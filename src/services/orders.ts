@@ -62,6 +62,9 @@ export const getPendingOrders = async () => {
 // ==========================================
 // 3. ACTUALIZAR EL ESTATUS DE LA ORDEN
 // ==========================================
+// ==========================================
+// 3. ACTUALIZAR EL ESTATUS DE LA ORDEN
+// ==========================================
 export async function updateOrderStatus(
   orderId: string, 
   newStatus: 'pending' | 'completed' | 'cancelled'
@@ -70,8 +73,10 @@ export async function updateOrderStatus(
     .from('orders')
     .update({ status: newStatus })
     .eq('id', orderId)
-    .select();
+    .select()
+    .single(); // 🔥 Asegura que devuelva un solo objeto { ... } y no un arreglo [ { ... } ]
 
   if (error) throw error;
-  return data;
+  console.log(data);
+  return data; // Retorna la orden modificada
 }

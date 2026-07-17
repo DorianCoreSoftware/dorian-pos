@@ -117,7 +117,7 @@ export const MenuList: React.FC<MenuListProps> = ({ productos, onProductPress, o
   return (
     <View style={{ flex: 1 }}>
       <FlatList
-        data={productos}
+        data={productos.filter(p => p.is_active !== false)}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.gridRow}

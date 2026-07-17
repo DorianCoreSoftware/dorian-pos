@@ -6,8 +6,9 @@ export interface Product {
   name: string;
   description: string | null;
   price: number;
-  image_url: string | null;
-  is_available: boolean;
+  image_url: string | null; // Obligatorio en la interfaz (puede ser un string o null)
+  is_available: boolean;    // Obligatorio en la interfaz
+  is_active: boolean;       // ← Añadimos el nuevo campo
   created_at: string;
   category?: Category; 
 }
