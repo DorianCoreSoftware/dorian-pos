@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
+  // --- Estructura de la Lista y Grid ---
   menuList: {
     padding: 16,
     paddingBottom: 40,
@@ -9,6 +10,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
+
+  // --- Tarjeta de Producto (Estilo Oscuro) ---
   productCard: {
     backgroundColor: '#1E1E1E',
     width: '48%',
@@ -33,6 +36,8 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+
+  // --- Fila de Precio y Acciones de la Tarjeta ---
   cardPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -44,7 +49,7 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   productPrice: {
-    color: '#FFBF00',
+    color: '#FFBF00', // Tu color dorado/ámbar original
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -78,8 +83,8 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: -2,
   },
-  
-  // Estilos para el modal con estética oscura
+
+  // --- Estilos del Modal (Overlay y Contenedor) ---
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -87,7 +92,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: 320,
+    width: 340, // Un poco más ancho para albergar cómodamente el formulario
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
     padding: 24,
@@ -100,30 +105,38 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
-  },
-  modalSubtitle: {
-    color: '#888',
-    fontSize: 14,
-    marginBottom: 20,
     textAlign: 'center',
+  },
+
+  // --- Formulario dentro del Modal ---
+  inputLabel: {
+    alignSelf: 'flex-start',
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#888',
+    marginBottom: 6,
+    marginTop: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   modalInput: {
     backgroundColor: '#121212',
     width: '100%',
-    height: 50,
+    height: 48,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#333',
-    color: '#FFBF00',
-    fontSize: 24,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    marginBottom: 24,
+    color: '#FFF', // Texto blanco para Name/Description para legibilidad
+    fontSize: 15,
+    paddingHorizontal: 12,
   },
+
+  // --- Fila de Botones del Modal (3 Columnas) ---
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    marginTop: 24,
   },
   modalButton: {
     flex: 1,
@@ -131,18 +144,24 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    marginHorizontal: 4, // Margen uniforme a los lados
   },
   cancelButton: {
     backgroundColor: '#2A2A2A',
-    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  deleteButton: {
+    backgroundColor: '#D9534F22', // Fondo rojo sutil translúcido
+    borderWidth: 1,
+    borderColor: '#D9534F88', // Borde rojo de alerta
   },
   saveButton: {
-    backgroundColor: '#FFBF00',
-    marginLeft: 8,
+    backgroundColor: '#FFBF00', // El color principal para destacar el botón guardar
   },
   buttonText: {
     color: '#FFF',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
 });

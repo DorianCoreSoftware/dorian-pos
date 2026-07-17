@@ -1,32 +1,45 @@
 import React, { useState } from 'react';
 import { StyleSheet, FlatList, TouchableOpacity, View, Text, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Product } from '../../types';
-import { useAuth } from '../../context/AuthContext'; // Importamos el contexto de autenticación
-import { supabase } from '../../services/supabase'; // Importamos supabase para actualizar directo
+import { useAuth } from '../../context/AuthContext'; // Contexto de autenticación
+import { supabase } from '../../services/supabase'; // Conexión directa a Supabase
 import { styles } from './MenuList.styles';
 
 interface MenuListProps {
   productos: Product[];
   onProductPress: (product: Product) => void;
-  onRefreshMenu?: () => void; // Callback opcional para que la pantalla padre refresque la lista de productos
+  onRefreshMenu?: () => void; // Callback opcional para refrescar la lista
 }
 
 export const MenuList: React.FC<MenuListProps> = ({ productos, onProductPress, onRefreshMenu }) => {
-  const { user } = useAuth(); // Obtenemos el rol del usuario conectado
+  const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // Estados para el Modal de Edición
+  // Estados para el Modal de Edición Completa
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
+  // Abrir el modal y precargar los datos actuales del producto
   const handleOpenEdit = (product: Product) => {
     setSelectedProduct(product);
+    setNewName(product.name);
+    setNewDescription(product.description || '');
     setNewPrice(product.price.toString());
   };
 
-  const handleUpdatePrice = async () => {
+  // Guardar los cambios (Update completo)
+  const handleUpdateProduct = async () => {
     if (!selectedProduct) return;
+
+    if (!newName.trim()) {
+      Alert.alert('Campo requerido', 'Por favor, ingresa el nombre del producto.');
+      return;
+    }
     
     const parsedPrice = parseFloat(newPrice);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
@@ -37,25 +50,68 @@ export const MenuList: React.FC<MenuListProps> = ({ productos, onProductPress, o
     setUpdating(true);
     try {
       const { error } = await supabase
-        .from('products') // Asegúrate de que el nombre de la tabla coincida exactamente
-        .update({ price: parsedPrice })
+        .from('products')
+        .update({ 
+          name: newName.trim(),
+          description: newDescription.trim() || null, // Guardamos null si está vacío
+          price: parsedPrice 
+        })
         .eq('id', selectedProduct.id);
 
       if (error) throw error;
 
-      Alert.alert('Éxito', `El precio de ${selectedProduct.name} ha sido actualizado.`);
+      Alert.alert('Éxito', `${newName.trim()} ha sido actualizado.`);
       setSelectedProduct(null);
       
-      // Si pasaste una función para recargar el menú, la llamamos para actualizar la UI instantáneamente
       if (onRefreshMenu) {
         onRefreshMenu();
       }
     } catch (err: any) {
-      console.error('Error al actualizar precio:', err);
-      Alert.alert('Error', 'No se pudo actualizar el precio en el servidor.');
+      console.error('Error al actualizar producto:', err);
+      Alert.alert('Error', 'No se pudo actualizar el producto en el servidor.');
     } finally {
       setUpdating(false);
     }
+  };
+
+  // Eliminación Lógica (Soft Delete: cambia is_active a false)
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
+
+    Alert.alert(
+      'Eliminar Producto',
+      `¿Estás seguro de que deseas eliminar "${selectedProduct.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const { error } = await supabase
+                .from('products')
+                .update({ is_active: false }) // Soft delete
+                .eq('id', selectedProduct.id);
+
+              if (error) throw error;
+
+              Alert.alert('Éxito', `El producto ha sido eliminado.`);
+              setSelectedProduct(null);
+              
+              if (onRefreshMenu) {
+                onRefreshMenu();
+              }
+            } catch (err: any) {
+              console.error('Error al eliminar producto:', err);
+              Alert.alert('Error', 'No se pudo eliminar el producto en el servidor.');
+            } finally {
+              setDeleting(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -82,7 +138,6 @@ export const MenuList: React.FC<MenuListProps> = ({ productos, onProductPress, o
               <View style={styles.priceContainer}>
                 <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
                 
-                {/* Mostramos el botón de editar precio únicamente al Administrador */}
                 {isAdmin && (
                   <TouchableOpacity 
                     style={styles.editPriceBadge}
@@ -107,35 +162,77 @@ export const MenuList: React.FC<MenuListProps> = ({ productos, onProductPress, o
           visible={true}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setSelectedProduct(null)}
+          onRequestClose={() => !updating && !deleting && setSelectedProduct(null)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Editar Precio</Text>
-              <Text style={styles.modalSubtitle}>{selectedProduct.name}</Text>
+              <Text style={styles.modalTitle}>Editar Producto</Text>
               
+              {/* INPUT: NOMBRE */}
+              <Text style={styles.inputLabel}>Nombre del Producto</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={newName}
+                onChangeText={setNewName}
+                placeholder="Ej. Hamburguesa Especial"
+                placeholderTextColor="#666"
+                editable={!updating && !deleting}
+              />
+
+              {/* INPUT: DESCRIPCIÓN */}
+              <Text style={styles.inputLabel}>Descripción</Text>
+              <TextInput
+                style={[styles.modalInput, { height: 60, textAlignVertical: 'top' }]}
+                value={newDescription}
+                onChangeText={setNewDescription}
+                placeholder="Describe los ingredientes o tamaño..."
+                placeholderTextColor="#666"
+                multiline={true}
+                numberOfLines={3}
+                editable={!updating && !deleting}
+              />
+
+              {/* INPUT: PRECIO */}
+              <Text style={styles.inputLabel}>Precio</Text>
               <TextInput
                 style={styles.modalInput}
                 keyboardType="decimal-pad"
                 value={newPrice}
                 onChangeText={setNewPrice}
-                autoFocus={true}
+                placeholder="0.00"
                 placeholderTextColor="#666"
+                editable={!updating && !deleting}
               />
 
+              {/* BOTONES DE ACCIÓN */}
               <View style={styles.modalButtons}>
+                {/* Cancelar */}
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.cancelButton]} 
                   onPress={() => setSelectedProduct(null)}
-                  disabled={updating}
+                  disabled={updating || deleting}
                 >
                   <Text style={styles.buttonText}>Cancelar</Text>
                 </TouchableOpacity>
 
+                {/* Eliminar (Soft Delete) */}
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.deleteButton]} 
+                  onPress={handleDeleteProduct}
+                  disabled={updating || deleting}
+                >
+                  {deleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={[styles.buttonText, { color: '#fff' }]}>Eliminar</Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Guardar Cambios */}
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.saveButton]} 
-                  onPress={handleUpdatePrice}
-                  disabled={updating}
+                  onPress={handleUpdateProduct}
+                  disabled={updating || deleting}
                 >
                   {updating ? (
                     <ActivityIndicator size="small" color="#000" />
@@ -151,4 +248,3 @@ export const MenuList: React.FC<MenuListProps> = ({ productos, onProductPress, o
     </View>
   );
 };
-
