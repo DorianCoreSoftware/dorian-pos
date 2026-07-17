@@ -1,6 +1,9 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
+  // ==========================================
+  // CONTENEDORES GENERALES Y LOADING
+  // ==========================================
   mainContainer: {
     flex: 1,
     backgroundColor: '#121212',
@@ -26,6 +29,10 @@ export const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#222',
   },
+
+  // ==========================================
+  // HEADER Y SECCIÓN DE USUARIO
+  // ==========================================
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -34,7 +41,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#222',
-    backgroundColor: '#1A1A1A'
+    backgroundColor: '#1A1A1A',
   },
   headerBrandContainer: {
     flexDirection: 'row',
@@ -49,6 +56,20 @@ export const styles = StyleSheet.create({
     width: 70,
     height: 40,
   },
+  userContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  userName: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // ==========================================
+  // TABS / PESTAÑAS
+  // ==========================================
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#262626',
@@ -71,29 +92,10 @@ export const styles = StyleSheet.create({
   tabActiveText: {
     color: '#000',
   },
-  userContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  userName: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    backgroundColor: '#333',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  logoutText: {
-    color: '#FF5252',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
+
+  // ==========================================
+  // VISTA DE COCINA Y TARJETAS DE ÓRDENES
+  // ==========================================
   kitchenContainer: {
     flex: 1,
     backgroundColor: '#161616',
@@ -164,6 +166,10 @@ export const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
+
+  // ==========================================
+  // BOTONES DE ACCIÓN (ENTREGAR, EDITAR, CANCELAR)
+  // ==========================================
   actionBlock: {
     gap: 8,
     marginTop: 'auto',
@@ -172,6 +178,19 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  logoutButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  logoutText: {
+    color: '#FF5252',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   editOrderButton: {
     flex: 1,
