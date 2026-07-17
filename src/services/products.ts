@@ -20,15 +20,14 @@ export const getActiveProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('is_available', true);
+    .eq('is_available', true)
+    .eq('is_active', true); // <--- Filtramos por ambas banderas de seguridad
 
   if (error) {
     console.error('Error fetching products:', error.message);
     throw new Error(error.message);
   }
 
-  // Supabase maneja los precios numéricos/moneda a veces como string, 
-  // nos aseguramos de que en el frontend se manejen como números.
   const formattedProducts = data.map((item: any) => ({
     ...item,
     price: typeof item.price === 'string' ? parseFloat(item.price) : item.price

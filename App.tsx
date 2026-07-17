@@ -18,14 +18,14 @@ import { supabase } from './src/services/supabase'; // Cliente para Realtime
 import { CartItem } from './src/types/cart-item';
 
 // Componentes Modulares
-import { CategoryTabs } from './src/components/CategoryTabs';
-import { MenuList } from './src/components/MenuList';
-import { Cart } from './src/components/Cart';
-import { ModifierModal } from './src/components/ModifierModal';
+import { CategoryTabs } from './src/components/category-tabs/CategoryTabs';
+import { MenuList } from './src/components/menu-list/MenuList';
+import { Cart } from './src/components/cart/Cart';
+import { ModifierModal } from './src/components/modifier-modal/ModifierModal';
 
 // --- NUEVAS IMPORTACIONES DE AUTENTICACIÓN ---
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { LoginScreen } from './src/components/LoginScreen';
+import { LoginScreen } from './src/components/login/LoginScreen';
 
 
 function MainApp() {
