@@ -7,6 +7,7 @@ import {
 export type ProductModifierMode =
   | 'burger'
   | 'wings'
+  | 'boneless'
   | 'none';
 
 export interface GroupedModifiers {
@@ -50,6 +51,13 @@ export function getProductModifierMode(
     normalizedProductName,
     normalizedCategoryName,
   ].join(' ');
+
+  if (
+    searchableText.includes('boneless') ||
+    searchableText.includes('bonelesses')
+  ) {
+    return 'boneless';
+  }
 
   if (
     searchableText.includes('alita') ||
