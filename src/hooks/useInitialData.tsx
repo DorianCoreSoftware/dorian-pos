@@ -13,7 +13,9 @@ import {
   getPendingOrders,
 } from '../services/orders';
 
-import { supabase } from '../services/supabase';
+import {
+  listenToOrderChanges,
+} from '../services/realtimeService';
 
 import {
   Category,
@@ -86,6 +88,7 @@ export function useInitialData(
       setPendingOrders([]);
       setErrorMessage(null);
       setIsLoading(false);
+
       return;
     }
 
@@ -110,12 +113,20 @@ export function useInitialData(
           return;
         }
 
-        setCategories(loadedCategories);
-        setProducts(loadedProducts);
-        setPendingOrders(loadedOrders);
+        setCategories(
+          loadedCategories,
+        );
+
+        setProducts(
+          loadedProducts,
+        );
+
+        setPendingOrders(
+          loadedOrders,
+        );
       } catch (error) {
         console.error(
-          'Error al conectar con Supabase:',
+          'Error al cargar los datos iniciales:',
           error,
         );
 
@@ -147,56 +158,21 @@ export function useInitialData(
       return;
     }
 
-    let refreshTimeout:
-      ReturnType<typeof setTimeout> | null =
-      null;
-
-    const scheduleOrdersRefresh = (): void => {
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-
-      refreshTimeout = setTimeout(() => {
-        void fetchKitchenOrders();
-      }, 300);
-    };
-
-    const ordersChannel = supabase
-      .channel('orders-live-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
+    const subscription =
+      listenToOrderChanges({
+        onOrdersChanged: () => {
+          void fetchKitchenOrders();
         },
-        scheduleOrdersRefresh,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-        },
-        scheduleOrdersRefresh,
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
+        onConnected: () => {
           console.log(
             '🍳 Cocina conectada en tiempo real',
           );
-        }
+        },
+        debounceMs: 300,
       });
 
     return () => {
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-
-      void supabase.removeChannel(
-        ordersChannel,
-      );
+      void subscription.unsubscribe();
     };
   }, [
     user,
