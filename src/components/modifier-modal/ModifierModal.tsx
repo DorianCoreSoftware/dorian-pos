@@ -1,302 +1,556 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
-  View,
-  Text,
+  ActivityIndicator,
   Modal,
+  ScrollView,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView
+  View,
 } from 'react-native';
-import { Product } from '../../types';
-import { styles } from './ModifierModal.styles';
-import { supabase } from '../../services/supabase';
 
-// Interfaz para estructurar los modificadores seleccionados y enviarlos al guardar la orden
-export interface SelectedModifier {
-  id: string;
-  name: string;
-  extra_price?: string; // Por ejemplo "0.00" o "15.00"
-  is_available?: boolean;
-  group_name: 'Carne' | 'Salsa' | null;
-}
+import {
+  Product,
+  SelectedModifier,
+} from '../../types';
+
+import { ProductModifierMode } from '../../services/modifierService';
+
+import { styles } from './ModifierModal.styles';
 
 interface ModifierModalProps {
   visible: boolean;
   product: Product | null;
   notes: string;
+
+  mode: ProductModifierMode;
+  isKongBurger: boolean;
+
+  meats: SelectedModifier[];
+  sauces: SelectedModifier[];
+
+  isLoading: boolean;
+  error: string | null;
+
   onNotesChange: (text: string) => void;
   onClose: () => void;
-  onConfirm: (selectedModifiers: SelectedModifier[]) => void;
+
+  onConfirm: (
+    selectedModifiers: SelectedModifier[],
+  ) => void;
 }
 
-const BURGER_CATEGORY_ID = 'bee57368-9ddb-44ec-a94d-d3212dabc113';
-const ALITAS_CATEGORY_ID = '54314805-c05f-46b8-bcfd-1c1255c48d3e';
-
-
-export const ModifierModal: React.FC<ModifierModalProps> = ({
+export const ModifierModal: React.FC<
+  ModifierModalProps
+> = ({
   visible,
   product,
   notes,
+  mode,
+  isKongBurger,
+  meats,
+  sauces,
+  isLoading,
+  error,
   onNotesChange,
   onClose,
   onConfirm,
 }) => {
-  const [selectedMeats, setSelectedMeats] = useState<string[]>([]);
-  const [selectedSauce, setSelectedSauce] = useState<string | null>(null);
-  const [meatsMap, setMeatsMap] = useState<Record<string, SelectedModifier>>({});
-  const [saucesMap, setSaucesMap] = useState<Record<string, SelectedModifier>>({});
-  const ALL_MEATS = Object.keys(meatsMap);
-  const ALL_SAUCES = Object.keys(saucesMap);
+  const [
+    selectedMeatIds,
+    setSelectedMeatIds,
+  ] = useState<string[]>([]);
 
-  const productName = product?.name?.toLowerCase() ?? "";
+  const [
+    selectedSauceId,
+    setSelectedSauceId,
+  ] = useState<string | null>(null);
 
-  const isBurger =
-    product?.category_id === BURGER_CATEGORY_ID ||
-    productName.includes("burger");
+  const isBurger = mode === 'burger';
+  const isWings = mode === 'wings';
 
-  const isAlitas =
-    product?.category_id === ALITAS_CATEGORY_ID ||
-    productName.includes("alita");
+  const maximumMeats =
+    isKongBurger ? 2 : 1;
 
-  const isKongBurger =
-    productName.includes("kong");
+  const selectedModifiers =
+    useMemo<SelectedModifier[]>(() => {
+      const selectedMeats =
+        selectedMeatIds
+          .map((modifierId) =>
+            meats.find(
+              (modifier) =>
+                modifier.id === modifierId,
+            ),
+          )
+          .filter(
+            (
+              modifier,
+            ): modifier is SelectedModifier =>
+              modifier !== undefined,
+          );
+
+      const selectedSauce =
+        selectedSauceId
+          ? sauces.find(
+              (modifier) =>
+                modifier.id ===
+                selectedSauceId,
+            )
+          : undefined;
+
+      return selectedSauce
+        ? [...selectedMeats, selectedSauce]
+        : selectedMeats;
+    }, [
+      selectedMeatIds,
+      selectedSauceId,
+      meats,
+      sauces,
+    ]);
+
+  const isSelectionValid =
+    useMemo(() => {
+      if (isLoading || error) {
+        return false;
+      }
+
+      if (
+        isBurger &&
+        selectedMeatIds.length === 0
+      ) {
+        return false;
+      }
+
+      if (
+        isWings &&
+        !selectedSauceId
+      ) {
+        return false;
+      }
+
+      return true;
+    }, [
+      isLoading,
+      error,
+      isBurger,
+      isWings,
+      selectedMeatIds,
+      selectedSauceId,
+    ]);
 
   useEffect(() => {
-    const loadModifiers = async () => {
-      const { data, error } = await supabase
-        .from("modifiers")
-        .select("*")
-        .eq("is_available", true);
+    if (!visible) {
+      return;
+    }
 
-      if (error) {
-        console.error(error);
-        return;
-      }
+    setSelectedMeatIds([]);
+    setSelectedSauceId(null);
+  }, [
+    visible,
+    product?.id,
+  ]);
 
-      const meats: Record<string, SelectedModifier> = {};
-      const sauces: Record<string, SelectedModifier> = {};
+  if (!product) {
+    return null;
+  }
 
-      data.forEach((mod: any) => {
-        const modifier: SelectedModifier = {
-          id: mod.id,
-          name: mod.name,
-          extra_price: mod.extra_price,
-          is_available: mod.is_available,
-          group_name: mod.group_name,
-        };
+  const handleMeatPress = (
+    modifierId: string,
+  ): void => {
+    setSelectedMeatIds(
+      (currentSelection) => {
+        const selectionCount =
+          currentSelection.filter(
+            (id) => id === modifierId,
+          ).length;
 
-        if (mod.group_name === "Carne") {
-          meats[mod.name] = modifier;
+        if (
+          currentSelection.includes(
+            modifierId,
+          )
+        ) {
+          return currentSelection.filter(
+            (id) => id !== modifierId,
+          );
         }
 
-        if (mod.group_name === "Salsa") {
-          sauces[mod.name] = modifier;
+        if (
+          maximumMeats === 1
+        ) {
+          return [modifierId];
         }
-      });
 
-      setMeatsMap(meats);
-      setSaucesMap(sauces);
-    };
-
-    loadModifiers();
-  }, []);
-
-  useEffect(() => {
-    if (visible) {
-      setSelectedMeats([]);
-      setSelectedSauce(null);
-    }
-  }, [product, visible]);
-
-  if (!product) return null;
-
-  const handleMeatPress = (meat: string) => {
-    if (selectedMeats.includes(meat)) {
-      setSelectedMeats(selectedMeats.filter(m => m !== meat));
-    } else {
-      const maxCarnes = isKongBurger ? 2 : 1;
-      if (selectedMeats.length < maxCarnes) {
-        setSelectedMeats([...selectedMeats, meat]);
-      } else if (maxCarnes === 1) {
-        setSelectedMeats([meat]);
-      }
-    }
-  };
-
-  const isSelectionValid = () => {
-    if (isBurger && selectedMeats.length === 0) return false;
-    if (isAlitas && !selectedSauce) return false;
-    return true;
-  };
-
-  const handleConfirm = () => {
-    if (!isSelectionValid()) return;
-
-    const dbModifiers: SelectedModifier[] = [];
-
-    // Mapeamos las carnes seleccionadas inyectando su ID y precio real
-    if (isBurger) {
-      selectedMeats.forEach(meatName => {
-        const meta = meatsMap[meatName];
-        if (meta) {
-          dbModifiers.push({
-            id: meta.id,
-            name: meatName,
-            extra_price: meta.extra_price,
-            is_available: meta.is_available,
-            group_name: meta.group_name
-          });
+        if (
+          currentSelection.length >=
+          maximumMeats
+        ) {
+          return currentSelection;
         }
-      });
-    }
 
-    // Mapeamos la salsa seleccionada
-    if (isAlitas && selectedSauce) {
-      const meta = saucesMap[selectedSauce];
-      if (meta) {
-        dbModifiers.push({
-          id: meta.id,
-          name: selectedSauce,
-          extra_price: meta.extra_price,
-          is_available: meta.is_available,
-          group_name: meta.group_name
-        });
-      }
-    }
-
-    onConfirm(dbModifiers);
+        return [
+          ...currentSelection,
+          modifierId,
+        ];
+      },
+    );
   };
+
+  const handleDoubleMeat = (
+    modifierId: string,
+  ): void => {
+    setSelectedMeatIds(
+      (currentSelection) => {
+        if (
+          !isKongBurger ||
+          currentSelection.length !== 1
+        ) {
+          return currentSelection;
+        }
+
+        return [
+          modifierId,
+          modifierId,
+        ];
+      },
+    );
+  };
+
+  const handleConfirm = (): void => {
+    if (!isSelectionValid) {
+      return;
+    }
+
+    onConfirm(selectedModifiers);
+  };
+
+  const selectedSingleMeat =
+    selectedMeatIds.length === 1
+      ? meats.find(
+          (modifier) =>
+            modifier.id ===
+            selectedMeatIds[0],
+        )
+      : undefined;
 
   return (
     <Modal
       animationType="fade"
-      transparent={true}
+      transparent
       visible={visible}
       onRequestClose={onClose}
     >
       <View style={styles.modalBackdrop}>
-        <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+        <View
+          style={[
+            styles.modalContent,
+            {
+              maxHeight: '85%',
+            },
+          ]}
+        >
+          <Text style={styles.modalTitle}>
+            Ajustes de {product.name}
+          </Text>
 
-          <Text style={styles.modalTitle}>Ajustes de {product.name}</Text>
-          <Text style={styles.modalSubtitle}>
-            {isKongBurger ? 'Selecciona hasta 2 tipos de carne para tu Kong Burger:' : 'Selecciona las opciones obligatorias:'}
+          <Text
+            style={styles.modalSubtitle}
+          >
+            {isKongBurger
+              ? 'Selecciona hasta 2 tipos de carne para tu Kong Burger:'
+              : isBurger || isWings
+                ? 'Selecciona las opciones obligatorias:'
+                : 'Agrega notas adicionales a tu producto:'}
           </Text>
 
           <ScrollView
-            contentContainerStyle={{ paddingVertical: 10 }}
-            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingVertical: 10,
+            }}
+            showsVerticalScrollIndicator={
+              false
+            }
           >
+            {isLoading && (
+              <View
+                style={{
+                  paddingVertical: 24,
+                  alignItems: 'center',
+                }}
+              >
+                <ActivityIndicator
+                  size="large"
+                  color="#FFBF00"
+                />
 
-            {/* Sección de Hamburguesas */}
-            {isBurger && (
-              <View style={styles.requiredSection}>
-                <Text style={styles.sectionLabel}>
-                  Tipo de Carne * {isKongBurger ? '(Selecciona 1 o 2)' : '(Obligatorio)'}
+                <Text
+                  style={{
+                    marginTop: 10,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  Cargando opciones...
                 </Text>
-                <View style={styles.optionsContainerHorizontal}>
-                  {ALL_MEATS.map((meat) => {
-                    const isSelected = selectedMeats.includes(meat);
-                    return (
+              </View>
+            )}
+
+            {!isLoading && error && (
+              <Text
+                style={{
+                  color: '#FF5252',
+                  textAlign: 'center',
+                  marginVertical: 16,
+                }}
+              >
+                {error}
+              </Text>
+            )}
+
+            {!isLoading &&
+              !error &&
+              isBurger && (
+                <View
+                  style={
+                    styles.requiredSection
+                  }
+                >
+                  <Text
+                    style={
+                      styles.sectionLabel
+                    }
+                  >
+                    Tipo de carne *{' '}
+                    {isKongBurger
+                      ? '(Selecciona 1 o 2)'
+                      : '(Obligatorio)'}
+                  </Text>
+
+                  <View
+                    style={
+                      styles.optionsContainerHorizontal
+                    }
+                  >
+                    {meats.map(
+                      (modifier) => {
+                        const selectedCount =
+                          selectedMeatIds.filter(
+                            (id) =>
+                              id ===
+                              modifier.id,
+                          ).length;
+
+                        const isSelected =
+                          selectedCount > 0;
+
+                        return (
+                          <TouchableOpacity
+                            key={modifier.id}
+                            style={[
+                              styles.optionButtonChip,
+                              isSelected &&
+                                styles.optionButtonSelected,
+                              {
+                                minWidth:
+                                  '45%',
+                                alignItems:
+                                  'center',
+                              },
+                            ]}
+                            onPress={() =>
+                              handleMeatPress(
+                                modifier.id,
+                              )
+                            }
+                            activeOpacity={
+                              0.8
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.optionText,
+                                isSelected &&
+                                  styles.optionTextSelected,
+                              ]}
+                            >
+                              {modifier.name}
+                              {selectedCount >
+                              1
+                                ? ` (x${selectedCount})`
+                                : ''}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      },
+                    )}
+                  </View>
+
+                  {isKongBurger &&
+                    selectedSingleMeat && (
                       <TouchableOpacity
-                        key={meat}
-                        style={[
-                          styles.optionButtonChip,
-                          isSelected && styles.optionButtonSelected,
-                          { minWidth: '45%', alignItems: 'center' }
-                        ]}
-                        onPress={() => handleMeatPress(meat)}
-                        activeOpacity={0.8}
+                        style={{
+                          marginTop: 8,
+                        }}
+                        onPress={() =>
+                          handleDoubleMeat(
+                            selectedSingleMeat.id,
+                          )
+                        }
                       >
-                        <Text style={[
-                          styles.optionText,
-                          isSelected && styles.optionTextSelected
-                        ]}>
-                          {meat} {isSelected && isKongBurger ? `(x${selectedMeats.filter(m => m === meat).length})` : ''}
+                        <Text
+                          style={{
+                            color:
+                              '#FFBF00',
+                            fontSize: 13,
+                            textDecorationLine:
+                              'underline',
+                          }}
+                        >
+                          ¿Hacerla doble de{' '}
+                          {
+                            selectedSingleMeat.name
+                          }
+                          ?
                         </Text>
                       </TouchableOpacity>
-                    );
-                  })}
+                    )}
                 </View>
+              )}
 
-                {isKongBurger && selectedMeats.length === 1 && (
-                  <TouchableOpacity
-                    style={{ marginTop: 8 }}
-                    onPress={() => setSelectedMeats([...selectedMeats, selectedMeats[0]])}
+            {!isLoading &&
+              !error &&
+              isWings && (
+                <View
+                  style={
+                    styles.requiredSection
+                  }
+                >
+                  <Text
+                    style={
+                      styles.sectionLabel
+                    }
                   >
-                    <Text style={{ color: '#FFBF00', fontSize: 13, textDecorationLine: 'underline' }}>
-                      ¿Hacerla doble de {selectedMeats[0]}?
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
+                    Salsa de las alitas *
+                    (Obligatorio)
+                  </Text>
 
-            {/* Sección de Alitas */}
-            {isAlitas && (
-              <View style={styles.requiredSection}>
-                <Text style={styles.sectionLabel}>Salsa de las Alitas * (Obligatorio)</Text>
-                <View style={styles.optionsContainerHorizontal}>
-                  {ALL_SAUCES.map((sauce) => (
-                    <TouchableOpacity
-                      key={sauce}
-                      style={[
-                        styles.optionButtonChip,
-                        selectedSauce === sauce && styles.optionButtonSelected
-                      ]}
-                      onPress={() => setSelectedSauce(sauce)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[
-                        styles.optionText,
-                        selectedSauce === sauce && styles.optionTextSelected
-                      ]}>
-                        {sauce}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  <View
+                    style={
+                      styles.optionsContainerHorizontal
+                    }
+                  >
+                    {sauces.map(
+                      (modifier) => {
+                        const isSelected =
+                          selectedSauceId ===
+                          modifier.id;
+
+                        return (
+                          <TouchableOpacity
+                            key={modifier.id}
+                            style={[
+                              styles.optionButtonChip,
+                              isSelected &&
+                                styles.optionButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedSauceId(
+                                modifier.id,
+                              )
+                            }
+                            activeOpacity={
+                              0.8
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.optionText,
+                                isSelected &&
+                                  styles.optionTextSelected,
+                              ]}
+                            >
+                              {modifier.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      },
+                    )}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Notas adicionales (Opcional)</Text>
+            <Text
+              style={[
+                styles.sectionLabel,
+                {
+                  marginTop: 16,
+                },
+              ]}
+            >
+              Notas adicionales
+              (opcional)
+            </Text>
+
             <TextInput
               style={styles.notesInput}
               placeholder="Ej: Sin cebolla, extra aderezo, aderezo aparte..."
               placeholderTextColor="#666"
               value={notes}
-              onChangeText={onNotesChange}
+              onChangeText={
+                onNotesChange
+              }
               multiline
               numberOfLines={3}
             />
           </ScrollView>
 
-          <View style={styles.modalActions}>
+          <View
+            style={
+              styles.modalActions
+            }
+          >
             <TouchableOpacity
-              style={styles.modalCancelBtn}
+              style={
+                styles.modalCancelBtn
+              }
               onPress={onClose}
               activeOpacity={0.7}
             >
-              <Text style={styles.modalCancelText}>Cancelar</Text>
+              <Text
+                style={
+                  styles.modalCancelText
+                }
+              >
+                Cancelar
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.modalAddBtn,
-                !isSelectionValid() && styles.modalAddBtnDisabled
+                !isSelectionValid &&
+                  styles.modalAddBtnDisabled,
               ]}
               onPress={handleConfirm}
-              disabled={!isSelectionValid()}
+              disabled={
+                !isSelectionValid
+              }
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.modalAddText,
-                !isSelectionValid() && styles.modalAddTextDisabled
-              ]}>
-                Agregar al Ticket
+              <Text
+                style={[
+                  styles.modalAddText,
+                  !isSelectionValid &&
+                    styles.modalAddTextDisabled,
+                ]}
+              >
+                Agregar al ticket
               </Text>
             </TouchableOpacity>
           </View>
-
         </View>
       </View>
     </Modal>

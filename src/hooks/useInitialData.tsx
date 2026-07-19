@@ -1,119 +1,217 @@
-// src/hooks/useInitialData.ts
-import { useState, useEffect } from 'react';
-import { getCategories, getActiveProducts } from '../services/products';
-import { getPendingOrders } from '../services/orders';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  getActiveProducts,
+  getCategories,
+} from '../services/products';
+
+import {
+  getPendingOrders,
+} from '../services/orders';
+
 import { supabase } from '../services/supabase';
-import { Product, Category } from '../types';
 
-export const useInitialData = (user: any) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+import {
+  Category,
+  KitchenOrder,
+  Product,
+} from '../types';
 
-  // Estados de datos de la base de datos
-  const [categorias, setCategorias] = useState<Category[]>([]);
-  const [productos, setProductos] = useState<Product[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+import { UserSession } from '../context/AuthContext';
 
-  // Función para jalar las órdenes de la BD asegurando que solo queden las 'pending'
-  const fetchKitchenOrders = async () => {
-    try {
-      const ordersData = await getPendingOrders();
+export function useInitialData(
+  user: UserSession | null,
+) {
+  const [isLoading, setIsLoading] =
+    useState(true);
 
-      // 1. Filtro de seguridad: Solo las que sigan pendientes
-      const onlyPending = (ordersData || []).filter((order: any) => order.status === 'pending');
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState<string | null>(null);
 
-      // 2. ELIMINAR DUPLICADOS DE RAÍZ: Evita que ráfagas de Realtime dupliquen la tarjeta
-      const uniqueOrdersMap = new Map();
-      onlyPending.forEach((order: any) => {
-        if (!uniqueOrdersMap.has(order.id)) {
-          uniqueOrdersMap.set(order.id, order);
-        }
-      });
+  const [
+    categories,
+    setCategories,
+  ] = useState<Category[]>([]);
 
-      setPendingOrders(Array.from(uniqueOrdersMap.values()));
-    } catch (error) {
-      console.error("Error actualizando comandas:", error);
-    }
-  };
+  const [
+    products,
+    setProducts,
+  ] = useState<Product[]>([]);
 
-  // Función para recargar productos de forma independiente si se requiere
-  const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*');
-    if (data) setProductos(data);
-  };
+  const [
+    pendingOrders,
+    setPendingOrders,
+  ] = useState<KitchenOrder[]>([]);
 
-  // 1. Carga inicial de datos desde Supabase
+  const fetchKitchenOrders =
+    useCallback(async (): Promise<void> => {
+      try {
+        const orders =
+          await getPendingOrders();
+
+        setPendingOrders(orders);
+      } catch (error) {
+        console.error(
+          'Error actualizando comandas:',
+          error,
+        );
+      }
+    }, []);
+
+  const fetchProducts =
+    useCallback(async (): Promise<void> => {
+      try {
+        const activeProducts =
+          await getActiveProducts();
+
+        setProducts(activeProducts);
+      } catch (error) {
+        console.error(
+          'Error actualizando productos:',
+          error,
+        );
+      }
+    }, []);
+
   useEffect(() => {
-    async function loadMenuFromCloud() {
+    if (!user) {
+      setCategories([]);
+      setProducts([]);
+      setPendingOrders([]);
+      setErrorMessage(null);
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadInitialData(): Promise<void> {
       try {
         setIsLoading(true);
-        setErrorMsg(null);
+        setErrorMessage(null);
 
-        const [catsResult, prodsResult] = await Promise.all([
+        const [
+          loadedCategories,
+          loadedProducts,
+          loadedOrders,
+        ] = await Promise.all([
           getCategories(),
-          getActiveProducts()
+          getActiveProducts(),
+          getPendingOrders(),
         ]);
 
-        setCategorias(catsResult);
-        setProductos(prodsResult);
+        if (!isMounted) {
+          return;
+        }
 
-        // Cargamos comandas iniciales
-        await fetchKitchenOrders();
+        setCategories(loadedCategories);
+        setProducts(loadedProducts);
+        setPendingOrders(loadedOrders);
+      } catch (error) {
+        console.error(
+          'Error al conectar con Supabase:',
+          error,
+        );
 
-      } catch (error: any) {
-        console.error("Error al conectar con Supabase:", error);
-        setErrorMsg(error?.message || "Error al conectar con el servidor en la nube");
+        if (!isMounted) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Error al conectar con el servidor en la nube.',
+        );
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
-    if (user) {
-      loadMenuFromCloud();
-    }
-  }, [user]);
-
-  // 2. Suscripción en Tiempo Real para Cocina (Realtime)
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('orders-live-changes')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        () => {
-          setTimeout(() => {
-            fetchKitchenOrders();
-          }, 300);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
-        () => {
-          setTimeout(() => {
-            fetchKitchenOrders();
-          }, 400);
-        }
-      )
-      .subscribe();
+    void loadInitialData();
 
     return () => {
-      supabase.removeChannel(channel);
+      isMounted = false;
     };
   }, [user]);
 
-  // Retornamos exactamente lo que MainApp espera desestructurar
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let refreshTimeout:
+      ReturnType<typeof setTimeout> | null =
+      null;
+
+    const scheduleOrdersRefresh = (): void => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+
+      refreshTimeout = setTimeout(() => {
+        void fetchKitchenOrders();
+      }, 300);
+    };
+
+    const ordersChannel = supabase
+      .channel('orders-live-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+        },
+        scheduleOrdersRefresh,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        scheduleOrdersRefresh,
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(
+            '🍳 Cocina conectada en tiempo real',
+          );
+        }
+      });
+
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+
+      void supabase.removeChannel(
+        ordersChannel,
+      );
+    };
+  }, [
+    user,
+    fetchKitchenOrders,
+  ]);
+
   return {
-    categorias,
-    productos,
-    setProductos,
+    categories,
+    products,
+    setProducts,
     pendingOrders,
     setPendingOrders,
     isLoading,
-    errorMsg,
+    errorMessage,
     fetchProducts,
-    fetchKitchenOrders
+    fetchKitchenOrders,
   };
-};
+}

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { getUserProfile } from '../services/authService';
 
-interface UserSession {
+export interface UserSession {
   id: string;
   email: string;
   fullName: string;
