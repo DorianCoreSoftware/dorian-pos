@@ -1,9 +1,11 @@
-// src/types/cart.ts (o similar)
+import { SelectedModifier } from '../components/modifier-modal/ModifierModal';
 import { Product } from './product';
 
+
 export interface CartItem {
-  id: string; // ID único que combina producto + notas/modificadores
+  id: string;
   product: Product;
   quantity: number;
   notes: string;
+  selectedModifiers?: SelectedModifier[];
 }

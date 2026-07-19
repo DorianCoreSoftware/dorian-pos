@@ -48,13 +48,55 @@ export const Cart: React.FC<CartProps> = ({
               <View style={styles.cartItemMain}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text style={styles.cartItemName}>{item.product.name}</Text>
-                  {item.notes ? (
-                    <Text style={styles.cartItemNotes}>📝 {item.notes}</Text>
-                  ) : null}
-                  <Text style={styles.cartItemPrice}>
-                    ${(item.product.price * item.quantity).toFixed(2)}
-                  </Text>
-                </View>
+                  
+                  {/* MODIFICADORES SELECCIONADOS (Carne / Salsa) */}
+                  {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4, marginBottom: 4 }}>
+                      {item.selectedModifiers.map((mod, idx) => (
+                        <View 
+                          key={`${mod.name}-${idx}`} 
+                          style={{ 
+                            backgroundColor: '#1E1E1E', 
+                            paddingHorizontal: 8, 
+                            paddingVertical: 2, 
+                            borderRadius: 4,
+                            borderWidth: 1,
+                            borderColor: mod.group_name === 'Carne' ? '#FFBF00' : '#FF4D4D' // Amarillo para carne, Rojo para salsa
+                          }}
+                        >
+                          <Text style={{ color: '#FFF', fontSize: 11, fontWeight: 'bold' }}>
+                            {mod.group_name}: {mod.name}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                 {/* MODIFICADORES SELECCIONADOS EN EL MENÚ */}
+{item.selectedModifiers && item.selectedModifiers.length > 0 ? (
+  <View style={{ marginTop: 2, gap: 2 }}>
+    {item.selectedModifiers.map((mod, index) => (
+      <Text 
+        key={`${item.id}-mod-${index}`} 
+        style={{ color: '#FFBF00', fontSize: 13, fontWeight: '600' }}
+      >
+        ✨ {mod.name}
+      </Text>
+    ))}
+  </View>
+) : null}
+
+{/* NOTAS MANUALES */}
+{item.notes ? (
+  <Text style={[styles.cartItemNotes, { marginTop: 2 }]}>
+    📝 {item.notes}
+  </Text>
+) : null}
+                  
+<Text style={[styles.cartItemPrice, { marginTop: 4 }]}>
+  ${(item.product.price * item.quantity).toFixed(2)}
+</Text>
+</View>
 
                 {/* CONTROLES DE CANTIDAD Y ELIMINAR */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

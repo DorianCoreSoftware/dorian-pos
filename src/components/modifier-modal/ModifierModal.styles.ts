@@ -26,6 +26,58 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
   },
+  // --- Nuevos estilos para modificadores obligatorios ---
+  requiredSection: {
+    marginVertical: 12,
+    width: '100%',
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  optionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  optionsContainerHorizontal: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#121212',
+    borderWidth: 1.5,
+    borderColor: '#333',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  optionButtonChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#121212',
+    borderWidth: 1.5,
+    borderColor: '#333',
+    borderRadius: 20,
+  },
+  optionButtonSelected: {
+    borderColor: '#FFBF00',
+    backgroundColor: 'rgba(255, 191, 0, 0.1)',
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#AAA',
+    fontWeight: '600',
+  },
+  optionTextSelected: {
+    color: '#FFBF00',
+    fontWeight: 'bold',
+  },
+  // ------------------------------------------------------
   notesInput: {
     backgroundColor: '#121212',
     color: '#FFF',
@@ -67,5 +119,12 @@ export const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  // Estados para bloquear el botón si falta selección
+  modalAddBtnDisabled: {
+    backgroundColor: '#333333',
+  },
+  modalAddTextDisabled: {
+    color: '#666',
   },
 });

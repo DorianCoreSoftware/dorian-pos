@@ -15,8 +15,16 @@ export function GlobalHeader({ activeTab, setActiveTab, editingOrderId, pendingO
   return (
     <View style={styles.header}>
       <View style={styles.headerBrandContainer}>
-        <Image source={require('../../assets/OnlyBurgerKong.png')} style={styles.headerLogo} resizeMode="contain" />
-        <Image source={require('../../assets/logo.png')} style={styles.headerLogoLetters} resizeMode="contain" />
+        <Image 
+      source={require('../../../assets/OnlyBurgerKong.png')} 
+      style={styles.headerLogo} 
+      resizeMode="contain" 
+    />
+    <Image 
+      source={require('../../../assets/logo.png')} 
+      style={styles.headerLogoLetters} 
+      resizeMode="contain" 
+    />
       </View>
 
       <View style={styles.tabContainer}>
