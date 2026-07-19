@@ -1,41 +1,165 @@
-import { supabase } from "./supabase";
+import { Session } from '@supabase/supabase-js';
 
-/**
- * Inicia sesión utilizando correo y contraseña en Supabase Auth
- */
-export const signInWithEmail = async (email: string, pass: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password: pass,
-  });
-  if (error) throw error;
-  return data;
-};
+import {
+  AuthSubscription,
+  fetchUserProfileById,
+  getCurrentSession,
+  signInWithPassword,
+  signOutCurrentUser,
+  subscribeToAuthChanges,
+} from '../repositories/AuthRepository';
 
-/**
- * Recupera el perfil y el rol del usuario desde la tabla 'profiles'
- * adaptado a las columnas 'first_name' y 'last_name'
- */
-export const getUserProfile = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('role, first_name, last_name') // Solicitamos los campos reales de tu base de datos
-    .eq('id', userId)
-    .single();
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+}
 
-  if (error) throw error;
+export interface UserProfile {
+  role: 'admin' | 'seller';
+  fullName: string;
+}
 
-  // Concatenamos el nombre completo y devolvemos la misma estructura que espera tu Context
+export interface AuthState {
+  user: AuthenticatedUser | null;
+}
+
+function mapSessionUser(
+  session: Session | null,
+): AuthenticatedUser | null {
+  if (!session?.user) {
+    return null;
+  }
+
   return {
-    role: data.role,
-    full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim()
+    id: session.user.id,
+    email: session.user.email ?? '',
   };
-};
+}
 
-/**
- * Cierra la sesión activa del usuario
- */
-export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-};
+export async function getActiveUser(): Promise<
+  AuthenticatedUser | null
+> {
+  try {
+    const session =
+      await getCurrentSession();
+
+    return mapSessionUser(session);
+  } catch (error) {
+    console.error(
+      'Error al recuperar la sesión activa:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo recuperar la sesión.',
+    );
+  }
+}
+
+export function listenToAuthChanges(
+  callback: (
+    authState: AuthState,
+  ) => void,
+): AuthSubscription {
+  return subscribeToAuthChanges(
+    (_event, session) => {
+      callback({
+        user: mapSessionUser(session),
+      });
+    },
+  );
+}
+
+export async function signInWithEmail(
+  email: string,
+  password: string,
+): Promise<AuthenticatedUser> {
+  const cleanEmail =
+    email.trim().toLowerCase();
+
+  if (!cleanEmail) {
+    throw new Error(
+      'El correo electrónico es obligatorio.',
+    );
+  }
+
+  if (!password) {
+    throw new Error(
+      'La contraseña es obligatoria.',
+    );
+  }
+
+  try {
+    const session =
+      await signInWithPassword(
+        cleanEmail,
+        password,
+      );
+
+    const user =
+      mapSessionUser(session);
+
+    if (!user) {
+      throw new Error(
+        'No se pudo obtener el usuario autenticado.',
+      );
+    }
+
+    return user;
+  } catch (error) {
+    console.error(
+      'Error al iniciar sesión:',
+      error,
+    );
+
+    throw error;
+  }
+}
+
+export async function getUserProfile(
+  userId: string,
+): Promise<UserProfile> {
+  try {
+    const profile =
+      await fetchUserProfileById(
+        userId,
+      );
+
+    const fullName = [
+      profile.first_name,
+      profile.last_name,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    return {
+      role: profile.role,
+      fullName,
+    };
+  } catch (error) {
+    console.error(
+      'Error al obtener el perfil:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo obtener el perfil del usuario.',
+    );
+  }
+}
+
+export async function signOut(): Promise<void> {
+  try {
+    await signOutCurrentUser();
+  } catch (error) {
+    console.error(
+      'Error al cerrar sesión:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo cerrar la sesión.',
+    );
+  }
+}

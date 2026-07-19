@@ -1,6 +1,18 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../services/supabase';
-import { getUserProfile } from '../services/authService';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  AuthenticatedUser,
+  getActiveUser,
+  getUserProfile,
+  listenToAuthChanges,
+  signOut,
+} from '../services/authService';
 
 export interface UserSession {
   id: string;
@@ -15,75 +27,165 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext =
+  createContext<AuthContextType | undefined>(
+    undefined,
+  );
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserSession | null>(null);
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+export const AuthProvider: React.FC<
+  AuthProviderProps
+> = ({ children }) => {
+  const [user, setUser] =
+    useState<UserSession | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const fetchAndSetProfile =
+    useCallback(
+      async (
+        authenticatedUser:
+          AuthenticatedUser,
+      ): Promise<void> => {
+        try {
+          const profile =
+            await getUserProfile(
+              authenticatedUser.id,
+            );
+
+          setUser({
+            id: authenticatedUser.id,
+            email:
+              authenticatedUser.email,
+            fullName:
+              profile.fullName,
+            role: profile.role,
+          });
+        } catch (error) {
+          console.error(
+            'Error al cargar el perfil del usuario:',
+            error,
+          );
+
+          setUser(null);
+        }
+      },
+      [],
+    );
 
   useEffect(() => {
-    // 1. Revisar si ya hay una sesión activa al abrir la app
-    const checkActiveSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await fetchAndSetProfile(session.user.id, session.user.email || '');
+    let isMounted = true;
+
+    const loadInitialSession =
+      async (): Promise<void> => {
+        try {
+          const activeUser =
+            await getActiveUser();
+
+          if (
+            activeUser &&
+            isMounted
+          ) {
+            await fetchAndSetProfile(
+              activeUser,
+            );
+          }
+        } catch (error) {
+          console.error(
+            'Error al recuperar la sesión inicial:',
+            error,
+          );
+
+          if (isMounted) {
+            setUser(null);
+          }
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
         }
-      } catch (err) {
-        console.error('Error al recuperar sesión inicial:', err);
+      };
+
+    void loadInitialSession();
+
+    const subscription =
+      listenToAuthChanges(
+        ({ user: authenticatedUser }) => {
+          void (async () => {
+            if (!isMounted) {
+              return;
+            }
+
+            setLoading(true);
+
+            try {
+              if (authenticatedUser) {
+                await fetchAndSetProfile(
+                  authenticatedUser,
+                );
+              } else {
+                setUser(null);
+              }
+            } finally {
+              if (isMounted) {
+                setLoading(false);
+              }
+            }
+          })();
+        },
+      );
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchAndSetProfile]);
+
+  const logout =
+    async (): Promise<void> => {
+      try {
+        setLoading(true);
+
+        await signOut();
+        setUser(null);
+      } catch (error) {
+        console.error(
+          'Error al cerrar sesión:',
+          error,
+        );
+
+        throw error;
       } finally {
         setLoading(false);
       }
     };
 
-    checkActiveSession();
-
-    // 2. Escuchar cambios de estado en la autenticación (Login, Logout, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setLoading(true);
-      if (session?.user) {
-        await fetchAndSetProfile(session.user.id, session.user.email || '');
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Función auxiliar para traer el perfil
-  const fetchAndSetProfile = async (uid: string, email: string) => {
-    try {
-      const profile = await getUserProfile(uid);
-      setUser({
-        id: uid,
-        email: email,
-        fullName: profile.full_name,
-        role: profile.role,
-      });
-    } catch (err) {
-      console.error('Error al obtener perfil:', err);
-      setUser(null);
-    }
-  };
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth debe usarse dentro de un AuthProvider');
+export function useAuth(): AuthContextType {
+  const context =
+    useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      'useAuth debe usarse dentro de un AuthProvider',
+    );
+  }
+
   return context;
-};
+}

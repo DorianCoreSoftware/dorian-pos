@@ -1,49 +1,75 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  View, 
-  ActivityIndicator, 
-  KeyboardAvoidingView, 
+
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
   Platform,
-  Alert
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { signInWithEmail } from '../../services/authService'; // Ajusta la ruta a tu archivo de servicios
+
+import { signInWithEmail } from '../../services/authService';
 import { styles } from './Login.styles';
 
 export const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Campos incompletos', 'Por favor ingresa tu correo y contraseña.');
+  const handleLogin = async (): Promise<void> => {
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password.trim()) {
+      Alert.alert(
+        'Campos incompletos',
+        'Por favor ingresa tu correo y contraseña.',
+      );
+
       return;
     }
 
-    setLoading(true);
     try {
-      await signInWithEmail(email.trim(), password);
-      // El AuthContext detectará el login y cambiará de pantalla automáticamente
-    } catch (error: any) {
-      console.error('Error en Login:', error);
-      Alert.alert('Error de acceso', 'El correo o contraseña son incorrectos.');
+      setIsLoading(true);
+
+      await signInWithEmail(
+        cleanEmail,
+        password,
+      );
+    } catch (error) {
+      console.error(
+        'Error en Login:',
+        error,
+      );
+
+      Alert.alert(
+        'Error de acceso',
+        'El correo o contraseña son incorrectos.',
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+    <KeyboardAvoidingView
+      behavior={
+        Platform.OS === 'ios'
+          ? 'padding'
+          : 'height'
+      }
       style={styles.container}
     >
       <View style={styles.card}>
-        <Text style={styles.logo}>🍔 Burger Kong</Text>
-        <Text style={styles.subtitle}>Panel de Control & Comandas</Text>
+        <Text style={styles.logo}>
+          🍔 Burger Kong
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Panel de Control & Comandas
+        </Text>
 
         <TextInput
           style={styles.input}
@@ -52,7 +78,9 @@ export const LoginScreen = () => {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
+          editable={!isLoading}
         />
 
         <TextInput
@@ -63,21 +91,35 @@ export const LoginScreen = () => {
           onChangeText={setPassword}
           secureTextEntry
           autoCapitalize="none"
+          autoCorrect={false}
+          editable={!isLoading}
+          onSubmitEditing={() => {
+            void handleLogin();
+          }}
         />
 
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={handleLogin}
-          disabled={loading}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => {
+            void handleLogin();
+          }}
+          disabled={isLoading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
+          {isLoading ? (
+            <ActivityIndicator
+              color="#fff"
+            />
           ) : (
-            <Text style={styles.buttonText}>Iniciar Sesión</Text>
+            <Text
+              style={
+                styles.buttonText
+              }
+            >
+              Iniciar Sesión
+            </Text>
           )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 };
-
