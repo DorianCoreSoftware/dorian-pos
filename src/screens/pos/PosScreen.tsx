@@ -236,10 +236,10 @@ export function POSScreen({
         (item, index) =>
           index === existingItemIndex
             ? {
-                ...item,
-                quantity:
-                  item.quantity + 1,
-              }
+              ...item,
+              quantity:
+                item.quantity + 1,
+            }
             : item,
       );
     });
@@ -256,11 +256,11 @@ export function POSScreen({
         .map((item) =>
           item.id === itemId
             ? {
-                ...item,
-                quantity:
-                  item.quantity +
-                  quantityChange,
-              }
+              ...item,
+              quantity:
+                item.quantity +
+                quantityChange,
+            }
             : item,
         )
         .filter(
@@ -366,7 +366,7 @@ export function POSScreen({
         />
 
         <MenuList
-          productos={filteredProducts}
+          products={filteredProducts}
           onProductPress={
             handleProductPress
           }
