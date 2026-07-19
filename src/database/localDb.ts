@@ -59,10 +59,10 @@ export const initLocalDatabase = async () => {
 
     CREATE TABLE IF NOT EXISTS sale_item_modifiers (
       id TEXT PRIMARY KEY,
-      sale_item_id TEXT NOT NULL,
+      order_item_id TEXT NOT NULL,
       modifier_id TEXT NOT NULL,
       extra_price_applied REAL NOT NULL,
-      FOREIGN KEY (sale_item_id) REFERENCES sale_items (id) ON DELETE CASCADE,
+      FOREIGN KEY (_item_id) REFERENCES sale_items (id) ON DELETE CASCADE,
       FOREIGN KEY (modifier_id) REFERENCES modifiers (id)
     );
 
