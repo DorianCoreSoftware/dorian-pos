@@ -8,6 +8,7 @@ export type ProductModifierMode =
   | 'burger'
   | 'wings'
   | 'boneless'
+  | 'combo'
   | 'none';
 
 export interface GroupedModifiers {
@@ -41,34 +42,37 @@ export function getProductModifierMode(
     return 'none';
   }
 
-  const normalizedProductName =
+  const normalizedName =
     normalizeText(product.name);
 
-  const normalizedCategoryName =
-    normalizeText(categoryName ?? '');
-
-  const searchableText = [
-    normalizedProductName,
-    normalizedCategoryName,
-  ].join(' ');
+  const normalizedCategory =
+    normalizeText(categoryName);
 
   if (
-    searchableText.includes('boneless') ||
-    searchableText.includes('bonelesses')
+    normalizedName.includes('combo') ||
+    normalizedCategory.includes('combo')
+  ) {
+    return 'combo';
+  }
+
+  if (
+    normalizedName.includes('boneless')
   ) {
     return 'boneless';
   }
 
   if (
-    searchableText.includes('alita') ||
-    searchableText.includes('wings')
+    normalizedName.includes('alita') ||
+    normalizedName.includes('wing')
   ) {
     return 'wings';
   }
 
   if (
-    searchableText.includes('hamburguesa') ||
-    searchableText.includes('burger')
+    normalizedName.includes(
+      'hamburguesa',
+    ) ||
+    normalizedName.includes('burger')
   ) {
     return 'burger';
   }
@@ -80,14 +84,18 @@ export function isKongBurger(
   product: Product | null,
 ): boolean {
   return normalizeText(
-    product?.name ?? '',
+    product?.name,
   ).includes('kong');
 }
 
-function normalizeText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase();
+function normalizeText(
+  value?: string | null,
+): string {
+  return (
+    value
+      ?.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase() ?? ''
+  );
 }

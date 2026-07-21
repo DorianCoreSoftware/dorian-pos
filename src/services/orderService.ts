@@ -1,11 +1,13 @@
 import {
+    deleteOrderItemsByOrderId,
     fetchPendingOrders,
     insertOrder,
     insertOrderItem,
+    insertOrderItemComponent,
+    insertOrderItemComponentModifiers,
     insertOrderItemModifiers,
     updateOrderStatusById,
     updateOrderTotalById,
-    deleteOrderItemsByOrderId,
 } from '../repositories/OrderRepository';
 
 import {
@@ -24,6 +26,46 @@ export interface CreateOrderResult {
     orderId: string;
 }
 
+async function persistCartItem(
+    orderId: string,
+    item: CartItem,
+): Promise<void> {
+    const orderItem =
+        await insertOrderItem(
+            orderId,
+            item,
+        );
+
+    await insertOrderItemModifiers(
+        orderItem.id,
+        item.selectedModifiers ?? [],
+    );
+
+    const comboComponents =
+        item.comboComponents ?? [];
+
+    for (
+        let position = 0;
+        position < comboComponents.length;
+        position += 1
+    ) {
+        const component =
+            comboComponents[position];
+
+        const componentRecord =
+            await insertOrderItemComponent(
+                orderItem.id,
+                component,
+                position,
+            );
+
+        await insertOrderItemComponentModifiers(
+            componentRecord.id,
+            component.selectedModifiers ?? [],
+        );
+    }
+}
+
 /**
  * Crea una orden completa:
  *
@@ -40,14 +82,9 @@ export async function createKitchenOrder(
     const order = await insertOrder(totalAmount);
 
     for (const item of cart) {
-        const orderItem = await insertOrderItem(
+        await persistCartItem(
             order.id,
             item,
-        );
-
-        await insertOrderItemModifiers(
-            orderItem.id,
-            item.selectedModifiers,
         );
     }
 
@@ -148,46 +185,128 @@ export async function updateOrderStatus(
 }
 
 function validateOrder(
-    cart: CartItem[],
-    totalAmount: number,
+  cart: CartItem[],
+  totalAmount: number,
 ): void {
-    if (!Array.isArray(cart) || cart.length === 0) {
-        throw new Error(
-            'No se puede crear una orden vacía.',
-        );
+  if (
+    !Array.isArray(cart) ||
+    cart.length === 0
+  ) {
+    throw new Error(
+      'No se puede crear una orden vacía.',
+    );
+  }
+
+  if (
+    !Number.isFinite(totalAmount) ||
+    totalAmount < 0
+  ) {
+    throw new Error(
+      'El total de la orden no es válido.',
+    );
+  }
+
+  cart.forEach((item, index) => {
+    if (!item.product?.id) {
+      throw new Error(
+        `El producto de la posición ${
+          index + 1
+        } no es válido.`,
+      );
     }
 
     if (
-        !Number.isFinite(totalAmount) ||
-        totalAmount < 0
+      !Number.isInteger(
+        item.quantity,
+      ) ||
+      item.quantity <= 0
     ) {
-        throw new Error(
-            'El total de la orden no es válido.',
-        );
+      throw new Error(
+        `La cantidad de "${item.product.name}" no es válida.`,
+      );
     }
 
-    cart.forEach((item, index) => {
-        if (!item.product?.id) {
-            throw new Error(
-                `El producto de la posición ${index + 1} no es válido.`,
-            );
+    if (
+      !Array.isArray(
+        item.selectedModifiers,
+      )
+    ) {
+      throw new Error(
+        `Los modificadores de "${item.product.name}" no son válidos.`,
+      );
+    }
+
+    const comboComponents =
+      item.comboComponents ?? [];
+
+    if (
+      !Array.isArray(
+        comboComponents,
+      )
+    ) {
+      throw new Error(
+        `Los componentes de "${item.product.name}" no son válidos.`,
+      );
+    }
+
+    comboComponents.forEach(
+      (
+        component,
+        componentIndex,
+      ) => {
+        if (
+          !component.slotId?.trim()
+        ) {
+          throw new Error(
+            `El componente ${
+              componentIndex + 1
+            } de "${item.product.name}" no tiene un identificador válido.`,
+          );
         }
 
         if (
-            !Number.isInteger(item.quantity) ||
-            item.quantity <= 0
+          !component.product?.id
         ) {
-            throw new Error(
-                `La cantidad de "${item.product.name}" no es válida.`,
-            );
+          throw new Error(
+            `El componente ${
+              componentIndex + 1
+            } de "${item.product.name}" no tiene un producto válido.`,
+          );
         }
 
-        if (!Array.isArray(item.selectedModifiers)) {
-            throw new Error(
-                `Los modificadores de "${item.product.name}" no son válidos.`,
-            );
+        if (
+          !component.label?.trim()
+        ) {
+          throw new Error(
+            `El componente ${
+              componentIndex + 1
+            } de "${item.product.name}" no tiene una etiqueta válida.`,
+          );
         }
-    });
+
+        if (
+          !Number.isInteger(
+            component.quantity,
+          ) ||
+          component.quantity <= 0
+        ) {
+          throw new Error(
+            `La cantidad del componente "${component.label}" no es válida.`,
+          );
+        }
+
+        if (
+          !Array.isArray(
+            component.selectedModifiers,
+          )
+        ) {
+          throw new Error(
+            `Los modificadores de "${component.label}" no son válidos.`,
+          );
+        }
+      },
+    );
+  });
 }
 
 function validateOrderId(
@@ -205,28 +324,16 @@ export async function updateKitchenOrder(
   cart: Cart,
   totalAmount: number,
 ): Promise<void> {
-  if (!orderId.trim()) {
-    throw new Error(
-      'No se proporcionó la orden que se desea actualizar.',
-    );
-  }
+  validateOrderId(orderId);
 
-  if (cart.length === 0) {
-    throw new Error(
-      'No puedes guardar una orden sin productos.',
-    );
-  }
+  validateOrder(
+    cart,
+    totalAmount,
+  );
 
-  if (
-    !Number.isFinite(totalAmount) ||
-    totalAmount < 0
-  ) {
-    throw new Error(
-      'El total de la orden no es válido.',
-    );
-  }
-
-  await deleteOrderItemsByOrderId(orderId);
+  await deleteOrderItemsByOrderId(
+    orderId,
+  );
 
   await updateOrderTotalById(
     orderId,
@@ -234,22 +341,9 @@ export async function updateKitchenOrder(
   );
 
   for (const cartItem of cart) {
-    const orderItem =
-      await insertOrderItem(
-        orderId,
-        cartItem,
-      );
-
-    const selectedModifiers =
-      cartItem.selectedModifiers ?? [];
-
-    if (selectedModifiers.length === 0) {
-      continue;
-    }
-
-    await insertOrderItemModifiers(
-      orderItem.id,
-      selectedModifiers,
+    await persistCartItem(
+      orderId,
+      cartItem,
     );
   }
 }

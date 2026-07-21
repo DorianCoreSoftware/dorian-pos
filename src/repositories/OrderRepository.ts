@@ -1,6 +1,7 @@
 import { supabase } from '../services/supabase';
 import {
   CartItem,
+  ComboComponentSelection,
   OrderStatus,
 } from '../types';
 
@@ -24,6 +25,19 @@ export interface OrderItemRecord {
   quantity: number;
   price_at_purchase: string | number;
   notes: string | null;
+}
+
+export interface OrderItemComponentRecord {
+  id: string;
+  order_item_id: string;
+  product_id: string;
+  component_type:
+  ComboComponentSelection['type'];
+  label: string;
+  quantity: number;
+  notes: string | null;
+  position: number;
+  created_at: string;
 }
 
 /**
@@ -152,6 +166,72 @@ export async function insertOrderItemModifiers(
   if (error) {
     throw new Error(
       `No se pudieron guardar los modificadores: ${error.message}`,
+    );
+  }
+}
+
+export async function insertOrderItemComponent(
+  orderItemId: string,
+  component: ComboComponentSelection,
+  position: number,
+): Promise<OrderItemComponentRecord> {
+  const { data, error } = await supabase
+    .from('order_item_components')
+    .insert({
+      order_item_id: orderItemId,
+      product_id: component.product.id,
+      component_type: component.type,
+      label: component.label,
+      quantity: component.quantity,
+      notes:
+        component.notes.trim() || null,
+      position,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(
+      `No se pudo guardar el componente "${component.label}": ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      `Supabase no devolvió el componente "${component.label}".`,
+    );
+  }
+
+  return data as OrderItemComponentRecord;
+}
+
+export async function insertOrderItemComponentModifiers(
+  orderItemComponentId: string,
+  modifiers: ComboComponentSelection[
+    'selectedModifiers'
+  ],
+): Promise<void> {
+  if (modifiers.length === 0) {
+    return;
+  }
+
+  const payload = modifiers.map(
+    (modifier) => ({
+      order_item_component_id:
+        orderItemComponentId,
+      modifier_id: modifier.id,
+    }),
+  );
+
+  const { error } = await supabase
+    .from(
+      'order_item_component_modifiers',
+    )
+    .insert(payload);
+
+  if (error) {
+    throw new Error(
+      `No se pudieron guardar los modificadores del componente: ${error.message}`,
     );
   }
 }

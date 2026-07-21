@@ -1,5 +1,8 @@
 import { Product } from './product';
 import { SelectedModifier } from './modifier';
+import {
+  ComboComponentSelection,
+} from './combo';
 
 export interface CartItem {
   id: string;
@@ -7,4 +10,6 @@ export interface CartItem {
   quantity: number;
   notes: string;
   selectedModifiers: SelectedModifier[];
+
+  comboComponents?: ComboComponentSelection[];
 }

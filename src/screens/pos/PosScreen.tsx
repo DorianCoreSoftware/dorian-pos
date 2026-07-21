@@ -12,7 +12,9 @@ import {
 import { CategoryTabs } from '../../components/category-tabs/CategoryTabs';
 import { MenuList } from '../../components/menu-list/MenuList';
 import { Cart as CartComponent } from '../../components/cart/Cart';
-import { ModifierModal } from '../../components/modifier-modal/ModifierModal';
+import {
+  ProductConfiguratorModal,
+} from '../../components/ProductConfigurator/ProductConfiguratorModal';
 
 import { useModifiers } from '../../hooks/useModifiers';
 
@@ -159,7 +161,7 @@ export function POSScreen({
       ),
     [
       selectedProduct,
-      selectedProductCategory,
+      selectedProductCategory?.name,
     ],
   );
 
@@ -392,7 +394,7 @@ export function POSScreen({
         }
       />
 
-      <ModifierModal
+      <ProductConfiguratorModal
         visible={
           isModifierModalVisible
         }

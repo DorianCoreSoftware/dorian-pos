@@ -22,6 +22,7 @@ import {
 import { ProductModifierMode } from '../../services/modifierService';
 
 import { styles } from './ModifierModal.styles';
+import { ProductConfiguratorModalProps } from '../../types/productConfiguratiorModalProps';
 
 interface ModifierModalProps {
   visible: boolean;
@@ -45,8 +46,8 @@ interface ModifierModalProps {
   ) => void;
 }
 
-export const ModifierModal: React.FC<
-  ModifierModalProps
+export const ProductConfiguratorModal: React.FC<
+  ProductConfiguratorModalProps
 > = ({
   visible,
   product,
