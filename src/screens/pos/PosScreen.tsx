@@ -175,6 +175,19 @@ export function POSScreen({
   const handleProductPress = (
     product: Product,
   ): void => {
+    const category = categories.find(
+      item =>
+        String(item.id) ===
+        String(product.category_id),
+    );
+
+    console.log('Producto seleccionado:', {
+      id: product.id,
+      name: product.name,
+      categoryName: category?.name,
+      categoryId: product.category_id,
+    });
+
     setSelectedProduct(product);
     setProductNotes('');
     setIsModifierModalVisible(true);
@@ -399,6 +412,8 @@ export function POSScreen({
           isModifierModalVisible
         }
         product={selectedProduct}
+        products={products}
+        categories={categories}
         notes={productNotes}
         mode={modifierMode}
         isKongBurger={

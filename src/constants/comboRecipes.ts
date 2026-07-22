@@ -226,24 +226,24 @@ export const COMBO_RECIPES: ComboRecipe[] = [
    */
 
   {
-    categoryName: 'Combos Hamburguesas',
-    productName: 'Combo sencillo',
-    slots: [
-      fixedBurger(
-        'burger-1',
-        'Hamburguesa sencilla',
-        'Hamburguesa sencilla',
-      ),
-      side(
-        'side-1',
-        'Complemento',
-      ),
-      drink(
-        'drink-1',
-        'Refresco 355 ml',
-      ),
-    ],
-  },
+  categoryName: 'Combos',
+  productName: 'Combo Hamburguesa sencilla',
+  slots: [
+    fixedBurger(
+      'burger-1',
+      'Hamburguesa sencilla',
+      'Hamburguesa sencilla',
+    ),
+    side(
+      'side-1',
+      'Complemento',
+    ),
+    drink(
+      'drink-1',
+      'Refresco 355 ml',
+    ),
+  ],
+},
 
   {
     categoryName: 'Combos Hamburguesas',

@@ -9,6 +9,43 @@ import {
   Product,
 } from '../types';
 
+import { supabase } from './supabase';
+
+import {
+  SupabaseComboRepository,
+} from '../repositories/SupabaseComboRepository';
+
+import {
+  ComboRecipe as DatabaseComboRecipe,
+} from '../domain/entities/ComboRecipe';
+
+const comboRepository =
+  new SupabaseComboRepository(supabase);
+
+export async function getComboRecipeByProductId(
+  comboProductId: string,
+): Promise<DatabaseComboRecipe | null> {
+  if (!comboProductId.trim()) {
+    throw new Error(
+      'El identificador del combo es obligatorio.',
+    );
+  }
+
+  try {
+    return await comboRepository
+      .getRecipeByComboProductId(
+        comboProductId,
+      );
+  } catch (error) {
+    console.error(
+      'Error al obtener la receta del combo:',
+      error,
+    );
+
+    throw error;
+  }
+}
+
 export interface ResolvedComboSlot {
   slot: ComboSlot;
 
@@ -152,9 +189,9 @@ function resolveFixedProduct(
         categories,
       ) &&
       normalizeText(item.name) ===
-        normalizeText(
-          slot.fixedProductName!,
-        ),
+      normalizeText(
+        slot.fixedProductName!,
+      ),
   );
 
   if (!product) {

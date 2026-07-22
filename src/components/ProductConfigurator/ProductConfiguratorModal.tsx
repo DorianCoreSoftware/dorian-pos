@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import {
+    Category,
     Product,
     SelectedModifier,
 } from '../../types';
@@ -30,6 +31,10 @@ import {
 interface ProductConfiguratorModalProps {
     visible: boolean;
     product: Product | null;
+
+    products: Product[];
+    categories: Category[];
+
     notes: string;
 
     mode: ProductModifierMode;
@@ -54,6 +59,8 @@ export const ProductConfiguratorModal: React.FC<
 > = ({
     visible,
     product,
+    products,
+    categories,
     notes,
     mode,
     isKongBurger,
@@ -323,8 +330,8 @@ export const ProductConfiguratorModal: React.FC<
 
                             {isCombo && (
                                 <ComboConfigurator
-                                    product={product}
-                                />
+  product={product}
+/>
                             )}
 
                             {!isLoading &&
@@ -528,50 +535,50 @@ export const ProductConfiguratorModal: React.FC<
 
                         {!isCombo && (
                             <>
-                        <View
-                            style={
-                                styles.modalActions
-                            }
-                        >
-                            <TouchableOpacity
-                                style={
-                                    styles.modalCancelBtn
-                                }
-                                onPress={onClose}
-                                activeOpacity={0.7}
-                            >
-                                <Text
+                                <View
                                     style={
-                                        styles.modalCancelText
+                                        styles.modalActions
                                     }
                                 >
-                                    Cancelar
-                                </Text>
-                            </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={
+                                            styles.modalCancelBtn
+                                        }
+                                        onPress={onClose}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            style={
+                                                styles.modalCancelText
+                                            }
+                                        >
+                                            Cancelar
+                                        </Text>
+                                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[
-                                    styles.modalAddBtn,
-                                    !isSelectionValid &&
-                                    styles.modalAddBtnDisabled,
-                                ]}
-                                onPress={handleConfirm}
-                                disabled={
-                                    !isSelectionValid
-                                }
-                                activeOpacity={0.7}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalAddText,
-                                        !isSelectionValid &&
-                                        styles.modalAddTextDisabled,
-                                    ]}
-                                >
-                                    Agregar al ticket
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.modalAddBtn,
+                                            !isSelectionValid &&
+                                            styles.modalAddBtnDisabled,
+                                        ]}
+                                        onPress={handleConfirm}
+                                        disabled={
+                                            !isSelectionValid
+                                        }
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.modalAddText,
+                                                !isSelectionValid &&
+                                                styles.modalAddTextDisabled,
+                                            ]}
+                                        >
+                                            Agregar al ticket
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
                             </>
                         )}
 
