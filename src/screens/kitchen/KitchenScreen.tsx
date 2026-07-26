@@ -17,6 +17,7 @@ import {
   CartItem,
   KitchenOrder,
   KitchenOrderItem,
+  KitchenOrderItemComponent,
   Product,
 } from '../../types';
 
@@ -144,32 +145,90 @@ export function KitchenScreen({
       ).trim();
 
       const modifiers = line.modifiers ?? [];
+      const components = line.components ?? [];
 
       const modifierIdentifier = modifiers
-        .map((modifier) => modifier.name)
+        .map((modifier) => modifier.id)
         .sort()
         .join(',');
+
+      const componentIdentifier = components
+        .map((component) => {
+          const componentModifiers =
+            component.modifiers ?? [];
+
+          return [
+            component.component_type,
+            component.product_id,
+            (component.notes ?? '').trim(),
+            componentModifiers
+              .map((modifier) => modifier.id)
+              .sort()
+              .join(','),
+          ].join(':');
+        })
+        .sort()
+        .join('|');
 
       const uniqueItemId = [
         line.product_id,
         cleanNotes,
         modifierIdentifier,
+        componentIdentifier,
       ].join('-');
 
       const existingItem =
         groupedItems[uniqueItemId];
 
       if (existingItem) {
-        existingItem.quantity += line.quantity;
+        existingItem.quantity +=
+          line.quantity;
+
         return;
       }
 
       groupedItems[uniqueItemId] = {
         id: uniqueItemId,
-        product: createProductFromOrderItem(line),
+        product:
+          createProductFromOrderItem(line),
         quantity: line.quantity,
         notes: cleanNotes,
         selectedModifiers: modifiers,
+
+        comboComponents:
+          components.length > 0
+            ? components.map(
+              (component) => ({
+                slotId:
+                  component.slot_id ??
+                  component.id,
+
+                type:
+                  component.component_type as
+                  | 'burger'
+                  | 'hotdog'
+                  | 'side'
+                  | 'drink',
+
+                label: component.label,
+
+                product:
+                  createProductFromComponent(
+                    component,
+                  ),
+
+                quantity:
+                  component.quantity,
+
+                notes: (
+                  component.notes ?? ''
+                ).trim(),
+
+                selectedModifiers:
+                  component.modifiers ?? [],
+              }),
+            )
+            : undefined,
       };
     });
 
@@ -193,50 +252,145 @@ export function KitchenScreen({
     setEditingOrderId(null);
   };
 
-  const renderOrderItem = (
-    line: KitchenOrderItem,
-  ) => (
-    <View
-      key={line.id}
-      style={styles.itemRow}
-    >
-      <Text style={styles.itemText}>
-        {line.quantity}x{' '}
-        {line.products?.name ?? 'Producto'}
-      </Text>
+  const renderComboComponent = (
+    component: KitchenOrderItemComponent,
+  ) => {
+    const modifiers =
+      component.modifiers ?? [];
 
-      {line.modifiers.length > 0 && (
-        <View
+    return (
+      <View
+        key={component.id}
+        style={{
+          marginTop: 5,
+          paddingLeft: 14,
+        }}
+      >
+        <Text
           style={{
-            paddingLeft: 12,
-            marginVertical: 4,
+            color: '#FFFFFF',
+            fontSize: 13,
+            fontWeight: '600',
           }}
         >
-          {line.modifiers.map((modifier) => (
+          ↳ {component.quantity}x{' '}
+          {component.products?.name ??
+            component.label}
+        </Text>
+
+        {modifiers.map((modifier) => (
+          <Text
+            key={`${component.id}-${modifier.id}`}
+            style={{
+              color: '#FFBF00',
+              fontSize: 12,
+              fontWeight: '600',
+              paddingLeft: 12,
+              marginTop: 2,
+            }}
+          >
+            • {modifier.name}
+            {modifier.group_name
+              ? ` (${modifier.group_name})`
+              : ''}
+          </Text>
+        ))}
+
+        {component.notes ? (
+          <Text
+            style={{
+              ...styles.notesText,
+              paddingLeft: 12,
+            }}
+          >
+            ⚠️ {component.notes}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
+
+  const renderOrderItem = (
+    line: KitchenOrderItem,
+  ) => {
+    const modifiers = line.modifiers ?? [];
+    const components = line.components ?? [];
+
+      console.log('🍔 Kitchen item recibido:', {
+    id: line.id,
+    product: line.products?.name,
+    components: line.components,
+    fullLine: line,
+  });
+
+    return (
+      <View
+        key={line.id}
+        style={styles.itemRow}
+      >
+        <Text style={styles.itemText}>
+          {line.quantity}x{' '}
+          {line.products?.name ?? 'Producto'}
+        </Text>
+
+        {modifiers.length > 0 && (
+          <View
+            style={{
+              paddingLeft: 12,
+              marginVertical: 4,
+            }}
+          >
+            {modifiers.map((modifier) => (
+              <Text
+                key={modifier.id}
+                style={{
+                  color: '#FFBF00',
+                  fontSize: 13,
+                  fontWeight: '600',
+                }}
+              >
+                • {modifier.name}
+                {modifier.group_name
+                  ? ` (${modifier.group_name})`
+                  : ''}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        {components.length > 0 && (
+          <View
+            style={{
+              marginTop: 5,
+              marginBottom: 4,
+            }}
+          >
             <Text
-              key={modifier.id}
               style={{
-                color: '#FFBF00',
-                fontSize: 13,
-                fontWeight: '600',
+                color: '#AFAFAF',
+                fontSize: 12,
+                fontWeight: '700',
+                paddingLeft: 12,
+                textTransform: 'uppercase',
               }}
             >
-              • {modifier.name}
-              {modifier.group_name
-                ? ` (${modifier.group_name})`
-                : ''}
+              Detalle del combo
             </Text>
-          ))}
-        </View>
-      )}
 
-      {line.notes ? (
-        <Text style={styles.notesText}>
-          ⚠️ {line.notes}
-        </Text>
-      ) : null}
-    </View>
-  );
+            {components.map(
+              renderComboComponent,
+            )}
+          </View>
+        )}
+
+        {line.notes ? (
+          <Text style={styles.notesText}>
+            ⚠️ {line.notes}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
 
   const renderOrder = ({
     item,
@@ -367,7 +521,7 @@ function createProductFromOrderItem(
       ...line.products,
       price: Number(
         line.price_at_purchase ??
-          line.products.price,
+        line.products.price,
       ),
     };
   }
@@ -378,6 +532,31 @@ function createProductFromOrderItem(
     price: Number(
       line.price_at_purchase,
     ),
+    category_id: '',
+    description: null,
+    is_active: true,
+    created_at: '',
+    image_url: null,
+    is_available: true,
+  };
+}
+
+function createProductFromComponent(
+  component: KitchenOrderItemComponent,
+): Product {
+  if (component.products) {
+    return {
+      ...component.products,
+      price: Number(
+        component.products.price,
+      ),
+    };
+  }
+
+  return {
+    id: component.product_id,
+    name: component.label || 'Componente',
+    price: 0,
     category_id: '',
     description: null,
     is_active: true,

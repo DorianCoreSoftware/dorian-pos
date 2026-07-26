@@ -50,11 +50,12 @@ export interface PendingOrderModifierRelation {
     name: string;
     extra_price: string | number;
     is_available: boolean;
-    group_name: 'Carne' | 'Salsa' | null;
+    group_name: 'Carne' | 'Salsa' | 'Sabor' | null;
   } | null;
 }
 
-export interface PendingOrderItemRecord extends OrderItemRecord {
+export interface PendingOrderItemComponentRecord
+  extends OrderItemComponentRecord {
   products: {
     id: string;
     category_id: string;
@@ -67,7 +68,29 @@ export interface PendingOrderItemRecord extends OrderItemRecord {
     created_at: string;
   } | null;
 
-  order_item_modifiers: PendingOrderModifierRelation[];
+  order_item_component_modifiers:
+    PendingOrderModifierRelation[];
+}
+
+export interface PendingOrderItemRecord
+  extends OrderItemRecord {
+  products: {
+    id: string;
+    category_id: string;
+    name: string;
+    description: string | null;
+    price: string | number;
+    image_url: string | null;
+    is_available: boolean;
+    is_active: boolean;
+    created_at: string;
+  } | null;
+
+  order_item_modifiers:
+    PendingOrderModifierRelation[];
+
+  order_item_components:
+    PendingOrderItemComponentRecord[];
 }
 
 export interface PendingOrderRecord extends OrderRecord {
@@ -252,8 +275,18 @@ export async function fetchPendingOrders(): Promise<
       order_items(
         *,
         products(*),
+
         order_item_modifiers(
           modifiers(*)
+        ),
+
+        order_item_components(
+          *,
+          products(*),
+
+          order_item_component_modifiers(
+            modifiers(*)
+          )
         )
       )
     `)
@@ -267,6 +300,11 @@ export async function fetchPendingOrders(): Promise<
       `No se pudieron obtener las órdenes pendientes: ${error.message}`,
     );
   }
+
+  console.log(
+    '🍔 Órdenes pendientes crudas:',
+    JSON.stringify(data, null, 2),
+  );
 
   return (data ?? []) as PendingOrderRecord[];
 }

@@ -12,6 +12,7 @@ import {
 import { CategoryTabs } from '../../components/category-tabs/CategoryTabs';
 import { MenuList } from '../../components/menu-list/MenuList';
 import { Cart as CartComponent } from '../../components/cart/Cart';
+
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
@@ -31,8 +32,10 @@ import {
 
 import {
   Cart,
+  CartItem,
   Category,
-  Product
+  ComboComponentSelection,
+  Product,
 } from '../../types';
 
 import { styles } from '../../../App.styles';
@@ -176,17 +179,21 @@ export function POSScreen({
     product: Product,
   ): void => {
     const category = categories.find(
-      item =>
+      (item) =>
         String(item.id) ===
         String(product.category_id),
     );
 
-    console.log('Producto seleccionado:', {
-      id: product.id,
-      name: product.name,
-      categoryName: category?.name,
-      categoryId: product.category_id,
-    });
+    console.log(
+      'Producto seleccionado:',
+      {
+        id: product.id,
+        name: product.name,
+        categoryName: category?.name,
+        categoryId:
+          product.category_id,
+      },
+    );
 
     setSelectedProduct(product);
     setProductNotes('');
@@ -209,24 +216,9 @@ export function POSScreen({
     }
 
     const {
-      selectedModifiers,
-      comboSelection,
+      selectedModifiers = [],
+      comboComponents = [],
     } = configuration;
-
-    if (comboSelection) {
-      console.log(
-        'Configuración de combo recibida:',
-        comboSelection,
-      );
-
-      /*
-       * La transformación a
-       * ComboComponentSelection[]
-       * se implementará en el
-       * siguiente commit.
-       */
-      return;
-    }
 
     const productToAdd =
       selectedProduct;
@@ -234,51 +226,142 @@ export function POSScreen({
     const cleanNotes =
       productNotes.trim();
 
+    /*
+     * Copia independiente de la configuración.
+     *
+     * Evita conservar referencias internas del modal que
+     * puedan modificarse o limpiarse cuando el modal cierre.
+     */
+    const normalizedComponents =
+      cloneComboComponents(
+        comboComponents,
+      );
+
     const modifierIdentifier =
-      selectedModifiers
-        .map(
-          modifier => modifier.id,
-        )
-        .sort()
-        .join(',');
+      createModifierIdentifier(
+        selectedModifiers,
+      );
+
+    const comboIdentifier =
+      createComboIdentifier(
+        normalizedComponents,
+      );
 
     const cartItemId = [
       productToAdd.id,
       cleanNotes,
       modifierIdentifier,
+      comboIdentifier,
     ].join('-');
 
-    setCart(currentCart => {
+    const itemToAdd: CartItem = {
+      id: cartItemId,
+      product: {
+        ...productToAdd,
+      },
+      quantity: 1,
+      notes: cleanNotes,
+
+      selectedModifiers:
+        selectedModifiers.map(
+          (modifier) => ({
+            ...modifier,
+          }),
+        ),
+
+      comboComponents:
+        normalizedComponents.length > 0
+          ? normalizedComponents
+          : undefined,
+    };
+
+    console.log(
+      '🧩 Item preparado para agregar:',
+      JSON.stringify(
+        {
+          id: itemToAdd.id,
+          product:
+            itemToAdd.product.name,
+          quantity:
+            itemToAdd.quantity,
+          comboComponents:
+            itemToAdd.comboComponents,
+        },
+        null,
+        2,
+      ),
+    );
+
+    setCart((currentCart) => {
       const existingItemIndex =
         currentCart.findIndex(
-          item =>
+          (item) =>
             item.id === cartItemId,
         );
 
       if (existingItemIndex === -1) {
         return [
           ...currentCart,
-          {
-            id: cartItemId,
-            product: productToAdd,
-            quantity: 1,
-            notes: cleanNotes,
-            selectedModifiers: [
-              ...selectedModifiers,
-            ],
-          },
+          itemToAdd,
         ];
       }
 
       return currentCart.map(
-        (item, index) =>
-          index === existingItemIndex
-            ? {
-              ...item,
-              quantity:
-                item.quantity + 1,
-            }
-            : item,
+        (item, index) => {
+          if (
+            index !== existingItemIndex
+          ) {
+            return item;
+          }
+
+          /*
+           * Mantiene la configuración que ya tenía el
+           * elemento agrupado.
+           *
+           * Si por alguna razón estaba vacía, recupera
+           * la configuración del nuevo elemento.
+           */
+          const preservedComponents =
+            item.comboComponents &&
+            item.comboComponents.length > 0
+              ? cloneComboComponents(
+                  item.comboComponents,
+                )
+              : cloneComboComponents(
+                  itemToAdd
+                    .comboComponents ?? [],
+                );
+
+          return {
+            ...item,
+
+            quantity:
+              item.quantity +
+              itemToAdd.quantity,
+
+            selectedModifiers:
+              item.selectedModifiers
+                .length > 0
+                ? item.selectedModifiers.map(
+                    (modifier) => ({
+                      ...modifier,
+                    }),
+                  )
+                : itemToAdd
+                    .selectedModifiers
+                    .map(
+                      (modifier) => ({
+                        ...modifier,
+                      }),
+                    ),
+
+            comboComponents:
+              preservedComponents.length >
+              0
+                ? preservedComponents
+                : undefined,
+          };
+        },
       );
     });
 
@@ -291,16 +374,22 @@ export function POSScreen({
   ): void => {
     setCart((currentCart) =>
       currentCart
-        .map((item) =>
-          item.id === itemId
-            ? {
-              ...item,
-              quantity:
-                item.quantity +
-                quantityChange,
-            }
-            : item,
-        )
+        .map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+
+          /*
+           * El spread mantiene comboComponents,
+           * selectedModifiers, notas y producto.
+           */
+          return {
+            ...item,
+            quantity:
+              item.quantity +
+              quantityChange,
+          };
+        })
         .filter(
           (item) => item.quantity > 0,
         ),
@@ -331,6 +420,23 @@ export function POSScreen({
     ) {
       return;
     }
+
+    console.log(
+      '🛒 Carrito antes de guardar:',
+      JSON.stringify(
+        cart.map((item) => ({
+          id: item.id,
+          product:
+            item.product.name,
+          quantity:
+            item.quantity,
+          comboComponents:
+            item.comboComponents,
+        })),
+        null,
+        2,
+      ),
+    );
 
     try {
       setIsProcessingOrder(true);
@@ -460,4 +566,88 @@ export function POSScreen({
       />
     </View>
   );
+}
+
+/**
+ * Crea una copia independiente de los componentes
+ * seleccionados para un combo.
+ *
+ * Esto evita que el estado del modal y el carrito
+ * compartan las mismas referencias.
+ */
+function cloneComboComponents(
+  components:
+    | ComboComponentSelection[]
+    | undefined,
+): ComboComponentSelection[] {
+  return (components ?? []).map(
+    (component) => ({
+      ...component,
+
+      product: {
+        ...component.product,
+      },
+
+      selectedModifiers: (
+        component.selectedModifiers ??
+        []
+      ).map((modifier) => ({
+        ...modifier,
+      })),
+    }),
+  );
+}
+
+/**
+ * Genera una firma estable para los modificadores
+ * directos de un producto.
+ */
+function createModifierIdentifier(
+  modifiers:
+    ProductConfigurationResult[
+      'selectedModifiers'
+    ],
+): string {
+  return (modifiers ?? [])
+    .map((modifier) => modifier.id)
+    .sort()
+    .join(',');
+}
+
+/**
+ * Genera una firma estable para toda la selección
+ * del combo.
+ *
+ * Dos combos solamente se agrupan cuando contienen
+ * exactamente los mismos productos, modificadores,
+ * notas, cantidades y tipos.
+ */
+function createComboIdentifier(
+  components:
+    | ComboComponentSelection[]
+    | undefined,
+): string {
+  return (components ?? [])
+    .map((component) => {
+      const modifierIds = (
+        component.selectedModifiers ??
+        []
+      )
+        .map(
+          (modifier) => modifier.id,
+        )
+        .sort()
+        .join(',');
+
+      return [
+        component.slotId,
+        component.type,
+        component.product.id,
+        component.quantity,
+        component.notes.trim(),
+        modifierIds,
+      ].join(':');
+    })
+    .sort()
+    .join('|');
 }

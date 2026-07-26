@@ -243,6 +243,7 @@ private mapFlavors(
   return flavors.map(flavor => ({
     id: flavor.id,
     productId: flavor.product_id,
+    modifierId: flavor.modifier_id,
     name: flavor.name,
     isAvailable: flavor.is_available,
     position: flavor.position,
@@ -271,6 +272,7 @@ private mapFlavors(
       .select(`
         id,
         product_id,
+        modifier_id,
         name,
         is_available,
         position
@@ -692,6 +694,7 @@ private mapFlavors(
             flavors: flavors.map(flavor => ({
                 id: flavor.id,
                 productId: flavor.product_id,
+                modifierId: flavor.modifier_id,
                 name: flavor.name,
                 isAvailable: flavor.is_available,
                 position: flavor.position,
@@ -756,6 +759,7 @@ private mapFlavors(
 interface ProductFlavorRow {
     id: string;
     product_id: string;
+    modifier_id: string;
     name: string;
     is_available: boolean;
     position: number;

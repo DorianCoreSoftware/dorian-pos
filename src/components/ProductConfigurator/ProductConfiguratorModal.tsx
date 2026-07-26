@@ -16,6 +16,7 @@ import {
 
 import {
     Category,
+    ComboComponentSelection,
     Product,
     SelectedModifier,
 } from '../../types';
@@ -31,10 +32,8 @@ import {
 
 export interface ProductConfigurationResult {
     selectedModifiers: SelectedModifier[];
-
-    comboSelection:
-    | ComboConfiguratorSelection
-    | null;
+    comboComponents:
+    ComboComponentSelection[];
 }
 
 interface ProductConfiguratorModalProps {
@@ -264,13 +263,18 @@ export const ProductConfiguratorModal: React.FC<
             }
 
             if (isCombo) {
-                if (!comboSelection) {
+                if (
+                    !comboSelection ||
+                    !comboSelection.isValid
+                ) {
                     return;
                 }
 
                 onConfirm({
                     selectedModifiers: [],
-                    comboSelection,
+                    comboComponents: [
+                        ...comboSelection.components,
+                    ],
                 });
 
                 return;
@@ -278,7 +282,7 @@ export const ProductConfiguratorModal: React.FC<
 
             onConfirm({
                 selectedModifiers,
-                comboSelection: null,
+                comboComponents: [],
             });
         };
 
@@ -369,6 +373,7 @@ export const ProductConfiguratorModal: React.FC<
                             {isCombo && (
                                 <ComboConfigurator
                                     product={product}
+                                    meats={meats}
                                     onSelectionChange={
                                         setComboSelection
                                     }

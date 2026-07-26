@@ -61,6 +61,7 @@ export interface ComboRecipe {
 export interface ProductFlavor {
   id: string;
   productId: string;
+  modifierId: string;
   name: string;
   isAvailable: boolean;
   position: number;

@@ -1,4 +1,4 @@
-export type ModifierGroup = 'Carne' | 'Salsa' | null;
+export type ModifierGroup = 'Carne' | 'Salsa' | 'Sabor' | null;
 
 export interface Modifier {
   id: string;
