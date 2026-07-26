@@ -137,7 +137,7 @@ export const Cart: React.FC<CartProps> = ({
           disabled={cart.length === 0}
           onPress={() => onCheckout(totalAmount)}
         >
-          <Text style={styles.checkoutBtnText}>ENVIAR A COCINA 🍳</Text>
+          <Text style={styles.checkoutBtnText}>ENVIAR A COCINA</Text>
         </TouchableOpacity>
       </View>
     </View>

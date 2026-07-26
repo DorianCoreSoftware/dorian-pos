@@ -30,13 +30,13 @@ export function GlobalHeader({ activeTab, setActiveTab, editingOrderId, pendingO
       <View style={styles.tabContainer}>
         <TouchableOpacity style={[styles.tabButton, activeTab === 'pos' && styles.tabActiveButton]} onPress={() => setActiveTab('pos')}>
           <Text style={[styles.tabText, activeTab === 'pos' && styles.tabActiveText]}>
-            🛒 MENÚ {editingOrderId ? '⚠️ (Modificando)' : ''}
+            MENÚ {editingOrderId ? '⚠️ (Modificando)' : ''}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.tabButton, activeTab === 'kitchen' && styles.tabActiveButton]} onPress={() => setActiveTab('kitchen')}>
           <Text style={[styles.tabText, activeTab === 'kitchen' && styles.tabActiveText]}>
-            🍳 PEDIDOS ({pendingOrdersCount})
+            PEDIDOS ({pendingOrdersCount})
           </Text>
         </TouchableOpacity>
       </View>
