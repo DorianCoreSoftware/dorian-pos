@@ -26,6 +26,7 @@ import { styles } from '../modifier-modal/ModifierModal.styles';
 
 import {
     ComboConfigurator,
+    ComboConfiguratorSelection,
 } from './ComboConfigurator';
 
 interface ProductConfiguratorModalProps {
@@ -82,6 +83,13 @@ export const ProductConfiguratorModal: React.FC<
             setSelectedSauceId,
         ] = useState<string | null>(null);
 
+        const [
+            comboSelection,
+            setComboSelection,
+        ] = useState<
+            ComboConfiguratorSelection | null
+        >(null);
+
         const isBurger = mode === 'burger';
         const isWings = mode === 'wings';
         const isBoneless = mode === 'boneless';
@@ -132,7 +140,10 @@ export const ProductConfiguratorModal: React.FC<
         const isSelectionValid =
             useMemo(() => {
                 if (isCombo) {
-                    return false;
+                    return (
+                        comboSelection?.isValid ??
+                        false
+                    );
                 }
 
                 if (isLoading || error) {
@@ -156,6 +167,7 @@ export const ProductConfiguratorModal: React.FC<
                 return true;
             }, [
                 isCombo,
+                comboSelection,
                 isLoading,
                 error,
                 isBurger,
@@ -171,6 +183,7 @@ export const ProductConfiguratorModal: React.FC<
 
             setSelectedMeatIds([]);
             setSelectedSauceId(null);
+            setComboSelection(null);
         }, [
             visible,
             product?.id,
@@ -330,8 +343,11 @@ export const ProductConfiguratorModal: React.FC<
 
                             {isCombo && (
                                 <ComboConfigurator
-  product={product}
-/>
+                                    product={product}
+                                    onSelectionChange={
+                                        setComboSelection
+                                    }
+                                />
                             )}
 
                             {!isLoading &&
@@ -589,8 +605,32 @@ export const ProductConfiguratorModal: React.FC<
                                     onPress={onClose}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={styles.modalCancelText}>
-                                        Cerrar
+                                    <Text
+                                        style={styles.modalCancelText}
+                                    >
+                                        Cancelar
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.modalAddBtn,
+                                        !isSelectionValid &&
+                                        styles.modalAddBtnDisabled,
+                                    ]}
+                                    disabled={
+                                        !isSelectionValid
+                                    }
+                                    activeOpacity={0.7}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.modalAddText,
+                                            !isSelectionValid &&
+                                            styles.modalAddTextDisabled,
+                                        ]}
+                                    >
+                                        Agregar al ticket
                                     </Text>
                                 </TouchableOpacity>
                             </View>
