@@ -301,11 +301,6 @@ export async function fetchPendingOrders(): Promise<
     );
   }
 
-  console.log(
-    '🍔 Órdenes pendientes crudas:',
-    JSON.stringify(data, null, 2),
-  );
-
   return (data ?? []) as PendingOrderRecord[];
 }
 

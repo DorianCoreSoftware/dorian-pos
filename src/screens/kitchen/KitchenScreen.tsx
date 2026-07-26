@@ -316,13 +316,6 @@ export function KitchenScreen({
     const modifiers = line.modifiers ?? [];
     const components = line.components ?? [];
 
-      console.log('🍔 Kitchen item recibido:', {
-    id: line.id,
-    product: line.products?.name,
-    components: line.components,
-    fullLine: line,
-  });
-
     return (
       <View
         key={line.id}

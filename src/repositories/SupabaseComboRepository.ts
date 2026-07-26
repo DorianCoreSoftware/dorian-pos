@@ -59,217 +59,212 @@ export class SupabaseComboRepository implements ComboRepository {
     ) { }
 
     async getRecipeByComboProductId(
-  comboProductId: string,
-): Promise<ComboRecipe | null> {
-  const recipe =
-    await this.getRecipe(
-      comboProductId,
-    );
+        comboProductId: string,
+    ): Promise<ComboRecipe | null> {
+        const recipe =
+            await this.getRecipe(
+                comboProductId,
+            );
 
-  if (!recipe) {
-    return null;
-  }
+        if (!recipe) {
+            return null;
+        }
 
-  const componentRows =
-    await this.getComponents(
-      recipe.id,
-    );
+        const componentRows =
+            await this.getComponents(
+                recipe.id,
+            );
 
-  if (componentRows.length === 0) {
-    return {
-      id: recipe.id,
-      comboProductId:
-        recipe.combo_product_id,
-      enabled: recipe.enabled,
-      components: [],
-    };
-  }
+        if (componentRows.length === 0) {
+            return {
+                id: recipe.id,
+                comboProductId:
+                    recipe.combo_product_id,
+                enabled: recipe.enabled,
+                components: [],
+            };
+        }
 
-  const componentIds =
-    componentRows.map(
-      component => component.id,
-    );
+        const componentIds =
+            componentRows.map(
+                component => component.id,
+            );
 
-  const rules =
-    await this.getComponentRules(
-      componentIds,
-    );
+        const rules =
+            await this.getComponentRules(
+                componentIds,
+            );
 
-  const productIds =
-    this.getRequiredProductIds(
-      componentRows,
-      rules,
-    );
+        const productIds =
+            this.getRequiredProductIds(
+                componentRows,
+                rules,
+            );
 
-  const categoryIds =
-    this.getSelectableCategoryIds(
-      componentRows,
-    );
+        const categoryIds =
+            this.getSelectableCategoryIds(
+                componentRows,
+            );
 
-  const [
-    referencedProducts,
-    categoryProducts,
-  ] = await Promise.all([
-    this.getProductsByIds(
-      productIds,
-    ),
-    this.getProductsByCategoryIds(
-      categoryIds,
-    ),
-  ]);
+        const [
+            referencedProducts,
+            categoryProducts,
+        ] = await Promise.all([
+            this.getProductsByIds(
+                productIds,
+            ),
+            this.getProductsByCategoryIds(
+                categoryIds,
+            ),
+        ]);
 
-  const allProducts = [
-    ...referencedProducts,
-    ...categoryProducts,
-  ];
+        const allProducts = [
+            ...referencedProducts,
+            ...categoryProducts,
+        ];
 
-  const uniqueProductIds = Array.from(
-    new Set(
-      allProducts.map(
-        product => product.id,
-      ),
-    ),
-  );
+        const uniqueProductIds = Array.from(
+            new Set(
+                allProducts.map(
+                    product => product.id,
+                ),
+            ),
+        );
 
-  const flavorRows =
-    await this.getProductFlavors(
-      uniqueProductIds,
-    );
+        const flavorRows =
+            await this.getProductFlavors(
+                uniqueProductIds,
+            );
 
-  const flavorsByProductId = new Map<
-    string,
-    ProductFlavorRow[]
-  >();
+        const flavorsByProductId = new Map<
+            string,
+            ProductFlavorRow[]
+        >();
 
-  flavorRows.forEach(flavor => {
-    const currentFlavors =
-      flavorsByProductId.get(
-        flavor.product_id,
-      ) ?? [];
+        flavorRows.forEach(flavor => {
+            const currentFlavors =
+                flavorsByProductId.get(
+                    flavor.product_id,
+                ) ?? [];
 
-    currentFlavors.push(flavor);
+            currentFlavors.push(flavor);
 
-    flavorsByProductId.set(
-      flavor.product_id,
-      currentFlavors,
-    );
-  });
+            flavorsByProductId.set(
+                flavor.product_id,
+                currentFlavors,
+            );
+        });
 
-  const addFlavors = (
-    product: ComboProductOption,
-  ): ComboProductOption => ({
-    ...product,
-    flavors: this.mapFlavors(
-      flavorsByProductId.get(
-        product.id,
-      ) ?? [],
-    ),
-  });
+        const addFlavors = (
+            product: ComboProductOption,
+        ): ComboProductOption => ({
+            ...product,
+            flavors: this.mapFlavors(
+                flavorsByProductId.get(
+                    product.id,
+                ) ?? [],
+            ),
+        });
 
-  const referencedProductsWithFlavors =
-    referencedProducts.map(
-      addFlavors,
-    );
+        const referencedProductsWithFlavors =
+            referencedProducts.map(
+                addFlavors,
+            );
 
-  const categoryProductsWithFlavors =
-    categoryProducts.map(
-      addFlavors,
-    );
+        const categoryProductsWithFlavors =
+            categoryProducts.map(
+                addFlavors,
+            );
 
-  const productsById = new Map<
-    string,
-    ComboProductOption
-  >();
+        const productsById = new Map<
+            string,
+            ComboProductOption
+        >();
 
-  referencedProductsWithFlavors.forEach(
-    product => {
-      productsById.set(
-        product.id,
-        product,
-      );
-    },
-  );
+        referencedProductsWithFlavors.forEach(
+            product => {
+                productsById.set(
+                    product.id,
+                    product,
+                );
+            },
+        );
 
-  categoryProductsWithFlavors.forEach(
-    product => {
-      productsById.set(
-        product.id,
-        product,
-      );
-    },
-  );
+        categoryProductsWithFlavors.forEach(
+            product => {
+                productsById.set(
+                    product.id,
+                    product,
+                );
+            },
+        );
 
-  const rulesByComponentId =
-    this.groupRulesByComponentId(
-      rules,
-    );
+        const rulesByComponentId =
+            this.groupRulesByComponentId(
+                rules,
+            );
 
-  const productsByCategoryId =
-    this.groupProductsByCategoryId(
-      categoryProductsWithFlavors,
-    );
+        const productsByCategoryId =
+            this.groupProductsByCategoryId(
+                categoryProductsWithFlavors,
+            );
 
-  const components =
-    componentRows.map(
-      component =>
-        this.mapComponent({
-          component,
-          productsById,
-          rules:
-            rulesByComponentId.get(
-              component.id,
-            ) ?? [],
-          categoryProducts:
-            component.product_category_id
-              ? productsByCategoryId.get(
-                  component.product_category_id,
-                ) ?? []
-              : [],
-        }),
-    );
+        const components =
+            componentRows.map(
+                component =>
+                    this.mapComponent({
+                        component,
+                        productsById,
+                        rules:
+                            rulesByComponentId.get(
+                                component.id,
+                            ) ?? [],
+                        categoryProducts:
+                            component.product_category_id
+                                ? productsByCategoryId.get(
+                                    component.product_category_id,
+                                ) ?? []
+                                : [],
+                    }),
+            );
 
-  return {
-    id: recipe.id,
-    comboProductId:
-      recipe.combo_product_id,
-    enabled: recipe.enabled,
-    components,
-  };
-}
+        return {
+            id: recipe.id,
+            comboProductId:
+                recipe.combo_product_id,
+            enabled: recipe.enabled,
+            components,
+        };
+    }
 
-private mapFlavors(
-  flavors: ProductFlavorRow[],
-): ComboProductOption['flavors'] {
-  return flavors.map(flavor => ({
-    id: flavor.id,
-    productId: flavor.product_id,
-    modifierId: flavor.modifier_id,
-    name: flavor.name,
-    isAvailable: flavor.is_available,
-    position: flavor.position,
-  }));
-}
+    private mapFlavors(
+        flavors: ProductFlavorRow[],
+    ): ComboProductOption['flavors'] {
+        return flavors.map(flavor => ({
+            id: flavor.id,
+            productId: flavor.product_id,
+            modifierId: flavor.modifier_id,
+            name: flavor.name,
+            isAvailable: flavor.is_available,
+            position: flavor.position,
+        }));
+    }
 
     private async getProductFlavors(
-  productIds: string[],
-): Promise<ProductFlavorRow[]> {
-  console.log(
-    '🥤 IDs enviados para buscar sabores:',
-    productIds,
-  );
+        productIds: string[],
+    ): Promise<ProductFlavorRow[]> {
+        if (productIds.length === 0) {
+            console.log(
+                '⚠️ No se recibieron productos para buscar sabores',
+            );
 
-  if (productIds.length === 0) {
-    console.log(
-      '⚠️ No se recibieron productos para buscar sabores',
-    );
+            return [];
+        }
 
-    return [];
-  }
-
-  const { data, error } =
-    await this.supabase
-      .from('product_flavors')
-      .select(`
+        const { data, error } =
+            await this.supabase
+                .from('product_flavors')
+                .select(`
         id,
         product_id,
         modifier_id,
@@ -277,28 +272,28 @@ private mapFlavors(
         is_available,
         position
       `)
-      .in('product_id', productIds)
-      .eq('is_available', true)
-      .order('position', {
-        ascending: true,
-      });
+                .in('product_id', productIds)
+                .eq('is_available', true)
+                .order('position', {
+                    ascending: true,
+                });
 
-  console.log(
-    '🥤 Sabores recibidos desde Supabase:',
-    {
-      data,
-      error,
-    },
-  );
+        console.log(
+            '🥤 Sabores recibidos desde Supabase:',
+            {
+                data,
+                error,
+            },
+        );
 
-  if (error) {
-    throw new Error(
-      `No fue posible obtener los sabores: ${error.message}`,
-    );
-  }
+        if (error) {
+            throw new Error(
+                `No fue posible obtener los sabores: ${error.message}`,
+            );
+        }
 
-  return (data ?? []) as ProductFlavorRow[];
-}
+        return (data ?? []) as ProductFlavorRow[];
+    }
 
     private async getRecipe(
         comboProductId: string,
@@ -328,11 +323,6 @@ private mapFlavors(
     `)
             .limit(5);
 
-        console.log('👀 Recetas visibles para la app:', {
-            visibleRecipes,
-            visibleRecipesError,
-        });
-
         const { data, error } = await this.supabase
             .from('combo_recipes')
             .select(`
@@ -346,12 +336,6 @@ private mapFlavors(
             )
             .eq('enabled', true)
             .maybeSingle<ComboRecipeRow>();
-
-        console.log('🔎 Receta solicitada:', {
-            comboProductId,
-            data,
-            error,
-        });
 
         if (error) {
             throw new Error(

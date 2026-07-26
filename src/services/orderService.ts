@@ -31,20 +31,6 @@ async function persistCartItem(
     orderId: string,
     item: CartItem,
 ): Promise<void> {
-
-  console.log(
-    '🧩 Item antes de persistir:',
-    JSON.stringify(
-      {
-        product: item.product.name,
-        quantity: item.quantity,
-        comboComponents:
-          item.comboComponents,
-      },
-      null,
-      2,
-    ),
-  );
     const orderItem =
         await insertOrderItem(
             orderId,

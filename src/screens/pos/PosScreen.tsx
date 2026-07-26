@@ -70,11 +70,33 @@ export function POSScreen({
   setEditingOrderId,
   fetchKitchenOrders,
 }: POSScreenProps) {
+  const visibleCategories = useMemo(
+    () =>
+      categories
+        .filter(
+          (category) =>
+            normalizeText(category.name) !==
+            normalizeText(
+              'Complementos de combo',
+            ),
+        )
+        .sort((categoryA, categoryB) =>
+          categoryA.name.localeCompare(
+            categoryB.name,
+            'es',
+            {
+              sensitivity: 'base',
+            },
+          ),
+        ),
+    [categories],
+  );
+
   const [
     selectedCategoryId,
     setSelectedCategoryId,
   ] = useState<string>(
-    categories[0]?.id ?? '',
+    visibleCategories[0]?.id ?? '',
   );
 
   const [
@@ -105,13 +127,13 @@ export function POSScreen({
   } = useModifiers();
 
   useEffect(() => {
-    if (categories.length === 0) {
+    if (visibleCategories.length === 0) {
       setSelectedCategoryId('');
       return;
     }
 
     const categoryStillExists =
-      categories.some(
+      visibleCategories.some(
         (category) =>
           String(category.id) ===
           String(selectedCategoryId),
@@ -119,21 +141,39 @@ export function POSScreen({
 
     if (!categoryStillExists) {
       setSelectedCategoryId(
-        categories[0].id,
+        visibleCategories[0].id,
       );
     }
   }, [
-    categories,
+    visibleCategories,
     selectedCategoryId,
   ]);
 
   const filteredProducts = useMemo(
     () =>
-      products.filter(
-        (product) =>
-          String(product.category_id) ===
-          String(selectedCategoryId),
-      ),
+      products
+        .filter(
+          (product) =>
+            String(product.category_id) ===
+            String(selectedCategoryId),
+        )
+        .sort((productA, productB) => {
+          const priceDifference =
+            Number(productA.price) -
+            Number(productB.price);
+
+          if (priceDifference !== 0) {
+            return priceDifference;
+          }
+
+          return productA.name.localeCompare(
+            productB.name,
+            'es',
+            {
+              sensitivity: 'base',
+            },
+          );
+        }),
     [
       products,
       selectedCategoryId,
@@ -182,17 +222,6 @@ export function POSScreen({
       (item) =>
         String(item.id) ===
         String(product.category_id),
-    );
-
-    console.log(
-      'Producto seleccionado:',
-      {
-        id: product.id,
-        name: product.name,
-        categoryName: category?.name,
-        categoryId:
-          product.category_id,
-      },
     );
 
     setSelectedProduct(product);
@@ -274,23 +303,6 @@ export function POSScreen({
           ? normalizedComponents
           : undefined,
     };
-
-    console.log(
-      '🧩 Item preparado para agregar:',
-      JSON.stringify(
-        {
-          id: itemToAdd.id,
-          product:
-            itemToAdd.product.name,
-          quantity:
-            itemToAdd.quantity,
-          comboComponents:
-            itemToAdd.comboComponents,
-        },
-        null,
-        2,
-      ),
-    );
 
     setCart((currentCart) => {
       const existingItemIndex =
@@ -421,23 +433,6 @@ export function POSScreen({
       return;
     }
 
-    console.log(
-      '🛒 Carrito antes de guardar:',
-      JSON.stringify(
-        cart.map((item) => ({
-          id: item.id,
-          product:
-            item.product.name,
-          quantity:
-            item.quantity,
-          comboComponents:
-            item.comboComponents,
-        })),
-        null,
-        2,
-      ),
-    );
-
     try {
       setIsProcessingOrder(true);
 
@@ -500,7 +495,7 @@ export function POSScreen({
     <View style={styles.contentRow}>
       <View style={styles.menuSection}>
         <CategoryTabs
-          categorias={categories}
+          categorias={visibleCategories}
           categoriaSeleccionada={
             selectedCategoryId
           }
@@ -650,4 +645,17 @@ function createComboIdentifier(
     })
     .sort()
     .join('|');
+}
+
+function normalizeText(
+  value: string | null | undefined,
+): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
+    .trim()
+    .toLocaleLowerCase('es');
 }

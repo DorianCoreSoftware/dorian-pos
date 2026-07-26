@@ -64,7 +64,7 @@ export const LoginScreen = () => {
     >
       <View style={styles.card}>
         <Text style={styles.logo}>
-          🍔 Burger Kong
+          Burger Kong
         </Text>
 
         <Text style={styles.subtitle}>

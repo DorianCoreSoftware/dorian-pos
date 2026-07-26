@@ -225,15 +225,6 @@ export const ComboConfigurator: React.FC<
           return;
         }
 
-        console.log(
-          '🍹 Receta recibida en ComboConfigurator:',
-          JSON.stringify(
-            loadedRecipe,
-            null,
-            2,
-          ),
-        );
-
         setRecipe(loadedRecipe);
       } catch (loadError) {
         if (!isMounted) {
