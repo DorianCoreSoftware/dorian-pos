@@ -29,6 +29,14 @@ import {
     ComboConfiguratorSelection,
 } from './ComboConfigurator';
 
+export interface ProductConfigurationResult {
+    selectedModifiers: SelectedModifier[];
+
+    comboSelection:
+    | ComboConfiguratorSelection
+    | null;
+}
+
 interface ProductConfiguratorModalProps {
     visible: boolean;
     product: Product | null;
@@ -51,7 +59,8 @@ interface ProductConfiguratorModalProps {
     onClose: () => void;
 
     onConfirm: (
-        selectedModifiers: SelectedModifier[],
+        configuration:
+            ProductConfigurationResult,
     ) => void;
 }
 
@@ -254,7 +263,23 @@ export const ProductConfiguratorModal: React.FC<
                 return;
             }
 
-            onConfirm(selectedModifiers);
+            if (isCombo) {
+                if (!comboSelection) {
+                    return;
+                }
+
+                onConfirm({
+                    selectedModifiers: [],
+                    comboSelection,
+                });
+
+                return;
+            }
+
+            onConfirm({
+                selectedModifiers,
+                comboSelection: null,
+            });
         };
 
         const selectedSingleMeat =
@@ -622,6 +647,7 @@ export const ProductConfiguratorModal: React.FC<
                                         !isSelectionValid
                                     }
                                     activeOpacity={0.7}
+                                    onPress={handleConfirm}
                                 >
                                     <Text
                                         style={[
