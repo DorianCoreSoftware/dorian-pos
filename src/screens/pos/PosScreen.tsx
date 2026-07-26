@@ -14,6 +14,7 @@ import { MenuList } from '../../components/menu-list/MenuList';
 import { Cart as CartComponent } from '../../components/cart/Cart';
 import {
   ProductConfiguratorModal,
+  ProductConfigurationResult,
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
 
 import { useModifiers } from '../../hooks/useModifiers';
@@ -31,8 +32,7 @@ import {
 import {
   Cart,
   Category,
-  Product,
-  SelectedModifier,
+  Product
 } from '../../types';
 
 import { styles } from '../../../App.styles';
@@ -201,20 +201,43 @@ export function POSScreen({
     };
 
   const handleConfirmAddToCart = (
-    selectedModifiers: SelectedModifier[],
+    configuration:
+      ProductConfigurationResult,
   ): void => {
     if (!selectedProduct) {
       return;
     }
 
-    const productToAdd = selectedProduct;
+    const {
+      selectedModifiers,
+      comboSelection,
+    } = configuration;
+
+    if (comboSelection) {
+      console.log(
+        'Configuración de combo recibida:',
+        comboSelection,
+      );
+
+      /*
+       * La transformación a
+       * ComboComponentSelection[]
+       * se implementará en el
+       * siguiente commit.
+       */
+      return;
+    }
+
+    const productToAdd =
+      selectedProduct;
+
     const cleanNotes =
       productNotes.trim();
 
     const modifierIdentifier =
       selectedModifiers
         .map(
-          (modifier) => modifier.id,
+          modifier => modifier.id,
         )
         .sort()
         .join(',');
@@ -225,10 +248,10 @@ export function POSScreen({
       modifierIdentifier,
     ].join('-');
 
-    setCart((currentCart) => {
+    setCart(currentCart => {
       const existingItemIndex =
         currentCart.findIndex(
-          (item) =>
+          item =>
             item.id === cartItemId,
         );
 
