@@ -4,4 +4,5 @@ export * from './modifier';
 export * from './cart-item';
 export * from './cart';
 export * from './order';
-export * from './combo';
+export * as combo from './combo';
+export * from './delivery';
