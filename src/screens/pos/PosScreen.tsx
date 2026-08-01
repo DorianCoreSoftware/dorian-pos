@@ -36,9 +36,17 @@ import {
   Category,
   ComboComponentSelection,
   Product,
+  DeliveryDetails,
 } from '../../types';
 
 import { styles } from '../../../App.styles';
+
+import {
+  DeliveryConfiguratorModal,
+} from '../../components/delivery-configurator';
+import { isDeliveryProduct } from '../../Utils/delivery';
+
+
 
 interface POSScreenProps {
   categories: Category[];
@@ -126,6 +134,16 @@ export function POSScreen({
     error: modifiersError,
   } = useModifiers();
 
+  const [
+    isDeliveryModalVisible,
+    setIsDeliveryModalVisible,
+  ] = useState(false);
+
+  const [
+    selectedDeliveryProduct,
+    setSelectedDeliveryProduct,
+  ] = useState<Product | null>(null);
+
   useEffect(() => {
     if (visibleCategories.length === 0) {
       setSelectedCategoryId('');
@@ -181,48 +199,46 @@ export function POSScreen({
   );
 
   const selectedProductCategory =
-    useMemo(
-      () =>
-        categories.find(
-          (category) =>
-            String(category.id) ===
-            String(
-              selectedProduct?.category_id,
-            ),
-        ) ?? null,
-      [
-        categories,
-        selectedProduct?.category_id,
-      ],
-    );
+    categories.find(
+      (category) =>
+        String(category.id) ===
+        String(
+          selectedProduct?.category_id,
+        ),
+    ) ?? null;
 
-  const modifierMode = useMemo(
-    () =>
-      getProductModifierMode(
-        selectedProduct,
-        selectedProductCategory?.name,
-      ),
-    [
+  const modifierMode =
+    getProductModifierMode(
       selectedProduct,
       selectedProductCategory?.name,
-    ],
-  );
+    );
 
   const selectedProductIsKongBurger =
-    useMemo(
-      () =>
-        isKongBurger(selectedProduct),
-      [selectedProduct],
-    );
+    isKongBurger(selectedProduct);
+
+  const currentDeliveryItem =
+  cart.find((item) =>
+    isDeliveryProduct(
+      item.product,
+    ),
+  ) ?? null;
+
+const currentDeliveryDetails =
+  currentDeliveryItem
+    ?.deliveryDetails ?? null;
 
   const handleProductPress = (
     product: Product,
   ): void => {
-    const category = categories.find(
-      (item) =>
-        String(item.id) ===
-        String(product.category_id),
-    );
+    if (isDeliveryProduct(product)) {
+      setSelectedDeliveryProduct(
+        product,
+      );
+      setIsDeliveryModalVisible(
+        true,
+      );
+      return;
+    }
 
     setSelectedProduct(product);
     setProductNotes('');
@@ -235,6 +251,78 @@ export function POSScreen({
       setSelectedProduct(null);
       setProductNotes('');
     };
+
+  const handleCloseDeliveryModal =
+    (): void => {
+      setIsDeliveryModalVisible(
+        false,
+      );
+      setSelectedDeliveryProduct(
+        null,
+      );
+    };
+
+  const handleConfirmDelivery = (
+  deliveryDetails: DeliveryDetails,
+): void => {
+  if (!selectedDeliveryProduct) {
+    return;
+  }
+
+  const deliveryItemId =
+    `${selectedDeliveryProduct.id}-delivery`;
+
+  const deliveryItem: CartItem = {
+    id: deliveryItemId,
+
+    product: {
+      ...selectedDeliveryProduct,
+    },
+
+    quantity: 1,
+    notes: '',
+    selectedModifiers: [],
+
+    deliveryDetails: {
+      ...deliveryDetails,
+    },
+  };
+
+  setCart((currentCart) => {
+    const existingDeliveryIndex =
+      currentCart.findIndex(
+        (item) =>
+          isDeliveryProduct(
+            item.product,
+          ),
+      );
+
+    /*
+     * Primera vez que se agrega.
+     */
+    if (
+      existingDeliveryIndex === -1
+    ) {
+      return [
+        ...currentCart,
+        deliveryItem,
+      ];
+    }
+
+    /*
+     * Ya existía: se actualiza en
+     * su misma posición.
+     */
+    return currentCart.map(
+      (item, index) =>
+        index === existingDeliveryIndex
+          ? deliveryItem
+          : item,
+    );
+  });
+
+  handleCloseDeliveryModal();
+};
 
   const handleConfirmAddToCart = (
     configuration:
@@ -335,14 +423,14 @@ export function POSScreen({
            */
           const preservedComponents =
             item.comboComponents &&
-            item.comboComponents.length > 0
+              item.comboComponents.length > 0
               ? cloneComboComponents(
-                  item.comboComponents,
-                )
+                item.comboComponents,
+              )
               : cloneComboComponents(
-                  itemToAdd
-                    .comboComponents ?? [],
-                );
+                itemToAdd
+                  .comboComponents ?? [],
+              );
 
           return {
             ...item,
@@ -355,21 +443,21 @@ export function POSScreen({
               item.selectedModifiers
                 .length > 0
                 ? item.selectedModifiers.map(
+                  (modifier) => ({
+                    ...modifier,
+                  }),
+                )
+                : itemToAdd
+                  .selectedModifiers
+                  .map(
                     (modifier) => ({
                       ...modifier,
                     }),
-                  )
-                : itemToAdd
-                    .selectedModifiers
-                    .map(
-                      (modifier) => ({
-                        ...modifier,
-                      }),
-                    ),
+                  ),
 
             comboComponents:
               preservedComponents.length >
-              0
+                0
                 ? preservedComponents
                 : undefined,
           };
@@ -381,32 +469,54 @@ export function POSScreen({
   };
 
   const handleUpdateQuantity = (
-    itemId: string,
-    quantityChange: number,
-  ): void => {
-    setCart((currentCart) =>
-      currentCart
-        .map((item) => {
-          if (item.id !== itemId) {
-            return item;
+  itemId: string,
+  quantityChange: number,
+): void => {
+  setCart((currentCart) =>
+    currentCart
+      .map((item) => {
+        if (item.id !== itemId) {
+          return item;
+        }
+
+        if (
+          isDeliveryProduct(
+            item.product,
+          )
+        ) {
+          /*
+           * No se puede incrementar.
+           */
+          if (quantityChange > 0) {
+            return {
+              ...item,
+              quantity: 1,
+            };
           }
 
           /*
-           * El spread mantiene comboComponents,
-           * selectedModifiers, notas y producto.
+           * Con el botón menos se lleva
+           * a cero y el filtro lo elimina.
            */
           return {
             ...item,
-            quantity:
-              item.quantity +
-              quantityChange,
+            quantity: 0,
           };
-        })
-        .filter(
-          (item) => item.quantity > 0,
-        ),
-    );
-  };
+        }
+
+        return {
+          ...item,
+          quantity:
+            item.quantity +
+            quantityChange,
+        };
+      })
+      .filter(
+        (item) =>
+          item.quantity > 0,
+      ),
+  );
+};
 
   const handleRemoveCartItem = (
     itemId: string,
@@ -559,6 +669,24 @@ export function POSScreen({
           handleConfirmAddToCart
         }
       />
+
+      <DeliveryConfiguratorModal
+        visible={
+          isDeliveryModalVisible
+        }
+        product={
+          selectedDeliveryProduct
+        }
+        initialValue={
+          currentDeliveryDetails
+        }
+        onClose={
+          handleCloseDeliveryModal
+        }
+        onConfirm={
+          handleConfirmDelivery
+        }
+      />
     </View>
   );
 }
@@ -600,7 +728,7 @@ function cloneComboComponents(
 function createModifierIdentifier(
   modifiers:
     ProductConfigurationResult[
-      'selectedModifiers'
+    'selectedModifiers'
     ],
 ): string {
   return (modifiers ?? [])

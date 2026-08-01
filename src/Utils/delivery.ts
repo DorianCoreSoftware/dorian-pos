@@ -1,16 +1,27 @@
 import { Product } from '../types';
 
 export function isDeliveryProduct(
-  product: Product | null,
+  product: Product | null | undefined,
 ): boolean {
   if (!product) {
     return false;
   }
 
   return (
-    product.name
-      .trim()
-      .toLowerCase() ===
-    'envío a domicilio'
+    normalizeText(product.name) ===
+    'envio a domicilio'
   );
+}
+
+function normalizeText(
+  value: string,
+): string {
+  return value
+    .normalize('NFD')
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
+    .trim()
+    .toLocaleLowerCase('es');
 }
