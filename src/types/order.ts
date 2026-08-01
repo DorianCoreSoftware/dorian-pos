@@ -1,3 +1,4 @@
+import { ComboComponentType } from './combo';
 import { Modifier } from './modifier';
 import { Product } from './product';
 
@@ -7,12 +8,6 @@ export type OrderStatus =
   | 'cancelled'
   | 'entregado'
   | 'cancelado';
-
-export type ComboComponentType =
-  | 'burger'
-  | 'hotdog'
-  | 'side'
-  | 'drink';
 
 export interface KitchenOrderItemComponent {
   id: string;
