@@ -2,8 +2,26 @@ import { supabase } from '../services/supabase';
 import {
   CartItem,
   ComboComponentSelection,
+  DeliveryDetails,
   OrderStatus,
 } from '../types';
+
+export interface OrderDeliveryDetailsRecord {
+  id: string;
+  order_id: string;
+  customer_name: string;
+  phone: string;
+  street: string;
+  exterior_number: string;
+  interior_number: string | null;
+  neighborhood: string;
+  postal_code: string | null;
+  delivery_references: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+  updated_at: string;
+}
 
 /**
  * Representa una fila recién creada en la tabla orders.
@@ -394,6 +412,86 @@ export async function deleteOrderItemsByOrderId(
   if (itemsError) {
     throw new Error(
       `No se pudieron eliminar los productos anteriores: ${itemsError.message}`,
+    );
+  }
+}
+
+export async function upsertOrderDeliveryDetails(
+  orderId: string,
+  details: DeliveryDetails,
+): Promise<OrderDeliveryDetailsRecord> {
+  const { data, error } = await supabase
+    .from('order_delivery_details')
+    .upsert(
+      {
+        order_id: orderId,
+
+        customer_name:
+          details.customerName.trim(),
+
+        phone:
+          details.phone.trim(),
+
+        street:
+          details.street.trim(),
+
+        exterior_number:
+          details.exteriorNumber.trim(),
+
+        interior_number:
+          details.interiorNumber.trim() ||
+          null,
+
+        neighborhood:
+          details.neighborhood.trim(),
+
+        postal_code:
+          details.postalCode.trim() ||
+          null,
+
+        delivery_references:
+          details.deliveryReferences.trim() ||
+          null,
+
+        latitude:
+          details.latitude,
+
+        longitude:
+          details.longitude,
+      },
+      {
+        onConflict: 'order_id',
+      },
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(
+      `No se pudieron guardar los datos de entrega: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      'Supabase no devolvió los datos de entrega guardados.',
+    );
+  }
+
+  return data as OrderDeliveryDetailsRecord;
+}
+
+export async function deleteOrderDeliveryDetailsByOrderId(
+  orderId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('order_delivery_details')
+    .delete()
+    .eq('order_id', orderId);
+
+  if (error) {
+    throw new Error(
+      `No se pudieron eliminar los datos de entrega: ${error.message}`,
     );
   }
 }

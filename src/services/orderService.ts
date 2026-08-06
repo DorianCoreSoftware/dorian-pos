@@ -1,18 +1,21 @@
 import {
-    deleteOrderItemsByOrderId,
-    fetchPendingOrders,
-    insertOrder,
-    insertOrderItem,
-    insertOrderItemComponent,
-    insertOrderItemComponentModifiers,
-    insertOrderItemModifiers,
-    updateOrderStatusById,
-    updateOrderTotalById,
+  deleteOrderDeliveryDetailsByOrderId,
+  deleteOrderItemsByOrderId,
+  fetchPendingOrders,
+  insertOrder,
+  insertOrderItem,
+  insertOrderItemComponent,
+  insertOrderItemComponentModifiers,
+  insertOrderItemModifiers,
+  updateOrderStatusById,
+  updateOrderTotalById,
+  upsertOrderDeliveryDetails,
 } from '../repositories/OrderRepository';
 
 import {
     Cart,
     CartItem,
+    DeliveryDetails,
     KitchenOrder,
     KitchenOrderItem,
     KitchenOrderItemComponent,
@@ -75,24 +78,42 @@ async function persistCartItem(
  * 3. Crea sus relaciones con modificadores.
  */
 export async function createKitchenOrder(
-    cart: CartItem[],
-    totalAmount: number,
+  cart: CartItem[],
+  totalAmount: number,
 ): Promise<CreateOrderResult> {
-    validateOrder(cart, totalAmount);
+  validateOrder(
+    cart,
+    totalAmount,
+  );
 
-    const order = await insertOrder(totalAmount);
+  const deliveryDetails =
+    getDeliveryDetailsFromCart(
+      cart,
+    );
 
-    for (const item of cart) {
-        await persistCartItem(
-            order.id,
-            item,
-        );
-    }
+  const order =
+    await insertOrder(
+      totalAmount,
+    );
 
-    return {
-        success: true,
-        orderId: order.id,
-    };
+  for (const item of cart) {
+    await persistCartItem(
+      order.id,
+      item,
+    );
+  }
+
+  if (deliveryDetails) {
+    await upsertOrderDeliveryDetails(
+      order.id,
+      deliveryDetails,
+    );
+  }
+
+  return {
+    success: true,
+    orderId: order.id,
+  };
 }
 
 /**
@@ -386,6 +407,109 @@ function validateOrder(
       },
     );
   });
+
+  const deliveryDetails =
+    getDeliveryDetailsFromCart(
+      cart,
+    );
+
+  if (!deliveryDetails) {
+    return;
+  }
+
+  if (
+    !deliveryDetails
+      .customerName
+      .trim()
+  ) {
+    throw new Error(
+      'El nombre del cliente es obligatorio para la entrega.',
+    );
+  }
+
+  const normalizedPhone =
+    deliveryDetails.phone.replace(
+      /\D/g,
+      '',
+    );
+
+  if (!normalizedPhone) {
+    throw new Error(
+      'El teléfono es obligatorio para la entrega.',
+    );
+  }
+
+  if (
+    normalizedPhone.length < 10
+  ) {
+    throw new Error(
+      'El teléfono de entrega debe tener al menos 10 dígitos.',
+    );
+  }
+
+  if (
+    !deliveryDetails
+      .street
+      .trim()
+  ) {
+    throw new Error(
+      'La calle es obligatoria para la entrega.',
+    );
+  }
+
+  if (
+    !deliveryDetails
+      .exteriorNumber
+      .trim()
+  ) {
+    throw new Error(
+      'El número exterior es obligatorio para la entrega.',
+    );
+  }
+
+  if (
+    !deliveryDetails
+      .neighborhood
+      .trim()
+  ) {
+    throw new Error(
+      'La colonia es obligatoria para la entrega.',
+    );
+  }
+
+  if (
+    deliveryDetails.latitude !==
+      null &&
+    (
+      !Number.isFinite(
+        deliveryDetails.latitude,
+      ) ||
+      deliveryDetails.latitude <
+        -90 ||
+      deliveryDetails.latitude > 90
+    )
+  ) {
+    throw new Error(
+      'La latitud de entrega no es válida.',
+    );
+  }
+
+  if (
+    deliveryDetails.longitude !==
+      null &&
+    (
+      !Number.isFinite(
+        deliveryDetails.longitude,
+      ) ||
+      deliveryDetails.longitude <
+        -180 ||
+      deliveryDetails.longitude > 180
+    )
+  ) {
+    throw new Error(
+      'La longitud de entrega no es válida.',
+    );
+  }
 }
 
 function validateOrderId(
@@ -410,6 +534,11 @@ export async function updateKitchenOrder(
     totalAmount,
   );
 
+  const deliveryDetails =
+    getDeliveryDetailsFromCart(
+      cart,
+    );
+
   await deleteOrderItemsByOrderId(
     orderId,
   );
@@ -425,4 +554,36 @@ export async function updateKitchenOrder(
       cartItem,
     );
   }
+
+  if (deliveryDetails) {
+    await upsertOrderDeliveryDetails(
+      orderId,
+      deliveryDetails,
+    );
+  } else {
+    await deleteOrderDeliveryDetailsByOrderId(
+      orderId,
+    );
+  }
+}
+
+function getDeliveryDetailsFromCart(
+  cart: CartItem[],
+): DeliveryDetails | null {
+  const deliveryItems =
+    cart.filter(
+      (item) =>
+        item.deliveryDetails,
+    );
+
+  if (deliveryItems.length > 1) {
+    throw new Error(
+      'La orden contiene más de una configuración de entrega.',
+    );
+  }
+
+  return (
+    deliveryItems[0]
+      ?.deliveryDetails ?? null
+  );
 }
