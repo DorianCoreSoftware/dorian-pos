@@ -47,7 +47,6 @@ import {
 import { isDeliveryProduct } from '../../Utils/delivery';
 
 
-
 interface POSScreenProps {
   categories: Category[];
   products: Product[];
@@ -79,13 +78,19 @@ export function POSScreen({
   fetchKitchenOrders,
 }: POSScreenProps) {
   const visibleCategories = useMemo(
-    () =>
-      categories
+    () => {
+      const hiddenCategoryNames = [
+        'Complementos de combo',
+        'Domicilio',
+      ].map(normalizeText);
+
+      return categories
         .filter(
           (category) =>
-            normalizeText(category.name) !==
-            normalizeText(
-              'Complementos de combo',
+            !hiddenCategoryNames.includes(
+              normalizeText(
+                category.name,
+              ),
             ),
         )
         .sort((categoryA, categoryB) =>
@@ -96,7 +101,8 @@ export function POSScreen({
               sensitivity: 'base',
             },
           ),
-        ),
+        );
+    },
     [categories],
   );
 
@@ -216,16 +222,93 @@ export function POSScreen({
   const selectedProductIsKongBurger =
     isKongBurger(selectedProduct);
 
-  const currentDeliveryItem =
-  cart.find((item) =>
-    isDeliveryProduct(
-      item.product,
-    ),
-  ) ?? null;
+  const deliveryProduct =
+    products.find(
+      (product) =>
+        isDeliveryProduct(product),
+    ) ?? null;
 
-const currentDeliveryDetails =
-  currentDeliveryItem
-    ?.deliveryDetails ?? null;
+  const currentDeliveryItem =
+    cart.find(
+      (item) =>
+        isDeliveryProduct(
+          item.product,
+        ),
+    ) ?? null;
+
+  const currentDeliveryDetails =
+    currentDeliveryItem
+      ?.deliveryDetails ?? null;
+
+  const handleToggleDelivery =
+  (): void => {
+    if (currentDeliveryItem) {
+      setCart((currentCart) =>
+        currentCart.filter(
+          (item) =>
+            !isDeliveryProduct(
+              item.product,
+            ),
+        ),
+      );
+
+      return;
+    }
+
+    const hasRegularProducts =
+      cart.some(
+        (item) =>
+          !isDeliveryProduct(
+            item.product,
+          ),
+      );
+
+    if (!hasRegularProducts) {
+      Alert.alert(
+        'Orden vacía',
+        'Agrega al menos un producto antes de activar el envío a domicilio.',
+      );
+
+      return;
+    }
+
+    if (!deliveryProduct) {
+      Alert.alert(
+        'Producto no disponible',
+        'No se encontró el producto Envío a domicilio.',
+      );
+
+      return;
+    }
+
+    setSelectedDeliveryProduct(
+      deliveryProduct,
+    );
+
+    setIsDeliveryModalVisible(
+      true,
+    );
+  };
+
+  const handleEditDelivery =
+    (): void => {
+      if (!deliveryProduct) {
+        Alert.alert(
+          'Producto no disponible',
+          'No se encontró el producto Envío a domicilio.',
+        );
+
+        return;
+      }
+
+      setSelectedDeliveryProduct(
+        deliveryProduct,
+      );
+
+      setIsDeliveryModalVisible(
+        true,
+      );
+    };
 
   const handleProductPress = (
     product: Product,
@@ -263,66 +346,66 @@ const currentDeliveryDetails =
     };
 
   const handleConfirmDelivery = (
-  deliveryDetails: DeliveryDetails,
-): void => {
-  if (!selectedDeliveryProduct) {
-    return;
-  }
-
-  const deliveryItemId =
-    `${selectedDeliveryProduct.id}-delivery`;
-
-  const deliveryItem: CartItem = {
-    id: deliveryItemId,
-
-    product: {
-      ...selectedDeliveryProduct,
-    },
-
-    quantity: 1,
-    notes: '',
-    selectedModifiers: [],
-
-    deliveryDetails: {
-      ...deliveryDetails,
-    },
-  };
-
-  setCart((currentCart) => {
-    const existingDeliveryIndex =
-      currentCart.findIndex(
-        (item) =>
-          isDeliveryProduct(
-            item.product,
-          ),
-      );
-
-    /*
-     * Primera vez que se agrega.
-     */
-    if (
-      existingDeliveryIndex === -1
-    ) {
-      return [
-        ...currentCart,
-        deliveryItem,
-      ];
+    deliveryDetails: DeliveryDetails,
+  ): void => {
+    if (!selectedDeliveryProduct) {
+      return;
     }
 
-    /*
-     * Ya existía: se actualiza en
-     * su misma posición.
-     */
-    return currentCart.map(
-      (item, index) =>
-        index === existingDeliveryIndex
-          ? deliveryItem
-          : item,
-    );
-  });
+    const deliveryItemId =
+      `${selectedDeliveryProduct.id}-delivery`;
 
-  handleCloseDeliveryModal();
-};
+    const deliveryItem: CartItem = {
+      id: deliveryItemId,
+
+      product: {
+        ...selectedDeliveryProduct,
+      },
+
+      quantity: 1,
+      notes: '',
+      selectedModifiers: [],
+
+      deliveryDetails: {
+        ...deliveryDetails,
+      },
+    };
+
+    setCart((currentCart) => {
+      const existingDeliveryIndex =
+        currentCart.findIndex(
+          (item) =>
+            isDeliveryProduct(
+              item.product,
+            ),
+        );
+
+      /*
+       * Primera vez que se agrega.
+       */
+      if (
+        existingDeliveryIndex === -1
+      ) {
+        return [
+          ...currentCart,
+          deliveryItem,
+        ];
+      }
+
+      /*
+       * Ya existía: se actualiza en
+       * su misma posición.
+       */
+      return currentCart.map(
+        (item, index) =>
+          index === existingDeliveryIndex
+            ? deliveryItem
+            : item,
+      );
+    });
+
+    handleCloseDeliveryModal();
+  };
 
   const handleConfirmAddToCart = (
     configuration:
@@ -469,54 +552,54 @@ const currentDeliveryDetails =
   };
 
   const handleUpdateQuantity = (
-  itemId: string,
-  quantityChange: number,
-): void => {
-  setCart((currentCart) =>
-    currentCart
-      .map((item) => {
-        if (item.id !== itemId) {
-          return item;
-        }
+    itemId: string,
+    quantityChange: number,
+  ): void => {
+    setCart((currentCart) =>
+      currentCart
+        .map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
 
-        if (
-          isDeliveryProduct(
-            item.product,
-          )
-        ) {
-          /*
-           * No se puede incrementar.
-           */
-          if (quantityChange > 0) {
+          if (
+            isDeliveryProduct(
+              item.product,
+            )
+          ) {
+            /*
+             * No se puede incrementar.
+             */
+            if (quantityChange > 0) {
+              return {
+                ...item,
+                quantity: 1,
+              };
+            }
+
+            /*
+             * Con el botón menos se lleva
+             * a cero y el filtro lo elimina.
+             */
             return {
               ...item,
-              quantity: 1,
+              quantity: 0,
             };
           }
 
-          /*
-           * Con el botón menos se lleva
-           * a cero y el filtro lo elimina.
-           */
           return {
             ...item,
-            quantity: 0,
+            quantity:
+              item.quantity +
+              quantityChange,
           };
-        }
-
-        return {
-          ...item,
-          quantity:
-            item.quantity +
-            quantityChange,
-        };
-      })
-      .filter(
-        (item) =>
-          item.quantity > 0,
-      ),
-  );
-};
+        })
+        .filter(
+          (item) =>
+            item.quantity > 0,
+        ),
+    );
+  };
 
   const handleRemoveCartItem = (
     itemId: string,
@@ -536,8 +619,16 @@ const currentDeliveryDetails =
   const handleCheckout = async (
     totalAmount: number,
   ): Promise<void> => {
+    const hasRegularProducts =
+      cart.some(
+        (item) =>
+          !isDeliveryProduct(
+            item.product,
+          ),
+      );
+
     if (
-      cart.length === 0 ||
+      !hasRegularProducts ||
       isProcessingOrder
     ) {
       return;
@@ -638,6 +729,12 @@ const currentDeliveryDetails =
         }
         onCheckout={
           handleCheckout
+        }
+        onToggleDelivery={
+          handleToggleDelivery
+        }
+        onEditDelivery={
+          handleEditDelivery
         }
       />
 
