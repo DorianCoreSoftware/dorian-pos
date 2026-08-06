@@ -86,10 +86,12 @@ export const ProductConfiguratorModal: React.FC<
             setSelectedMeatIds,
         ] = useState<string[]>([]);
 
+        const MAXIMUM_SAUCES = 3;
+
         const [
-            selectedSauceId,
-            setSelectedSauceId,
-        ] = useState<string | null>(null);
+            selectedSauceIds,
+            setSelectedSauceIds,
+        ] = useState<string[]>([]);
 
         const [
             comboSelection,
@@ -126,21 +128,28 @@ export const ProductConfiguratorModal: React.FC<
                                 modifier !== undefined,
                         );
 
-                const selectedSauce =
-                    selectedSauceId
-                        ? sauces.find(
-                            (modifier) =>
-                                modifier.id ===
-                                selectedSauceId,
+                const selectedSauces =
+                    selectedSauceIds
+                        .map((modifierId) =>
+                            sauces.find(
+                                (modifier) =>
+                                    modifier.id === modifierId,
+                            ),
                         )
-                        : undefined;
+                        .filter(
+                            (
+                                modifier,
+                            ): modifier is SelectedModifier =>
+                                modifier !== undefined,
+                        );
 
-                return selectedSauce
-                    ? [...selectedMeats, selectedSauce]
-                    : selectedMeats;
+                return [
+                    ...selectedMeats,
+                    ...selectedSauces,
+                ];
             }, [
                 selectedMeatIds,
-                selectedSauceId,
+                selectedSauceIds,
                 meats,
                 sauces,
             ]);
@@ -167,7 +176,7 @@ export const ProductConfiguratorModal: React.FC<
 
                 if (
                     requiresSauce &&
-                    !selectedSauceId
+                    selectedSauceIds.length === 0
                 ) {
                     return false;
                 }
@@ -181,7 +190,7 @@ export const ProductConfiguratorModal: React.FC<
                 isBurger,
                 requiresSauce,
                 selectedMeatIds,
-                selectedSauceId,
+                selectedSauceIds,
             ]);
 
         useEffect(() => {
@@ -190,7 +199,7 @@ export const ProductConfiguratorModal: React.FC<
             }
 
             setSelectedMeatIds([]);
-            setSelectedSauceId(null);
+            setSelectedSauceIds([]);
             setComboSelection(null);
         }, [
             visible,
@@ -251,6 +260,36 @@ export const ProductConfiguratorModal: React.FC<
 
                     return [
                         modifierId,
+                        modifierId,
+                    ];
+                },
+            );
+        };
+
+        const handleSaucePress = (
+            modifierId: string,
+        ): void => {
+            setSelectedSauceIds(
+                (currentSelection) => {
+                    if (
+                        currentSelection.includes(
+                            modifierId,
+                        )
+                    ) {
+                        return currentSelection.filter(
+                            (id) => id !== modifierId,
+                        );
+                    }
+
+                    if (
+                        currentSelection.length >=
+                        MAXIMUM_SAUCES
+                    ) {
+                        return currentSelection;
+                    }
+
+                    return [
+                        ...currentSelection,
                         modifierId,
                     ];
                 },
@@ -500,9 +539,21 @@ export const ProductConfiguratorModal: React.FC<
                                     >
                                         <Text style={styles.sectionLabel}>
                                             {isBoneless
-                                                ? 'Salsa de los boneless'
-                                                : 'Salsa de las alitas'}{' '}
-                                            * (Obligatorio)
+                                                ? 'Salsas de los boneless'
+                                                : 'Salsas de las alitas'}{' '}
+                                            * (Selecciona de 1 a 3)
+                                        </Text>
+
+                                        <Text
+                                            style={{
+                                                color: '#AAAAAA',
+                                                fontSize: 12,
+                                                marginBottom: 8,
+                                            }}
+                                        >
+                                            {selectedSauceIds.length}/
+                                            {MAXIMUM_SAUCES}{' '}
+                                            seleccionadas
                                         </Text>
 
                                         <View
@@ -513,8 +564,9 @@ export const ProductConfiguratorModal: React.FC<
                                             {sauces.map(
                                                 (modifier) => {
                                                     const isSelected =
-                                                        selectedSauceId ===
-                                                        modifier.id;
+                                                        selectedSauceIds.includes(
+                                                            modifier.id,
+                                                        );
 
                                                     return (
                                                         <TouchableOpacity
@@ -525,7 +577,7 @@ export const ProductConfiguratorModal: React.FC<
                                                                 styles.optionButtonSelected,
                                                             ]}
                                                             onPress={() =>
-                                                                setSelectedSauceId(
+                                                                handleSaucePress(
                                                                     modifier.id,
                                                                 )
                                                             }
