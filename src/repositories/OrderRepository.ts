@@ -111,8 +111,12 @@ export interface PendingOrderItemRecord
     PendingOrderItemComponentRecord[];
 }
 
-export interface PendingOrderRecord extends OrderRecord {
+export interface PendingOrderRecord
+  extends OrderRecord {
   order_items: PendingOrderItemRecord[];
+
+  order_delivery_details:
+  PendingOrderDeliveryDetailsRecord | null;
 }
 
 /**
@@ -290,18 +294,18 @@ export async function fetchPendingOrders(): Promise<
     .from('orders')
     .select(`
       *,
+      order_delivery_details(
+        *
+      ),
       order_items(
         *,
         products(*),
-
         order_item_modifiers(
           modifiers(*)
         ),
-
         order_item_components(
           *,
           products(*),
-
           order_item_component_modifiers(
             modifiers(*)
           )
@@ -319,7 +323,9 @@ export async function fetchPendingOrders(): Promise<
     );
   }
 
-  return (data ?? []) as PendingOrderRecord[];
+  return (
+    data ?? []
+  ) as PendingOrderRecord[];
 }
 
 /**
@@ -494,4 +500,21 @@ export async function deleteOrderDeliveryDetailsByOrderId(
       `No se pudieron eliminar los datos de entrega: ${error.message}`,
     );
   }
+}
+
+export interface PendingOrderDeliveryDetailsRecord {
+  id: string;
+  order_id: string;
+  customer_name: string;
+  phone: string;
+  street: string;
+  exterior_number: string;
+  interior_number: string | null;
+  neighborhood: string;
+  postal_code: string | null;
+  delivery_references: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+  updated_at: string;
 }

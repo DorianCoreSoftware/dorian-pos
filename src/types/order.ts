@@ -1,4 +1,5 @@
 import { ComboComponentType } from './combo';
+import { OrderDeliveryDetails } from './delivery';
 import { Modifier } from './modifier';
 import { Product } from './product';
 
@@ -45,5 +46,10 @@ export interface KitchenOrder {
   total: string | number;
   status: OrderStatus;
   created_at: string;
-  order_items: KitchenOrderItem[];
+
+  deliveryDetails:
+    OrderDeliveryDetails | null;
+
+  order_items:
+    KitchenOrderItem[];
 }

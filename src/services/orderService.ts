@@ -123,119 +123,222 @@ export async function createKitchenOrder(
 export async function getPendingOrders(): Promise<
   KitchenOrder[]
 > {
-  const orders = await fetchPendingOrders();
+  const orders =
+    await fetchPendingOrders();
 
-  return orders.map((order): KitchenOrder => ({
-    id: order.id,
-    total: order.total,
-    status: order.status,
-    created_at: order.created_at,
+  return orders.map(
+    (order): KitchenOrder => {
+      const rawDeliveryDetails =
+  order.order_delivery_details ??
+  null;
 
-    order_items: (
-      order.order_items ?? []
-    ).map(
-      (item): KitchenOrderItem => ({
-        id: item.id,
-        order_id: item.order_id,
-        product_id: item.product_id,
-        quantity: item.quantity,
+      return {
+        id: order.id,
+        total: order.total,
+        status: order.status,
+        created_at:
+          order.created_at,
 
-        price_at_purchase:
-          item.price_at_purchase,
+        deliveryDetails:
+          rawDeliveryDetails
+            ? {
+                id:
+                  rawDeliveryDetails.id,
 
-        notes: item.notes,
+                orderId:
+                  rawDeliveryDetails
+                    .order_id,
 
-        products: item.products
-          ? {
-              ...item.products,
-              price: Number(
-                item.products.price,
-              ),
-            }
-          : null,
+                customerName:
+                  rawDeliveryDetails
+                    .customer_name,
 
-        modifiers: (
-          item.order_item_modifiers ?? []
-        )
-          .map(
-            (relation) =>
-              relation.modifiers,
-          )
-          .filter(
-            (
-              modifier,
-            ): modifier is NonNullable<
-              typeof modifier
-            > => modifier !== null,
-          ),
+                phone:
+                  rawDeliveryDetails
+                    .phone,
 
-        components: (
-          item.order_item_components ?? []
-        )
-          .map(
-            (
-              component,
-            ): KitchenOrderItemComponent => ({
-              id: component.id,
+                street:
+                  rawDeliveryDetails
+                    .street,
 
-              order_item_id:
-                component.order_item_id,
+                exteriorNumber:
+                  rawDeliveryDetails
+                    .exterior_number,
 
-              product_id:
-                component.product_id,
+                interiorNumber:
+                  rawDeliveryDetails
+                    .interior_number,
 
-              component_type:
-                component.component_type,
+                neighborhood:
+                  rawDeliveryDetails
+                    .neighborhood,
 
-              label: component.label,
+                postalCode:
+                  rawDeliveryDetails
+                    .postal_code,
 
-              quantity:
-                component.quantity,
+                deliveryReferences:
+                  rawDeliveryDetails
+                    .delivery_references,
 
-              notes:
-                component.notes,
+                latitude:
+                  rawDeliveryDetails
+                    .latitude,
 
-              position:
-                component.position ?? null,
+                longitude:
+                  rawDeliveryDetails
+                    .longitude,
 
-              products:
-                component.products
-                  ? {
-                      ...component.products,
-                      price: Number(
-                        component.products
-                          .price,
-                      ),
-                    }
-                  : null,
+                createdAt:
+                  rawDeliveryDetails
+                    .created_at,
 
-              modifiers: (
-                component
-                  .order_item_component_modifiers ??
-                []
+                updatedAt:
+                  rawDeliveryDetails
+                    .updated_at,
+              }
+            : null,
+
+        order_items: (
+          order.order_items ?? []
+        ).map(
+          (
+            item,
+          ): KitchenOrderItem => ({
+            id: item.id,
+
+            order_id:
+              item.order_id,
+
+            product_id:
+              item.product_id,
+
+            quantity:
+              item.quantity,
+
+            price_at_purchase:
+              item.price_at_purchase,
+
+            notes:
+              item.notes,
+
+            products:
+              item.products
+                ? {
+                    ...item.products,
+
+                    price: Number(
+                      item.products
+                        .price,
+                    ),
+                  }
+                : null,
+
+            modifiers: (
+              item.order_item_modifiers ??
+              []
+            )
+              .map(
+                (relation) =>
+                  relation.modifiers,
               )
-                .map(
-                  (relation) =>
-                    relation.modifiers,
-                )
-                .filter(
+              .filter(
+                (
+                  modifier,
+                ): modifier is NonNullable<
+                  typeof modifier
+                > =>
+                  modifier !== null,
+              ),
+
+            components: (
+              item.order_item_components ??
+              []
+            )
+              .map(
+                (
+                  component,
+                ): KitchenOrderItemComponent => ({
+                  id:
+                    component.id,
+
+                  order_item_id:
+                    component
+                      .order_item_id,
+
+                  product_id:
+                    component
+                      .product_id,
+
+                  component_type:
+                    component
+                      .component_type,
+
+                  label:
+                    component.label,
+
+                  quantity:
+                    component.quantity,
+
+                  notes:
+                    component.notes,
+
+                  position:
+                    component.position ??
+                    null,
+
+                  products:
+                    component.products
+                      ? {
+                          ...component.products,
+
+                          price: Number(
+                            component
+                              .products
+                              .price,
+                          ),
+                        }
+                      : null,
+
+                  modifiers: (
+                    component
+                      .order_item_component_modifiers ??
+                    []
+                  )
+                    .map(
+                      (relation) =>
+                        relation.modifiers,
+                    )
+                    .filter(
+                      (
+                        modifier,
+                      ): modifier is NonNullable<
+                        typeof modifier
+                      > =>
+                        modifier !==
+                        null,
+                    ),
+                }),
+              )
+              .sort(
+                (
+                  first,
+                  second,
+                ) =>
                   (
-                    modifier,
-                  ): modifier is NonNullable<
-                    typeof modifier
-                  > =>
-                    modifier !== null,
-                ),
-            }),
-          )
-          .sort(
-            (first, second) =>
-              (first.position ?? 0) -
-              (second.position ?? 0),
-          ),
-      }),
-    ),
-  }));
+                    first.position ??
+                    0
+                  ) -
+                  (
+                    second.position ??
+                    0
+                  ),
+              ),
+          }),
+        ),
+      };
+    },
+  );
 }
 
 /**

@@ -385,6 +385,94 @@ export function KitchenScreen({
     );
   };
 
+  const renderDeliveryDetails = (
+    order: KitchenOrder,
+  ) => {
+    const delivery =
+      order.deliveryDetails;
+
+    if (!delivery) {
+      return null;
+    }
+
+    return (
+      <View
+        style={{
+          marginBottom: 14,
+          padding: 12,
+          borderRadius: 8,
+          backgroundColor: '#202020',
+          borderWidth: 1,
+          borderColor: '#4CAF50',
+        }}
+      >
+        <Text
+          style={{
+            color: '#4CAF50',
+            fontWeight: 'bold',
+            fontSize: 16,
+            marginBottom: 8,
+          }}
+        >
+          🏠 PEDIDO A DOMICILIO
+        </Text>
+
+        <Text
+          style={{
+            color: '#FFF',
+            marginBottom: 2,
+          }}
+        >
+          👤 {delivery.customerName}
+        </Text>
+
+        <Text
+          style={{
+            color: '#FFF',
+            marginBottom: 8,
+          }}
+        >
+          📞 {delivery.phone}
+        </Text>
+
+        <Text
+          style={{
+            color: '#FFF',
+          }}
+        >
+          📍 {delivery.street}{' '}
+          #{delivery.exteriorNumber}
+          {delivery.interiorNumber
+            ? ` Int. ${delivery.interiorNumber}`
+            : ''}
+        </Text>
+
+        <Text
+          style={{
+            color: '#FFF',
+            marginBottom: 8,
+          }}
+        >
+          {delivery.neighborhood}
+          {delivery.postalCode
+            ? ` C.P. ${delivery.postalCode}`
+            : ''}
+        </Text>
+
+        {delivery.deliveryReferences ? (
+          <Text
+            style={{
+              color: '#FFD54F',
+            }}
+          >
+            🚩{' '}
+            {delivery.deliveryReferences}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
+
   const renderOrder = ({
     item,
   }: {
@@ -414,6 +502,8 @@ export function KitchenScreen({
             minute: '2-digit',
           })}
         </Text>
+
+        {renderDeliveryDetails(item)}
 
         <View style={styles.itemsContainer}>
           {item.order_items.map(
