@@ -22,6 +22,9 @@ import {
 } from '../../types';
 
 import { styles } from '../../../App.styles';
+import { isDeliveryProduct } from '../../Utils/delivery';
+
+
 
 interface KitchenProps {
   pendingOrders: KitchenOrder[];
@@ -144,43 +147,70 @@ export function KitchenScreen({
         line.notes ?? ''
       ).trim();
 
-      const modifiers = line.modifiers ?? [];
-      const components = line.components ?? [];
+      const modifiers =
+        line.modifiers ?? [];
 
-      const modifierIdentifier = modifiers
-        .map((modifier) => modifier.id)
-        .sort()
-        .join(',');
+      const components =
+        line.components ?? [];
 
-      const componentIdentifier = components
-        .map((component) => {
-          const componentModifiers =
-            component.modifiers ?? [];
+      const modifierIdentifier =
+        modifiers
+          .map(
+            (modifier) =>
+              modifier.id,
+          )
+          .sort()
+          .join(',');
 
-          return [
-            component.component_type,
-            component.product_id,
-            (component.notes ?? '').trim(),
-            componentModifiers
-              .map((modifier) => modifier.id)
-              .sort()
-              .join(','),
-          ].join(':');
-        })
-        .sort()
-        .join('|');
+      const componentIdentifier =
+        components
+          .map((component) => {
+            const componentModifiers =
+              component.modifiers ?? [];
 
-      const uniqueItemId = [
-        line.product_id,
-        cleanNotes,
-        modifierIdentifier,
-        componentIdentifier,
-      ].join('-');
+            return [
+              component.component_type,
+              component.product_id,
+              (
+                component.notes ?? ''
+              ).trim(),
+              componentModifiers
+                .map(
+                  (modifier) =>
+                    modifier.id,
+                )
+                .sort()
+                .join(','),
+            ].join(':');
+          })
+          .sort()
+          .join('|');
+
+      const product =
+        createProductFromOrderItem(
+          line,
+        );
+
+      const isDeliveryItem =
+        isDeliveryProduct(product);
+
+      const uniqueItemId =
+        isDeliveryItem
+          ? `${product.id}-delivery`
+          : [
+              line.product_id,
+              cleanNotes,
+              modifierIdentifier,
+              componentIdentifier,
+            ].join('-');
 
       const existingItem =
         groupedItems[uniqueItemId];
 
-      if (existingItem) {
+      if (
+        existingItem &&
+        !isDeliveryItem
+      ) {
         existingItem.quantity +=
           line.quantity;
 
@@ -189,51 +219,124 @@ export function KitchenScreen({
 
       groupedItems[uniqueItemId] = {
         id: uniqueItemId,
-        product:
-          createProductFromOrderItem(line),
-        quantity: line.quantity,
+
+        product,
+
+        quantity:
+          isDeliveryItem
+            ? 1
+            : line.quantity,
+
         notes: cleanNotes,
-        selectedModifiers: modifiers,
+
+        selectedModifiers:
+          modifiers.map(
+            (modifier) => ({
+              ...modifier,
+            }),
+          ),
 
         comboComponents:
           components.length > 0
             ? components.map(
-              (component) => ({
-                slotId:
-                  component.slot_id ??
-                  component.id,
+                (component) => ({
+                  slotId:
+                    component.slot_id ??
+                    component.id,
 
-                type:
-                  component.component_type as
-                  | 'burger'
-                  | 'hotdog'
-                  | 'side'
-                  | 'drink',
+                  type:
+                    component
+                      .component_type as
+                      | 'burger'
+                      | 'hotdog'
+                      | 'side'
+                      | 'drink',
 
-                label: component.label,
+                  label:
+                    component.label,
 
-                product:
-                  createProductFromComponent(
-                    component,
+                  product:
+                    createProductFromComponent(
+                      component,
+                    ),
+
+                  quantity:
+                    component.quantity,
+
+                  notes: (
+                    component.notes ?? ''
+                  ).trim(),
+
+                  selectedModifiers: (
+                    component.modifiers ??
+                    []
+                  ).map(
+                    (modifier) => ({
+                      ...modifier,
+                    }),
                   ),
+                }),
+              )
+            : undefined,
 
-                quantity:
-                  component.quantity,
+        deliveryDetails:
+          isDeliveryItem &&
+          order.deliveryDetails
+            ? {
+                customerName:
+                  order.deliveryDetails
+                    .customerName,
 
-                notes: (
-                  component.notes ?? ''
-                ).trim(),
+                phone:
+                  order.deliveryDetails
+                    .phone,
 
-                selectedModifiers:
-                  component.modifiers ?? [],
-              }),
-            )
+                street:
+                  order.deliveryDetails
+                    .street,
+
+                exteriorNumber:
+                  order.deliveryDetails
+                    .exteriorNumber,
+
+                interiorNumber:
+                  order.deliveryDetails
+                    .interiorNumber ?? '',
+
+                neighborhood:
+                  order.deliveryDetails
+                    .neighborhood,
+
+                postalCode:
+                  order.deliveryDetails
+                    .postalCode ?? '',
+
+                deliveryReferences:
+                  order.deliveryDetails
+                    .deliveryReferences ?? '',
+
+                latitude:
+                  order.deliveryDetails
+                    .latitude,
+
+                longitude:
+                  order.deliveryDetails
+                    .longitude,
+              }
             : undefined,
       };
     });
 
-    setCart(Object.values(groupedItems));
-    setEditingOrderId(order.id);
+    setCart(
+      Object.values(
+        groupedItems,
+      ),
+    );
+
+    setEditingOrderId(
+      order.id,
+    );
+
     setActiveTab('pos');
   };
 
