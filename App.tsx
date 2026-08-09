@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, {
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -11,32 +13,55 @@ import {
   useAuth,
 } from './src/context/AuthContext';
 
-import { LoginScreen } from './src/screens/login/LoginScreen';
-import { POSScreen } from './src/screens/pos/PosScreen';
-import { KitchenScreen } from './src/screens/kitchen/KitchenScreen';
+import {
+  LoginScreen,
+} from './src/screens/login/LoginScreen';
 
-import { GlobalHeader } from './src/components/header/GlobalHeader';
+import {
+  POSScreen,
+} from './src/screens/pos/PosScreen';
 
-import { useInitialData } from './src/hooks/useInitialData';
+import {
+  KitchenScreen,
+} from './src/screens/kitchen/KitchenScreen';
 
-import { Cart } from './src/types';
+import {
+  GlobalHeader,
+  MainTab,
+} from './src/components/header/GlobalHeader';
 
-import { styles } from './App.styles';
+import {
+  useInitialData,
+} from './src/hooks/useInitialData';
+
+import {
+  Cart,
+} from './src/types';
+
+import {
+  styles,
+} from './App.styles';
+import { SalesScreen } from './src/screens/sales/SalesScreen';
 
 function MainApp() {
-  const { user, logout } = useAuth();
+  const {
+    user,
+    logout,
+  } = useAuth();
 
   const [
     activeTab,
     setActiveTab,
-  ] = useState<'pos' | 'kitchen'>(
+  ] = useState<MainTab>(
     'pos',
   );
 
   const [
     editingOrderId,
     setEditingOrderId,
-  ] = useState<string | null>(null);
+  ] = useState<string | null>(
+    null,
+  );
 
   const [
     cart,
@@ -57,7 +82,9 @@ function MainApp() {
   if (isLoading) {
     return (
       <View
-        style={styles.containerLoading}
+        style={
+          styles.containerLoading
+        }
       >
         <ActivityIndicator
           size="large"
@@ -65,7 +92,9 @@ function MainApp() {
         />
 
         <Text
-          style={styles.loadingText}
+          style={
+            styles.loadingText
+          }
         >
           Conectando a Burger Kong
           Cloud...
@@ -109,11 +138,85 @@ function MainApp() {
     );
   }
 
+  const renderActiveScreen =
+    () => {
+      if (
+        activeTab === 'pos'
+      ) {
+        return (
+          <POSScreen
+            categories={
+              categories
+            }
+            products={
+              products
+            }
+            fetchProducts={
+              fetchProducts
+            }
+            cart={cart}
+            setCart={
+              setCart
+            }
+            editingOrderId={
+              editingOrderId
+            }
+            setEditingOrderId={
+              setEditingOrderId
+            }
+            fetchKitchenOrders={
+              fetchKitchenOrders
+            }
+          />
+        );
+      }
+
+      if (
+        activeTab ===
+        'kitchen'
+      ) {
+        return (
+          <KitchenScreen
+            pendingOrders={
+              pendingOrders
+            }
+            setPendingOrders={
+              setPendingOrders
+            }
+            editingOrderId={
+              editingOrderId
+            }
+            setEditingOrderId={
+              setEditingOrderId
+            }
+            setCart={
+              setCart
+            }
+            setActiveTab={
+              setActiveTab
+            }
+          />
+        );
+      }
+
+      return (
+        <SalesScreen />
+      );
+    };
+
   return (
-    <View style={styles.mainContainer}>
+    <View
+      style={
+        styles.mainContainer
+      }
+    >
       <GlobalHeader
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab={
+          activeTab
+        }
+        setActiveTab={
+          setActiveTab
+        }
         editingOrderId={
           editingOrderId
         }
@@ -124,57 +227,23 @@ function MainApp() {
         logout={logout}
       />
 
-      {activeTab === 'pos' ? (
-        <POSScreen
-          categories={categories}
-          products={products}
-          fetchProducts={
-            fetchProducts
-          }
-          cart={cart}
-          setCart={setCart}
-          editingOrderId={
-            editingOrderId
-          }
-          setEditingOrderId={
-            setEditingOrderId
-          }
-          fetchKitchenOrders={
-            fetchKitchenOrders
-          }
-        />
-      ) : (
-        <KitchenScreen
-          pendingOrders={
-            pendingOrders
-          }
-          setPendingOrders={
-            setPendingOrders
-          }
-          editingOrderId={
-            editingOrderId
-          }
-          setEditingOrderId={
-            setEditingOrderId
-          }
-          setCart={setCart}
-          setActiveTab={
-            setActiveTab
-          }
-        />
-      )}
+      {renderActiveScreen()}
     </View>
   );
 }
 
 function NavigationGateway() {
-  const { user, loading } =
-    useAuth();
+  const {
+    user,
+    loading,
+  } = useAuth();
 
   if (loading) {
     return (
       <View
-        style={styles.containerLoading}
+        style={
+          styles.containerLoading
+        }
       >
         <ActivityIndicator
           size="large"
@@ -182,9 +251,12 @@ function NavigationGateway() {
         />
 
         <Text
-          style={styles.loadingText}
+          style={
+            styles.loadingText
+          }
         >
-          Verificando credenciales...
+          Verificando
+          credenciales...
         </Text>
       </View>
     );

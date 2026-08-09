@@ -7,6 +7,17 @@ import {
   OrderPayment,
 } from '../types';
 
+export interface CompletedSaleRecord {
+  id: string;
+  total: string | number;
+  status: string;
+  created_at: string;
+
+  order_payments:
+    | OrderPaymentRecord
+    | null;
+}
+
 interface OrderPaymentRecord {
   id: string;
   order_id: string;
@@ -133,3 +144,47 @@ function mapOrderPayment(
       record.created_at,
   };
 }
+
+export async function fetchCompletedSales(): Promise<
+  CompletedSaleRecord[]
+> {
+  const { data, error } =
+    await supabase
+      .from('orders')
+      .select(`
+        id,
+        total,
+        status,
+        created_at,
+        order_payments(
+          id,
+          order_id,
+          payment_method,
+          total_amount,
+          amount_received,
+          change_amount,
+          created_at
+        )
+      `)
+      .eq(
+        'status',
+        'entregado',
+      )
+      .order(
+        'created_at',
+        {
+          ascending: false,
+        },
+      );
+
+  if (error) {
+    throw new Error(
+      `No se pudieron consultar las ventas: ${error.message}`,
+    );
+  }
+
+  return (
+      data ?? []
+  ) as unknown as CompletedSaleRecord[];
+}
+

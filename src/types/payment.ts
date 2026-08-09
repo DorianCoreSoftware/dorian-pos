@@ -19,3 +19,15 @@ export interface CreateOrderPayment {
   amountReceived: number | null;
   changeAmount: number | null;
 }
+
+export interface CompletedSale {
+  orderId: string;
+
+  totalAmount: number;
+
+  orderStatus: string;
+
+  orderCreatedAt: string;
+
+  payment: OrderPayment;
+}
