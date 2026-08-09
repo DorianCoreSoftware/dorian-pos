@@ -13,22 +13,16 @@ export async function getCompletedSales(): Promise<
     await fetchCompletedSales();
 
   return records
-    .filter(
-      (
-        record,
-      ): record is typeof record & {
-        order_payments:
-          NonNullable<
-            typeof record.order_payments
-          >;
-      } =>
-        record.order_payments !==
-        null,
-    )
-    .map(
-      (
-        record,
-      ): CompletedSale => ({
+    .map((record) => {
+      const payment =
+        record.order_payments?.[0] ??
+        null;
+
+      if (!payment) {
+        return null;
+      }
+
+      return {
         orderId:
           record.id,
 
@@ -45,56 +39,44 @@ export async function getCompletedSales(): Promise<
 
         payment: {
           id:
-            record
-              .order_payments
-              .id,
+            payment.id,
 
           orderId:
-            record
-              .order_payments
-              .order_id,
+            payment.order_id,
 
           paymentMethod:
-            record
-              .order_payments
-              .payment_method,
+            payment.payment_method,
 
           totalAmount:
             Number(
-              record
-                .order_payments
-                .total_amount,
+              payment.total_amount,
             ),
 
           amountReceived:
-            record
-              .order_payments
-              .amount_received ===
+            payment.amount_received ===
             null
               ? null
               : Number(
-                  record
-                    .order_payments
-                    .amount_received,
+                  payment.amount_received,
                 ),
 
           changeAmount:
-            record
-              .order_payments
-              .change_amount ===
+            payment.change_amount ===
             null
               ? null
               : Number(
-                  record
-                    .order_payments
-                    .change_amount,
+                  payment.change_amount,
                 ),
 
           createdAt:
-            record
-              .order_payments
-              .created_at,
+            payment.created_at,
         },
-      }),
+      } satisfies CompletedSale;
+    })
+    .filter(
+      (
+        sale,
+      ): sale is CompletedSale =>
+        sale !== null,
     );
 }

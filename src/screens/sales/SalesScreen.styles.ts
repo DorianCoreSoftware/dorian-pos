@@ -300,4 +300,38 @@ export const styles =
       textAlign: 'center',
       marginTop: 5,
     },
+
+    filtersContainer: {
+  flexDirection: 'row',
+  gap: 10,
+  marginBottom: 16,
+},
+
+filterButton: {
+  minHeight: 38,
+  paddingHorizontal: 14,
+  borderRadius: 8,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderWidth: 1,
+  borderColor: '#444444',
+  backgroundColor: '#1D1D1D',
+},
+
+filterButtonActive: {
+  borderColor: '#FFBF00',
+  backgroundColor: '#302800',
+},
+
+filterButtonText: {
+  color: '#AAAAAA',
+  fontSize: 12,
+  fontWeight: '700',
+},
+
+filterButtonTextActive: {
+  color: '#FFBF00',
+},
   });
+
+  
