@@ -1,4 +1,15 @@
-import React from 'react';
+import React, {
+  useState,
+} from 'react';
+
+import {
+  PaymentModal,
+} from '../../components/payment-modal';
+
+import {
+  registerOrderPayment,
+} from '../../services/paymentService';
+
 import {
   Alert,
   FlatList,
@@ -18,11 +29,13 @@ import {
   KitchenOrder,
   KitchenOrderItem,
   KitchenOrderItemComponent,
+  PaymentMethod,
   Product,
 } from '../../types';
 
 import { styles } from '../../../App.styles';
 import { isDeliveryProduct } from '../../Utils/delivery';
+
 
 
 
@@ -56,29 +69,85 @@ export function KitchenScreen({
   setCart,
   setActiveTab,
 }: KitchenProps) {
-  const handleDeliverOrder = async (
-    orderId: string,
+  const [
+    paymentOrder,
+    setPaymentOrder,
+  ] = useState<KitchenOrder | null>(
+    null,
+  );
+
+  const [
+    isProcessingPayment,
+    setIsProcessingPayment,
+  ] = useState(false);
+
+  const handleOpenPayment = (
+    order: KitchenOrder,
+  ): void => {
+    setPaymentOrder(order);
+  };
+
+  const handleClosePayment = (): void => {
+    if (isProcessingPayment) {
+      return;
+    }
+
+    setPaymentOrder(null);
+  };
+
+  const handleConfirmPayment = async (
+    paymentMethod: PaymentMethod,
+    amountReceived: number | null,
   ): Promise<void> => {
+    if (
+      !paymentOrder ||
+      isProcessingPayment
+    ) {
+      return;
+    }
+
     try {
-      await deliverOrder(orderId);
+      setIsProcessingPayment(true);
 
-      removeOrderFromPendingList(orderId);
+      await registerOrderPayment({
+        orderId: paymentOrder.id,
+        paymentMethod,
+        totalAmount: Number(
+          paymentOrder.total,
+        ),
+        amountReceived,
+      });
 
-      if (editingOrderId === orderId) {
+      await deliverOrder(
+        paymentOrder.id,
+      );
+
+      removeOrderFromPendingList(
+        paymentOrder.id,
+      );
+
+      if (
+        editingOrderId ===
+        paymentOrder.id
+      ) {
         clearEditingOrder();
       }
+
+      setPaymentOrder(null);
     } catch (error) {
       console.error(
-        'Error al entregar la orden:',
+        'Error al cobrar la orden:',
         error,
       );
 
       Alert.alert(
-        'Error',
+        'Error al cobrar',
         error instanceof Error
           ? error.message
-          : 'No se pudo entregar la orden.',
+          : 'No se pudo registrar el pago.',
       );
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -634,18 +703,16 @@ export function KitchenScreen({
 
           <TouchableOpacity
             style={styles.deliverButton}
-            onPress={() => {
-              void handleDeliverOrder(
-                item.id,
-              );
-            }}
+            onPress={() =>
+              handleOpenPayment(item)
+            }
           >
             <Text
               style={
                 styles.deliverButtonText
               }
             >
-              Entregar
+              Cobrar / Entregar
             </Text>
           </TouchableOpacity>
         </View>
@@ -694,6 +761,34 @@ export function KitchenScreen({
           paddingVertical: 20,
         }}
         renderItem={renderOrder}
+      />
+
+      <PaymentModal
+        visible={
+          paymentOrder !== null
+        }
+        totalAmount={
+          paymentOrder
+            ? Number(
+                paymentOrder.total,
+              )
+            : 0
+        }
+        isProcessing={
+          isProcessingPayment
+        }
+        onClose={
+          handleClosePayment
+        }
+        onConfirm={(
+          paymentMethod,
+          amountReceived,
+        ) => {
+          void handleConfirmPayment(
+            paymentMethod,
+            amountReceived,
+          );
+        }}
       />
     </View>
   );
