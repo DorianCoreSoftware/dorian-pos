@@ -57,6 +57,77 @@ export const styles =
       fontWeight: '800',
     },
 
+    filtersContainer: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 16,
+    },
+
+    filterButton: {
+      minHeight: 38,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#1D1D1D',
+    },
+
+    filterButtonActive: {
+      borderColor: '#FFBF00',
+      backgroundColor: '#302800',
+    },
+
+    filterButtonText: {
+      color: '#AAAAAA',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    filterButtonTextActive: {
+      color: '#FFBF00',
+    },
+
+    customDateContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: -6,
+      marginBottom: 18,
+    },
+
+    dateField: {
+      flex: 1,
+      minHeight: 64,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#555555',
+      backgroundColor: '#1D1D1D',
+      justifyContent: 'center',
+    },
+
+    dateLabel: {
+      color: '#999999',
+      fontSize: 11,
+      fontWeight: '700',
+      marginBottom: 5,
+    },
+
+    dateValue: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '800',
+    },
+
+    dateRangeSeparator: {
+      color: '#FFBF00',
+      fontSize: 20,
+      fontWeight: '900',
+    },
+
     summaryContainer: {
       flexDirection: 'row',
       gap: 12,
@@ -301,37 +372,68 @@ export const styles =
       marginTop: 5,
     },
 
-    filtersContainer: {
-  flexDirection: 'row',
-  gap: 10,
-  marginBottom: 16,
-},
+    datePickerOverlay: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20,
+      backgroundColor:
+        'rgba(0, 0, 0, 0.72)',
+    },
 
-filterButton: {
-  minHeight: 38,
-  paddingHorizontal: 14,
-  borderRadius: 8,
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderWidth: 1,
-  borderColor: '#444444',
-  backgroundColor: '#1D1D1D',
-},
+    datePickerModal: {
+      width: '100%',
+      maxWidth: 430,
+      padding: 18,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#1D1D1D',
+    },
 
-filterButtonActive: {
-  borderColor: '#FFBF00',
-  backgroundColor: '#302800',
-},
+    datePickerTitle: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginBottom: 12,
+    },
 
-filterButtonText: {
-  color: '#AAAAAA',
-  fontSize: 12,
-  fontWeight: '700',
-},
+    datePickerActions: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 14,
+    },
 
-filterButtonTextActive: {
-  color: '#FFBF00',
-},
+    datePickerCancelButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#555555',
+      backgroundColor: '#292929',
+    },
+
+    datePickerCancelText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+    },
+
+    datePickerConfirmButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#FFBF00',
+    },
+
+    datePickerConfirmText: {
+      color: '#171717',
+      fontSize: 13,
+      fontWeight: '900',
+    },
   });
-
-  
