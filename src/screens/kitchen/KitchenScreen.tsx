@@ -35,6 +35,7 @@ import {
 
 import { styles } from '../../../App.styles';
 import { isDeliveryProduct } from '../../Utils/delivery';
+import { fetchOrderPaymentByOrderId } from '../../repositories/PaymentRepository';
 
 
 
@@ -81,10 +82,91 @@ export function KitchenScreen({
     setIsProcessingPayment,
   ] = useState(false);
 
-  const handleOpenPayment = (
+  const handleDeliverPaidOrder = async (
     order: KitchenOrder,
-  ): void => {
-    setPaymentOrder(order);
+  ): Promise<void> => {
+    try {
+      await deliverOrder(
+        order.id,
+      );
+
+      removeOrderFromPendingList(
+        order.id,
+      );
+
+      if (
+        editingOrderId ===
+        order.id
+      ) {
+        clearEditingOrder();
+      }
+    } catch (error) {
+      console.error(
+        'Error al entregar la orden pagada:',
+        error,
+      );
+
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo entregar la orden.',
+      );
+    }
+  };
+
+  const handleOpenPayment = async (
+    order: KitchenOrder,
+  ): Promise<void> => {
+    try {
+      const existingPayment =
+        await fetchOrderPaymentByOrderId(
+          order.id,
+        );
+
+      if (existingPayment) {
+        Alert.alert(
+          'Orden ya pagada',
+          existingPayment.paymentMethod === 'cash'
+            ? `Esta orden ya fue pagada en efectivo.\n\nRecibido: $${(
+              existingPayment.amountReceived ?? 0
+            ).toFixed(2)}\nCambio: $${(
+              existingPayment.changeAmount ?? 0
+            ).toFixed(2)}`
+            : 'Esta orden ya fue pagada con tarjeta.',
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+            },
+            {
+              text: 'Entregar',
+              onPress: () => {
+                void handleDeliverPaidOrder(
+                  order,
+                );
+              },
+            },
+          ],
+        );
+
+        return;
+      }
+
+      setPaymentOrder(order);
+    } catch (error) {
+      console.error(
+        'Error al consultar el pago:',
+        error,
+      );
+
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo consultar el estado del pago.',
+      );
+    }
   };
 
   const handleClosePayment = (): void => {
@@ -267,11 +349,11 @@ export function KitchenScreen({
         isDeliveryItem
           ? `${product.id}-delivery`
           : [
-              line.product_id,
-              cleanNotes,
-              modifierIdentifier,
-              componentIdentifier,
-            ].join('-');
+            line.product_id,
+            cleanNotes,
+            modifierIdentifier,
+            componentIdentifier,
+          ].join('-');
 
       const existingItem =
         groupedItems[uniqueItemId];
@@ -308,90 +390,90 @@ export function KitchenScreen({
         comboComponents:
           components.length > 0
             ? components.map(
-                (component) => ({
-                  slotId:
-                    component.slot_id ??
-                    component.id,
+              (component) => ({
+                slotId:
+                  component.slot_id ??
+                  component.id,
 
-                  type:
-                    component
-                      .component_type as
-                      | 'burger'
-                      | 'hotdog'
-                      | 'side'
-                      | 'drink',
+                type:
+                  component
+                    .component_type as
+                  | 'burger'
+                  | 'hotdog'
+                  | 'side'
+                  | 'drink',
 
-                  label:
-                    component.label,
+                label:
+                  component.label,
 
-                  product:
-                    createProductFromComponent(
-                      component,
-                    ),
-
-                  quantity:
-                    component.quantity,
-
-                  notes: (
-                    component.notes ?? ''
-                  ).trim(),
-
-                  selectedModifiers: (
-                    component.modifiers ??
-                    []
-                  ).map(
-                    (modifier) => ({
-                      ...modifier,
-                    }),
+                product:
+                  createProductFromComponent(
+                    component,
                   ),
-                }),
-              )
+
+                quantity:
+                  component.quantity,
+
+                notes: (
+                  component.notes ?? ''
+                ).trim(),
+
+                selectedModifiers: (
+                  component.modifiers ??
+                  []
+                ).map(
+                  (modifier) => ({
+                    ...modifier,
+                  }),
+                ),
+              }),
+            )
             : undefined,
 
         deliveryDetails:
           isDeliveryItem &&
-          order.deliveryDetails
+            order.deliveryDetails
             ? {
-                customerName:
-                  order.deliveryDetails
-                    .customerName,
+              customerName:
+                order.deliveryDetails
+                  .customerName,
 
-                phone:
-                  order.deliveryDetails
-                    .phone,
+              phone:
+                order.deliveryDetails
+                  .phone,
 
-                street:
-                  order.deliveryDetails
-                    .street,
+              street:
+                order.deliveryDetails
+                  .street,
 
-                exteriorNumber:
-                  order.deliveryDetails
-                    .exteriorNumber,
+              exteriorNumber:
+                order.deliveryDetails
+                  .exteriorNumber,
 
-                interiorNumber:
-                  order.deliveryDetails
-                    .interiorNumber ?? '',
+              interiorNumber:
+                order.deliveryDetails
+                  .interiorNumber ?? '',
 
-                neighborhood:
-                  order.deliveryDetails
-                    .neighborhood,
+              neighborhood:
+                order.deliveryDetails
+                  .neighborhood,
 
-                postalCode:
-                  order.deliveryDetails
-                    .postalCode ?? '',
+              postalCode:
+                order.deliveryDetails
+                  .postalCode ?? '',
 
-                deliveryReferences:
-                  order.deliveryDetails
-                    .deliveryReferences ?? '',
+              deliveryReferences:
+                order.deliveryDetails
+                  .deliveryReferences ?? '',
 
-                latitude:
-                  order.deliveryDetails
-                    .latitude,
+              latitude:
+                order.deliveryDetails
+                  .latitude,
 
-                longitude:
-                  order.deliveryDetails
-                    .longitude,
-              }
+              longitude:
+                order.deliveryDetails
+                  .longitude,
+            }
             : undefined,
       };
     });
@@ -703,9 +785,9 @@ export function KitchenScreen({
 
           <TouchableOpacity
             style={styles.deliverButton}
-            onPress={() =>
-              handleOpenPayment(item)
-            }
+            onPress={() => {
+              void handleOpenPayment(item);
+            }}
           >
             <Text
               style={
@@ -770,8 +852,8 @@ export function KitchenScreen({
         totalAmount={
           paymentOrder
             ? Number(
-                paymentOrder.total,
-              )
+              paymentOrder.total,
+            )
             : 0
         }
         isProcessing={

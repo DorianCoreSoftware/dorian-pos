@@ -1,4 +1,5 @@
 import {
+  fetchOrderPaymentByOrderId,
   insertOrderPayment,
 } from '../repositories/PaymentRepository';
 
@@ -22,6 +23,23 @@ export async function registerOrderPayment({
 }: RegisterPaymentParams): Promise<OrderPayment> {
   validateOrderId(orderId);
   validateTotalAmount(totalAmount);
+
+  const existingPayment =
+    await fetchOrderPaymentByOrderId(
+      orderId,
+    );
+
+  /*
+   * Si el pago ya existe, no intentamos
+   * insertarlo nuevamente.
+   *
+   * Esto permite recuperar el flujo si
+   * el pago se guardó correctamente pero
+   * falló el cambio de estado de la orden.
+   */
+  if (existingPayment) {
+    return existingPayment;
+  }
 
   if (paymentMethod === 'card') {
     return insertOrderPayment({
@@ -80,7 +98,9 @@ function validateTotalAmount(
   totalAmount: number,
 ): void {
   if (
-    !Number.isFinite(totalAmount) ||
+    !Number.isFinite(
+      totalAmount,
+    ) ||
     totalAmount < 0
   ) {
     throw new Error(
@@ -95,7 +115,9 @@ function validateCashPayment(
 ): void {
   if (
     amountReceived === null ||
-    !Number.isFinite(amountReceived)
+    !Number.isFinite(
+      amountReceived,
+    )
   ) {
     throw new Error(
       'Ingresa la cantidad recibida.',
@@ -109,7 +131,8 @@ function validateCashPayment(
   }
 
   if (
-    amountReceived < totalAmount
+    amountReceived <
+    totalAmount
   ) {
     const missingAmount =
       roundCurrency(
@@ -130,9 +153,10 @@ function roundCurrency(
 ): number {
   return (
     Math.round(
-      (amount +
-        Number.EPSILON) *
-        100,
+      (
+        amount +
+        Number.EPSILON
+      ) * 100,
     ) / 100
   );
 }
