@@ -6,3 +6,4 @@ export * from './cart';
 export * from './order';
 export * from './combo';
 export * from './delivery';
+export * from './payment';
