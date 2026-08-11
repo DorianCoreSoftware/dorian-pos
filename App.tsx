@@ -5,6 +5,7 @@ import React, {
 import {
   ActivityIndicator,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -26,6 +27,14 @@ import {
 } from './src/screens/kitchen/KitchenScreen';
 
 import {
+  SalesScreen,
+} from './src/screens/sales/SalesScreen';
+
+import {
+  CashClosingScreen,
+} from './src/screens/cash-closing/CashClosingScreen';
+
+import {
   GlobalHeader,
   MainTab,
 } from './src/components/header/GlobalHeader';
@@ -41,7 +50,7 @@ import {
 import {
   styles,
 } from './App.styles';
-import { SalesScreen } from './src/screens/sales/SalesScreen';
+import { canManageCash } from './src/Utils/permissions';
 
 function MainApp() {
   const {
@@ -71,13 +80,23 @@ function MainApp() {
   const {
     categories,
     products,
+
     pendingOrders,
     setPendingOrders,
+
+    cashSession,
+    setCashSession,
+
     isLoading,
     errorMessage,
+
     fetchProducts,
     fetchKitchenOrders,
+    fetchCashSession,
   } = useInitialData(user);
+
+  const userCanManageCash =
+    canManageCash(user);
 
   if (isLoading) {
     return (
@@ -138,11 +157,106 @@ function MainApp() {
     );
   }
 
+  const renderCashRequired =
+    () => {
+      return (
+        <View
+          style={
+            styles.containerLoading
+          }
+        >
+          <Text
+            style={{
+              fontSize: 48,
+              marginBottom: 14,
+            }}
+          >
+            🔒
+          </Text>
+
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontSize: 24,
+              fontWeight: '900',
+              textAlign: 'center',
+            }}
+          >
+            Caja cerrada
+          </Text>
+
+          <Text
+            style={{
+              color: '#AAAAAA',
+              fontSize: 14,
+              marginTop: 8,
+              textAlign: 'center',
+              maxWidth: 420,
+              lineHeight: 21,
+            }}
+          >
+            Debe existir una caja
+            abierta antes de comenzar
+            a registrar ventas.
+          </Text>
+
+          {userCanManageCash ? (
+            <TouchableOpacity
+              style={{
+                marginTop: 20,
+                minHeight: 46,
+                paddingHorizontal: 22,
+                borderRadius: 8,
+                alignItems: 'center',
+                justifyContent:
+                  'center',
+                backgroundColor:
+                  '#FFBF00',
+              }}
+              onPress={() =>
+                setActiveTab(
+                  'cash',
+                )
+              }
+            >
+              <Text
+                style={{
+                  color: '#171717',
+                  fontSize: 14,
+                  fontWeight: '900',
+                }}
+              >
+                Abrir caja
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text
+              style={{
+                color: '#FFBF00',
+                fontSize: 13,
+                fontWeight: '700',
+                marginTop: 18,
+                textAlign: 'center',
+              }}
+            >
+              Solicita a un
+              administrador que abra
+              la caja.
+            </Text>
+          )}
+        </View>
+      );
+    };
+
   const renderActiveScreen =
     () => {
       if (
         activeTab === 'pos'
       ) {
+        if (!cashSession) {
+          return renderCashRequired();
+        }
+
         return (
           <POSScreen
             categories={
@@ -199,9 +313,77 @@ function MainApp() {
         );
       }
 
-      return (
-        <SalesScreen />
-      );
+      if (
+        activeTab ===
+        'sales'
+      ) {
+        return (
+          <SalesScreen />
+        );
+      }
+
+      if (
+        activeTab ===
+        'cash'
+      ) {
+        if (!userCanManageCash) {
+          return (
+            <View
+              style={
+                styles.containerLoading
+              }
+            >
+              <Text
+                style={{
+                  fontSize: 48,
+                  marginBottom: 14,
+                }}
+              >
+                🔐
+              </Text>
+
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 24,
+                  fontWeight: '900',
+                }}
+              >
+                Acceso restringido
+              </Text>
+
+              <Text
+                style={{
+                  color: '#AAAAAA',
+                  fontSize: 14,
+                  marginTop: 8,
+                  textAlign: 'center',
+                }}
+              >
+                Solo un administrador
+                puede administrar la
+                caja.
+              </Text>
+            </View>
+          );
+        }
+
+        return (
+          <CashClosingScreen
+            cashSession={
+              cashSession
+            }
+            setCashSession={
+              setCashSession
+            }
+            fetchCashSession={
+              fetchCashSession
+            }
+          />
+        );
+      }
+
+      return null;
     };
 
   return (

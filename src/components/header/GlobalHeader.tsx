@@ -10,11 +10,13 @@ import {
 import {
   styles,
 } from '../../../App.styles';
+import { canManageCash } from '../../Utils/permissions';
 
 export type MainTab =
   | 'pos'
   | 'kitchen'
-  | 'sales';
+  | 'sales'
+  | 'cash';
 
 interface HeaderProps {
   activeTab: MainTab;
@@ -41,12 +43,18 @@ export function GlobalHeader({
   logout,
 }: HeaderProps) {
   return (
-    <View style={styles.header}>
+    <View
+      style={
+        styles.header
+      }
+    >
       <Image
         source={require(
           '../../../assets/OnlyBurgerKong.png'
         )}
-        style={styles.headerLogo}
+        style={
+          styles.headerLogo
+        }
         resizeMode="contain"
       />
 
@@ -61,25 +69,31 @@ export function GlobalHeader({
       />
 
       <View
-        style={styles.tabContainer}
+        style={
+          styles.tabContainer
+        }
       >
         <TouchableOpacity
           style={[
             styles.tabButton,
 
-            activeTab === 'pos' &&
-              styles.tabActiveButton,
+            activeTab ===
+            'pos' &&
+            styles.tabActiveButton,
           ]}
           onPress={() =>
-            setActiveTab('pos')
+            setActiveTab(
+              'pos',
+            )
           }
         >
           <Text
             style={[
               styles.tabText,
 
-              activeTab === 'pos' &&
-                styles.tabActiveText,
+              activeTab ===
+              'pos' &&
+              styles.tabActiveText,
             ]}
           >
             MENÚ{' '}
@@ -94,8 +108,8 @@ export function GlobalHeader({
             styles.tabButton,
 
             activeTab ===
-              'kitchen' &&
-              styles.tabActiveButton,
+            'kitchen' &&
+            styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -108,8 +122,8 @@ export function GlobalHeader({
               styles.tabText,
 
               activeTab ===
-                'kitchen' &&
-                styles.tabActiveText,
+              'kitchen' &&
+              styles.tabActiveText,
             ]}
           >
             PEDIDOS (
@@ -122,8 +136,8 @@ export function GlobalHeader({
             styles.tabButton,
 
             activeTab ===
-              'sales' &&
-              styles.tabActiveButton,
+            'sales' &&
+            styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -136,13 +150,42 @@ export function GlobalHeader({
               styles.tabText,
 
               activeTab ===
-                'sales' &&
-                styles.tabActiveText,
+              'sales' &&
+              styles.tabActiveText,
             ]}
           >
             VENTAS
           </Text>
         </TouchableOpacity>
+
+        {canManageCash(user) ? (
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+
+              activeTab ===
+              'cash' &&
+              styles.tabActiveButton,
+            ]}
+            onPress={() =>
+              setActiveTab(
+                'cash',
+              )
+            }
+          >
+            <Text
+              style={[
+                styles.tabText,
+
+                activeTab ===
+                'cash' &&
+                styles.tabActiveText,
+              ]}
+            >
+              CAJA
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View
@@ -151,7 +194,9 @@ export function GlobalHeader({
         }
       >
         <Text
-          style={styles.userName}
+          style={
+            styles.userName
+          }
         >
           {user?.fullName}{' '}
           (
@@ -162,7 +207,9 @@ export function GlobalHeader({
         </Text>
 
         <TouchableOpacity
-          onPress={logout}
+          onPress={
+            logout
+          }
           style={
             styles.logoutButton
           }

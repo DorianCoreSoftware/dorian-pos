@@ -7,3 +7,4 @@ export * from './order';
 export * from './combo';
 export * from './delivery';
 export * from './payment';
+export * from './cash-session';

@@ -14,27 +14,38 @@ import {
 } from '../services/orders';
 
 import {
+  getOpenCashSession,
+} from '../services/cashSessionService';
+
+import {
   listenToOrderChanges,
 } from '../services/realtimeService';
 
 import {
+  CashSession,
   Category,
   KitchenOrder,
   Product,
 } from '../types';
 
-import { UserSession } from '../context/AuthContext';
+import {
+  UserSession,
+} from '../context/AuthContext';
 
 export function useInitialData(
   user: UserSession | null,
 ) {
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState<string | null>(null);
+  ] = useState<string | null>(
+    null,
+  );
 
   const [
     categories,
@@ -49,43 +60,83 @@ export function useInitialData(
   const [
     pendingOrders,
     setPendingOrders,
-  ] = useState<KitchenOrder[]>([]);
+  ] = useState<KitchenOrder[]>(
+    [],
+  );
+
+  const [
+    cashSession,
+    setCashSession,
+  ] = useState<CashSession | null>(
+    null,
+  );
 
   const fetchKitchenOrders =
-    useCallback(async (): Promise<void> => {
-      try {
-        const orders =
-          await getPendingOrders();
+    useCallback(
+      async (): Promise<void> => {
+        try {
+          const orders =
+            await getPendingOrders();
 
-        setPendingOrders(orders);
-      } catch (error) {
-        console.error(
-          'Error actualizando comandas:',
-          error,
-        );
-      }
-    }, []);
+          setPendingOrders(
+            orders,
+          );
+        } catch (error) {
+          console.error(
+            'Error actualizando comandas:',
+            error,
+          );
+        }
+      },
+      [],
+    );
 
   const fetchProducts =
-    useCallback(async (): Promise<void> => {
-      try {
-        const activeProducts =
-          await getActiveProducts();
+    useCallback(
+      async (): Promise<void> => {
+        try {
+          const activeProducts =
+            await getActiveProducts();
 
-        setProducts(activeProducts);
-      } catch (error) {
-        console.error(
-          'Error actualizando productos:',
-          error,
-        );
-      }
-    }, []);
+          setProducts(
+            activeProducts,
+          );
+        } catch (error) {
+          console.error(
+            'Error actualizando productos:',
+            error,
+          );
+        }
+      },
+      [],
+    );
+
+  const fetchCashSession =
+    useCallback(
+      async (): Promise<void> => {
+        try {
+          const openSession =
+            await getOpenCashSession();
+
+          setCashSession(
+            openSession,
+          );
+        } catch (error) {
+          console.error(
+            'Error actualizando la caja:',
+            error,
+          );
+        }
+      },
+      [],
+    );
 
   useEffect(() => {
     if (!user) {
       setCategories([]);
       setProducts([]);
       setPendingOrders([]);
+      setCashSession(null);
       setErrorMessage(null);
       setIsLoading(false);
 
@@ -94,7 +145,8 @@ export function useInitialData(
 
     let isMounted = true;
 
-    async function loadInitialData(): Promise<void> {
+    async function loadInitialData():
+      Promise<void> {
       try {
         setIsLoading(true);
         setErrorMessage(null);
@@ -103,10 +155,12 @@ export function useInitialData(
           loadedCategories,
           loadedProducts,
           loadedOrders,
+          loadedCashSession,
         ] = await Promise.all([
           getCategories(),
           getActiveProducts(),
           getPendingOrders(),
+          getOpenCashSession(),
         ]);
 
         if (!isMounted) {
@@ -123,6 +177,10 @@ export function useInitialData(
 
         setPendingOrders(
           loadedOrders,
+        );
+
+        setCashSession(
+          loadedCashSession,
         );
       } catch (error) {
         console.error(
@@ -163,11 +221,13 @@ export function useInitialData(
         onOrdersChanged: () => {
           void fetchKitchenOrders();
         },
+
         onConnected: () => {
           console.log(
             '🍳 Cocina conectada en tiempo real',
           );
         },
+
         debounceMs: 300,
       });
 
@@ -181,13 +241,21 @@ export function useInitialData(
 
   return {
     categories,
+
     products,
     setProducts,
+
     pendingOrders,
     setPendingOrders,
+
+    cashSession,
+    setCashSession,
+
     isLoading,
     errorMessage,
+
     fetchProducts,
     fetchKitchenOrders,
+    fetchCashSession,
   };
 }
