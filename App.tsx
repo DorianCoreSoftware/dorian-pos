@@ -111,6 +111,7 @@ function MainApp() {
     isLoading,
     errorMessage,
 
+    fetchCategories,
     fetchProducts,
     fetchKitchenOrders,
     fetchCashSession,
@@ -459,6 +460,9 @@ function MainApp() {
           <AdminScreen
             onProductsChanged={
               fetchProducts
+            }
+            onCategoriesChanged={
+              fetchCategories
             }
           />
         );

@@ -6,8 +6,11 @@ import {
 
 import {
   getActiveProducts,
-  getCategories,
 } from '../services/products';
+
+import {
+  getActiveCategories,
+} from '../services/categoryService';
 
 import {
   getPendingOrders,
@@ -70,6 +73,26 @@ export function useInitialData(
   ] = useState<CashSession | null>(
     null,
   );
+
+  const fetchCategories =
+    useCallback(
+      async (): Promise<void> => {
+        try {
+          const activeCategories =
+            await getActiveCategories();
+
+          setCategories(
+            activeCategories,
+          );
+        } catch (error) {
+          console.error(
+            'Error actualizando categorías:',
+            error,
+          );
+        }
+      },
+      [],
+    );
 
   const fetchKitchenOrders =
     useCallback(
@@ -157,7 +180,7 @@ export function useInitialData(
           loadedOrders,
           loadedCashSession,
         ] = await Promise.all([
-          getCategories(),
+          getActiveCategories(),
           getActiveProducts(),
           getPendingOrders(),
           getOpenCashSession(),
@@ -241,6 +264,7 @@ export function useInitialData(
 
   return {
     categories,
+    setCategories,
 
     products,
     setProducts,
@@ -254,6 +278,7 @@ export function useInitialData(
     isLoading,
     errorMessage,
 
+    fetchCategories,
     fetchProducts,
     fetchKitchenOrders,
     fetchCashSession,

@@ -3,4 +3,5 @@ export interface Category {
   name: string;
   description: string | null;
   created_at: string;
+  is_active: boolean;
 }
