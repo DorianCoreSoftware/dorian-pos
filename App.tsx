@@ -123,6 +123,21 @@ function MainApp() {
   const userCanManageCatalog =
     canManageCatalog(user);
 
+  const [
+    modifiersVersion,
+    setModifiersVersion,
+  ] = useState(0);
+
+  const handleModifiersChanged =
+    (): Promise<void> => {
+      setModifiersVersion(
+        (current) =>
+          current + 1,
+      );
+
+      return Promise.resolve();
+    };
+
   if (isLoading) {
     return (
       <View
@@ -306,6 +321,9 @@ function MainApp() {
             fetchKitchenOrders={
               fetchKitchenOrders
             }
+            modifiersVersion={
+              modifiersVersion
+            }
           />
         );
       }
@@ -458,11 +476,16 @@ function MainApp() {
 
         return (
           <AdminScreen
-            onProductsChanged={fetchProducts}
-            onCategoriesChanged={fetchCategories} 
-            onModifiersChanged={function (): Promise<void> {
-              throw new Error('Function not implemented.');
-            }} />
+            onProductsChanged={
+              fetchProducts
+            }
+            onCategoriesChanged={
+              fetchCategories
+            }
+            onModifiersChanged={
+              handleModifiersChanged
+            }
+          />
         );
       }
 

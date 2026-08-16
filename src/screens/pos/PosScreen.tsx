@@ -66,11 +66,10 @@ import {
 
 interface POSScreenProps {
   categories: Category[];
-
   products: Product[];
 
   fetchProducts:
-    () => Promise<void>;
+  () => Promise<void>;
 
   cart: Cart;
 
@@ -78,16 +77,20 @@ interface POSScreenProps {
     React.SetStateAction<Cart>
   >;
 
-  editingOrderId: string | null;
+  editingOrderId:
+  string | null;
 
-  setEditingOrderId: React.Dispatch<
+  setEditingOrderId:
+  React.Dispatch<
     React.SetStateAction<
       string | null
     >
   >;
 
   fetchKitchenOrders:
-    () => Promise<void>;
+  () => Promise<void>;
+
+  modifiersVersion: number;
 }
 
 export function POSScreen({
@@ -99,6 +102,7 @@ export function POSScreen({
   editingOrderId,
   setEditingOrderId,
   fetchKitchenOrders,
+  modifiersVersion,
 }: POSScreenProps) {
   const visibleCategories =
     useMemo(
@@ -143,7 +147,7 @@ export function POSScreen({
     setSelectedCategoryId,
   ] = useState<string>(
     visibleCategories[0]?.id ??
-      '',
+    '',
   );
 
   const [
@@ -177,9 +181,24 @@ export function POSScreen({
     meats,
     sauces,
     isLoading:
-      areModifiersLoading,
-    error: modifiersError,
+    areModifiersLoading,
+    error:
+    modifiersError,
+    fetchModifiers,
   } = useModifiers();
+
+  useEffect(() => {
+    if (
+      modifiersVersion <= 0
+    ) {
+      return;
+    }
+
+    void fetchModifiers();
+  }, [
+    modifiersVersion,
+    fetchModifiers,
+  ]);
 
   const [
     isDeliveryModalVisible,
@@ -535,7 +554,7 @@ export function POSScreen({
             index,
           ) =>
             index ===
-            existingDeliveryIndex
+              existingDeliveryIndex
               ? deliveryItem
               : item,
         );
@@ -649,17 +668,17 @@ export function POSScreen({
 
               const preservedComponents =
                 item.comboComponents &&
-                item
-                  .comboComponents
-                  .length > 0
+                  item
+                    .comboComponents
+                    .length > 0
                   ? cloneComboComponents(
-                      item.comboComponents,
-                    )
+                    item.comboComponents,
+                  )
                   : cloneComboComponents(
-                      itemToAdd
-                        .comboComponents ??
-                        [],
-                    );
+                    itemToAdd
+                      .comboComponents ??
+                    [],
+                  );
 
               return {
                 ...item,
@@ -673,23 +692,23 @@ export function POSScreen({
                     .selectedModifiers
                     .length > 0
                     ? item
-                        .selectedModifiers
-                        .map(
-                          (
-                            modifier,
-                          ) => ({
-                            ...modifier,
-                          }),
-                        )
+                      .selectedModifiers
+                      .map(
+                        (
+                          modifier,
+                        ) => ({
+                          ...modifier,
+                        }),
+                      )
                     : itemToAdd
-                        .selectedModifiers
-                        .map(
-                          (
-                            modifier,
-                          ) => ({
-                            ...modifier,
-                          }),
-                        ),
+                      .selectedModifiers
+                      .map(
+                        (
+                          modifier,
+                        ) => ({
+                          ...modifier,
+                        }),
+                      ),
 
                 comboComponents:
                   preservedComponents
@@ -901,7 +920,7 @@ export function POSScreen({
           />
 
           {searchText.length >
-          0 ? (
+            0 ? (
             <TouchableOpacity
               style={
                 styles.productSearchClear
@@ -1065,7 +1084,7 @@ function cloneComboComponents(
 function createModifierIdentifier(
   modifiers:
     ProductConfigurationResult[
-      'selectedModifiers'
+    'selectedModifiers'
     ],
 ): string {
   return (

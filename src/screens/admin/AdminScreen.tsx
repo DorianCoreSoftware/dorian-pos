@@ -36,6 +36,17 @@ interface AdminScreenProps {
     () => Promise<void>;
 }
 
+interface AdminScreenProps {
+    onProductsChanged:
+    () => Promise<void>;
+
+    onCategoriesChanged:
+    () => Promise<void>;
+
+    onModifiersChanged:
+    () => Promise<void>;
+}
+
 export function AdminScreen({
     onProductsChanged,
     onCategoriesChanged,
@@ -77,7 +88,11 @@ export function AdminScreen({
             }
 
             return (
-                <AdminModifiers />
+                <AdminModifiers
+                    onModifiersChanged={
+                        onModifiersChanged
+                    }
+                />
             );
         };
 
