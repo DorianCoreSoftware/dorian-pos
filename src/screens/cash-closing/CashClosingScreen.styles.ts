@@ -286,178 +286,433 @@ export const styles =
     },
 
     cashTabs: {
-  flexDirection: 'row',
-  alignSelf: 'flex-start',
-  padding: 4,
-  marginBottom: 18,
-  borderRadius: 9,
-  backgroundColor: '#242424',
-},
+      flexDirection: 'row',
+      alignSelf: 'flex-start',
+      padding: 4,
+      marginBottom: 18,
+      borderRadius: 9,
+      backgroundColor: '#242424',
+    },
 
-cashTab: {
-  minWidth: 130,
-  paddingVertical: 9,
-  paddingHorizontal: 16,
-  borderRadius: 7,
-  alignItems: 'center',
-},
+    cashTab: {
+      minWidth: 130,
+      paddingVertical: 9,
+      paddingHorizontal: 16,
+      borderRadius: 7,
+      alignItems: 'center',
+    },
 
-cashTabActive: {
-  backgroundColor: '#FFBF00',
-},
+    cashTabActive: {
+      backgroundColor: '#FFBF00',
+    },
 
-cashTabText: {
-  color: '#888888',
-  fontSize: 12,
-  fontWeight: '800',
-},
+    cashTabText: {
+      color: '#888888',
+      fontSize: 12,
+      fontWeight: '800',
+    },
 
-cashTabTextActive: {
-  color: '#171717',
-},
+    cashTabTextActive: {
+      color: '#171717',
+    },
 
-historyScroll: {
-  flex: 1,
-},
+    historyScroll: {
+      flex: 1,
+    },
 
-historyContent: {
-  paddingBottom: 30,
-},
+    historyContent: {
+      paddingBottom: 30,
+    },
 
-historyCenter: {
-  flex: 1,
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 30,
-},
+    historyCenter: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 30,
+    },
 
-historyLoadingText: {
-  color: '#AAAAAA',
-  fontSize: 13,
-  marginTop: 10,
-},
+    historyLoadingText: {
+      color: '#AAAAAA',
+      fontSize: 13,
+      marginTop: 10,
+    },
 
-historyEmptyIcon: {
-  fontSize: 42,
-},
+    historyEmptyIcon: {
+      fontSize: 42,
+    },
 
-historyEmptyTitle: {
-  color: '#FFFFFF',
-  fontSize: 18,
-  fontWeight: '900',
-  marginTop: 8,
-},
+    historyEmptyTitle: {
+      color: '#FFFFFF',
+      fontSize: 18,
+      fontWeight: '900',
+      marginTop: 8,
+    },
 
-historyEmptyText: {
-  color: '#888888',
-  fontSize: 12,
-  marginTop: 5,
-},
+    historyEmptyText: {
+      color: '#888888',
+      fontSize: 12,
+      marginTop: 5,
+    },
 
-historyCard: {
-  padding: 16,
-  marginBottom: 12,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#343434',
-  backgroundColor: '#1D1D1D',
-},
+    historyCard: {
+      padding: 16,
+      marginBottom: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#1D1D1D',
+    },
 
-historyCardHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-},
+    historyCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
 
-historyDate: {
-  color: '#FFFFFF',
-  fontSize: 15,
-  fontWeight: '900',
-},
+    historyDate: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '900',
+    },
 
-historyOpenedAt: {
-  color: '#777777',
-  fontSize: 11,
-  marginTop: 4,
-},
+    historyOpenedAt: {
+      color: '#777777',
+      fontSize: 11,
+      marginTop: 4,
+    },
 
-closedBadge: {
-  paddingHorizontal: 9,
-  paddingVertical: 4,
-  borderRadius: 10,
-  borderWidth: 1,
-  borderColor: '#555555',
-  backgroundColor: '#292929',
-},
+    closedBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#555555',
+      backgroundColor: '#292929',
+    },
 
-closedBadgeText: {
-  color: '#AAAAAA',
-  fontSize: 9,
-  fontWeight: '900',
-},
+    closedBadgeText: {
+      color: '#AAAAAA',
+      fontSize: 9,
+      fontWeight: '900',
+    },
 
-historySalesRow: {
-  flexDirection: 'row',
-  marginTop: 16,
-  gap: 8,
-},
+    historySalesRow: {
+      flexDirection: 'row',
+      marginTop: 16,
+      gap: 8,
+    },
 
-historyMetric: {
-  flex: 1,
-  padding: 10,
-  borderRadius: 8,
-  backgroundColor: '#252525',
-},
+    historyMetric: {
+      flex: 1,
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: '#252525',
+    },
 
-historyMetricLabel: {
-  color: '#888888',
-  fontSize: 10,
-  fontWeight: '700',
-},
+    historyMetricLabel: {
+      color: '#888888',
+      fontSize: 10,
+      fontWeight: '700',
+    },
 
-historyMetricValue: {
-  color: '#FFFFFF',
-  fontSize: 15,
-  fontWeight: '800',
-  marginTop: 5,
-},
+    historyMetricValue: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+      marginTop: 5,
+    },
 
-historyTotalValue: {
-  color: '#FFBF00',
-  fontSize: 16,
-  fontWeight: '900',
-  marginTop: 5,
-},
+    historyTotalValue: {
+      color: '#FFBF00',
+      fontSize: 16,
+      fontWeight: '900',
+      marginTop: 5,
+    },
 
-historyDivider: {
-  height: 1,
-  marginVertical: 14,
-  backgroundColor: '#333333',
-},
+    historyDivider: {
+      height: 1,
+      marginVertical: 14,
+      backgroundColor: '#333333',
+    },
 
-historyCashGrid: {
-  flexDirection: 'row',
-  gap: 8,
-},
+    historyCashGrid: {
+      flexDirection: 'row',
+      gap: 8,
+    },
 
-historyCashItem: {
-  flex: 1,
-},
+    historyCashItem: {
+      flex: 1,
+    },
 
-historyCashLabel: {
-  color: '#777777',
-  fontSize: 10,
-  marginBottom: 4,
-},
+    historyCashLabel: {
+      color: '#777777',
+      fontSize: 10,
+      marginBottom: 4,
+    },
 
-historyCashValue: {
-  color: '#DDDDDD',
-  fontSize: 13,
-  fontWeight: '700',
-},
+    historyCashValue: {
+      color: '#DDDDDD',
+      fontSize: 13,
+      fontWeight: '700',
+    },
 
-historyDifference: {
-  fontSize: 13,
-  fontWeight: '900',
-},
+    historyDifference: {
+      fontSize: 13,
+      fontWeight: '900',
+    },
+
+    historyFilters: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 12,
+    },
+
+    historyFilterButton: {
+      minHeight: 38,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#1D1D1D',
+    },
+
+    historyFilterButtonActive: {
+      borderColor: '#FFBF00',
+      backgroundColor: '#302800',
+    },
+
+    historyFilterText: {
+      color: '#AAAAAA',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    historyFilterTextActive: {
+      color: '#FFBF00',
+    },
+
+    historyDateRange: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+    },
+
+    historyDateField: {
+      flex: 1,
+      minHeight: 58,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: '#555555',
+      backgroundColor: '#1D1D1D',
+      justifyContent: 'center',
+    },
+
+    historyDateLabel: {
+      color: '#888888',
+      fontSize: 9,
+      fontWeight: '800',
+      marginBottom: 4,
+    },
+
+    historyDateValue: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+
+    historyDateSeparator: {
+      color: '#FFBF00',
+      fontSize: 18,
+      fontWeight: '900',
+    },
+
+    historyListHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+
+    historyListTitle: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontWeight: '900',
+    },
+
+    historyListCount: {
+      color: '#777777',
+      fontSize: 11,
+    },
+
+    historyCardRight: {
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+
+    historyDetailHint: {
+      color: '#FFBF00',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+
+    historyModalOverlay: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 22,
+      backgroundColor:
+        'rgba(0, 0, 0, 0.82)',
+    },
+
+    historyModalContent: {
+      width: '100%',
+      maxWidth: 650,
+      maxHeight: '90%',
+      padding: 20,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: '#424242',
+      backgroundColor: '#1D1D1D',
+    },
+
+    historyModalHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+
+    historyModalTitle: {
+      color: '#FFFFFF',
+      fontSize: 23,
+      fontWeight: '900',
+    },
+
+    historyModalSubtitle: {
+      color: '#999999',
+      fontSize: 12,
+      marginTop: 4,
+    },
+
+    historyModalClose: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#292929',
+    },
+
+    historyModalCloseText: {
+      color: '#CCCCCC',
+      fontSize: 15,
+      fontWeight: '900',
+    },
+
+    historyModalScroll: {
+      flexGrow: 0,
+    },
+
+    historyModalStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+
+    historyModalId: {
+      color: '#666666',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+
+    historyModalSection: {
+      marginBottom: 14,
+    },
+
+    historyModalSectionTitle: {
+      color: '#FFBF00',
+      fontSize: 12,
+      fontWeight: '900',
+      marginBottom: 7,
+      textTransform: 'uppercase',
+    },
+
+    historyModalSectionBody: {
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#242424',
+    },
+
+    historyModalDetailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 34,
+      borderBottomWidth: 1,
+      borderBottomColor: '#303030',
+    },
+
+    historyModalDetailLabel: {
+      color: '#999999',
+      fontSize: 12,
+    },
+
+    historyModalDetailValue: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+      textAlign: 'right',
+    },
+
+    historyModalDetailValueHighlighted: {
+      color: '#FFBF00',
+      fontSize: 14,
+      fontWeight: '900',
+      textAlign: 'right',
+    },
+
+    historyModalDifferenceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 42,
+      marginTop: 4,
+    },
+
+    historyModalDifferenceLabel: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+
+    historyModalDifferenceValue: {
+      fontSize: 18,
+      fontWeight: '900',
+    },
+
+    historyModalDoneButton: {
+      minHeight: 44,
+      marginTop: 14,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#FFBF00',
+    },
+
+    historyModalDoneButtonText: {
+      color: '#171717',
+      fontSize: 13,
+      fontWeight: '900',
+    },
   });

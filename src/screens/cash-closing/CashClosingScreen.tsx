@@ -8,12 +8,17 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 
 import {
   closeCashSession,
@@ -40,7 +45,7 @@ import {
 
 interface CashClosingScreenProps {
   cashSession:
-  CashSession | null;
+    CashSession | null;
 
   setCashSession: React.Dispatch<
     React.SetStateAction<
@@ -49,10 +54,26 @@ interface CashClosingScreenProps {
   >;
 
   fetchCashSession:
-  () => Promise<void>;
+    () => Promise<void>;
 
   pendingOrdersCount: number;
 }
+
+type CashView =
+  | 'current'
+  | 'history';
+
+type HistoryFilter =
+  | 'today'
+  | 'week'
+  | 'month'
+  | 'all'
+  | 'custom';
+
+type DatePickerField =
+  | 'from'
+  | 'to'
+  | null;
 
 export function CashClosingScreen({
   cashSession,
@@ -60,16 +81,16 @@ export function CashClosingScreen({
   fetchCashSession,
   pendingOrdersCount,
 }: CashClosingScreenProps) {
+  const {
+    user,
+  } = useAuth();
+
   const [
     sales,
     setSales,
   ] = useState<CompletedSale[]>(
     [],
   );
-
-  const {
-    user,
-  } = useAuth();
 
   const [
     openingAmountText,
@@ -98,12 +119,18 @@ export function CashClosingScreen({
     null,
   );
 
+  /*
+   * ============================
+   * HISTORIAL
+   * ============================
+   */
+
   const [
     activeView,
     setActiveView,
-  ] = useState<
-    'current' | 'history'
-  >('current');
+  ] = useState<CashView>(
+    'current',
+  );
 
   const [
     cashHistory,
@@ -123,6 +150,55 @@ export function CashClosingScreen({
   ] = useState<string | null>(
     null,
   );
+
+  const [
+    historyFilter,
+    setHistoryFilter,
+  ] = useState<HistoryFilter>(
+    'today',
+  );
+
+  const [
+    historyFrom,
+    setHistoryFrom,
+  ] = useState<Date>(() =>
+    startOfDay(
+      new Date(),
+    ),
+  );
+
+  const [
+    historyTo,
+    setHistoryTo,
+  ] = useState<Date>(() =>
+    endOfDay(
+      new Date(),
+    ),
+  );
+
+  const [
+    datePickerField,
+    setDatePickerField,
+  ] = useState<DatePickerField>(
+    null,
+  );
+
+  /*
+   * Corte seleccionado para
+   * el modal de detalle.
+   */
+  const [
+    selectedHistorySession,
+    setSelectedHistorySession,
+  ] = useState<CashSession | null>(
+    null,
+  );
+
+  /*
+   * ============================
+   * CARGA DE DATOS
+   * ============================
+   */
 
   const loadSales =
     useCallback(
@@ -159,8 +235,13 @@ export function CashClosingScreen({
     useCallback(
       async (): Promise<void> => {
         try {
-          setIsHistoryLoading(true);
-          setHistoryError(null);
+          setIsHistoryLoading(
+            true,
+          );
+
+          setHistoryError(
+            null,
+          );
 
           const history =
             await getCashSessionHistory();
@@ -180,7 +261,9 @@ export function CashClosingScreen({
               : 'No se pudo cargar el historial de caja.',
           );
         } finally {
-          setIsHistoryLoading(false);
+          setIsHistoryLoading(
+            false,
+          );
         }
       },
       [],
@@ -188,7 +271,8 @@ export function CashClosingScreen({
 
   useEffect(() => {
     if (
-      activeView !== 'history'
+      activeView !==
+      'history'
     ) {
       return;
     }
@@ -221,6 +305,12 @@ export function CashClosingScreen({
     setCountedCashText('');
   }, [cashSession]);
 
+  /*
+   * ============================
+   * VENTAS DE SESIÓN ACTUAL
+   * ============================
+   */
+
   const sessionSales =
     useMemo(() => {
       if (!cashSession) {
@@ -248,7 +338,8 @@ export function CashClosingScreen({
           }
 
           return (
-            paymentDate >= openedAt
+            paymentDate >=
+            openedAt
           );
         },
       );
@@ -323,7 +414,7 @@ export function CashClosingScreen({
 
       return roundCurrency(
         cashSession.openingAmount +
-        summary.cash,
+          summary.cash,
       );
     }, [
       cashSession,
@@ -340,12 +431,265 @@ export function CashClosingScreen({
 
       return roundCurrency(
         countedCash -
-        expectedCash,
+          expectedCash,
       );
     }, [
       countedCash,
       expectedCash,
     ]);
+
+  /*
+   * ============================
+   * FILTROS DEL HISTORIAL
+   * ============================
+   */
+
+  const filteredCashHistory =
+    useMemo(() => {
+      if (
+        historyFilter ===
+        'all'
+      ) {
+        return cashHistory;
+      }
+
+      const now =
+        new Date();
+
+      let fromDate:
+        Date | null = null;
+
+      let toDate:
+        Date | null = null;
+
+      if (
+        historyFilter ===
+        'today'
+      ) {
+        fromDate =
+          startOfDay(now);
+
+        toDate =
+          endOfDay(now);
+      }
+
+      if (
+        historyFilter ===
+        'week'
+      ) {
+        const sevenDaysAgo =
+          new Date(now);
+
+        sevenDaysAgo.setDate(
+          now.getDate() - 6,
+        );
+
+        fromDate =
+          startOfDay(
+            sevenDaysAgo,
+          );
+
+        toDate =
+          endOfDay(now);
+      }
+
+      if (
+        historyFilter ===
+        'month'
+      ) {
+        fromDate =
+          new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1,
+            0,
+            0,
+            0,
+            0,
+          );
+
+        toDate =
+          endOfDay(now);
+      }
+
+      if (
+        historyFilter ===
+        'custom'
+      ) {
+        fromDate =
+          startOfDay(
+            historyFrom,
+          );
+
+        toDate =
+          endOfDay(
+            historyTo,
+          );
+      }
+
+      if (
+        !fromDate ||
+        !toDate
+      ) {
+        return cashHistory;
+      }
+
+      return cashHistory.filter(
+        (session) => {
+          const referenceDate =
+            parseSupabaseDate(
+              session.closedAt ??
+                session.openedAt,
+            );
+
+          if (!referenceDate) {
+            return false;
+          }
+
+          return (
+            referenceDate >=
+              fromDate &&
+            referenceDate <=
+              toDate
+          );
+        },
+      );
+    }, [
+      cashHistory,
+      historyFilter,
+      historyFrom,
+      historyTo,
+    ]);
+
+  const handleHistoryFilter =
+    (
+      filter:
+        HistoryFilter,
+    ): void => {
+      setHistoryFilter(
+        filter,
+      );
+
+      if (
+        filter ===
+        'custom'
+      ) {
+        const today =
+          new Date();
+
+        setHistoryFrom(
+          startOfDay(
+            today,
+          ),
+        );
+
+        setHistoryTo(
+          endOfDay(
+            today,
+          ),
+        );
+      }
+    };
+
+  const handleDateChange =
+    (
+      event:
+        DateTimePickerEvent,
+
+      selectedDate?:
+        Date,
+    ): void => {
+      const field =
+        datePickerField;
+
+      setDatePickerField(
+        null,
+      );
+
+      if (
+        event.type ===
+          'dismissed' ||
+        !selectedDate ||
+        !field
+      ) {
+        return;
+      }
+
+      if (
+        field ===
+        'from'
+      ) {
+        const newFrom =
+          startOfDay(
+            selectedDate,
+          );
+
+        setHistoryFrom(
+          newFrom,
+        );
+
+        if (
+          newFrom >
+          historyTo
+        ) {
+          setHistoryTo(
+            endOfDay(
+              selectedDate,
+            ),
+          );
+        }
+
+        return;
+      }
+
+      const newTo =
+        endOfDay(
+          selectedDate,
+        );
+
+      if (
+        newTo <
+        historyFrom
+      ) {
+        Alert.alert(
+          'Rango inválido',
+          'La fecha final no puede ser anterior a la fecha inicial.',
+        );
+
+        return;
+      }
+
+      setHistoryTo(
+        newTo,
+      );
+    };
+
+  /*
+   * ============================
+   * DETALLE DE CORTE
+   * ============================
+   */
+
+  const openHistoryDetail = (
+    session: CashSession,
+  ): void => {
+    setSelectedHistorySession(
+      session,
+    );
+  };
+
+  const closeHistoryDetail =
+    (): void => {
+      setSelectedHistorySession(
+        null,
+      );
+    };
+
+  /*
+   * ============================
+   * APERTURA DE CAJA
+   * ============================
+   */
 
   const handleOpenCash =
     async (): Promise<void> => {
@@ -369,19 +713,10 @@ export function CashClosingScreen({
               user?.id ?? null,
           });
 
-        /*
-         * Actualizamos la sesión
-         * compartida de toda la app.
-         */
         setCashSession(
           session,
         );
 
-        /*
-         * Actualizamos ventas por si
-         * existió algún cambio mientras
-         * estábamos en esta pantalla.
-         */
         const completedSales =
           await getCompletedSales();
 
@@ -407,17 +742,25 @@ export function CashClosingScreen({
       }
     };
 
+  /*
+   * ============================
+   * CIERRE DE CAJA
+   * ============================
+   */
+
   const handleCloseCashPrompt =
     (): void => {
       if (
-        pendingOrdersCount > 0
+        pendingOrdersCount >
+        0
       ) {
         Alert.alert(
           'Pedidos pendientes',
           [
             'No puedes cerrar la caja mientras haya pedidos pendientes.',
             '',
-            pendingOrdersCount === 1
+            pendingOrdersCount ===
+            1
               ? 'Hay 1 pedido pendiente.'
               : `Hay ${pendingOrdersCount} pedidos pendientes.`,
             '',
@@ -445,22 +788,29 @@ export function CashClosingScreen({
           `Efectivo esperado: $${expectedCash.toFixed(
             2,
           )}`,
+
           `Efectivo contado: $${countedCash.toFixed(
             2,
           )}`,
+
           `Diferencia: $${(
             difference ?? 0
           ).toFixed(2)}`,
+
           '',
+
           '¿Deseas cerrar la caja?',
         ].join('\n'),
+
         [
           {
             text: 'Cancelar',
             style: 'cancel',
           },
+
           {
-            text: 'Cerrar caja',
+            text:
+              'Cerrar caja',
 
             onPress: () => {
               void handleCloseCash();
@@ -473,7 +823,8 @@ export function CashClosingScreen({
   const handleCloseCash =
     async (): Promise<void> => {
       if (
-        pendingOrdersCount > 0
+        pendingOrdersCount >
+        0
       ) {
         Alert.alert(
           'Pedidos pendientes',
@@ -482,6 +833,7 @@ export function CashClosingScreen({
 
         return;
       }
+
       if (
         !cashSession ||
         countedCash === null ||
@@ -514,19 +866,17 @@ export function CashClosingScreen({
               sessionSales.length,
 
             closedBy:
-              user?.id ?? null,
+              user?.id ??
+              null,
           });
 
-        /*
-         * La sesión compartida queda
-         * inmediatamente cerrada.
-         *
-         * Esto bloquea el POS desde App
-         * sin necesidad de reiniciar.
-         */
-        setCashSession(null);
+        setCashSession(
+          null,
+        );
 
-        setCountedCashText('');
+        setCountedCashText(
+          '',
+        );
 
         setOpeningAmountText(
           '1000',
@@ -549,14 +899,10 @@ export function CashClosingScreen({
           ].join('\n'),
         );
 
-        /*
-         * Confirmamos contra Supabase
-         * que efectivamente no exista
-         * otra sesión abierta.
-         */
         await fetchCashSession();
 
         await loadSales();
+
         await loadHistory();
       } catch (error) {
         Alert.alert(
@@ -566,11 +912,6 @@ export function CashClosingScreen({
             : 'No se pudo cerrar la caja.',
         );
 
-        /*
-         * Si ocurrió un error ambiguo,
-         * resincronizamos la sesión con
-         * Supabase.
-         */
         await fetchCashSession();
       } finally {
         setIsProcessing(false);
@@ -613,19 +954,30 @@ export function CashClosingScreen({
     const parts =
       sanitized.split('.');
 
-    if (parts.length > 2) {
+    if (
+      parts.length > 2
+    ) {
       return;
     }
 
     if (
       parts[1] &&
-      parts[1].length > 2
+      parts[1].length >
+        2
     ) {
       return;
     }
 
-    setter(sanitized);
+    setter(
+      sanitized,
+    );
   };
+
+  /*
+   * ============================
+   * LOADING / ERROR
+   * ============================
+   */
 
   if (isLoading) {
     return (
@@ -693,6 +1045,12 @@ export function CashClosingScreen({
     );
   }
 
+  /*
+   * ============================
+   * NAVEGACIÓN
+   * ============================
+   */
+
   const renderNavigation =
     () => {
       return (
@@ -706,8 +1064,8 @@ export function CashClosingScreen({
               styles.cashTab,
 
               activeView ===
-              'current' &&
-              styles.cashTabActive,
+                'current' &&
+                styles.cashTabActive,
             ]}
             onPress={() =>
               setActiveView(
@@ -720,8 +1078,8 @@ export function CashClosingScreen({
                 styles.cashTabText,
 
                 activeView ===
-                'current' &&
-                styles.cashTabTextActive,
+                  'current' &&
+                  styles.cashTabTextActive,
               ]}
             >
               CAJA ACTUAL
@@ -733,8 +1091,8 @@ export function CashClosingScreen({
               styles.cashTab,
 
               activeView ===
-              'history' &&
-              styles.cashTabActive,
+                'history' &&
+                styles.cashTabActive,
             ]}
             onPress={() =>
               setActiveView(
@@ -747,8 +1105,8 @@ export function CashClosingScreen({
                 styles.cashTabText,
 
                 activeView ===
-                'history' &&
-                styles.cashTabTextActive,
+                  'history' &&
+                  styles.cashTabTextActive,
               ]}
             >
               HISTORIAL
@@ -758,9 +1116,204 @@ export function CashClosingScreen({
       );
     };
 
+  /*
+   * ============================
+   * FILTROS
+   * ============================
+   */
+
+  const renderHistoryFilters =
+    () => {
+      const filters: Array<{
+        value:
+          HistoryFilter;
+
+        label: string;
+      }> = [
+        {
+          value: 'today',
+          label: 'Hoy',
+        },
+
+        {
+          value: 'week',
+          label:
+            'Últimos 7 días',
+        },
+
+        {
+          value: 'month',
+          label: 'Este mes',
+        },
+
+        {
+          value: 'all',
+          label: 'Todo',
+        },
+
+        {
+          value: 'custom',
+          label:
+            'Personalizado',
+        },
+      ];
+
+      return (
+        <>
+          <View
+            style={
+              styles.historyFilters
+            }
+          >
+            {filters.map(
+              (filter) => {
+                const isActive =
+                  historyFilter ===
+                  filter.value;
+
+                return (
+                  <TouchableOpacity
+                    key={
+                      filter.value
+                    }
+                    style={[
+                      styles.historyFilterButton,
+
+                      isActive &&
+                        styles.historyFilterButtonActive,
+                    ]}
+                    onPress={() =>
+                      handleHistoryFilter(
+                        filter.value,
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.historyFilterText,
+
+                        isActive &&
+                          styles.historyFilterTextActive,
+                      ]}
+                    >
+                      {
+                        filter.label
+                      }
+                    </Text>
+                  </TouchableOpacity>
+                );
+              },
+            )}
+          </View>
+
+          {historyFilter ===
+          'custom' ? (
+            <View
+              style={
+                styles.historyDateRange
+              }
+            >
+              <TouchableOpacity
+                style={
+                  styles.historyDateField
+                }
+                onPress={() =>
+                  setDatePickerField(
+                    'from',
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.historyDateLabel
+                  }
+                >
+                  DESDE
+                </Text>
+
+                <Text
+                  style={
+                    styles.historyDateValue
+                  }
+                >
+                  {formatDateOnly(
+                    historyFrom,
+                  )}
+                </Text>
+              </TouchableOpacity>
+
+              <Text
+                style={
+                  styles.historyDateSeparator
+                }
+              >
+                →
+              </Text>
+
+              <TouchableOpacity
+                style={
+                  styles.historyDateField
+                }
+                onPress={() =>
+                  setDatePickerField(
+                    'to',
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.historyDateLabel
+                  }
+                >
+                  HASTA
+                </Text>
+
+                <Text
+                  style={
+                    styles.historyDateValue
+                  }
+                >
+                  {formatDateOnly(
+                    historyTo,
+                  )}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {datePickerField ? (
+            <DateTimePicker
+              value={
+                datePickerField ===
+                'from'
+                  ? historyFrom
+                  : historyTo
+              }
+              mode="date"
+              display="default"
+              maximumDate={
+                new Date()
+              }
+              onChange={
+                handleDateChange
+              }
+            />
+          ) : null}
+        </>
+      );
+    };
+
+  /*
+   * ============================
+   * HISTORIAL
+   * ============================
+   */
+
   const renderHistory =
     () => {
-      if (isHistoryLoading) {
+      if (
+        isHistoryLoading
+      ) {
         return (
           <View
             style={
@@ -826,323 +1379,647 @@ export function CashClosingScreen({
         );
       }
 
-      if (
-        cashHistory.length === 0
-      ) {
-        return (
+      return (
+        <View
+          style={{
+            flex: 1,
+          }}
+        >
+          {renderHistoryFilters()}
+
           <View
             style={
-              styles.historyCenter
+              styles.historyListHeader
             }
           >
             <Text
               style={
-                styles.historyEmptyIcon
+                styles.historyListTitle
               }
             >
-              🧾
+              Cortes de caja
             </Text>
 
             <Text
               style={
-                styles.historyEmptyTitle
+                styles.historyListCount
               }
             >
-              Sin cortes todavía
-            </Text>
-
-            <Text
-              style={
-                styles.historyEmptyText
-              }
-            >
-              Los cierres de caja
-              aparecerán aquí.
+              {
+                filteredCashHistory.length
+              }{' '}
+              {filteredCashHistory.length ===
+              1
+                ? 'corte'
+                : 'cortes'}
             </Text>
           </View>
-        );
+
+          {filteredCashHistory.length ===
+          0 ? (
+            <View
+              style={
+                styles.historyCenter
+              }
+            >
+              <Text
+                style={
+                  styles.historyEmptyIcon
+                }
+              >
+                🧾
+              </Text>
+
+              <Text
+                style={
+                  styles.historyEmptyTitle
+                }
+              >
+                Sin cortes
+              </Text>
+
+              <Text
+                style={
+                  styles.historyEmptyText
+                }
+              >
+                No hay cortes de
+                caja para el periodo
+                seleccionado.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={
+                styles.historyScroll
+              }
+              contentContainerStyle={
+                styles.historyContent
+              }
+              showsVerticalScrollIndicator={
+                false
+              }
+            >
+              {filteredCashHistory.map(
+                (session) => {
+                  const differenceValue =
+                    session.differenceAmount ??
+                    0;
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        session.id
+                      }
+                      activeOpacity={
+                        0.8
+                      }
+                      style={
+                        styles.historyCard
+                      }
+                      onPress={() =>
+                        openHistoryDetail(
+                          session,
+                        )
+                      }
+                    >
+                      <View
+                        style={
+                          styles.historyCardHeader
+                        }
+                      >
+                        <View>
+                          <Text
+                            style={
+                              styles.historyDate
+                            }
+                          >
+                            {session.closedAt
+                              ? formatDateTime(
+                                  session.closedAt,
+                                )
+                              : 'Sin fecha de cierre'}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.historyOpenedAt
+                            }
+                          >
+                            Apertura:{' '}
+                            {formatDateTime(
+                              session.openedAt,
+                            )}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.historyOpenedAt
+                            }
+                          >
+                            Abrió:{' '}
+                            {session.openedByName ??
+                              'No registrado'}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.historyOpenedAt
+                            }
+                          >
+                            Cerró:{' '}
+                            {session.closedByName ??
+                              'No registrado'}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={
+                            styles.historyCardRight
+                          }
+                        >
+                          <View
+                            style={
+                              styles.closedBadge
+                            }
+                          >
+                            <Text
+                              style={
+                                styles.closedBadgeText
+                              }
+                            >
+                              CERRADA
+                            </Text>
+                          </View>
+
+                          <Text
+                            style={
+                              styles.historyDetailHint
+                            }
+                          >
+                            Ver detalle ›
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View
+                        style={
+                          styles.historySalesRow
+                        }
+                      >
+                        <HistoryMetric
+                          label="Ventas"
+                          value={String(
+                            session.salesCount ??
+                              0,
+                          )}
+                        />
+
+                        <HistoryMetric
+                          label="💵 Efectivo"
+                          value={`$${(
+                            session.totalCashSales ??
+                            0
+                          ).toFixed(2)}`}
+                        />
+
+                        <HistoryMetric
+                          label="💳 Tarjeta"
+                          value={`$${(
+                            session.totalCardSales ??
+                            0
+                          ).toFixed(2)}`}
+                        />
+
+                        <View
+                          style={
+                            styles.historyMetric
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.historyMetricLabel
+                            }
+                          >
+                            Total
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.historyTotalValue
+                            }
+                          >
+                            $
+                            {(
+                              session.totalSales ??
+                              0
+                            ).toFixed(2)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View
+                        style={
+                          styles.historyDivider
+                        }
+                      />
+
+                      <View
+                        style={
+                          styles.historyCashGrid
+                        }
+                      >
+                        <HistoryCashValue
+                          label="Fondo inicial"
+                          value={
+                            session.openingAmount
+                          }
+                        />
+
+                        <HistoryCashValue
+                          label="Esperado"
+                          value={
+                            session.expectedCash ??
+                            0
+                          }
+                        />
+
+                        <HistoryCashValue
+                          label="Contado"
+                          value={
+                            session.countedCash ??
+                            0
+                          }
+                        />
+
+                        <View
+                          style={
+                            styles.historyCashItem
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.historyCashLabel
+                            }
+                          >
+                            Diferencia
+                          </Text>
+
+                          <Text
+                            style={[
+                              styles.historyDifference,
+
+                              differenceValue ===
+                              0
+                                ? styles.differenceNeutral
+                                : differenceValue >
+                                    0
+                                  ? styles.differencePositive
+                                  : styles.differenceNegative,
+                            ]}
+                          >
+                            {formatDifference(
+                              differenceValue,
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                },
+              )}
+            </ScrollView>
+          )}
+
+          {renderHistoryDetailModal()}
+        </View>
+      );
+    };
+
+  /*
+   * ============================
+   * MODAL DETALLE DEL CORTE
+   * ============================
+   */
+
+  const renderHistoryDetailModal =
+    () => {
+      if (
+        !selectedHistorySession
+      ) {
+        return null;
       }
 
+      const session =
+        selectedHistorySession;
+
+      const differenceValue =
+        session.differenceAmount ??
+        0;
+
       return (
-        <ScrollView
-          style={
-            styles.historyScroll
+        <Modal
+          visible={
+            selectedHistorySession !==
+            null
           }
-          contentContainerStyle={
-            styles.historyContent
-          }
-          showsVerticalScrollIndicator={
-            false
+          transparent
+          animationType="fade"
+          onRequestClose={
+            closeHistoryDetail
           }
         >
-          {cashHistory.map(
-            (session) => {
-              const differenceValue =
-                session.differenceAmount ??
-                0;
+          <View
+            style={
+              styles.historyModalOverlay
+            }
+          >
+            <View
+              style={
+                styles.historyModalContent
+              }
+            >
+              <View
+                style={
+                  styles.historyModalHeader
+                }
+              >
+                <View>
+                  <Text
+                    style={
+                      styles.historyModalTitle
+                    }
+                  >
+                    Corte de caja
+                  </Text>
 
-              return (
-                <View
-                  key={
-                    session.id
-                  }
+                  <Text
+                    style={
+                      styles.historyModalSubtitle
+                    }
+                  >
+                    {session.closedAt
+                      ? formatDateTime(
+                          session.closedAt,
+                        )
+                      : 'Sin fecha de cierre'}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
                   style={
-                    styles.historyCard
+                    styles.historyModalClose
+                  }
+                  onPress={
+                    closeHistoryDetail
+                  }
+                >
+                  <Text
+                    style={
+                      styles.historyModalCloseText
+                    }
+                  >
+                    ✕
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={
+                  styles.historyModalScroll
+                }
+                showsVerticalScrollIndicator={
+                  false
+                }
+              >
+                <View
+                  style={
+                    styles.historyModalStatusRow
                   }
                 >
                   <View
                     style={
-                      styles.historyCardHeader
+                      styles.closedBadge
                     }
                   >
-                    <View>
-                      <Text
-                        style={
-                          styles.historyDate
-                        }
-                      >
-                        {session.closedAt
-                          ? formatDateTime(
+                    <Text
+                      style={
+                        styles.closedBadgeText
+                      }
+                    >
+                      CERRADA
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={
+                      styles.historyModalId
+                    }
+                  >
+                    Corte #
+                    {session.id
+                      .slice(
+                        0,
+                        8,
+                      )
+                      .toUpperCase()}
+                  </Text>
+                </View>
+
+                <DetailSection
+                  title="Apertura"
+                >
+                  <DetailRow
+                    label="Fecha y hora"
+                    value={
+                      formatDateTime(
+                        session.openedAt,
+                      )
+                    }
+                  />
+
+                  <DetailRow
+                    label="Abrió"
+                    value={
+                      session.openedByName ??
+                      'No registrado'
+                    }
+                  />
+
+                  <DetailRow
+                    label="Fondo inicial"
+                    value={
+                      formatMoney(
+                        session.openingAmount,
+                      )
+                    }
+                    highlighted
+                  />
+                </DetailSection>
+
+                <DetailSection
+                  title="Cierre"
+                >
+                  <DetailRow
+                    label="Fecha y hora"
+                    value={
+                      session.closedAt
+                        ? formatDateTime(
                             session.closedAt,
                           )
-                          : 'Sin fecha de cierre'}
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.historyOpenedAt
-                        }
-                      >
-                        Apertura:{' '}
-                        {formatDateTime(
-                          session.openedAt,
-                        )}
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.historyOpenedAt
-                        }
-                      >
-                        Abrió:{' '}
-                        {session.openedByName ??
-                          'No registrado'}
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.historyOpenedAt
-                        }
-                      >
-                        Cerró:{' '}
-                        {session.closedByName ??
-                          'No registrado'}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={
-                        styles.closedBadge
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.closedBadgeText
-                        }
-                      >
-                        CERRADA
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={
-                      styles.historySalesRow
+                        : 'No registrado'
                     }
-                  >
-                    <View
-                      style={
-                        styles.historyMetric
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.historyMetricLabel
-                        }
-                      >
-                        Ventas
-                      </Text>
+                  />
 
-                      <Text
-                        style={
-                          styles.historyMetricValue
-                        }
-                      >
-                        {session.salesCount ??
-                          0}
-                      </Text>
-                    </View>
+                  <DetailRow
+                    label="Cerró"
+                    value={
+                      session.closedByName ??
+                      'No registrado'
+                    }
+                  />
+                </DetailSection>
 
-                    <View
-                      style={
-                        styles.historyMetric
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.historyMetricLabel
-                        }
-                      >
-                        💵 Efectivo
-                      </Text>
+                <DetailSection
+                  title="Ventas"
+                >
+                  <DetailRow
+                    label="Número de ventas"
+                    value={String(
+                      session.salesCount ??
+                        0,
+                    )}
+                  />
 
-                      <Text
-                        style={
-                          styles.historyMetricValue
-                        }
-                      >
-                        $
-                        {(
-                          session.totalCashSales ??
-                          0
-                        ).toFixed(2)}
-                      </Text>
-                    </View>
+                  <DetailRow
+                    label="Ventas en efectivo"
+                    value={
+                      formatMoney(
+                        session.totalCashSales ??
+                          0,
+                      )
+                    }
+                  />
 
-                    <View
-                      style={
-                        styles.historyMetric
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.historyMetricLabel
-                        }
-                      >
-                        💳 Tarjeta
-                      </Text>
+                  <DetailRow
+                    label="Ventas con tarjeta"
+                    value={
+                      formatMoney(
+                        session.totalCardSales ??
+                          0,
+                      )
+                    }
+                  />
 
-                      <Text
-                        style={
-                          styles.historyMetricValue
-                        }
-                      >
-                        $
-                        {(
-                          session.totalCardSales ??
-                          0
-                        ).toFixed(2)}
-                      </Text>
-                    </View>
+                  <DetailRow
+                    label="Total vendido"
+                    value={
+                      formatMoney(
+                        session.totalSales ??
+                          0,
+                      )
+                    }
+                    highlighted
+                  />
+                </DetailSection>
 
-                    <View
-                      style={
-                        styles.historyMetric
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.historyMetricLabel
-                        }
-                      >
-                        Total
-                      </Text>
+                <DetailSection
+                  title="Arqueo de caja"
+                >
+                  <DetailRow
+                    label="Fondo inicial"
+                    value={
+                      formatMoney(
+                        session.openingAmount,
+                      )
+                    }
+                  />
 
-                      <Text
-                        style={
-                          styles.historyTotalValue
-                        }
-                      >
-                        $
-                        {(
-                          session.totalSales ??
-                          0
-                        ).toFixed(2)}
-                      </Text>
-                    </View>
-                  </View>
+                  <DetailRow
+                    label="Efectivo esperado"
+                    value={
+                      formatMoney(
+                        session.expectedCash ??
+                          0,
+                      )
+                    }
+                  />
 
-                  <View
-                    style={
-                      styles.historyDivider
+                  <DetailRow
+                    label="Efectivo contado"
+                    value={
+                      formatMoney(
+                        session.countedCash ??
+                          0,
+                      )
                     }
                   />
 
                   <View
                     style={
-                      styles.historyCashGrid
+                      styles.historyModalDifferenceRow
                     }
                   >
-                    <HistoryCashValue
-                      label="Fondo inicial"
-                      value={
-                        session.openingAmount
-                      }
-                    />
-
-                    <HistoryCashValue
-                      label="Esperado"
-                      value={
-                        session.expectedCash ??
-                        0
-                      }
-                    />
-
-                    <HistoryCashValue
-                      label="Contado"
-                      value={
-                        session.countedCash ??
-                        0
-                      }
-                    />
-
-                    <View
+                    <Text
                       style={
-                        styles.historyCashItem
+                        styles.historyModalDifferenceLabel
                       }
                     >
-                      <Text
-                        style={
-                          styles.historyCashLabel
-                        }
-                      >
-                        Diferencia
-                      </Text>
+                      Diferencia
+                    </Text>
 
-                      <Text
-                        style={[
-                          styles.historyDifference,
+                    <Text
+                      style={[
+                        styles.historyModalDifferenceValue,
 
-                          differenceValue ===
-                            0
-                            ? styles.differenceNeutral
-                            : differenceValue >
+                        differenceValue ===
+                        0
+                          ? styles.differenceNeutral
+                          : differenceValue >
                               0
-                              ? styles.differencePositive
-                              : styles.differenceNegative,
-                        ]}
-                      >
-                        {differenceValue >
-                          0
-                          ? '+'
-                          : ''}
-                        $
-                        {differenceValue.toFixed(
-                          2,
-                        )}
-                      </Text>
-                    </View>
+                            ? styles.differencePositive
+                            : styles.differenceNegative,
+                      ]}
+                    >
+                      {formatDifference(
+                        differenceValue,
+                      )}
+                    </Text>
                   </View>
-                </View>
-              );
-            },
-          )}
-        </ScrollView>
+                </DetailSection>
+              </ScrollView>
+
+              <TouchableOpacity
+                style={
+                  styles.historyModalDoneButton
+                }
+                onPress={
+                  closeHistoryDetail
+                }
+              >
+                <Text
+                  style={
+                    styles.historyModalDoneButtonText
+                  }
+                >
+                  Cerrar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       );
     };
 
+  /*
+   * ============================
+   * VISTA HISTORIAL
+   * ============================
+   */
+
   if (
-    activeView === 'history'
+    activeView ===
+    'history'
   ) {
     return (
       <View
@@ -1156,6 +2033,7 @@ export function CashClosingScreen({
       </View>
     );
   }
+
   /*
    * ============================
    * CAJA CERRADA
@@ -1229,7 +2107,7 @@ export function CashClosingScreen({
               styles.primaryButton,
 
               isProcessing &&
-              styles.buttonDisabled,
+                styles.buttonDisabled,
             ]}
             disabled={
               isProcessing
@@ -1578,22 +2456,21 @@ export function CashClosingScreen({
             style={[
               styles.differenceValue,
 
-              difference === null ||
-                difference === 0
+              difference ===
+                null ||
+              difference === 0
                 ? styles.differenceNeutral
-                : difference > 0
+                : difference >
+                    0
                   ? styles.differencePositive
                   : styles.differenceNegative,
             ]}
           >
             {difference === null
               ? '$0.00'
-              : `${difference > 0
-                ? '+'
-                : ''
-              }$${difference.toFixed(
-                2,
-              )}`}
+              : formatDifference(
+                  difference,
+                )}
           </Text>
         </View>
 
@@ -1602,13 +2479,15 @@ export function CashClosingScreen({
             styles.closeButton,
 
             (
-              countedCash === null ||
+              countedCash ===
+                null ||
               isProcessing
             ) &&
-            styles.buttonDisabled,
+              styles.buttonDisabled,
           ]}
           disabled={
-            countedCash === null ||
+            countedCash ===
+              null ||
             isProcessing
           }
           onPress={
@@ -1629,6 +2508,12 @@ export function CashClosingScreen({
     </View>
   );
 }
+
+/*
+ * ============================
+ * COMPONENTES AUXILIARES
+ * ============================
+ */
 
 interface HistoryCashValueProps {
   label: string;
@@ -1658,11 +2543,126 @@ function HistoryCashValue({
           styles.historyCashValue
         }
       >
-        ${value.toFixed(2)}
+        {formatMoney(
+          value,
+        )}
       </Text>
     </View>
   );
 }
+
+interface HistoryMetricProps {
+  label: string;
+  value: string;
+}
+
+function HistoryMetric({
+  label,
+  value,
+}: HistoryMetricProps) {
+  return (
+    <View
+      style={
+        styles.historyMetric
+      }
+    >
+      <Text
+        style={
+          styles.historyMetricLabel
+        }
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={
+          styles.historyMetricValue
+        }
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+interface DetailSectionProps {
+  title: string;
+  children:
+    React.ReactNode;
+}
+
+function DetailSection({
+  title,
+  children,
+}: DetailSectionProps) {
+  return (
+    <View
+      style={
+        styles.historyModalSection
+      }
+    >
+      <Text
+        style={
+          styles.historyModalSectionTitle
+        }
+      >
+        {title}
+      </Text>
+
+      <View
+        style={
+          styles.historyModalSectionBody
+        }
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
+
+interface DetailRowProps {
+  label: string;
+  value: string;
+  highlighted?: boolean;
+}
+
+function DetailRow({
+  label,
+  value,
+  highlighted = false,
+}: DetailRowProps) {
+  return (
+    <View
+      style={
+        styles.historyModalDetailRow
+      }
+    >
+      <Text
+        style={
+          styles.historyModalDetailLabel
+        }
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={
+          highlighted
+            ? styles.historyModalDetailValueHighlighted
+            : styles.historyModalDetailValue
+        }
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+/*
+ * ============================
+ * FECHAS / DINERO
+ * ============================
+ */
 
 function parseSupabaseDate(
   dateValue: string,
@@ -1724,6 +2724,71 @@ function formatDateTime(
       minute: '2-digit',
     },
   );
+}
+
+function formatDateOnly(
+  date: Date,
+): string {
+  return date.toLocaleDateString(
+    'es-MX',
+    {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    },
+  );
+}
+
+function formatMoney(
+  amount: number,
+): string {
+  return `$${Number(
+    amount,
+  ).toFixed(2)}`;
+}
+
+function formatDifference(
+  difference: number,
+): string {
+  return `${
+    difference > 0
+      ? '+'
+      : ''
+  }$${difference.toFixed(
+    2,
+  )}`;
+}
+
+function startOfDay(
+  date: Date,
+): Date {
+  const result =
+    new Date(date);
+
+  result.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
+
+  return result;
+}
+
+function endOfDay(
+  date: Date,
+): Date {
+  const result =
+    new Date(date);
+
+  result.setHours(
+    23,
+    59,
+    59,
+    999,
+  );
+
+  return result;
 }
 
 function roundCurrency(
