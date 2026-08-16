@@ -10,13 +10,18 @@ import {
 import {
   styles,
 } from '../../../App.styles';
-import { canManageCash } from '../../Utils/permissions';
+
+import {
+  canManageCash,
+  canManageCatalog,
+} from '../../Utils/permissions';
 
 export type MainTab =
   | 'pos'
   | 'kitchen'
   | 'sales'
-  | 'cash';
+  | 'cash'
+  | 'admin';
 
 interface HeaderProps {
   activeTab: MainTab;
@@ -78,8 +83,8 @@ export function GlobalHeader({
             styles.tabButton,
 
             activeTab ===
-            'pos' &&
-            styles.tabActiveButton,
+              'pos' &&
+              styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -92,8 +97,8 @@ export function GlobalHeader({
               styles.tabText,
 
               activeTab ===
-              'pos' &&
-              styles.tabActiveText,
+                'pos' &&
+                styles.tabActiveText,
             ]}
           >
             MENÚ{' '}
@@ -108,8 +113,8 @@ export function GlobalHeader({
             styles.tabButton,
 
             activeTab ===
-            'kitchen' &&
-            styles.tabActiveButton,
+              'kitchen' &&
+              styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -122,8 +127,8 @@ export function GlobalHeader({
               styles.tabText,
 
               activeTab ===
-              'kitchen' &&
-              styles.tabActiveText,
+                'kitchen' &&
+                styles.tabActiveText,
             ]}
           >
             PEDIDOS (
@@ -136,8 +141,8 @@ export function GlobalHeader({
             styles.tabButton,
 
             activeTab ===
-            'sales' &&
-            styles.tabActiveButton,
+              'sales' &&
+              styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -150,8 +155,8 @@ export function GlobalHeader({
               styles.tabText,
 
               activeTab ===
-              'sales' &&
-              styles.tabActiveText,
+                'sales' &&
+                styles.tabActiveText,
             ]}
           >
             VENTAS
@@ -164,8 +169,8 @@ export function GlobalHeader({
               styles.tabButton,
 
               activeTab ===
-              'cash' &&
-              styles.tabActiveButton,
+                'cash' &&
+                styles.tabActiveButton,
             ]}
             onPress={() =>
               setActiveTab(
@@ -178,11 +183,40 @@ export function GlobalHeader({
                 styles.tabText,
 
                 activeTab ===
-                'cash' &&
-                styles.tabActiveText,
+                  'cash' &&
+                  styles.tabActiveText,
               ]}
             >
               CAJA
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {canManageCatalog(user) ? (
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+
+              activeTab ===
+                'admin' &&
+                styles.tabActiveButton,
+            ]}
+            onPress={() =>
+              setActiveTab(
+                'admin',
+              )
+            }
+          >
+            <Text
+              style={[
+                styles.tabText,
+
+                activeTab ===
+                  'admin' &&
+                  styles.tabActiveText,
+              ]}
+            >
+              ADMIN
             </Text>
           </TouchableOpacity>
         ) : null}

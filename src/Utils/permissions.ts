@@ -9,3 +9,11 @@ export function canManageCash(
     user?.role === 'admin'
   );
 }
+
+export function canManageCatalog(
+  user: UserSession | null,
+): boolean {
+  return (
+    user?.role === 'admin'
+  );
+}

@@ -50,11 +50,19 @@ import {
 import {
   styles,
 } from './App.styles';
-import { canManageCash } from './src/Utils/permissions';
+
+import {
+  canManageCash,
+  canManageCatalog,
+} from './src/Utils/permissions';
 
 import {
   useSessionInactivity,
 } from './src/hooks/useSessionInactivity';
+
+import {
+  AdminScreen,
+} from './src/screens/admin/AdminScreen';
 
 function MainApp() {
   const {
@@ -110,6 +118,9 @@ function MainApp() {
 
   const userCanManageCash =
     canManageCash(user);
+
+  const userCanManageCatalog =
+    canManageCatalog(user);
 
   if (isLoading) {
     return (
@@ -393,6 +404,59 @@ function MainApp() {
               fetchCashSession
             }
           />
+        );
+      }
+
+      if (
+        activeTab ===
+        'admin'
+      ) {
+        if (
+          !userCanManageCatalog
+        ) {
+          return (
+            <View
+              style={
+                styles.containerLoading
+              }
+            >
+              <Text
+                style={{
+                  fontSize: 48,
+                  marginBottom: 14,
+                }}
+              >
+                🔐
+              </Text>
+
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 24,
+                  fontWeight: '900',
+                }}
+              >
+                Acceso restringido
+              </Text>
+
+              <Text
+                style={{
+                  color: '#AAAAAA',
+                  fontSize: 14,
+                  marginTop: 8,
+                  textAlign: 'center',
+                }}
+              >
+                Solo un administrador
+                puede modificar el
+                catálogo.
+              </Text>
+            </View>
+          );
+        }
+
+        return (
+          <AdminScreen />
         );
       }
 
