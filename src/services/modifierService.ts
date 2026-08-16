@@ -1,5 +1,11 @@
 import {
+  CreateModifierData,
+  fetchAllModifiers,
   fetchAvailableModifiers,
+  insertModifier,
+  ModifierGroup,
+  setModifierAvailableById,
+  updateModifierById,
 } from '../repositories/ModifierRepository';
 
 import {
@@ -19,6 +25,19 @@ export interface GroupedModifiers {
   sauces: Modifier[];
 }
 
+export interface CreateModifierInput {
+  name: string;
+  extraPrice: number;
+  groupName: ModifierGroup;
+}
+
+export interface UpdateModifierInput {
+  name: string;
+  extraPrice: number;
+  groupName: ModifierGroup;
+  isAvailable: boolean;
+}
+
 export async function getAvailableModifiers(): Promise<
   GroupedModifiers
 > {
@@ -26,18 +45,150 @@ export async function getAvailableModifiers(): Promise<
     await fetchAvailableModifiers();
 
   return {
-    meats: modifiers.filter(
-      (modifier) =>
-        modifier.group_name ===
-        'Carne',
-    ),
+    meats:
+      modifiers.filter(
+        (modifier) =>
+          modifier.group_name ===
+          'Carne',
+      ),
 
-    sauces: modifiers.filter(
-      (modifier) =>
-        modifier.group_name ===
-        'Salsa',
-    ),
+    sauces:
+      modifiers.filter(
+        (modifier) =>
+          modifier.group_name ===
+          'Salsa',
+      ),
   };
+}
+
+export async function getAllModifiers(): Promise<
+  Modifier[]
+> {
+  try {
+    return await fetchAllModifiers();
+  } catch (error) {
+    console.error(
+      'Error al obtener todos los modificadores:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudieron obtener los modificadores.',
+    );
+  }
+}
+
+export async function createModifier(
+  input:
+    CreateModifierInput,
+): Promise<Modifier> {
+  const cleanName =
+    input.name.trim();
+
+  validateModifier(
+    cleanName,
+    input.extraPrice,
+  );
+
+  try {
+    const data:
+      CreateModifierData = {
+      name:
+        cleanName,
+
+      extraPrice:
+        input.extraPrice,
+
+      groupName:
+        input.groupName,
+    };
+
+    return await insertModifier(
+      data,
+    );
+  } catch (error) {
+    console.error(
+      'Error al crear modificador:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo crear el modificador.',
+    );
+  }
+}
+
+export async function updateModifier(
+  modifierId: string,
+  input:
+    UpdateModifierInput,
+): Promise<Modifier> {
+  validateModifierId(
+    modifierId,
+  );
+
+  const cleanName =
+    input.name.trim();
+
+  validateModifier(
+    cleanName,
+    input.extraPrice,
+  );
+
+  try {
+    return await updateModifierById(
+      modifierId,
+      {
+        name:
+          cleanName,
+
+        extraPrice:
+          input.extraPrice,
+
+        groupName:
+          input.groupName,
+
+        isAvailable:
+          input.isAvailable,
+      },
+    );
+  } catch (error) {
+    console.error(
+      'Error al actualizar modificador:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo actualizar el modificador.',
+    );
+  }
+}
+
+export async function setModifierAvailable(
+  modifierId: string,
+  isAvailable: boolean,
+): Promise<Modifier> {
+  validateModifierId(
+    modifierId,
+  );
+
+  try {
+    return await setModifierAvailableById(
+      modifierId,
+      isAvailable,
+    );
+  } catch (error) {
+    console.error(
+      'Error al cambiar disponibilidad del modificador:',
+      error,
+    );
+
+    throw new Error(
+      isAvailable
+        ? 'No se pudo activar el modificador.'
+        : 'No se pudo desactivar el modificador.',
+    );
+  }
 }
 
 export function getProductModifierMode(
@@ -49,16 +200,15 @@ export function getProductModifierMode(
   }
 
   const normalizedName =
-    normalizeText(product.name);
+    normalizeText(
+      product.name,
+    );
 
   const normalizedCategory =
-    normalizeText(categoryName);
+    normalizeText(
+      categoryName,
+    );
 
-  /*
-   * Los combos se detectan primero para
-   * evitar que "Combo Alitas" se trate
-   * como un producto individual.
-   */
   if (
     normalizedName.includes(
       'combo',
@@ -70,11 +220,6 @@ export function getProductModifierMode(
     return 'combo';
   }
 
-  /*
-   * Boneless puede detectarse tanto por
-   * el nombre del producto como por la
-   * categoría a la que pertenece.
-   */
   if (
     normalizedName.includes(
       'boneless',
@@ -86,12 +231,6 @@ export function getProductModifierMode(
     return 'boneless';
   }
 
-  /*
-   * Algunos productos de la categoría
-   * Alitas pueden llamarse solamente por
-   * número de piezas. Por eso también se
-   * revisa el nombre de la categoría.
-   */
   if (
     normalizedName.includes(
       'alita',
@@ -109,11 +248,6 @@ export function getProductModifierMode(
     return 'wings';
   }
 
-  /*
-   * También se contempla la categoría de
-   * hamburguesas por si un producto tiene
-   * un nombre que no incluye la palabra.
-   */
   if (
     normalizedName.includes(
       'hamburguesa',
@@ -142,6 +276,38 @@ export function isKongBurger(
   ).includes('kong');
 }
 
+function validateModifierId(
+  modifierId: string,
+): void {
+  if (!modifierId?.trim()) {
+    throw new Error(
+      'El modificador no es válido.',
+    );
+  }
+}
+
+function validateModifier(
+  name: string,
+  extraPrice: number,
+): void {
+  if (!name) {
+    throw new Error(
+      'El nombre del modificador es obligatorio.',
+    );
+  }
+
+  if (
+    !Number.isFinite(
+      extraPrice,
+    ) ||
+    extraPrice < 0
+  ) {
+    throw new Error(
+      'El precio extra no es válido.',
+    );
+  }
+}
+
 function normalizeText(
   value?: string | null,
 ): string {
@@ -153,6 +319,8 @@ function normalizeText(
         '',
       )
       .trim()
-      .toLocaleLowerCase('es') ?? ''
+      .toLocaleLowerCase(
+        'es',
+      ) ?? ''
   );
 }

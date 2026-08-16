@@ -16,6 +16,9 @@ import {
     styles,
 } from './AdminScreen.styles';
 import { AdminCategories } from '../../components/admin/categories/AdminCategories';
+import {
+    AdminModifiers,
+} from '../../components/admin/modifiers/AdminModifiers';
 
 type AdminSection =
     | 'products'
@@ -28,11 +31,15 @@ interface AdminScreenProps {
 
     onCategoriesChanged:
     () => Promise<void>;
+
+    onModifiersChanged:
+    () => Promise<void>;
 }
 
 export function AdminScreen({
     onProductsChanged,
     onCategoriesChanged,
+    onModifiersChanged,
 }: AdminScreenProps) {
     const [
         activeSection,
@@ -70,37 +77,7 @@ export function AdminScreen({
             }
 
             return (
-                <View
-                    style={
-                        styles.placeholderCard
-                    }
-                >
-                    <Text
-                        style={
-                            styles.placeholderIcon
-                        }
-                    >
-                        🧂
-                    </Text>
-
-                    <Text
-                        style={
-                            styles.placeholderTitle
-                        }
-                    >
-                        Modificadores
-                    </Text>
-
-                    <Text
-                        style={
-                            styles.placeholderText
-                        }
-                    >
-                        Aquí administraremos
-                        carnes, salsas, sabores
-                        y otros modificadores.
-                    </Text>
-                </View>
+                <AdminModifiers />
             );
         };
 

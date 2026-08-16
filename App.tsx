@@ -458,13 +458,11 @@ function MainApp() {
 
         return (
           <AdminScreen
-            onProductsChanged={
-              fetchProducts
-            }
-            onCategoriesChanged={
-              fetchCategories
-            }
-          />
+            onProductsChanged={fetchProducts}
+            onCategoriesChanged={fetchCategories} 
+            onModifiersChanged={function (): Promise<void> {
+              throw new Error('Function not implemented.');
+            }} />
         );
       }
 
