@@ -6,19 +6,32 @@ import React, {
 
 import {
   Alert,
+  Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
-import { CategoryTabs } from '../../components/category-tabs/CategoryTabs';
-import { MenuList } from '../../components/menu-list/MenuList';
-import { Cart as CartComponent } from '../../components/cart/Cart';
+import {
+  CategoryTabs,
+} from '../../components/category-tabs/CategoryTabs';
+
+import {
+  MenuList,
+} from '../../components/menu-list/MenuList';
+
+import {
+  Cart as CartComponent,
+} from '../../components/cart/Cart';
 
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
 
-import { useModifiers } from '../../hooks/useModifiers';
+import {
+  useModifiers,
+} from '../../hooks/useModifiers';
 
 import {
   createKitchenOrder,
@@ -35,22 +48,29 @@ import {
   CartItem,
   Category,
   ComboComponentSelection,
-  Product,
   DeliveryDetails,
+  Product,
 } from '../../types';
 
-import { styles } from '../../../App.styles';
+import {
+  styles,
+} from '../../../App.styles';
 
 import {
   DeliveryConfiguratorModal,
 } from '../../components/delivery-configurator';
-import { isDeliveryProduct } from '../../Utils/delivery';
 
+import {
+  isDeliveryProduct,
+} from '../../Utils/delivery';
 
 interface POSScreenProps {
   categories: Category[];
+
   products: Product[];
-  fetchProducts: () => Promise<void>;
+
+  fetchProducts:
+    () => Promise<void>;
 
   cart: Cart;
 
@@ -61,10 +81,13 @@ interface POSScreenProps {
   editingOrderId: string | null;
 
   setEditingOrderId: React.Dispatch<
-    React.SetStateAction<string | null>
+    React.SetStateAction<
+      string | null
+    >
   >;
 
-  fetchKitchenOrders: () => Promise<void>;
+  fetchKitchenOrders:
+    () => Promise<void>;
 }
 
 export function POSScreen({
@@ -77,41 +100,56 @@ export function POSScreen({
   setEditingOrderId,
   fetchKitchenOrders,
 }: POSScreenProps) {
-  const visibleCategories = useMemo(
-    () => {
-      const hiddenCategoryNames = [
-        'Complementos de combo',
-        'Domicilio',
-      ].map(normalizeText);
+  const visibleCategories =
+    useMemo(
+      () => {
+        const hiddenCategoryNames =
+          [
+            'Complementos de combo',
+            'Domicilio',
+          ].map(
+            normalizeText,
+          );
 
-      return categories
-        .filter(
-          (category) =>
-            !hiddenCategoryNames.includes(
-              normalizeText(
-                category.name,
+        return categories
+          .filter(
+            (category) =>
+              !hiddenCategoryNames.includes(
+                normalizeText(
+                  category.name,
+                ),
               ),
-            ),
-        )
-        .sort((categoryA, categoryB) =>
-          categoryA.name.localeCompare(
-            categoryB.name,
-            'es',
-            {
-              sensitivity: 'base',
-            },
-          ),
-        );
-    },
-    [categories],
-  );
+          )
+          .sort(
+            (
+              categoryA,
+              categoryB,
+            ) =>
+              categoryA.name.localeCompare(
+                categoryB.name,
+                'es',
+                {
+                  sensitivity:
+                    'base',
+                },
+              ),
+          );
+      },
+      [categories],
+    );
 
   const [
     selectedCategoryId,
     setSelectedCategoryId,
   ] = useState<string>(
-    visibleCategories[0]?.id ?? '',
+    visibleCategories[0]?.id ??
+      '',
   );
+
+  const [
+    searchText,
+    setSearchText,
+  ] = useState('');
 
   const [
     isModifierModalVisible,
@@ -121,7 +159,9 @@ export function POSScreen({
   const [
     selectedProduct,
     setSelectedProduct,
-  ] = useState<Product | null>(null);
+  ] = useState<Product | null>(
+    null,
+  );
 
   const [
     productNotes,
@@ -136,7 +176,8 @@ export function POSScreen({
   const {
     meats,
     sauces,
-    isLoading: areModifiersLoading,
+    isLoading:
+      areModifiersLoading,
     error: modifiersError,
   } = useModifiers();
 
@@ -148,19 +189,31 @@ export function POSScreen({
   const [
     selectedDeliveryProduct,
     setSelectedDeliveryProduct,
-  ] = useState<Product | null>(null);
+  ] = useState<Product | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (visibleCategories.length === 0) {
-      setSelectedCategoryId('');
+    if (
+      visibleCategories.length ===
+      0
+    ) {
+      setSelectedCategoryId(
+        '',
+      );
+
       return;
     }
 
     const categoryStillExists =
       visibleCategories.some(
         (category) =>
-          String(category.id) ===
-          String(selectedCategoryId),
+          String(
+            category.id,
+          ) ===
+          String(
+            selectedCategoryId,
+          ),
       );
 
     if (!categoryStillExists) {
@@ -173,59 +226,112 @@ export function POSScreen({
     selectedCategoryId,
   ]);
 
-  const filteredProducts = useMemo(
-    () =>
-      products
+  const filteredProducts =
+    useMemo(() => {
+      const normalizedSearch =
+        normalizeText(
+          searchText,
+        );
+
+      return products
         .filter(
-          (product) =>
-            String(product.category_id) ===
-            String(selectedCategoryId),
+          (product) => {
+            if (
+              normalizedSearch
+            ) {
+              /*
+               * Búsqueda global:
+               * ignora la categoría
+               * seleccionada.
+               */
+              return normalizeText(
+                product.name,
+              ).includes(
+                normalizedSearch,
+              );
+            }
+
+            /*
+             * Sin búsqueda:
+             * comportamiento normal
+             * por categoría.
+             */
+            return (
+              String(
+                product.category_id,
+              ) ===
+              String(
+                selectedCategoryId,
+              )
+            );
+          },
         )
-        .sort((productA, productB) => {
-          const priceDifference =
-            Number(productA.price) -
-            Number(productB.price);
+        .sort(
+          (
+            productA,
+            productB,
+          ) => {
+            const priceDifference =
+              Number(
+                productA.price,
+              ) -
+              Number(
+                productB.price,
+              );
 
-          if (priceDifference !== 0) {
-            return priceDifference;
-          }
+            if (
+              priceDifference !==
+              0
+            ) {
+              return priceDifference;
+            }
 
-          return productA.name.localeCompare(
-            productB.name,
-            'es',
-            {
-              sensitivity: 'base',
-            },
-          );
-        }),
-    [
+            return productA.name.localeCompare(
+              productB.name,
+              'es',
+              {
+                sensitivity:
+                  'base',
+              },
+            );
+          },
+        );
+    }, [
       products,
       selectedCategoryId,
-    ],
-  );
+      searchText,
+    ]);
 
   const selectedProductCategory =
     categories.find(
       (category) =>
-        String(category.id) ===
         String(
-          selectedProduct?.category_id,
+          category.id,
+        ) ===
+        String(
+          selectedProduct
+            ?.category_id,
         ),
     ) ?? null;
 
   const modifierMode =
     getProductModifierMode(
       selectedProduct,
-      selectedProductCategory?.name,
+      selectedProductCategory
+        ?.name,
     );
 
   const selectedProductIsKongBurger =
-    isKongBurger(selectedProduct);
+    isKongBurger(
+      selectedProduct,
+    );
 
   const deliveryProduct =
     products.find(
       (product) =>
-        isDeliveryProduct(product),
+        isDeliveryProduct(
+          product,
+        ),
     ) ?? null;
 
   const currentDeliveryItem =
@@ -241,54 +347,61 @@ export function POSScreen({
       ?.deliveryDetails ?? null;
 
   const handleToggleDelivery =
-  (): void => {
-    if (currentDeliveryItem) {
-      setCart((currentCart) =>
-        currentCart.filter(
+    (): void => {
+      if (
+        currentDeliveryItem
+      ) {
+        setCart(
+          (
+            currentCart,
+          ) =>
+            currentCart.filter(
+              (item) =>
+                !isDeliveryProduct(
+                  item.product,
+                ),
+            ),
+        );
+
+        return;
+      }
+
+      const hasRegularProducts =
+        cart.some(
           (item) =>
             !isDeliveryProduct(
               item.product,
             ),
-        ),
+        );
+
+      if (
+        !hasRegularProducts
+      ) {
+        Alert.alert(
+          'Orden vacía',
+          'Agrega al menos un producto antes de activar el envío a domicilio.',
+        );
+
+        return;
+      }
+
+      if (!deliveryProduct) {
+        Alert.alert(
+          'Producto no disponible',
+          'No se encontró el producto Envío a domicilio.',
+        );
+
+        return;
+      }
+
+      setSelectedDeliveryProduct(
+        deliveryProduct,
       );
 
-      return;
-    }
-
-    const hasRegularProducts =
-      cart.some(
-        (item) =>
-          !isDeliveryProduct(
-            item.product,
-          ),
+      setIsDeliveryModalVisible(
+        true,
       );
-
-    if (!hasRegularProducts) {
-      Alert.alert(
-        'Orden vacía',
-        'Agrega al menos un producto antes de activar el envío a domicilio.',
-      );
-
-      return;
-    }
-
-    if (!deliveryProduct) {
-      Alert.alert(
-        'Producto no disponible',
-        'No se encontró el producto Envío a domicilio.',
-      );
-
-      return;
-    }
-
-    setSelectedDeliveryProduct(
-      deliveryProduct,
-    );
-
-    setIsDeliveryModalVisible(
-      true,
-    );
-  };
+    };
 
   const handleEditDelivery =
     (): void => {
@@ -313,25 +426,41 @@ export function POSScreen({
   const handleProductPress = (
     product: Product,
   ): void => {
-    if (isDeliveryProduct(product)) {
+    if (
+      isDeliveryProduct(
+        product,
+      )
+    ) {
       setSelectedDeliveryProduct(
         product,
       );
+
       setIsDeliveryModalVisible(
         true,
       );
+
       return;
     }
 
-    setSelectedProduct(product);
+    setSelectedProduct(
+      product,
+    );
+
     setProductNotes('');
-    setIsModifierModalVisible(true);
+
+    setIsModifierModalVisible(
+      true,
+    );
   };
 
   const handleCloseModifierModal =
     (): void => {
-      setIsModifierModalVisible(false);
+      setIsModifierModalVisible(
+        false,
+      );
+
       setSelectedProduct(null);
+
       setProductNotes('');
     };
 
@@ -340,22 +469,27 @@ export function POSScreen({
       setIsDeliveryModalVisible(
         false,
       );
+
       setSelectedDeliveryProduct(
         null,
       );
     };
 
   const handleConfirmDelivery = (
-    deliveryDetails: DeliveryDetails,
+    deliveryDetails:
+      DeliveryDetails,
   ): void => {
-    if (!selectedDeliveryProduct) {
+    if (
+      !selectedDeliveryProduct
+    ) {
       return;
     }
 
     const deliveryItemId =
       `${selectedDeliveryProduct.id}-delivery`;
 
-    const deliveryItem: CartItem = {
+    const deliveryItem:
+      CartItem = {
       id: deliveryItemId,
 
       product: {
@@ -363,7 +497,9 @@ export function POSScreen({
       },
 
       quantity: 1,
+
       notes: '',
+
       selectedModifiers: [],
 
       deliveryDetails: {
@@ -371,250 +507,276 @@ export function POSScreen({
       },
     };
 
-    setCart((currentCart) => {
-      const existingDeliveryIndex =
-        currentCart.findIndex(
-          (item) =>
-            isDeliveryProduct(
-              item.product,
-            ),
+    setCart(
+      (
+        currentCart,
+      ) => {
+        const existingDeliveryIndex =
+          currentCart.findIndex(
+            (item) =>
+              isDeliveryProduct(
+                item.product,
+              ),
+          );
+
+        if (
+          existingDeliveryIndex ===
+          -1
+        ) {
+          return [
+            ...currentCart,
+            deliveryItem,
+          ];
+        }
+
+        return currentCart.map(
+          (
+            item,
+            index,
+          ) =>
+            index ===
+            existingDeliveryIndex
+              ? deliveryItem
+              : item,
         );
-
-      /*
-       * Primera vez que se agrega.
-       */
-      if (
-        existingDeliveryIndex === -1
-      ) {
-        return [
-          ...currentCart,
-          deliveryItem,
-        ];
-      }
-
-      /*
-       * Ya existía: se actualiza en
-       * su misma posición.
-       */
-      return currentCart.map(
-        (item, index) =>
-          index === existingDeliveryIndex
-            ? deliveryItem
-            : item,
-      );
-    });
+      },
+    );
 
     handleCloseDeliveryModal();
   };
 
-  const handleConfirmAddToCart = (
-    configuration:
-      ProductConfigurationResult,
-  ): void => {
-    if (!selectedProduct) {
-      return;
-    }
-
-    const {
-      selectedModifiers = [],
-      comboComponents = [],
-    } = configuration;
-
-    const productToAdd =
-      selectedProduct;
-
-    const cleanNotes =
-      productNotes.trim();
-
-    /*
-     * Copia independiente de la configuración.
-     *
-     * Evita conservar referencias internas del modal que
-     * puedan modificarse o limpiarse cuando el modal cierre.
-     */
-    const normalizedComponents =
-      cloneComboComponents(
-        comboComponents,
-      );
-
-    const modifierIdentifier =
-      createModifierIdentifier(
-        selectedModifiers,
-      );
-
-    const comboIdentifier =
-      createComboIdentifier(
-        normalizedComponents,
-      );
-
-    const cartItemId = [
-      productToAdd.id,
-      cleanNotes,
-      modifierIdentifier,
-      comboIdentifier,
-    ].join('-');
-
-    const itemToAdd: CartItem = {
-      id: cartItemId,
-      product: {
-        ...productToAdd,
-      },
-      quantity: 1,
-      notes: cleanNotes,
-
-      selectedModifiers:
-        selectedModifiers.map(
-          (modifier) => ({
-            ...modifier,
-          }),
-        ),
-
-      comboComponents:
-        normalizedComponents.length > 0
-          ? normalizedComponents
-          : undefined,
-    };
-
-    setCart((currentCart) => {
-      const existingItemIndex =
-        currentCart.findIndex(
-          (item) =>
-            item.id === cartItemId,
-        );
-
-      if (existingItemIndex === -1) {
-        return [
-          ...currentCart,
-          itemToAdd,
-        ];
+  const handleConfirmAddToCart =
+    (
+      configuration:
+        ProductConfigurationResult,
+    ): void => {
+      if (!selectedProduct) {
+        return;
       }
 
-      return currentCart.map(
-        (item, index) => {
+      const {
+        selectedModifiers = [],
+        comboComponents = [],
+      } = configuration;
+
+      const productToAdd =
+        selectedProduct;
+
+      const cleanNotes =
+        productNotes.trim();
+
+      const normalizedComponents =
+        cloneComboComponents(
+          comboComponents,
+        );
+
+      const modifierIdentifier =
+        createModifierIdentifier(
+          selectedModifiers,
+        );
+
+      const comboIdentifier =
+        createComboIdentifier(
+          normalizedComponents,
+        );
+
+      const cartItemId = [
+        productToAdd.id,
+        cleanNotes,
+        modifierIdentifier,
+        comboIdentifier,
+      ].join('-');
+
+      const itemToAdd:
+        CartItem = {
+        id: cartItemId,
+
+        product: {
+          ...productToAdd,
+        },
+
+        quantity: 1,
+
+        notes:
+          cleanNotes,
+
+        selectedModifiers:
+          selectedModifiers.map(
+            (modifier) => ({
+              ...modifier,
+            }),
+          ),
+
+        comboComponents:
+          normalizedComponents
+            .length > 0
+            ? normalizedComponents
+            : undefined,
+      };
+
+      setCart(
+        (
+          currentCart,
+        ) => {
+          const existingItemIndex =
+            currentCart.findIndex(
+              (item) =>
+                item.id ===
+                cartItemId,
+            );
+
           if (
-            index !== existingItemIndex
+            existingItemIndex ===
+            -1
           ) {
-            return item;
+            return [
+              ...currentCart,
+              itemToAdd,
+            ];
           }
 
-          /*
-           * Mantiene la configuración que ya tenía el
-           * elemento agrupado.
-           *
-           * Si por alguna razón estaba vacía, recupera
-           * la configuración del nuevo elemento.
-           */
-          const preservedComponents =
-            item.comboComponents &&
-              item.comboComponents.length > 0
-              ? cloneComboComponents(
-                item.comboComponents,
-              )
-              : cloneComboComponents(
-                itemToAdd
-                  .comboComponents ?? [],
-              );
+          return currentCart.map(
+            (
+              item,
+              index,
+            ) => {
+              if (
+                index !==
+                existingItemIndex
+              ) {
+                return item;
+              }
 
-          return {
-            ...item,
+              const preservedComponents =
+                item.comboComponents &&
+                item
+                  .comboComponents
+                  .length > 0
+                  ? cloneComboComponents(
+                      item.comboComponents,
+                    )
+                  : cloneComboComponents(
+                      itemToAdd
+                        .comboComponents ??
+                        [],
+                    );
 
-            quantity:
-              item.quantity +
-              itemToAdd.quantity,
+              return {
+                ...item,
 
-            selectedModifiers:
-              item.selectedModifiers
-                .length > 0
-                ? item.selectedModifiers.map(
-                  (modifier) => ({
-                    ...modifier,
-                  }),
-                )
-                : itemToAdd
-                  .selectedModifiers
-                  .map(
-                    (modifier) => ({
-                      ...modifier,
-                    }),
-                  ),
+                quantity:
+                  item.quantity +
+                  itemToAdd.quantity,
 
-            comboComponents:
-              preservedComponents.length >
-                0
-                ? preservedComponents
-                : undefined,
-          };
+                selectedModifiers:
+                  item
+                    .selectedModifiers
+                    .length > 0
+                    ? item
+                        .selectedModifiers
+                        .map(
+                          (
+                            modifier,
+                          ) => ({
+                            ...modifier,
+                          }),
+                        )
+                    : itemToAdd
+                        .selectedModifiers
+                        .map(
+                          (
+                            modifier,
+                          ) => ({
+                            ...modifier,
+                          }),
+                        ),
+
+                comboComponents:
+                  preservedComponents
+                    .length > 0
+                    ? preservedComponents
+                    : undefined,
+              };
+            },
+          );
         },
       );
-    });
 
-    handleCloseModifierModal();
-  };
+      handleCloseModifierModal();
+    };
 
   const handleUpdateQuantity = (
     itemId: string,
     quantityChange: number,
   ): void => {
-    setCart((currentCart) =>
-      currentCart
-        .map((item) => {
-          if (item.id !== itemId) {
-            return item;
-          }
+    setCart(
+      (
+        currentCart,
+      ) =>
+        currentCart
+          .map((item) => {
+            if (
+              item.id !== itemId
+            ) {
+              return item;
+            }
 
-          if (
-            isDeliveryProduct(
-              item.product,
-            )
-          ) {
-            /*
-             * No se puede incrementar.
-             */
-            if (quantityChange > 0) {
+            if (
+              isDeliveryProduct(
+                item.product,
+              )
+            ) {
+              if (
+                quantityChange > 0
+              ) {
+                return {
+                  ...item,
+                  quantity: 1,
+                };
+              }
+
               return {
                 ...item,
-                quantity: 1,
+                quantity: 0,
               };
             }
 
-            /*
-             * Con el botón menos se lleva
-             * a cero y el filtro lo elimina.
-             */
             return {
               ...item,
-              quantity: 0,
-            };
-          }
 
-          return {
-            ...item,
-            quantity:
-              item.quantity +
-              quantityChange,
-          };
-        })
-        .filter(
-          (item) =>
-            item.quantity > 0,
-        ),
+              quantity:
+                item.quantity +
+                quantityChange,
+            };
+          })
+          .filter(
+            (item) =>
+              item.quantity > 0,
+          ),
     );
   };
 
   const handleRemoveCartItem = (
     itemId: string,
   ): void => {
-    setCart((currentCart) =>
-      currentCart.filter(
-        (item) => item.id !== itemId,
-      ),
+    setCart(
+      (
+        currentCart,
+      ) =>
+        currentCart.filter(
+          (item) =>
+            item.id !==
+            itemId,
+        ),
     );
   };
 
-  const handleClearCart = (): void => {
-    setCart([]);
-    setEditingOrderId(null);
-  };
+  const handleClearCart =
+    (): void => {
+      setCart([]);
+
+      setEditingOrderId(null);
+    };
 
   const handleCheckout = async (
     totalAmount: number,
@@ -635,7 +797,9 @@ export function POSScreen({
     }
 
     try {
-      setIsProcessingOrder(true);
+      setIsProcessingOrder(
+        true,
+      );
 
       if (editingOrderId) {
         await updateKitchenOrder(
@@ -672,6 +836,7 @@ export function POSScreen({
       }
 
       setCart([]);
+
       setEditingOrderId(null);
 
       await fetchKitchenOrders();
@@ -688,15 +853,78 @@ export function POSScreen({
           : 'No se pudo guardar el pedido.',
       );
     } finally {
-      setIsProcessingOrder(false);
+      setIsProcessingOrder(
+        false,
+      );
     }
   };
 
   return (
-    <View style={styles.contentRow}>
-      <View style={styles.menuSection}>
+    <View
+      style={
+        styles.contentRow
+      }
+    >
+      <View
+        style={
+          styles.menuSection
+        }
+      >
+        <View
+          style={
+            styles.productSearchContainer
+          }
+        >
+          <Text
+            style={
+              styles.productSearchIcon
+            }
+          >
+            🔎
+          </Text>
+
+          <TextInput
+            value={
+              searchText
+            }
+            onChangeText={
+              setSearchText
+            }
+            placeholder="Buscar producto..."
+            placeholderTextColor="#777777"
+            style={
+              styles.productSearchInput
+            }
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+
+          {searchText.length >
+          0 ? (
+            <TouchableOpacity
+              style={
+                styles.productSearchClear
+              }
+              onPress={() =>
+                setSearchText('')
+              }
+            >
+              <Text
+                style={
+                  styles.productSearchClearText
+                }
+              >
+                ✕
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
         <CategoryTabs
-          categorias={visibleCategories}
+          categorias={
+            visibleCategories
+          }
           categoriaSeleccionada={
             selectedCategoryId
           }
@@ -706,7 +934,9 @@ export function POSScreen({
         />
 
         <MenuList
-          products={filteredProducts}
+          products={
+            filteredProducts
+          }
           onProductPress={
             handleProductPress
           }
@@ -742,20 +972,36 @@ export function POSScreen({
         visible={
           isModifierModalVisible
         }
-        product={selectedProduct}
-        products={products}
-        categories={categories}
-        notes={productNotes}
-        mode={modifierMode}
+        product={
+          selectedProduct
+        }
+        products={
+          products
+        }
+        categories={
+          categories
+        }
+        notes={
+          productNotes
+        }
+        mode={
+          modifierMode
+        }
         isKongBurger={
           selectedProductIsKongBurger
         }
-        meats={meats}
-        sauces={sauces}
+        meats={
+          meats
+        }
+        sauces={
+          sauces
+        }
         isLoading={
           areModifiersLoading
         }
-        error={modifiersError}
+        error={
+          modifiersError
+        }
         onNotesChange={
           setProductNotes
         }
@@ -788,19 +1034,14 @@ export function POSScreen({
   );
 }
 
-/**
- * Crea una copia independiente de los componentes
- * seleccionados para un combo.
- *
- * Esto evita que el estado del modal y el carrito
- * compartan las mismas referencias.
- */
 function cloneComboComponents(
   components:
     | ComboComponentSelection[]
     | undefined,
 ): ComboComponentSelection[] {
-  return (components ?? []).map(
+  return (
+    components ?? []
+  ).map(
     (component) => ({
       ...component,
 
@@ -809,78 +1050,87 @@ function cloneComboComponents(
       },
 
       selectedModifiers: (
-        component.selectedModifiers ??
+        component
+          .selectedModifiers ??
         []
-      ).map((modifier) => ({
-        ...modifier,
-      })),
+      ).map(
+        (modifier) => ({
+          ...modifier,
+        }),
+      ),
     }),
   );
 }
 
-/**
- * Genera una firma estable para los modificadores
- * directos de un producto.
- */
 function createModifierIdentifier(
   modifiers:
     ProductConfigurationResult[
-    'selectedModifiers'
+      'selectedModifiers'
     ],
 ): string {
-  return (modifiers ?? [])
-    .map((modifier) => modifier.id)
+  return (
+    modifiers ?? []
+  )
+    .map(
+      (modifier) =>
+        modifier.id,
+    )
     .sort()
     .join(',');
 }
 
-/**
- * Genera una firma estable para toda la selección
- * del combo.
- *
- * Dos combos solamente se agrupan cuando contienen
- * exactamente los mismos productos, modificadores,
- * notas, cantidades y tipos.
- */
 function createComboIdentifier(
   components:
     | ComboComponentSelection[]
     | undefined,
 ): string {
-  return (components ?? [])
-    .map((component) => {
-      const modifierIds = (
-        component.selectedModifiers ??
-        []
-      )
-        .map(
-          (modifier) => modifier.id,
+  return (
+    components ?? []
+  )
+    .map(
+      (component) => {
+        const modifierIds = (
+          component
+            .selectedModifiers ??
+          []
         )
-        .sort()
-        .join(',');
+          .map(
+            (modifier) =>
+              modifier.id,
+          )
+          .sort()
+          .join(',');
 
-      return [
-        component.slotId,
-        component.type,
-        component.product.id,
-        component.quantity,
-        component.notes.trim(),
-        modifierIds,
-      ].join(':');
-    })
+        return [
+          component.slotId,
+          component.type,
+          component.product.id,
+          component.quantity,
+          component.notes.trim(),
+          modifierIds,
+        ].join(':');
+      },
+    )
     .sort()
     .join('|');
 }
 
 function normalizeText(
-  value: string | null | undefined,
+  value:
+    | string
+    | null
+    | undefined,
 ): string {
-  return (value ?? '')
+  return (
+    value ?? ''
+  )
     .normalize('NFD')
     .replace(
       /[\u0300-\u036f]/g,
       '',
     )
     .trim()
-    .toLocaleLowerCase('es');
+    .toLocaleLowerCase(
+      'es',
+    );
 }

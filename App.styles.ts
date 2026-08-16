@@ -231,4 +231,48 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+
+  productSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#3D3D3D',
+    backgroundColor: '#1D1D1D',
+  },
+
+  productSearchIcon: {
+    fontSize: 17,
+    marginRight: 10,
+  },
+
+  productSearchInput: {
+    flex: 1,
+    height: 46,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    paddingVertical: 0,
+  },
+
+  productSearchClear: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17,
+    backgroundColor: '#303030',
+  },
+
+  productSearchClearText: {
+    color: '#AAAAAA',
+    fontSize: 14,
+    fontWeight: '900',
+  },
 });
+
