@@ -52,11 +52,24 @@ import {
 } from './App.styles';
 import { canManageCash } from './src/Utils/permissions';
 
+import {
+  useSessionInactivity,
+} from './src/hooks/useSessionInactivity';
+
 function MainApp() {
   const {
     user,
     logout,
   } = useAuth();
+
+  const {
+    registerActivity,
+  } = useSessionInactivity({
+    userId:
+      user?.id ?? null,
+
+    logout,
+  });
 
   const [
     activeTab,
@@ -390,6 +403,9 @@ function MainApp() {
     <View
       style={
         styles.mainContainer
+      }
+      onTouchStart={
+        registerActivity
       }
     >
       <GlobalHeader
