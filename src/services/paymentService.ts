@@ -1,6 +1,7 @@
 import {
   fetchOrderPaymentByOrderId,
   insertOrderPayment,
+  PaymentRepositoryError,
 } from '../repositories/PaymentRepository';
 
 import {
@@ -10,9 +11,12 @@ import {
 
 interface RegisterPaymentParams {
   orderId: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod:
+    PaymentMethod;
   totalAmount: number;
-  amountReceived?: number | null;
+
+  amountReceived?:
+    number | null;
 }
 
 export async function registerOrderPayment({
@@ -21,57 +25,107 @@ export async function registerOrderPayment({
   totalAmount,
   amountReceived = null,
 }: RegisterPaymentParams): Promise<OrderPayment> {
-  validateOrderId(orderId);
-  validateTotalAmount(totalAmount);
+  validateOrderId(
+    orderId,
+  );
+
+  validateTotalAmount(
+    totalAmount,
+  );
 
   const existingPayment =
     await fetchOrderPaymentByOrderId(
       orderId,
     );
 
-  /*
-   * Si el pago ya existe, no intentamos
-   * insertarlo nuevamente.
-   *
-   * Esto permite recuperar el flujo si
-   * el pago se guardó correctamente pero
-   * falló el cambio de estado de la orden.
-   */
   if (existingPayment) {
     return existingPayment;
   }
 
-  if (paymentMethod === 'card') {
-    return insertOrderPayment({
+  const paymentPayload =
+    buildPaymentPayload({
+      orderId,
+      paymentMethod,
+      totalAmount,
+      amountReceived,
+    });
+
+  try {
+    return await insertOrderPayment(
+      paymentPayload,
+    );
+  } catch (error) {
+    /*
+     * 23505 = unique_violation.
+     *
+     * Otro request pudo registrar
+     * el pago entre nuestro SELECT
+     * y nuestro INSERT.
+     */
+    if (
+      error instanceof
+        PaymentRepositoryError &&
+      error.code ===
+        '23505'
+    ) {
+      const paymentAfterConflict =
+        await fetchOrderPaymentByOrderId(
+          orderId,
+        );
+
+      if (
+        paymentAfterConflict
+      ) {
+        return paymentAfterConflict;
+      }
+    }
+
+    throw error;
+  }
+}
+
+function buildPaymentPayload({
+  orderId,
+  paymentMethod,
+  totalAmount,
+  amountReceived,
+}: RegisterPaymentParams) {
+  if (
+    paymentMethod ===
+    'card'
+  ) {
+    return {
       orderId,
       paymentMethod,
       totalAmount,
       amountReceived: null,
       changeAmount: null,
-    });
+    };
   }
 
   validateCashPayment(
     totalAmount,
-    amountReceived,
+    amountReceived ??
+      null,
   );
 
   const received =
     amountReceived as number;
 
-  const changeAmount =
-    calculateChange(
-      totalAmount,
-      received,
-    );
-
-  return insertOrderPayment({
+  return {
     orderId,
     paymentMethod,
     totalAmount,
-    amountReceived: received,
-    changeAmount,
-  });
+
+    amountReceived:
+      received,
+
+    changeAmount:
+      calculateChange(
+        totalAmount,
+        received,
+      ),
+  };
 }
 
 export function calculateChange(
@@ -79,9 +133,12 @@ export function calculateChange(
   amountReceived: number,
 ): number {
   const change =
-    amountReceived - totalAmount;
+    amountReceived -
+    totalAmount;
 
-  return roundCurrency(change);
+  return roundCurrency(
+    change,
+  );
 }
 
 function validateOrderId(
@@ -111,10 +168,12 @@ function validateTotalAmount(
 
 function validateCashPayment(
   totalAmount: number,
-  amountReceived: number | null,
+  amountReceived:
+    number | null,
 ): void {
   if (
-    amountReceived === null ||
+    amountReceived ===
+      null ||
     !Number.isFinite(
       amountReceived,
     )
@@ -124,7 +183,9 @@ function validateCashPayment(
     );
   }
 
-  if (amountReceived < 0) {
+  if (
+    amountReceived < 0
+  ) {
     throw new Error(
       'La cantidad recibida no es válida.',
     );

@@ -188,46 +188,98 @@ export function KitchenScreen({
       return;
     }
 
+    const orderToPay =
+      paymentOrder;
+
     try {
       setIsProcessingPayment(true);
 
-      await registerOrderPayment({
-        orderId: paymentOrder.id,
-        paymentMethod,
-        totalAmount: Number(
-          paymentOrder.total,
-        ),
-        amountReceived,
-      });
+      /*
+       * PASO 1:
+       * Registrar el pago.
+       *
+       * registerOrderPayment es idempotente:
+       * si el pago ya existe, devuelve el
+       * existente en lugar de duplicarlo.
+       */
+      try {
+        await registerOrderPayment({
+          orderId:
+            orderToPay.id,
 
-      await deliverOrder(
-        paymentOrder.id,
-      );
+          paymentMethod,
 
+          totalAmount:
+            Number(
+              orderToPay.total,
+            ),
+
+          amountReceived,
+        });
+      } catch (error) {
+        console.error(
+          'Error al registrar el pago:',
+          error,
+        );
+
+        Alert.alert(
+          'Error al cobrar',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo registrar el pago.',
+        );
+
+        return;
+      }
+
+      /*
+       * PASO 2:
+       * El pago ya quedó registrado.
+       *
+       * A partir de aquí NO debemos decir
+       * que el cobro falló.
+       */
+      try {
+        await deliverOrder(
+          orderToPay.id,
+        );
+      } catch (error) {
+        console.error(
+          'Pago registrado, pero no se pudo entregar la orden:',
+          error,
+        );
+
+        /*
+         * Cerramos el modal porque el pago
+         * ya existe y no queremos inducir
+         * al usuario a cobrar nuevamente.
+         */
+        setPaymentOrder(null);
+
+        Alert.alert(
+          'Pago registrado',
+          'El pago se guardó correctamente, pero no se pudo marcar la orden como entregada.\n\nLa orden seguirá apareciendo como pendiente. Presiona "Cobrar / Entregar" nuevamente para completar la entrega.',
+        );
+
+        return;
+      }
+
+      /*
+       * PASO 3:
+       * Pago y entrega completados.
+       */
       removeOrderFromPendingList(
-        paymentOrder.id,
+        orderToPay.id,
       );
 
       if (
         editingOrderId ===
-        paymentOrder.id
+        orderToPay.id
       ) {
         clearEditingOrder();
       }
 
       setPaymentOrder(null);
-    } catch (error) {
-      console.error(
-        'Error al cobrar la orden:',
-        error,
-      );
-
-      Alert.alert(
-        'Error al cobrar',
-        error instanceof Error
-          ? error.message
-          : 'No se pudo registrar el pago.',
-      );
     } finally {
       setIsProcessingPayment(false);
     }

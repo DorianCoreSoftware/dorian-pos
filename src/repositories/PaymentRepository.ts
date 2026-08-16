@@ -20,49 +20,78 @@ export interface CompletedSaleRecord {
 interface OrderPaymentRecord {
   id: string;
   order_id: string;
+
   payment_method:
     | 'cash'
     | 'card';
-  total_amount: string | number;
+
+  total_amount:
+    | string
+    | number;
+
   amount_received:
     | string
     | number
     | null;
+
   change_amount:
     | string
     | number
     | null;
+
   created_at: string;
 }
 
+export class PaymentRepositoryError
+  extends Error {
+  code: string | null;
+
+  constructor(
+    message: string,
+    code: string | null,
+  ) {
+    super(message);
+
+    this.name =
+      'PaymentRepositoryError';
+
+    this.code =
+      code;
+  }
+}
+
 export async function insertOrderPayment(
-  payment: CreateOrderPayment,
+  payment:
+    CreateOrderPayment,
 ): Promise<OrderPayment> {
-  const { data, error } =
-    await supabase
-      .from('order_payments')
-      .insert({
-        order_id:
-          payment.orderId,
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('order_payments')
+    .insert({
+      order_id:
+        payment.orderId,
 
-        payment_method:
-          payment.paymentMethod,
+      payment_method:
+        payment.paymentMethod,
 
-        total_amount:
-          payment.totalAmount,
+      total_amount:
+        payment.totalAmount,
 
-        amount_received:
-          payment.amountReceived,
+      amount_received:
+        payment.amountReceived,
 
-        change_amount:
-          payment.changeAmount,
-      })
-      .select()
-      .single();
+      change_amount:
+        payment.changeAmount,
+    })
+    .select()
+    .single();
 
   if (error) {
-    throw new Error(
+    throw new PaymentRepositoryError(
       `No se pudo registrar el pago: ${error.message}`,
+      error.code ?? null,
     );
   }
 
@@ -80,15 +109,17 @@ export async function insertOrderPayment(
 export async function fetchOrderPaymentByOrderId(
   orderId: string,
 ): Promise<OrderPayment | null> {
-  const { data, error } =
-    await supabase
-      .from('order_payments')
-      .select('*')
-      .eq(
-        'order_id',
-        orderId,
-      )
-      .maybeSingle();
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('order_payments')
+    .select('*')
+    .eq(
+      'order_id',
+      orderId,
+    )
+    .maybeSingle();
 
   if (error) {
     throw new Error(
@@ -106,7 +137,8 @@ export async function fetchOrderPaymentByOrderId(
 }
 
 function mapOrderPayment(
-  record: OrderPaymentRecord,
+  record:
+    OrderPaymentRecord,
 ): OrderPayment {
   return {
     id:
@@ -147,34 +179,36 @@ function mapOrderPayment(
 export async function fetchCompletedSales(): Promise<
   CompletedSaleRecord[]
 > {
-  const { data, error } =
-    await supabase
-      .from('orders')
-      .select(`
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      total,
+      status,
+      created_at,
+      order_payments(
         id,
-        total,
-        status,
-        created_at,
-        order_payments(
-          id,
-          order_id,
-          payment_method,
-          total_amount,
-          amount_received,
-          change_amount,
-          created_at
-        )
-      `)
-      .eq(
-        'status',
-        'entregado',
+        order_id,
+        payment_method,
+        total_amount,
+        amount_received,
+        change_amount,
+        created_at
       )
-      .order(
-        'created_at',
-        {
-          ascending: false,
-        },
-      );
+    `)
+    .eq(
+      'status',
+      'entregado',
+    )
+    .order(
+      'created_at',
+      {
+        ascending: false,
+      },
+    );
 
   if (error) {
     throw new Error(
@@ -183,7 +217,6 @@ export async function fetchCompletedSales(): Promise<
   }
 
   return (
-      data ?? []
+    data ?? []
   ) as unknown as CompletedSaleRecord[];
 }
-
