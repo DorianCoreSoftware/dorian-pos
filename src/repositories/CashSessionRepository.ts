@@ -16,34 +16,44 @@ interface CashSessionRecord {
   opened_at: string;
 
   opening_amount:
-    string | number;
+  string | number;
 
   closed_at: string | null;
   closed_by: string | null;
 
   expected_cash:
-    string | number | null;
+  string | number | null;
 
   counted_cash:
-    string | number | null;
+  string | number | null;
 
   difference_amount:
-    string | number | null;
+  string | number | null;
 
   total_cash_sales:
-    string | number | null;
+  string | number | null;
 
   total_card_sales:
-    string | number | null;
+  string | number | null;
 
   total_sales:
-    string | number | null;
+  string | number | null;
 
   sales_count: number | null;
 
   status: CashSessionStatus;
 
   created_at: string;
+
+  opened_by_profile?: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+
+  closed_by_profile?: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
 }
 
 export async function fetchOpenCashSession(): Promise<
@@ -82,7 +92,17 @@ export async function fetchClosedCashSessions(): Promise<
     error,
   } = await supabase
     .from('cash_sessions')
-    .select('*')
+    .select(`
+      *,
+      opened_by_profile:profiles!cash_sessions_opened_by_fkey(
+        first_name,
+        last_name
+      ),
+      closed_by_profile:profiles!cash_sessions_closed_by_fkey(
+        first_name,
+        last_name
+      )
+    `)
     .eq(
       'status',
       'closed',
@@ -102,8 +122,8 @@ export async function fetchClosedCashSessions(): Promise<
 
   return (
     data as
-      | CashSessionRecord[]
-      | null
+    | CashSessionRecord[]
+    | null
   )?.map(
     mapCashSession,
   ) ?? [];
@@ -151,7 +171,7 @@ export async function closeCashSessionById(
   const differenceAmount =
     roundCurrency(
       input.countedCash -
-        input.expectedCash,
+      input.expectedCash,
     );
 
   const { data, error } =
@@ -279,6 +299,16 @@ function mapCashSession(
 
     createdAt:
       record.created_at,
+
+    openedByName:
+      buildProfileName(
+        record.opened_by_profile,
+      ),
+
+    closedByName:
+      buildProfileName(
+        record.closed_by_profile,
+      ),
   };
 }
 
@@ -306,4 +336,33 @@ function roundCurrency(
       ) * 100,
     ) / 100
   );
+}
+
+function buildProfileName(
+  profile:
+    | {
+        first_name:
+          | string
+          | null;
+
+        last_name:
+          | string
+          | null;
+      }
+    | null
+    | undefined,
+): string | null {
+  if (!profile) {
+    return null;
+  }
+
+  const fullName = [
+    profile.first_name,
+    profile.last_name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return fullName || null;
 }

@@ -34,6 +34,10 @@ import {
   styles,
 } from './CashClosingScreen.styles';
 
+import {
+  useAuth,
+} from '../../context/AuthContext';
+
 interface CashClosingScreenProps {
   cashSession:
   CashSession | null;
@@ -62,6 +66,10 @@ export function CashClosingScreen({
   ] = useState<CompletedSale[]>(
     [],
   );
+
+  const {
+    user,
+  } = useAuth();
 
   const [
     openingAmountText,
@@ -356,6 +364,9 @@ export function CashClosingScreen({
         const session =
           await openCashSession({
             openingAmount,
+
+            openedBy:
+              user?.id ?? null,
           });
 
         /*
@@ -501,6 +512,9 @@ export function CashClosingScreen({
 
             salesCount:
               sessionSales.length,
+
+            closedBy:
+              user?.id ?? null,
           });
 
         /*
@@ -680,448 +694,468 @@ export function CashClosingScreen({
   }
 
   const renderNavigation =
-  () => {
-    return (
-      <View
-        style={
-          styles.cashTabs
-        }
-      >
-        <TouchableOpacity
-          style={[
-            styles.cashTab,
+    () => {
+      return (
+        <View
+          style={
+            styles.cashTabs
+          }
+        >
+          <TouchableOpacity
+            style={[
+              styles.cashTab,
 
-            activeView ===
+              activeView ===
               'current' &&
               styles.cashTabActive,
-          ]}
-          onPress={() =>
-            setActiveView(
-              'current',
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.cashTabText,
-
-              activeView ===
-                'current' &&
-                styles.cashTabTextActive,
             ]}
-          >
-            CAJA ACTUAL
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.cashTab,
-
-            activeView ===
-              'history' &&
-              styles.cashTabActive,
-          ]}
-          onPress={() =>
-            setActiveView(
-              'history',
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.cashTabText,
-
-              activeView ===
-                'history' &&
-                styles.cashTabTextActive,
-            ]}
-          >
-            HISTORIAL
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderHistory =
-  () => {
-    if (isHistoryLoading) {
-      return (
-        <View
-          style={
-            styles.historyCenter
-          }
-        >
-          <ActivityIndicator
-            size="large"
-            color="#FFBF00"
-          />
-
-          <Text
-            style={
-              styles.historyLoadingText
+            onPress={() =>
+              setActiveView(
+                'current',
+              )
             }
-          >
-            Cargando historial...
-          </Text>
-        </View>
-      );
-    }
-
-    if (historyError) {
-      return (
-        <View
-          style={
-            styles.historyCenter
-          }
-        >
-          <Text
-            style={
-              styles.errorTitle
-            }
-          >
-            ⚠️ Error
-          </Text>
-
-          <Text
-            style={
-              styles.errorMessage
-            }
-          >
-            {historyError}
-          </Text>
-
-          <TouchableOpacity
-            style={
-              styles.retryButton
-            }
-            onPress={() => {
-              void loadHistory();
-            }}
           >
             <Text
-              style={
-                styles.retryButtonText
-              }
+              style={[
+                styles.cashTabText,
+
+                activeView ===
+                'current' &&
+                styles.cashTabTextActive,
+              ]}
             >
-              Reintentar
+              CAJA ACTUAL
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.cashTab,
+
+              activeView ===
+              'history' &&
+              styles.cashTabActive,
+            ]}
+            onPress={() =>
+              setActiveView(
+                'history',
+              )
+            }
+          >
+            <Text
+              style={[
+                styles.cashTabText,
+
+                activeView ===
+                'history' &&
+                styles.cashTabTextActive,
+              ]}
+            >
+              HISTORIAL
             </Text>
           </TouchableOpacity>
         </View>
       );
-    }
+    };
 
-    if (
-      cashHistory.length === 0
-    ) {
-      return (
-        <View
-          style={
-            styles.historyCenter
-          }
-        >
-          <Text
+  const renderHistory =
+    () => {
+      if (isHistoryLoading) {
+        return (
+          <View
             style={
-              styles.historyEmptyIcon
+              styles.historyCenter
             }
           >
-            🧾
-          </Text>
+            <ActivityIndicator
+              size="large"
+              color="#FFBF00"
+            />
 
-          <Text
+            <Text
+              style={
+                styles.historyLoadingText
+              }
+            >
+              Cargando historial...
+            </Text>
+          </View>
+        );
+      }
+
+      if (historyError) {
+        return (
+          <View
             style={
-              styles.historyEmptyTitle
+              styles.historyCenter
             }
           >
-            Sin cortes todavía
-          </Text>
+            <Text
+              style={
+                styles.errorTitle
+              }
+            >
+              ⚠️ Error
+            </Text>
 
-          <Text
-            style={
-              styles.historyEmptyText
-            }
-          >
-            Los cierres de caja
-            aparecerán aquí.
-          </Text>
-        </View>
-      );
-    }
+            <Text
+              style={
+                styles.errorMessage
+              }
+            >
+              {historyError}
+            </Text>
 
-    return (
-      <ScrollView
-        style={
-          styles.historyScroll
-        }
-        contentContainerStyle={
-          styles.historyContent
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-      >
-        {cashHistory.map(
-          (session) => {
-            const differenceValue =
-              session.differenceAmount ??
-              0;
-
-            return (
-              <View
-                key={
-                  session.id
-                }
+            <TouchableOpacity
+              style={
+                styles.retryButton
+              }
+              onPress={() => {
+                void loadHistory();
+              }}
+            >
+              <Text
                 style={
-                  styles.historyCard
+                  styles.retryButtonText
                 }
               >
+                Reintentar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      if (
+        cashHistory.length === 0
+      ) {
+        return (
+          <View
+            style={
+              styles.historyCenter
+            }
+          >
+            <Text
+              style={
+                styles.historyEmptyIcon
+              }
+            >
+              🧾
+            </Text>
+
+            <Text
+              style={
+                styles.historyEmptyTitle
+              }
+            >
+              Sin cortes todavía
+            </Text>
+
+            <Text
+              style={
+                styles.historyEmptyText
+              }
+            >
+              Los cierres de caja
+              aparecerán aquí.
+            </Text>
+          </View>
+        );
+      }
+
+      return (
+        <ScrollView
+          style={
+            styles.historyScroll
+          }
+          contentContainerStyle={
+            styles.historyContent
+          }
+          showsVerticalScrollIndicator={
+            false
+          }
+        >
+          {cashHistory.map(
+            (session) => {
+              const differenceValue =
+                session.differenceAmount ??
+                0;
+
+              return (
                 <View
+                  key={
+                    session.id
+                  }
                   style={
-                    styles.historyCardHeader
+                    styles.historyCard
                   }
                 >
-                  <View>
-                    <Text
-                      style={
-                        styles.historyDate
-                      }
-                    >
-                      {session.closedAt
-                        ? formatDateTime(
+                  <View
+                    style={
+                      styles.historyCardHeader
+                    }
+                  >
+                    <View>
+                      <Text
+                        style={
+                          styles.historyDate
+                        }
+                      >
+                        {session.closedAt
+                          ? formatDateTime(
                             session.closedAt,
                           )
-                        : 'Sin fecha de cierre'}
-                    </Text>
+                          : 'Sin fecha de cierre'}
+                      </Text>
 
-                    <Text
+                      <Text
+                        style={
+                          styles.historyOpenedAt
+                        }
+                      >
+                        Apertura:{' '}
+                        {formatDateTime(
+                          session.openedAt,
+                        )}
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.historyOpenedAt
+                        }
+                      >
+                        Abrió:{' '}
+                        {session.openedByName ??
+                          'No registrado'}
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.historyOpenedAt
+                        }
+                      >
+                        Cerró:{' '}
+                        {session.closedByName ??
+                          'No registrado'}
+                      </Text>
+                    </View>
+
+                    <View
                       style={
-                        styles.historyOpenedAt
+                        styles.closedBadge
                       }
                     >
-                      Apertura:{' '}
-                      {formatDateTime(
-                        session.openedAt,
-                      )}
-                    </Text>
+                      <Text
+                        style={
+                          styles.closedBadgeText
+                        }
+                      >
+                        CERRADA
+                      </Text>
+                    </View>
                   </View>
 
                   <View
                     style={
-                      styles.closedBadge
+                      styles.historySalesRow
                     }
                   >
-                    <Text
+                    <View
                       style={
-                        styles.closedBadgeText
+                        styles.historyMetric
                       }
                     >
-                      CERRADA
-                    </Text>
-                  </View>
-                </View>
+                      <Text
+                        style={
+                          styles.historyMetricLabel
+                        }
+                      >
+                        Ventas
+                      </Text>
 
-                <View
-                  style={
-                    styles.historySalesRow
-                  }
-                >
+                      <Text
+                        style={
+                          styles.historyMetricValue
+                        }
+                      >
+                        {session.salesCount ??
+                          0}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.historyMetric
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.historyMetricLabel
+                        }
+                      >
+                        💵 Efectivo
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.historyMetricValue
+                        }
+                      >
+                        $
+                        {(
+                          session.totalCashSales ??
+                          0
+                        ).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.historyMetric
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.historyMetricLabel
+                        }
+                      >
+                        💳 Tarjeta
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.historyMetricValue
+                        }
+                      >
+                        $
+                        {(
+                          session.totalCardSales ??
+                          0
+                        ).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.historyMetric
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.historyMetricLabel
+                        }
+                      >
+                        Total
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.historyTotalValue
+                        }
+                      >
+                        $
+                        {(
+                          session.totalSales ??
+                          0
+                        ).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+
                   <View
                     style={
-                      styles.historyMetric
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.historyMetricLabel
-                      }
-                    >
-                      Ventas
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.historyMetricValue
-                      }
-                    >
-                      {session.salesCount ??
-                        0}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.historyMetric
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.historyMetricLabel
-                      }
-                    >
-                      💵 Efectivo
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.historyMetricValue
-                      }
-                    >
-                      $
-                      {(
-                        session.totalCashSales ??
-                        0
-                      ).toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.historyMetric
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.historyMetricLabel
-                      }
-                    >
-                      💳 Tarjeta
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.historyMetricValue
-                      }
-                    >
-                      $
-                      {(
-                        session.totalCardSales ??
-                        0
-                      ).toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.historyMetric
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.historyMetricLabel
-                      }
-                    >
-                      Total
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.historyTotalValue
-                      }
-                    >
-                      $
-                      {(
-                        session.totalSales ??
-                        0
-                      ).toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View
-                  style={
-                    styles.historyDivider
-                  }
-                />
-
-                <View
-                  style={
-                    styles.historyCashGrid
-                  }
-                >
-                  <HistoryCashValue
-                    label="Fondo inicial"
-                    value={
-                      session.openingAmount
-                    }
-                  />
-
-                  <HistoryCashValue
-                    label="Esperado"
-                    value={
-                      session.expectedCash ??
-                      0
-                    }
-                  />
-
-                  <HistoryCashValue
-                    label="Contado"
-                    value={
-                      session.countedCash ??
-                      0
+                      styles.historyDivider
                     }
                   />
 
                   <View
                     style={
-                      styles.historyCashItem
+                      styles.historyCashGrid
                     }
                   >
-                    <Text
+                    <HistoryCashValue
+                      label="Fondo inicial"
+                      value={
+                        session.openingAmount
+                      }
+                    />
+
+                    <HistoryCashValue
+                      label="Esperado"
+                      value={
+                        session.expectedCash ??
+                        0
+                      }
+                    />
+
+                    <HistoryCashValue
+                      label="Contado"
+                      value={
+                        session.countedCash ??
+                        0
+                      }
+                    />
+
+                    <View
                       style={
-                        styles.historyCashLabel
+                        styles.historyCashItem
                       }
                     >
-                      Diferencia
-                    </Text>
+                      <Text
+                        style={
+                          styles.historyCashLabel
+                        }
+                      >
+                        Diferencia
+                      </Text>
 
-                    <Text
-                      style={[
-                        styles.historyDifference,
+                      <Text
+                        style={[
+                          styles.historyDifference,
 
-                        differenceValue ===
-                        0
-                          ? styles.differenceNeutral
-                          : differenceValue >
+                          differenceValue ===
+                            0
+                            ? styles.differenceNeutral
+                            : differenceValue >
                               0
-                            ? styles.differencePositive
-                            : styles.differenceNegative,
-                      ]}
-                    >
-                      {differenceValue >
-                      0
-                        ? '+'
-                        : ''}
-                      $
-                      {differenceValue.toFixed(
-                        2,
-                      )}
-                    </Text>
+                              ? styles.differencePositive
+                              : styles.differenceNegative,
+                        ]}
+                      >
+                        {differenceValue >
+                          0
+                          ? '+'
+                          : ''}
+                        $
+                        {differenceValue.toFixed(
+                          2,
+                        )}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            );
-          },
-        )}
-      </ScrollView>
-    );
-  };
+              );
+            },
+          )}
+        </ScrollView>
+      );
+    };
 
   if (
-  activeView === 'history'
-) {
-  return (
-    <View
-      style={
-        styles.container
-      }
-    >
-      {renderNavigation()}
+    activeView === 'history'
+  ) {
+    return (
+      <View
+        style={
+          styles.container
+        }
+      >
+        {renderNavigation()}
 
-      {renderHistory()}
-    </View>
-  );
-}
+        {renderHistory()}
+      </View>
+    );
+  }
   /*
    * ============================
    * CAJA CERRADA
@@ -1135,6 +1169,8 @@ export function CashClosingScreen({
           styles.container
         }
       >
+        {renderNavigation()}
+
         <View
           style={
             styles.openCashCard
@@ -1229,7 +1265,7 @@ export function CashClosingScreen({
         styles.container
       }
     >
-       {renderNavigation()}
+      {renderNavigation()}
 
       <View
         style={

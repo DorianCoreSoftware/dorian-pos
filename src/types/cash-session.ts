@@ -26,6 +26,9 @@ export interface CashSession {
   status: CashSessionStatus;
 
   createdAt: string;
+
+  openedByName?: string | null;
+  closedByName?: string | null;
 }
 
 export interface OpenCashSessionInput {
