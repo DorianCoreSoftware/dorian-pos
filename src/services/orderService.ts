@@ -1,4 +1,7 @@
 import {
+  CreateKitchenOrderRpcDelivery,
+  CreateKitchenOrderRpcItem,
+  createKitchenOrderTransaction,
   deleteOrderDeliveryDetailsByOrderId,
   deleteOrderItemsByOrderId,
   fetchPendingOrders,
@@ -13,61 +16,62 @@ import {
 } from '../repositories/OrderRepository';
 
 import {
-    Cart,
-    CartItem,
-    DeliveryDetails,
-    KitchenOrder,
-    KitchenOrderItem,
-    KitchenOrderItemComponent,
-    OrderStatus,
+  Cart,
+  CartItem,
+  DeliveryDetails,
+  KitchenOrder,
+  KitchenOrderItem,
+  KitchenOrderItemComponent,
+  OrderStatus,
 } from '../types';
+import { supabase } from './supabase';
 
 /**
  * Resultado devuelto al crear una orden.
  */
 export interface CreateOrderResult {
-    success: true;
-    orderId: string;
+  success: true;
+  orderId: string;
 }
 
 async function persistCartItem(
-    orderId: string,
-    item: CartItem,
+  orderId: string,
+  item: CartItem,
 ): Promise<void> {
-    const orderItem =
-        await insertOrderItem(
-            orderId,
-            item,
-        );
-
-    await insertOrderItemModifiers(
-        orderItem.id,
-        item.selectedModifiers ?? [],
+  const orderItem =
+    await insertOrderItem(
+      orderId,
+      item,
     );
 
-    const comboComponents =
-        item.comboComponents ?? [];
+  await insertOrderItemModifiers(
+    orderItem.id,
+    item.selectedModifiers ?? [],
+  );
 
-    for (
-        let position = 0;
-        position < comboComponents.length;
-        position += 1
-    ) {
-        const component =
-            comboComponents[position];
+  const comboComponents =
+    item.comboComponents ?? [];
 
-        const componentRecord =
-            await insertOrderItemComponent(
-                orderItem.id,
-                component,
-                position,
-            );
+  for (
+    let position = 0;
+    position < comboComponents.length;
+    position += 1
+  ) {
+    const component =
+      comboComponents[position];
 
-        await insertOrderItemComponentModifiers(
-            componentRecord.id,
-            component.selectedModifiers ?? [],
-        );
-    }
+    const componentRecord =
+      await insertOrderItemComponent(
+        orderItem.id,
+        component,
+        position,
+      );
+
+    await insertOrderItemComponentModifiers(
+      componentRecord.id,
+      component.selectedModifiers ?? [],
+    );
+  }
 }
 
 /**
@@ -91,28 +95,118 @@ export async function createKitchenOrder(
       cart,
     );
 
-  const order =
-    await insertOrder(
+  const rpcItems =
+    cart.map(
+      (item) => ({
+        productId:
+          item.product.id,
+
+        quantity:
+          item.quantity,
+
+        price:
+          Number(
+            item.product.price,
+          ),
+
+        notes:
+          item.notes.trim(),
+
+        modifiers: (
+          item.selectedModifiers ??
+          []
+        ).map(
+          (modifier) => ({
+            id:
+              modifier.id,
+
+            extraPrice:
+              Number(
+                modifier.extra_price ??
+                0,
+              ),
+          }),
+        ),
+
+        components: (
+          item.comboComponents ??
+          []
+        ).map(
+          (component) => ({
+            productId:
+              component.product.id,
+
+            type:
+              component.type,
+
+            label:
+              component.label,
+
+            quantity:
+              component.quantity,
+
+            notes:
+              component.notes.trim(),
+
+            modifiers: (
+              component.selectedModifiers ??
+              []
+            ).map(
+              (modifier) => ({
+                id:
+                  modifier.id,
+              }),
+            ),
+          }),
+        ),
+      }),
+    );
+
+  const rpcDelivery =
+    deliveryDetails
+      ? {
+        customerName:
+          deliveryDetails.customerName,
+
+        phone:
+          deliveryDetails.phone,
+
+        street:
+          deliveryDetails.street,
+
+        exteriorNumber:
+          deliveryDetails.exteriorNumber,
+
+        interiorNumber:
+          deliveryDetails.interiorNumber,
+
+        neighborhood:
+          deliveryDetails.neighborhood,
+
+        postalCode:
+          deliveryDetails.postalCode,
+
+        deliveryReferences:
+          deliveryDetails.deliveryReferences,
+
+        latitude:
+          deliveryDetails.latitude,
+
+        longitude:
+          deliveryDetails.longitude,
+      }
+      : null;
+
+  const orderId =
+    await createKitchenOrderTransaction(
       totalAmount,
+      rpcItems,
+      rpcDelivery,
     );
-
-  for (const item of cart) {
-    await persistCartItem(
-      order.id,
-      item,
-    );
-  }
-
-  if (deliveryDetails) {
-    await upsertOrderDeliveryDetails(
-      order.id,
-      deliveryDetails,
-    );
-  }
 
   return {
     success: true,
-    orderId: order.id,
+    orderId,
   };
 }
 
@@ -129,8 +223,8 @@ export async function getPendingOrders(): Promise<
   return orders.map(
     (order): KitchenOrder => {
       const rawDeliveryDetails =
-  order.order_delivery_details ??
-  null;
+        order.order_delivery_details ??
+        null;
 
       return {
         id: order.id,
@@ -142,61 +236,61 @@ export async function getPendingOrders(): Promise<
         deliveryDetails:
           rawDeliveryDetails
             ? {
-                id:
-                  rawDeliveryDetails.id,
+              id:
+                rawDeliveryDetails.id,
 
-                orderId:
-                  rawDeliveryDetails
-                    .order_id,
+              orderId:
+                rawDeliveryDetails
+                  .order_id,
 
-                customerName:
-                  rawDeliveryDetails
-                    .customer_name,
+              customerName:
+                rawDeliveryDetails
+                  .customer_name,
 
-                phone:
-                  rawDeliveryDetails
-                    .phone,
+              phone:
+                rawDeliveryDetails
+                  .phone,
 
-                street:
-                  rawDeliveryDetails
-                    .street,
+              street:
+                rawDeliveryDetails
+                  .street,
 
-                exteriorNumber:
-                  rawDeliveryDetails
-                    .exterior_number,
+              exteriorNumber:
+                rawDeliveryDetails
+                  .exterior_number,
 
-                interiorNumber:
-                  rawDeliveryDetails
-                    .interior_number,
+              interiorNumber:
+                rawDeliveryDetails
+                  .interior_number,
 
-                neighborhood:
-                  rawDeliveryDetails
-                    .neighborhood,
+              neighborhood:
+                rawDeliveryDetails
+                  .neighborhood,
 
-                postalCode:
-                  rawDeliveryDetails
-                    .postal_code,
+              postalCode:
+                rawDeliveryDetails
+                  .postal_code,
 
-                deliveryReferences:
-                  rawDeliveryDetails
-                    .delivery_references,
+              deliveryReferences:
+                rawDeliveryDetails
+                  .delivery_references,
 
-                latitude:
-                  rawDeliveryDetails
-                    .latitude,
+              latitude:
+                rawDeliveryDetails
+                  .latitude,
 
-                longitude:
-                  rawDeliveryDetails
-                    .longitude,
+              longitude:
+                rawDeliveryDetails
+                  .longitude,
 
-                createdAt:
-                  rawDeliveryDetails
-                    .created_at,
+              createdAt:
+                rawDeliveryDetails
+                  .created_at,
 
-                updatedAt:
-                  rawDeliveryDetails
-                    .updated_at,
-              }
+              updatedAt:
+                rawDeliveryDetails
+                  .updated_at,
+            }
             : null,
 
         order_items: (
@@ -225,13 +319,13 @@ export async function getPendingOrders(): Promise<
             products:
               item.products
                 ? {
-                    ...item.products,
+                  ...item.products,
 
-                    price: Number(
-                      item.products
-                        .price,
-                    ),
-                  }
+                  price: Number(
+                    item.products
+                      .price,
+                  ),
+                }
                 : null,
 
             modifiers: (
@@ -290,14 +384,14 @@ export async function getPendingOrders(): Promise<
                   products:
                     component.products
                       ? {
-                          ...component.products,
+                        ...component.products,
 
-                          price: Number(
-                            component
-                              .products
-                              .price,
-                          ),
-                        }
+                        price: Number(
+                          component
+                            .products
+                            .price,
+                        ),
+                      }
                       : null,
 
                   modifiers: (
@@ -345,28 +439,28 @@ export async function getPendingOrders(): Promise<
  * Marca una orden como entregada.
  */
 export async function deliverOrder(
-    orderId: string,
+  orderId: string,
 ) {
-    validateOrderId(orderId);
+  validateOrderId(orderId);
 
-    return updateOrderStatusById(
-        orderId,
-        'entregado',
-    );
+  return updateOrderStatusById(
+    orderId,
+    'entregado',
+  );
 }
 
 /**
  * Marca una orden como cancelada.
  */
 export async function cancelOrder(
-    orderId: string,
+  orderId: string,
 ) {
-    validateOrderId(orderId);
+  validateOrderId(orderId);
 
-    return updateOrderStatusById(
-        orderId,
-        'cancelado',
-    );
+  return updateOrderStatusById(
+    orderId,
+    'cancelado',
+  );
 }
 
 /**
@@ -376,15 +470,15 @@ export async function cancelOrder(
  * del servicio anterior.
  */
 export async function updateOrderStatus(
-    orderId: string,
-    status: OrderStatus,
+  orderId: string,
+  status: OrderStatus,
 ) {
-    validateOrderId(orderId);
+  validateOrderId(orderId);
 
-    return updateOrderStatusById(
-        orderId,
-        status,
-    );
+  return updateOrderStatusById(
+    orderId,
+    status,
+  );
 }
 
 function validateOrder(
@@ -412,8 +506,7 @@ function validateOrder(
   cart.forEach((item, index) => {
     if (!item.product?.id) {
       throw new Error(
-        `El producto de la posición ${
-          index + 1
+        `El producto de la posición ${index + 1
         } no es válido.`,
       );
     }
@@ -461,8 +554,7 @@ function validateOrder(
           !component.slotId?.trim()
         ) {
           throw new Error(
-            `El componente ${
-              componentIndex + 1
+            `El componente ${componentIndex + 1
             } de "${item.product.name}" no tiene un identificador válido.`,
           );
         }
@@ -471,8 +563,7 @@ function validateOrder(
           !component.product?.id
         ) {
           throw new Error(
-            `El componente ${
-              componentIndex + 1
+            `El componente ${componentIndex + 1
             } de "${item.product.name}" no tiene un producto válido.`,
           );
         }
@@ -481,8 +572,7 @@ function validateOrder(
           !component.label?.trim()
         ) {
           throw new Error(
-            `El componente ${
-              componentIndex + 1
+            `El componente ${componentIndex + 1
             } de "${item.product.name}" no tiene una etiqueta válida.`,
           );
         }
@@ -582,13 +672,13 @@ function validateOrder(
 
   if (
     deliveryDetails.latitude !==
-      null &&
+    null &&
     (
       !Number.isFinite(
         deliveryDetails.latitude,
       ) ||
       deliveryDetails.latitude <
-        -90 ||
+      -90 ||
       deliveryDetails.latitude > 90
     )
   ) {
@@ -599,13 +689,13 @@ function validateOrder(
 
   if (
     deliveryDetails.longitude !==
-      null &&
+    null &&
     (
       !Number.isFinite(
         deliveryDetails.longitude,
       ) ||
       deliveryDetails.longitude <
-        -180 ||
+      -180 ||
       deliveryDetails.longitude > 180
     )
   ) {
@@ -616,13 +706,13 @@ function validateOrder(
 }
 
 function validateOrderId(
-    orderId: string,
+  orderId: string,
 ): void {
-    if (!orderId?.trim()) {
-        throw new Error(
-            'El identificador de la orden es obligatorio.',
-        );
-    }
+  if (!orderId?.trim()) {
+    throw new Error(
+      'El identificador de la orden es obligatorio.',
+    );
+  }
 }
 
 export async function updateKitchenOrder(
@@ -630,7 +720,9 @@ export async function updateKitchenOrder(
   cart: Cart,
   totalAmount: number,
 ): Promise<void> {
-  validateOrderId(orderId);
+  validateOrderId(
+    orderId,
+  );
 
   validateOrder(
     cart,
@@ -642,30 +734,145 @@ export async function updateKitchenOrder(
       cart,
     );
 
-  await deleteOrderItemsByOrderId(
-    orderId,
-  );
+  const rpcItems =
+    cart.map(
+      (item) => ({
+        productId:
+          item.product.id,
 
-  await updateOrderTotalById(
+        quantity:
+          item.quantity,
+
+        price:
+          Number(
+            item.product.price,
+          ),
+
+        notes:
+          item.notes.trim(),
+
+        modifiers: (
+          item.selectedModifiers ??
+          []
+        ).map(
+          (modifier) => ({
+            id:
+              modifier.id,
+
+            extraPrice:
+              Number(
+                modifier.extra_price ??
+                  0,
+              ),
+          }),
+        ),
+
+        components: (
+          item.comboComponents ??
+          []
+        ).map(
+          (component) => ({
+            productId:
+              component.product.id,
+
+            type:
+              component.type,
+
+            label:
+              component.label,
+
+            quantity:
+              component.quantity,
+
+            notes:
+              component.notes.trim(),
+
+            modifiers: (
+              component.selectedModifiers ??
+              []
+            ).map(
+              (modifier) => ({
+                id:
+                  modifier.id,
+              }),
+            ),
+          }),
+        ),
+      }),
+    );
+
+  const rpcDelivery =
+    deliveryDetails
+      ? {
+          customerName:
+            deliveryDetails.customerName,
+
+          phone:
+            deliveryDetails.phone,
+
+          street:
+            deliveryDetails.street,
+
+          exteriorNumber:
+            deliveryDetails.exteriorNumber,
+
+          interiorNumber:
+            deliveryDetails.interiorNumber,
+
+          neighborhood:
+            deliveryDetails.neighborhood,
+
+          postalCode:
+            deliveryDetails.postalCode,
+
+          deliveryReferences:
+            deliveryDetails.deliveryReferences,
+
+          latitude:
+            deliveryDetails.latitude,
+
+          longitude:
+            deliveryDetails.longitude,
+        }
+      : null;
+
+  await updateKitchenOrderTransaction(
     orderId,
     totalAmount,
+    rpcItems,
+    rpcDelivery,
+  );
+}
+
+export async function updateKitchenOrderTransaction(
+  orderId: string,
+  totalAmount: number,
+  items: CreateKitchenOrderRpcItem[],
+  delivery:
+    CreateKitchenOrderRpcDelivery | null,
+): Promise<void> {
+  const {
+    error,
+  } = await supabase.rpc(
+    'update_kitchen_order',
+    {
+      p_order_id:
+        orderId,
+
+      p_total:
+        totalAmount,
+
+      p_items:
+        items,
+
+      p_delivery:
+        delivery,
+    },
   );
 
-  for (const cartItem of cart) {
-    await persistCartItem(
-      orderId,
-      cartItem,
-    );
-  }
-
-  if (deliveryDetails) {
-    await upsertOrderDeliveryDetails(
-      orderId,
-      deliveryDetails,
-    );
-  } else {
-    await deleteOrderDeliveryDetailsByOrderId(
-      orderId,
+  if (error) {
+    throw new Error(
+      `No se pudo actualizar la orden: ${error.message}`,
     );
   }
 }

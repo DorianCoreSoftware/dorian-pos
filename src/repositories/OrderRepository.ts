@@ -151,6 +151,90 @@ export async function insertOrder(
   return data as OrderRecord;
 }
 
+export interface CreateKitchenOrderRpcItem {
+  productId: string;
+  quantity: number;
+  price: number;
+  notes: string;
+
+  modifiers: Array<{
+    id: string;
+    extraPrice: number;
+  }>;
+
+  components: Array<{
+    productId: string;
+
+    type:
+      | 'burger'
+      | 'hotdog'
+      | 'side'
+      | 'drink';
+
+    label: string;
+    quantity: number;
+    notes: string;
+
+    modifiers: Array<{
+      id: string;
+    }>;
+  }>;
+}
+
+export interface CreateKitchenOrderRpcDelivery {
+  customerName: string;
+  phone: string;
+  street: string;
+  exteriorNumber: string;
+  interiorNumber: string;
+  neighborhood: string;
+  postalCode: string;
+  deliveryReferences: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export async function createKitchenOrderTransaction(
+  totalAmount: number,
+  items: CreateKitchenOrderRpcItem[],
+  delivery:
+    CreateKitchenOrderRpcDelivery | null,
+): Promise<string> {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'create_kitchen_order',
+    {
+      p_total:
+        totalAmount,
+
+      p_items:
+        items,
+
+      p_delivery:
+        delivery,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      `No se pudo crear la orden: ${error.message}`,
+    );
+  }
+
+  if (
+    !data ||
+    typeof data !== 'string'
+  ) {
+    throw new Error(
+      'Supabase no devolvió el identificador de la orden creada.',
+    );
+  }
+
+  return data;
+}
+
 /**
  * Inserta un producto dentro de una orden.
  *
