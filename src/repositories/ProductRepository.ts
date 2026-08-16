@@ -1,4 +1,6 @@
-import { supabase } from '../services/supabase';
+import {
+  supabase,
+} from '../services/supabase';
 
 import {
   Category,
@@ -11,8 +13,28 @@ export interface UpdateProductData {
   price: number;
 }
 
-export async function fetchCategories(): Promise<Category[]> {
-  const { data, error } = await supabase
+export interface AdminUpdateProductData {
+  name: string;
+  description: string | null;
+  price: number;
+  categoryId: string;
+  isAvailable: boolean;
+}
+
+export interface CreateProductData {
+  name: string;
+  description: string | null;
+  price: number;
+  categoryId: string;
+}
+
+export async function fetchCategories(): Promise<
+  Category[]
+> {
+  const {
+    data,
+    error,
+  } = await supabase
     .from('categories')
     .select(`
       id,
@@ -20,51 +42,222 @@ export async function fetchCategories(): Promise<Category[]> {
       description,
       created_at
     `)
-    .order('created_at', {
-      ascending: true,
-    });
+    .order(
+      'created_at',
+      {
+        ascending: true,
+      },
+    );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message,
+    );
   }
 
-  return (data ?? []) as Category[];
+  return (
+    data ?? []
+  ) as Category[];
 }
 
 export async function fetchActiveProducts(): Promise<
   Product[]
 > {
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from('products')
     .select('*')
-    .eq('is_available', true)
-    .eq('is_active', true);
+    .eq(
+      'is_available',
+      true,
+    )
+    .eq(
+      'is_active',
+      true,
+    );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message,
+    );
   }
 
-  return (data ?? []) as Product[];
+  return (
+    data ?? []
+  ) as Product[];
 }
 
-export async function updateProductById(
-  productId: string,
-  productData: UpdateProductData,
-): Promise<Product> {
-  const { data, error } = await supabase
+export async function fetchAllProducts(): Promise<
+  Product[]
+> {
+  const {
+    data,
+    error,
+  } = await supabase
     .from('products')
-    .update({
-      name: productData.name,
+    .select('*')
+    .order(
+      'name',
+      {
+        ascending: true,
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      error.message,
+    );
+  }
+
+  return (
+    data ?? []
+  ) as Product[];
+}
+
+export async function insertProduct(
+  productData:
+    CreateProductData,
+): Promise<Product> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('products')
+    .insert({
+      name:
+        productData.name,
+
       description:
         productData.description,
-      price: productData.price,
+
+      price:
+        productData.price,
+
+      category_id:
+        productData.categoryId,
+
+      is_active:
+        true,
+
+      is_available:
+        true,
     })
-    .eq('id', productId)
     .select()
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message,
+    );
+  }
+
+  return data as Product;
+}
+
+export async function updateProductById(
+  productId: string,
+  productData:
+    UpdateProductData,
+): Promise<Product> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('products')
+    .update({
+      name:
+        productData.name,
+
+      description:
+        productData.description,
+
+      price:
+        productData.price,
+    })
+    .eq(
+      'id',
+      productId,
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message,
+    );
+  }
+
+  return data as Product;
+}
+
+export async function adminUpdateProductById(
+  productId: string,
+  productData:
+    AdminUpdateProductData,
+): Promise<Product> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('products')
+    .update({
+      name:
+        productData.name,
+
+      description:
+        productData.description,
+
+      price:
+        productData.price,
+
+      category_id:
+        productData.categoryId,
+
+      is_available:
+        productData.isAvailable,
+    })
+    .eq(
+      'id',
+      productId,
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message,
+    );
+  }
+
+  return data as Product;
+}
+
+export async function setProductActiveById(
+  productId: string,
+  isActive: boolean,
+): Promise<Product> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('products')
+    .update({
+      is_active:
+        isActive,
+    })
+    .eq(
+      'id',
+      productId,
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message,
+    );
   }
 
   return data as Product;
@@ -73,37 +266,36 @@ export async function updateProductById(
 export async function deactivateProductById(
   productId: string,
 ): Promise<Product> {
-  const { data, error } = await supabase
-    .from('products')
-    .update({
-      is_active: false,
-    })
-    .eq('id', productId)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data as Product;
+  return setProductActiveById(
+    productId,
+    false,
+  );
 }
 
 export async function updateProductPriceById(
   productId: string,
   newPrice: number,
 ): Promise<Product> {
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from('products')
     .update({
-      price: newPrice,
+      price:
+        newPrice,
     })
-    .eq('id', productId)
+    .eq(
+      'id',
+      productId,
+    )
     .select()
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message,
+    );
   }
 
   return data as Product;

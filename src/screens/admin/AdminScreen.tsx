@@ -7,14 +7,28 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { styles } from './AdminScreen.styles';
+
+import {
+  AdminProducts,
+} from '../../components/admin/products/AdminProducts';
+
+import {
+  styles,
+} from './AdminScreen.styles';
 
 type AdminSection =
   | 'products'
   | 'categories'
   | 'modifiers';
 
-export function AdminScreen() {
+interface AdminScreenProps {
+  onProductsChanged:
+    () => Promise<void>;
+}
+
+export function AdminScreen({
+  onProductsChanged,
+}: AdminScreenProps) {
   const [
     activeSection,
     setActiveSection,
@@ -29,37 +43,11 @@ export function AdminScreen() {
         'products'
       ) {
         return (
-          <View
-            style={
-              styles.placeholderCard
+          <AdminProducts
+            onProductsChanged={
+              onProductsChanged
             }
-          >
-            <Text
-              style={
-                styles.placeholderIcon
-              }
-            >
-              🍔
-            </Text>
-
-            <Text
-              style={
-                styles.placeholderTitle
-              }
-            >
-              Productos
-            </Text>
-
-            <Text
-              style={
-                styles.placeholderText
-              }
-            >
-              Aquí administraremos
-              productos, precios,
-              descripción y estado.
-            </Text>
-          </View>
+          />
         );
       }
 

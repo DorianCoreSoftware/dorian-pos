@@ -456,7 +456,11 @@ function MainApp() {
         }
 
         return (
-          <AdminScreen />
+          <AdminScreen
+            onProductsChanged={
+              fetchProducts
+            }
+          />
         );
       }
 
