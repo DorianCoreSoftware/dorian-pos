@@ -284,4 +284,180 @@ export const styles =
       fontSize: 14,
       fontWeight: '900',
     },
+
+    cashTabs: {
+  flexDirection: 'row',
+  alignSelf: 'flex-start',
+  padding: 4,
+  marginBottom: 18,
+  borderRadius: 9,
+  backgroundColor: '#242424',
+},
+
+cashTab: {
+  minWidth: 130,
+  paddingVertical: 9,
+  paddingHorizontal: 16,
+  borderRadius: 7,
+  alignItems: 'center',
+},
+
+cashTabActive: {
+  backgroundColor: '#FFBF00',
+},
+
+cashTabText: {
+  color: '#888888',
+  fontSize: 12,
+  fontWeight: '800',
+},
+
+cashTabTextActive: {
+  color: '#171717',
+},
+
+historyScroll: {
+  flex: 1,
+},
+
+historyContent: {
+  paddingBottom: 30,
+},
+
+historyCenter: {
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 30,
+},
+
+historyLoadingText: {
+  color: '#AAAAAA',
+  fontSize: 13,
+  marginTop: 10,
+},
+
+historyEmptyIcon: {
+  fontSize: 42,
+},
+
+historyEmptyTitle: {
+  color: '#FFFFFF',
+  fontSize: 18,
+  fontWeight: '900',
+  marginTop: 8,
+},
+
+historyEmptyText: {
+  color: '#888888',
+  fontSize: 12,
+  marginTop: 5,
+},
+
+historyCard: {
+  padding: 16,
+  marginBottom: 12,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#343434',
+  backgroundColor: '#1D1D1D',
+},
+
+historyCardHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+
+historyDate: {
+  color: '#FFFFFF',
+  fontSize: 15,
+  fontWeight: '900',
+},
+
+historyOpenedAt: {
+  color: '#777777',
+  fontSize: 11,
+  marginTop: 4,
+},
+
+closedBadge: {
+  paddingHorizontal: 9,
+  paddingVertical: 4,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: '#555555',
+  backgroundColor: '#292929',
+},
+
+closedBadgeText: {
+  color: '#AAAAAA',
+  fontSize: 9,
+  fontWeight: '900',
+},
+
+historySalesRow: {
+  flexDirection: 'row',
+  marginTop: 16,
+  gap: 8,
+},
+
+historyMetric: {
+  flex: 1,
+  padding: 10,
+  borderRadius: 8,
+  backgroundColor: '#252525',
+},
+
+historyMetricLabel: {
+  color: '#888888',
+  fontSize: 10,
+  fontWeight: '700',
+},
+
+historyMetricValue: {
+  color: '#FFFFFF',
+  fontSize: 15,
+  fontWeight: '800',
+  marginTop: 5,
+},
+
+historyTotalValue: {
+  color: '#FFBF00',
+  fontSize: 16,
+  fontWeight: '900',
+  marginTop: 5,
+},
+
+historyDivider: {
+  height: 1,
+  marginVertical: 14,
+  backgroundColor: '#333333',
+},
+
+historyCashGrid: {
+  flexDirection: 'row',
+  gap: 8,
+},
+
+historyCashItem: {
+  flex: 1,
+},
+
+historyCashLabel: {
+  color: '#777777',
+  fontSize: 10,
+  marginBottom: 4,
+},
+
+historyCashValue: {
+  color: '#DDDDDD',
+  fontSize: 13,
+  fontWeight: '700',
+},
+
+historyDifference: {
+  fontSize: 13,
+  fontWeight: '900',
+},
   });

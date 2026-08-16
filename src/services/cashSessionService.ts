@@ -1,5 +1,6 @@
 import {
   closeCashSessionById,
+  fetchClosedCashSessions,
   fetchOpenCashSession,
   insertCashSession,
 } from '../repositories/CashSessionRepository';
@@ -173,4 +174,21 @@ function roundCurrency(
       ) * 100,
     ) / 100
   );
+}
+
+export async function getCashSessionHistory(): Promise<
+  CashSession[]
+> {
+  try {
+    return await fetchClosedCashSessions();
+  } catch (error) {
+    console.error(
+      'Error al obtener el historial de caja:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo obtener el historial de caja.',
+    );
+  }
 }

@@ -422,6 +422,9 @@ function MainApp() {
             fetchCashSession={
               fetchCashSession
             }
+            pendingOrdersCount={
+              pendingOrders.length
+            }
           />
         );
       }

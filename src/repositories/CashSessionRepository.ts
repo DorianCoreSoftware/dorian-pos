@@ -74,6 +74,41 @@ export async function fetchOpenCashSession(): Promise<
   );
 }
 
+export async function fetchClosedCashSessions(): Promise<
+  CashSession[]
+> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('cash_sessions')
+    .select('*')
+    .eq(
+      'status',
+      'closed',
+    )
+    .order(
+      'closed_at',
+      {
+        ascending: false,
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      `No se pudo consultar el historial de caja: ${error.message}`,
+    );
+  }
+
+  return (
+    data as
+      | CashSessionRecord[]
+      | null
+  )?.map(
+    mapCashSession,
+  ) ?? [];
+}
+
 export async function insertCashSession(
   input: OpenCashSessionInput,
 ): Promise<CashSession> {
