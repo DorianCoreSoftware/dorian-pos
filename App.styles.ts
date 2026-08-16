@@ -25,7 +25,8 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
   menuSection: {
-    flex: 0.7,
+    flex: 1,
+    minWidth: 0,
     borderRightWidth: 1,
     borderRightColor: '#222',
   },
