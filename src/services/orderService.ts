@@ -2,17 +2,8 @@ import {
   CreateKitchenOrderRpcDelivery,
   CreateKitchenOrderRpcItem,
   createKitchenOrderTransaction,
-  deleteOrderDeliveryDetailsByOrderId,
-  deleteOrderItemsByOrderId,
   fetchPendingOrders,
-  insertOrder,
-  insertOrderItem,
-  insertOrderItemComponent,
-  insertOrderItemComponentModifiers,
-  insertOrderItemModifiers,
   updateOrderStatusById,
-  updateOrderTotalById,
-  upsertOrderDeliveryDetails,
 } from '../repositories/OrderRepository';
 
 import {
@@ -32,46 +23,6 @@ import { supabase } from './supabase';
 export interface CreateOrderResult {
   success: true;
   orderId: string;
-}
-
-async function persistCartItem(
-  orderId: string,
-  item: CartItem,
-): Promise<void> {
-  const orderItem =
-    await insertOrderItem(
-      orderId,
-      item,
-    );
-
-  await insertOrderItemModifiers(
-    orderItem.id,
-    item.selectedModifiers ?? [],
-  );
-
-  const comboComponents =
-    item.comboComponents ?? [];
-
-  for (
-    let position = 0;
-    position < comboComponents.length;
-    position += 1
-  ) {
-    const component =
-      comboComponents[position];
-
-    const componentRecord =
-      await insertOrderItemComponent(
-        orderItem.id,
-        component,
-        position,
-      );
-
-    await insertOrderItemComponentModifiers(
-      componentRecord.id,
-      component.selectedModifiers ?? [],
-    );
-  }
 }
 
 /**
