@@ -15,8 +15,13 @@ export async function getCompletedSales(): Promise<
   return records
     .map((record) => {
       const payment =
-        record.order_payments?.[0] ??
-        null;
+        Array.isArray(
+          record.order_payments,
+        )
+          ? record.order_payments[0] ??
+          null
+          : record.order_payments ??
+          null;
 
       if (!payment) {
         return null;
@@ -54,19 +59,19 @@ export async function getCompletedSales(): Promise<
 
           amountReceived:
             payment.amount_received ===
-            null
+              null
               ? null
               : Number(
-                  payment.amount_received,
-                ),
+                payment.amount_received,
+              ),
 
           changeAmount:
             payment.change_amount ===
-            null
+              null
               ? null
               : Number(
-                  payment.change_amount,
-                ),
+                payment.change_amount,
+              ),
 
           createdAt:
             payment.created_at,

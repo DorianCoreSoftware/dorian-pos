@@ -14,7 +14,9 @@ export interface CompletedSaleRecord {
   created_at: string;
 
   order_payments:
-    OrderPaymentRecord[];
+    | OrderPaymentRecord
+    | OrderPaymentRecord[]
+    | null;
 }
 
 interface OrderPaymentRecord {
