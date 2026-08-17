@@ -35,6 +35,7 @@ export interface CreateOrderResult {
 export async function createKitchenOrder(
   cart: CartItem[],
   totalAmount: number,
+  clientRequestId: string,
 ): Promise<CreateOrderResult> {
   validateOrder(
     cart,
@@ -153,6 +154,7 @@ export async function createKitchenOrder(
       totalAmount,
       rpcItems,
       rpcDelivery,
+      clientRequestId,
     );
 
   return {
@@ -713,7 +715,7 @@ export async function updateKitchenOrder(
             extraPrice:
               Number(
                 modifier.extra_price ??
-                  0,
+                0,
               ),
           }),
         ),
@@ -755,36 +757,36 @@ export async function updateKitchenOrder(
   const rpcDelivery =
     deliveryDetails
       ? {
-          customerName:
-            deliveryDetails.customerName,
+        customerName:
+          deliveryDetails.customerName,
 
-          phone:
-            deliveryDetails.phone,
+        phone:
+          deliveryDetails.phone,
 
-          street:
-            deliveryDetails.street,
+        street:
+          deliveryDetails.street,
 
-          exteriorNumber:
-            deliveryDetails.exteriorNumber,
+        exteriorNumber:
+          deliveryDetails.exteriorNumber,
 
-          interiorNumber:
-            deliveryDetails.interiorNumber,
+        interiorNumber:
+          deliveryDetails.interiorNumber,
 
-          neighborhood:
-            deliveryDetails.neighborhood,
+        neighborhood:
+          deliveryDetails.neighborhood,
 
-          postalCode:
-            deliveryDetails.postalCode,
+        postalCode:
+          deliveryDetails.postalCode,
 
-          deliveryReferences:
-            deliveryDetails.deliveryReferences,
+        deliveryReferences:
+          deliveryDetails.deliveryReferences,
 
-          latitude:
-            deliveryDetails.latitude,
+        latitude:
+          deliveryDetails.latitude,
 
-          longitude:
-            deliveryDetails.longitude,
-        }
+        longitude:
+          deliveryDetails.longitude,
+      }
       : null;
 
   await updateKitchenOrderTransaction(

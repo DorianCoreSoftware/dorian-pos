@@ -2,6 +2,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from 'react';
 
 import {
@@ -176,6 +177,12 @@ export function POSScreen({
     isProcessingOrder,
     setIsProcessingOrder,
   ] = useState(false);
+
+  const pendingOrderRequest =
+    useRef<{
+      id: string;
+      fingerprint: string;
+    } | null>(null);
 
   const {
     meats,
@@ -814,7 +821,11 @@ export function POSScreen({
     ) {
       return;
     }
-
+    const orderFingerprint =
+      createOrderFingerprint(
+        cart,
+        totalAmount,
+      );
     try {
       setIsProcessingOrder(
         true,
@@ -832,10 +843,34 @@ export function POSScreen({
           'Los cambios fueron enviados a cocina.',
         );
       } else {
+        /*
+         * Si es exactamente el mismo
+         * carrito que falló antes,
+         * reutilizamos la misma clave.
+         *
+         * Si el carrito cambió,
+         * generamos una nueva.
+         */
+        if (
+          !pendingOrderRequest.current ||
+          pendingOrderRequest.current
+            .fingerprint !==
+          orderFingerprint
+        ) {
+          pendingOrderRequest.current = {
+            id:
+              createRequestId(),
+
+            fingerprint:
+              orderFingerprint,
+          };
+        }
+
         const result =
           await createKitchenOrder(
             cart,
             totalAmount,
+            pendingOrderRequest.current.id,
           );
 
         if (
@@ -847,6 +882,14 @@ export function POSScreen({
             'No se pudo crear la orden.',
           );
         }
+
+        /*
+         * Ya tenemos confirmación de que
+         * Supabase recibió la solicitud.
+         * La clave deja de ser necesaria.
+         */
+        pendingOrderRequest.current =
+          null;
 
         Alert.alert(
           '🍳 ¡Pedido enviado!',
@@ -1152,4 +1195,122 @@ function normalizeText(
     .toLocaleLowerCase(
       'es',
     );
+}
+
+function createOrderFingerprint(
+  cart: Cart,
+  totalAmount: number,
+): string {
+  return JSON.stringify({
+    total:
+      Number(
+        totalAmount,
+      ).toFixed(2),
+
+    items:
+      cart.map(
+        (item) => ({
+          id:
+            item.id,
+
+          productId:
+            item.product.id,
+
+          quantity:
+            item.quantity,
+
+          notes:
+            item.notes.trim(),
+
+          modifiers: (
+            item.selectedModifiers ??
+            []
+          )
+            .map(
+              (modifier) =>
+                modifier.id,
+            )
+            .sort(),
+
+          components: (
+            item.comboComponents ??
+            []
+          ).map(
+            (component) => ({
+              slotId:
+                component.slotId,
+
+              productId:
+                component.product.id,
+
+              quantity:
+                component.quantity,
+
+              notes:
+                component.notes.trim(),
+
+              modifiers: (
+                component
+                  .selectedModifiers ??
+                []
+              )
+                .map(
+                  (modifier) =>
+                    modifier.id,
+                )
+                .sort(),
+            }),
+          ),
+
+          delivery:
+            item.deliveryDetails ??
+            null,
+        }),
+      ),
+  });
+}
+
+function createRequestId(): string {
+  const cryptoObject =
+    globalThis.crypto;
+
+  if (
+    cryptoObject &&
+    typeof cryptoObject.randomUUID ===
+    'function'
+  ) {
+    return cryptoObject.randomUUID();
+  }
+
+  /*
+   * Fallback UUID v4 para
+   * ambientes donde randomUUID
+   * no esté disponible.
+   *
+   * Esta clave se usa únicamente
+   * para idempotencia, no para
+   * seguridad criptográfica.
+   */
+  return (
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+  ).replace(
+    /[xy]/g,
+    (character) => {
+      const random =
+        Math.floor(
+          Math.random() * 16,
+        );
+
+      const value =
+        character === 'x'
+          ? random
+          : (
+            random & 0x3
+          ) | 0x8;
+
+      return value.toString(
+        16,
+      );
+    },
+  );
 }

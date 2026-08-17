@@ -1,8 +1,6 @@
 import { supabase } from '../services/supabase';
 import {
-  CartItem,
   ComboComponentSelection,
-  DeliveryDetails,
   OrderStatus,
 } from '../types';
 
@@ -87,7 +85,7 @@ export interface PendingOrderItemComponentRecord
   } | null;
 
   order_item_component_modifiers:
-    PendingOrderModifierRelation[];
+  PendingOrderModifierRelation[];
 }
 
 export interface PendingOrderItemRecord
@@ -105,10 +103,10 @@ export interface PendingOrderItemRecord
   } | null;
 
   order_item_modifiers:
-    PendingOrderModifierRelation[];
+  PendingOrderModifierRelation[];
 
   order_item_components:
-    PendingOrderItemComponentRecord[];
+  PendingOrderItemComponentRecord[];
 }
 
 export interface PendingOrderRecord
@@ -166,10 +164,10 @@ export interface CreateKitchenOrderRpcItem {
     productId: string;
 
     type:
-      | 'burger'
-      | 'hotdog'
-      | 'side'
-      | 'drink';
+    | 'burger'
+    | 'hotdog'
+    | 'side'
+    | 'drink';
 
     label: string;
     quantity: number;
@@ -199,6 +197,7 @@ export async function createKitchenOrderTransaction(
   items: CreateKitchenOrderRpcItem[],
   delivery:
     CreateKitchenOrderRpcDelivery | null,
+  clientRequestId: string,
 ): Promise<string> {
   const {
     data,
@@ -214,6 +213,9 @@ export async function createKitchenOrderTransaction(
 
       p_delivery:
         delivery,
+
+      p_client_request_id:
+        clientRequestId,
     },
   );
 
@@ -233,136 +235,6 @@ export async function createKitchenOrderTransaction(
   }
 
   return data;
-}
-
-/**
- * Inserta un producto dentro de una orden.
- *
- * Los modificadores no se insertan aquí; pertenecen a
- * order_item_modifiers.
- */
-export async function insertOrderItem(
-  orderId: string,
-  item: CartItem,
-): Promise<OrderItemRecord> {
-  const { data, error } = await supabase
-    .from('order_items')
-    .insert({
-      order_id: orderId,
-      product_id: item.product.id,
-      quantity: item.quantity,
-      price_at_purchase: item.product.price,
-      notes: item.notes.trim() || null,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(
-      `No se pudo agregar "${item.product.name}" a la orden: ${error.message}`,
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      `Supabase no devolvió el registro de "${item.product.name}".`,
-    );
-  }
-
-  return data as OrderItemRecord;
-}
-
-/**
- * Inserta las relaciones entre un order_item y sus modificadores.
- */
-export async function insertOrderItemModifiers(
-  orderItemId: string,
-  modifiers: CartItem['selectedModifiers'],
-): Promise<void> {
-  if (modifiers.length === 0) {
-    return;
-  }
-
-  const payload = modifiers.map((modifier) => ({
-    order_item_id: orderItemId,
-    modifier_id: modifier.id,
-  }));
-
-  const { error } = await supabase
-    .from('order_item_modifiers')
-    .insert(payload);
-
-  if (error) {
-    throw new Error(
-      `No se pudieron guardar los modificadores: ${error.message}`,
-    );
-  }
-}
-
-export async function insertOrderItemComponent(
-  orderItemId: string,
-  component: ComboComponentSelection,
-  position: number,
-): Promise<OrderItemComponentRecord> {
-  const { data, error } = await supabase
-    .from('order_item_components')
-    .insert({
-      order_item_id: orderItemId,
-      product_id: component.product.id,
-      component_type: component.type,
-      label: component.label,
-      quantity: component.quantity,
-      notes:
-        component.notes.trim() || null,
-      position,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(
-      `No se pudo guardar el componente "${component.label}": ${error.message}`,
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      `Supabase no devolvió el componente "${component.label}".`,
-    );
-  }
-
-  return data as OrderItemComponentRecord;
-}
-
-export async function insertOrderItemComponentModifiers(
-  orderItemComponentId: string,
-  modifiers: ComboComponentSelection[
-    'selectedModifiers'
-  ],
-): Promise<void> {
-  if (modifiers.length === 0) {
-    return;
-  }
-
-  const payload = modifiers.map(
-    (modifier) => ({
-      order_item_component_id:
-        orderItemComponentId,
-      modifier_id: modifier.id,
-    }),
-  );
-
-  const { error } = await supabase
-    .from(
-      'order_item_component_modifiers',
-    )
-    .insert(payload);
-
-  if (error) {
-    throw new Error(
-      `No se pudieron guardar los modificadores del componente: ${error.message}`,
-    );
-  }
 }
 
 /**
@@ -441,149 +313,6 @@ export async function updateOrderStatusById(
   }
 
   return data as OrderRecord;
-}
-
-export async function updateOrderTotalById(
-  orderId: string,
-  total: number,
-): Promise<void> {
-  const { error } = await supabase
-    .from('orders')
-    .update({
-      total,
-    })
-    .eq('id', orderId);
-
-  if (error) {
-    throw new Error(
-      `No se pudo actualizar el total de la orden: ${error.message}`,
-    );
-  }
-}
-
-export async function deleteOrderItemsByOrderId(
-  orderId: string,
-): Promise<void> {
-  const { data: orderItems, error: findError } =
-    await supabase
-      .from('order_items')
-      .select('id')
-      .eq('order_id', orderId);
-
-  if (findError) {
-    throw new Error(
-      `No se pudieron consultar los productos de la orden: ${findError.message}`,
-    );
-  }
-
-  const orderItemIds = (orderItems ?? []).map(
-    (item) => item.id,
-  );
-
-  if (orderItemIds.length > 0) {
-    const { error: modifiersError } =
-      await supabase
-        .from('order_item_modifiers')
-        .delete()
-        .in('order_item_id', orderItemIds);
-
-    if (modifiersError) {
-      throw new Error(
-        `No se pudieron eliminar los modificadores anteriores: ${modifiersError.message}`,
-      );
-    }
-  }
-
-  const { error: itemsError } = await supabase
-    .from('order_items')
-    .delete()
-    .eq('order_id', orderId);
-
-  if (itemsError) {
-    throw new Error(
-      `No se pudieron eliminar los productos anteriores: ${itemsError.message}`,
-    );
-  }
-}
-
-export async function upsertOrderDeliveryDetails(
-  orderId: string,
-  details: DeliveryDetails,
-): Promise<OrderDeliveryDetailsRecord> {
-  const { data, error } = await supabase
-    .from('order_delivery_details')
-    .upsert(
-      {
-        order_id: orderId,
-
-        customer_name:
-          details.customerName.trim(),
-
-        phone:
-          details.phone.trim(),
-
-        street:
-          details.street.trim(),
-
-        exterior_number:
-          details.exteriorNumber.trim(),
-
-        interior_number:
-          details.interiorNumber.trim() ||
-          null,
-
-        neighborhood:
-          details.neighborhood.trim(),
-
-        postal_code:
-          details.postalCode.trim() ||
-          null,
-
-        delivery_references:
-          details.deliveryReferences.trim() ||
-          null,
-
-        latitude:
-          details.latitude,
-
-        longitude:
-          details.longitude,
-      },
-      {
-        onConflict: 'order_id',
-      },
-    )
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(
-      `No se pudieron guardar los datos de entrega: ${error.message}`,
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      'Supabase no devolvió los datos de entrega guardados.',
-    );
-  }
-
-  return data as OrderDeliveryDetailsRecord;
-}
-
-export async function deleteOrderDeliveryDetailsByOrderId(
-  orderId: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from('order_delivery_details')
-    .delete()
-    .eq('order_id', orderId);
-
-  if (error) {
-    throw new Error(
-      `No se pudieron eliminar los datos de entrega: ${error.message}`,
-    );
-  }
 }
 
 export interface PendingOrderDeliveryDetailsRecord {
