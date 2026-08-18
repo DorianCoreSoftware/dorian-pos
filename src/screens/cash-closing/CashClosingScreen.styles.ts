@@ -715,4 +715,428 @@ export const styles =
       fontSize: 13,
       fontWeight: '900',
     },
+
+    containerPhone: {
+  padding:
+    12,
+},
+
+cashTabsPhone: {
+  alignSelf:
+    'stretch',
+
+  flexWrap:
+    'wrap',
+},
+
+cashTabPhone: {
+  minWidth:
+    0,
+
+  width:
+    '50%',
+
+  paddingHorizontal:
+    6,
+
+  paddingVertical:
+    10,
+},
+
+cashTabTextSmall: {
+  fontSize:
+    10,
+},
+
+summaryContainerPhone: {
+  flexWrap:
+    'wrap',
+},
+
+summaryCardPhone: {
+  flex:
+    0,
+
+  width:
+    '48%',
+},
+
+headerPhone: {
+  alignItems:
+    'flex-start',
+
+  gap:
+    10,
+},
+
+closingHeaderPhone: {
+  alignItems:
+    'flex-start',
+
+  gap:
+    8,
+},
+
+promoScrollContent: {
+  flexGrow:
+    1,
+
+  paddingBottom:
+    30,
+},
+
+promoCard: {
+  width:
+    '100%',
+
+  maxWidth:
+    900,
+
+  alignSelf:
+    'center',
+
+  padding:
+    22,
+
+  borderRadius:
+    14,
+
+  borderWidth:
+    1,
+
+  borderColor:
+    '#393939',
+
+  backgroundColor:
+    '#1D1D1D',
+},
+
+promoCardPhone: {
+  padding:
+    14,
+
+  borderRadius:
+    10,
+},
+
+promoTitle: {
+  color:
+    '#FFFFFF',
+
+  fontSize:
+    24,
+
+  fontWeight:
+    '900',
+},
+
+promoSubtitle: {
+  color:
+    '#999999',
+
+  fontSize:
+    13,
+
+  lineHeight:
+    19,
+
+  marginTop:
+    5,
+
+  marginBottom:
+    20,
+},
+
+kongInputsGrid: {
+  flexDirection:
+    'row',
+
+  flexWrap:
+    'wrap',
+
+  gap:
+    12,
+},
+
+kongInputsGridPhone: {
+  flexDirection:
+    'column',
+
+  gap:
+    8,
+},
+
+kongInputContainer: {
+  width:
+    '48%',
+},
+
+kongInputContainerPhone: {
+  width:
+    '100%',
+},
+
+promoInputLabel: {
+  color:
+    '#CCCCCC',
+
+  fontSize:
+    11,
+
+  fontWeight:
+    '800',
+
+  marginBottom:
+    6,
+
+  textTransform:
+    'uppercase',
+},
+
+promoInput: {
+  minHeight:
+    48,
+
+  paddingHorizontal:
+    13,
+
+  borderRadius:
+    8,
+
+  borderWidth:
+    1,
+
+  borderColor:
+    '#555555',
+
+  backgroundColor:
+    '#252525',
+
+  color:
+    '#FFFFFF',
+
+  fontSize:
+    16,
+
+  fontWeight:
+    '800',
+},
+
+promoSectionTitle: {
+  color:
+    '#FFFFFF',
+
+  fontSize:
+    15,
+
+  fontWeight:
+    '900',
+
+  marginTop:
+    24,
+
+  marginBottom:
+    10,
+},
+
+rewardGrid: {
+  flexDirection:
+    'row',
+
+  flexWrap:
+    'wrap',
+
+  gap:
+    10,
+},
+
+rewardGridPhone: {
+  flexDirection:
+    'column',
+},
+
+rewardButton: {
+  minHeight:
+    48,
+
+  minWidth:
+    180,
+
+  paddingHorizontal:
+    15,
+
+  paddingVertical:
+    10,
+
+  borderRadius:
+    9,
+
+  borderWidth:
+    1,
+
+  borderColor:
+    '#444444',
+
+  backgroundColor:
+    '#242424',
+
+  alignItems:
+    'center',
+
+  justifyContent:
+    'center',
+},
+
+rewardButtonPhone: {
+  width:
+    '100%',
+
+  minWidth:
+    0,
+},
+
+rewardButtonActive: {
+  borderColor:
+    '#FFBF00',
+
+  backgroundColor:
+    '#302800',
+},
+
+rewardButtonText: {
+  color:
+    '#AAAAAA',
+
+  fontSize:
+    12,
+
+  fontWeight:
+    '800',
+
+  textAlign:
+    'center',
+},
+
+rewardButtonTextActive: {
+  color:
+    '#FFBF00',
+},
+
+promoWarning: {
+  marginTop:
+    20,
+
+  padding:
+    12,
+
+  borderRadius:
+    8,
+
+  borderWidth:
+    1,
+
+  borderColor:
+    '#5A4A00',
+
+  backgroundColor:
+    '#2B260D',
+},
+
+promoWarningText: {
+  color:
+    '#FFD54F',
+
+  fontSize:
+    12,
+
+  lineHeight:
+    18,
+},
+
+promoPrimaryButton: {
+  minHeight:
+    52,
+
+  marginTop:
+    18,
+
+  borderRadius:
+    9,
+
+  alignItems:
+    'center',
+
+  justifyContent:
+    'center',
+
+  backgroundColor:
+    '#FFBF00',
+},
+
+promoPrimaryButtonText: {
+  color:
+    '#171717',
+
+  fontSize:
+    14,
+
+  fontWeight:
+    '900',
+},
+
+dorianCard: {
+  maxWidth:
+    650,
+},
+
+dorianNotice: {
+  marginTop:
+    18,
+
+  padding:
+    16,
+
+  borderRadius:
+    10,
+
+  borderWidth:
+    1,
+
+  borderColor:
+    '#4CAF50',
+
+  backgroundColor:
+    '#172A18',
+},
+
+dorianNoticeTitle: {
+  color:
+    '#4CAF50',
+
+  fontSize:
+    18,
+
+  fontWeight:
+    '900',
+
+  textAlign:
+    'center',
+},
+
+dorianNoticeText: {
+  color:
+    '#CCCCCC',
+
+  fontSize:
+    12,
+
+  lineHeight:
+    18,
+
+  marginTop:
+    8,
+
+  textAlign:
+    'center',
+},
   });

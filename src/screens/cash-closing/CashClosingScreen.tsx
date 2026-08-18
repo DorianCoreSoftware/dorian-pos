@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -42,10 +43,12 @@ import {
 import {
   useAuth,
 } from '../../context/AuthContext';
+import { PromoReward } from '../../repositories/PromoRepository';
+import { PROMO_REWARD_OPTIONS, redeemDorian, redeemKongs } from '../../services/promoService';
 
 interface CashClosingScreenProps {
   cashSession:
-    CashSession | null;
+  CashSession | null;
 
   setCashSession: React.Dispatch<
     React.SetStateAction<
@@ -54,14 +57,16 @@ interface CashClosingScreenProps {
   >;
 
   fetchCashSession:
-    () => Promise<void>;
+  () => Promise<void>;
 
   pendingOrdersCount: number;
 }
 
 type CashView =
   | 'current'
-  | 'history';
+  | 'history'
+  | 'kongs'
+  | 'dorian';
 
 type HistoryFilter =
   | 'today'
@@ -84,6 +89,16 @@ export function CashClosingScreen({
   const {
     user,
   } = useAuth();
+
+  const {
+    width,
+  } = useWindowDimensions();
+
+  const isPhone =
+    width < 700;
+
+  const isSmallPhone =
+    width < 430;
 
   const [
     sales,
@@ -193,6 +208,34 @@ export function CashClosingScreen({
   ] = useState<CashSession | null>(
     null,
   );
+
+  const [
+    kongCodes,
+    setKongCodes,
+  ] = useState<string[]>([
+    '',
+    '',
+    '',
+    '',
+    '',
+  ]);
+
+  const [
+    selectedReward,
+    setSelectedReward,
+  ] = useState<PromoReward>(
+    'special_burger',
+  );
+
+  const [
+    dorianCode,
+    setDorianCode,
+  ] = useState('');
+
+  const [
+    isPromoProcessing,
+    setIsPromoProcessing,
+  ] = useState(false);
 
   /*
    * ============================
@@ -414,7 +457,7 @@ export function CashClosingScreen({
 
       return roundCurrency(
         cashSession.openingAmount +
-          summary.cash,
+        summary.cash,
       );
     }, [
       cashSession,
@@ -431,7 +474,7 @@ export function CashClosingScreen({
 
       return roundCurrency(
         countedCash -
-          expectedCash,
+        expectedCash,
       );
     }, [
       countedCash,
@@ -539,7 +582,7 @@ export function CashClosingScreen({
           const referenceDate =
             parseSupabaseDate(
               session.closedAt ??
-                session.openedAt,
+              session.openedAt,
             );
 
           if (!referenceDate) {
@@ -548,9 +591,9 @@ export function CashClosingScreen({
 
           return (
             referenceDate >=
-              fromDate &&
+            fromDate &&
             referenceDate <=
-              toDate
+            toDate
           );
         },
       );
@@ -608,7 +651,7 @@ export function CashClosingScreen({
 
       if (
         event.type ===
-          'dismissed' ||
+        'dismissed' ||
         !selectedDate ||
         !field
       ) {
@@ -760,7 +803,7 @@ export function CashClosingScreen({
             'No puedes cerrar la caja mientras haya pedidos pendientes.',
             '',
             pendingOrdersCount ===
-            1
+              1
               ? 'Hay 1 pedido pendiente.'
               : `Hay ${pendingOrdersCount} pedidos pendientes.`,
             '',
@@ -963,7 +1006,7 @@ export function CashClosingScreen({
     if (
       parts[1] &&
       parts[1].length >
-        2
+      2
     ) {
       return;
     }
@@ -971,6 +1014,284 @@ export function CashClosingScreen({
     setter(
       sanitized,
     );
+  };
+
+  /*
+ * ============================
+ * PROMOCIONES
+ * ============================
+ */
+
+  const handleKongCodeChange = (
+    index: number,
+    value: string,
+  ): void => {
+    const normalizedValue =
+      value
+        .toUpperCase()
+        .replace(
+          /\s/g,
+          '',
+        );
+
+    setKongCodes(
+      (
+        currentCodes,
+      ) => {
+        const updatedCodes =
+          [
+            ...currentCodes,
+          ];
+
+        updatedCodes[
+          index
+        ] =
+          normalizedValue;
+
+        return updatedCodes;
+      },
+    );
+  };
+
+  const clearKongRedemption =
+    (): void => {
+      setKongCodes([
+        '',
+        '',
+        '',
+        '',
+        '',
+      ]);
+
+      setSelectedReward(
+        'special_burger',
+      );
+    };
+
+  const handleRedeemKongs =
+    (): void => {
+      if (
+        isPromoProcessing
+      ) {
+        return;
+      }
+
+      const reward =
+        PROMO_REWARD_OPTIONS.find(
+          (
+            option,
+          ) =>
+            option.value ===
+            selectedReward,
+        );
+
+      Alert.alert(
+        'Canjear Kongs',
+        [
+          'Se utilizarán los 5 códigos ingresados.',
+          '',
+          `Premio: ${reward?.label ??
+          'Premio'
+          }`,
+          '',
+          'Los códigos quedarán marcados como canjeados y no podrán volver a utilizarse.',
+        ].join(
+          '\n',
+        ),
+        [
+          {
+            text:
+              'Cancelar',
+
+            style:
+              'cancel',
+          },
+          {
+            text:
+              'Confirmar canje',
+
+            onPress:
+              () => {
+                void executeRedeemKongs();
+              },
+          },
+        ],
+      );
+    };
+
+  const executeRedeemKongs =
+    async (): Promise<void> => {
+      if (
+        isPromoProcessing
+      ) {
+        return;
+      }
+
+      try {
+        setIsPromoProcessing(
+          true,
+        );
+
+        await redeemKongs({
+          codes:
+            kongCodes,
+
+          reward:
+            selectedReward,
+        });
+
+        const reward =
+          PROMO_REWARD_OPTIONS.find(
+            (
+              option,
+            ) =>
+              option.value ===
+              selectedReward,
+          );
+
+        clearKongRedemption();
+
+        Alert.alert(
+          '✅ Canje realizado',
+          `Los 5 Kongs fueron canjeados correctamente por:\n\n${reward?.label ??
+          'Premio'
+          }`,
+        );
+      } catch (error) {
+        console.error(
+          'Error al canjear Kongs:',
+          error,
+        );
+
+        Alert.alert(
+          'No se pudo realizar el canje',
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al validar los Kongs.',
+        );
+      } finally {
+        setIsPromoProcessing(
+          false,
+        );
+      }
+    };
+
+    const handleRedeemDorian =
+  (): void => {
+    if (
+      isPromoProcessing
+    ) {
+      return;
+    }
+
+    const normalizedCode =
+      dorianCode
+        .trim()
+        .toUpperCase();
+
+    if (
+      !normalizedCode
+    ) {
+      Alert.alert(
+        'Código requerido',
+        'Ingresa el código del Dorian de la Suerte.',
+      );
+
+      return;
+    }
+
+    if (
+      !normalizedCode.startsWith(
+        'BK-D',
+      )
+    ) {
+      Alert.alert(
+        'Código inválido',
+        'El código no corresponde a un Dorian de la Suerte.',
+      );
+
+      return;
+    }
+
+    Alert.alert(
+      'Validar Dorian',
+      [
+        `Código: ${normalizedCode}`,
+        '',
+        'Este cupón quedará marcado como canjeado.',
+        '',
+        '¿Deseas continuar?',
+      ].join(
+        '\n',
+      ),
+      [
+        {
+          text:
+            'Cancelar',
+
+          style:
+            'cancel',
+        },
+        {
+          text:
+            'Confirmar',
+
+          onPress:
+            () => {
+              void executeRedeemDorian();
+            },
+        },
+      ],
+    );
+  };
+
+const executeRedeemDorian =
+  async (): Promise<void> => {
+    if (
+      isPromoProcessing
+    ) {
+      return;
+    }
+
+    try {
+      setIsPromoProcessing(
+        true,
+      );
+
+      const normalizedCode =
+        dorianCode
+          .trim()
+          .toUpperCase();
+
+      await redeemDorian(
+        normalizedCode,
+      );
+
+      setDorianCode(
+        '',
+      );
+
+      Alert.alert(
+        '🍀 Dorian válido',
+        'El Dorian de la Suerte fue validado y marcado como canjeado correctamente.',
+      );
+    } catch (error) {
+      console.error(
+        'Error al canjear Dorian:',
+        error,
+      );
+
+      Alert.alert(
+        'No se pudo canjear Dorian',
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al validar el código.',
+      );
+    } finally {
+      setIsPromoProcessing(
+        false,
+      );
+    }
   };
 
   /*
@@ -1053,65 +1374,90 @@ export function CashClosingScreen({
 
   const renderNavigation =
     () => {
+      const tabs: Array<{
+        value: CashView;
+        label: string;
+      }> = [
+          {
+            value:
+              'current',
+            label:
+              'CAJA ACTUAL',
+          },
+          {
+            value:
+              'history',
+            label:
+              'HISTORIAL',
+          },
+          {
+            value:
+              'kongs',
+            label:
+              'CANJEAR KONGS',
+          },
+          {
+            value:
+              'dorian',
+            label:
+              'DORIAN',
+          },
+        ];
+
       return (
         <View
-          style={
-            styles.cashTabs
-          }
+          style={[
+            styles.cashTabs,
+
+            isPhone &&
+            styles.cashTabsPhone,
+          ]}
         >
-          <TouchableOpacity
-            style={[
-              styles.cashTab,
-
-              activeView ===
-                'current' &&
-                styles.cashTabActive,
-            ]}
-            onPress={() =>
-              setActiveView(
-                'current',
-              )
-            }
-          >
-            <Text
-              style={[
-                styles.cashTabText,
-
+          {tabs.map(
+            (
+              tab,
+            ) => {
+              const isActive =
                 activeView ===
-                  'current' &&
-                  styles.cashTabTextActive,
-              ]}
-            >
-              CAJA ACTUAL
-            </Text>
-          </TouchableOpacity>
+                tab.value;
 
-          <TouchableOpacity
-            style={[
-              styles.cashTab,
+              return (
+                <TouchableOpacity
+                  key={
+                    tab.value
+                  }
+                  style={[
+                    styles.cashTab,
 
-              activeView ===
-                'history' &&
-                styles.cashTabActive,
-            ]}
-            onPress={() =>
-              setActiveView(
-                'history',
-              )
-            }
-          >
-            <Text
-              style={[
-                styles.cashTabText,
+                    isPhone &&
+                    styles.cashTabPhone,
 
-                activeView ===
-                  'history' &&
-                  styles.cashTabTextActive,
-              ]}
-            >
-              HISTORIAL
-            </Text>
-          </TouchableOpacity>
+                    isActive &&
+                    styles.cashTabActive,
+                  ]}
+                  onPress={() =>
+                    setActiveView(
+                      tab.value,
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.cashTabText,
+
+                      isSmallPhone &&
+                      styles.cashTabTextSmall,
+
+                      isActive &&
+                      styles.cashTabTextActive,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            },
+          )}
         </View>
       );
     };
@@ -1126,37 +1472,37 @@ export function CashClosingScreen({
     () => {
       const filters: Array<{
         value:
-          HistoryFilter;
+        HistoryFilter;
 
         label: string;
       }> = [
-        {
-          value: 'today',
-          label: 'Hoy',
-        },
+          {
+            value: 'today',
+            label: 'Hoy',
+          },
 
-        {
-          value: 'week',
-          label:
-            'Últimos 7 días',
-        },
+          {
+            value: 'week',
+            label:
+              'Últimos 7 días',
+          },
 
-        {
-          value: 'month',
-          label: 'Este mes',
-        },
+          {
+            value: 'month',
+            label: 'Este mes',
+          },
 
-        {
-          value: 'all',
-          label: 'Todo',
-        },
+          {
+            value: 'all',
+            label: 'Todo',
+          },
 
-        {
-          value: 'custom',
-          label:
-            'Personalizado',
-        },
-      ];
+          {
+            value: 'custom',
+            label:
+              'Personalizado',
+          },
+        ];
 
       return (
         <>
@@ -1180,7 +1526,7 @@ export function CashClosingScreen({
                       styles.historyFilterButton,
 
                       isActive &&
-                        styles.historyFilterButtonActive,
+                      styles.historyFilterButtonActive,
                     ]}
                     onPress={() =>
                       handleHistoryFilter(
@@ -1193,7 +1539,7 @@ export function CashClosingScreen({
                         styles.historyFilterText,
 
                         isActive &&
-                          styles.historyFilterTextActive,
+                        styles.historyFilterTextActive,
                       ]}
                     >
                       {
@@ -1207,7 +1553,7 @@ export function CashClosingScreen({
           </View>
 
           {historyFilter ===
-          'custom' ? (
+            'custom' ? (
             <View
               style={
                 styles.historyDateRange
@@ -1285,7 +1631,7 @@ export function CashClosingScreen({
             <DateTimePicker
               value={
                 datePickerField ===
-                'from'
+                  'from'
                   ? historyFrom
                   : historyTo
               }
@@ -1409,14 +1755,14 @@ export function CashClosingScreen({
                 filteredCashHistory.length
               }{' '}
               {filteredCashHistory.length ===
-              1
+                1
                 ? 'corte'
                 : 'cortes'}
             </Text>
           </View>
 
           {filteredCashHistory.length ===
-          0 ? (
+            0 ? (
             <View
               style={
                 styles.historyCenter
@@ -1496,8 +1842,8 @@ export function CashClosingScreen({
                           >
                             {session.closedAt
                               ? formatDateTime(
-                                  session.closedAt,
-                                )
+                                session.closedAt,
+                              )
                               : 'Sin fecha de cierre'}
                           </Text>
 
@@ -1571,7 +1917,7 @@ export function CashClosingScreen({
                           label="Ventas"
                           value={String(
                             session.salesCount ??
-                              0,
+                            0,
                           )}
                         />
 
@@ -1670,10 +2016,10 @@ export function CashClosingScreen({
                               styles.historyDifference,
 
                               differenceValue ===
-                              0
+                                0
                                 ? styles.differenceNeutral
                                 : differenceValue >
-                                    0
+                                  0
                                   ? styles.differencePositive
                                   : styles.differenceNegative,
                             ]}
@@ -1760,8 +2106,8 @@ export function CashClosingScreen({
                   >
                     {session.closedAt
                       ? formatDateTime(
-                          session.closedAt,
-                        )
+                        session.closedAt,
+                      )
                       : 'Sin fecha de cierre'}
                   </Text>
                 </View>
@@ -1865,8 +2211,8 @@ export function CashClosingScreen({
                     value={
                       session.closedAt
                         ? formatDateTime(
-                            session.closedAt,
-                          )
+                          session.closedAt,
+                        )
                         : 'No registrado'
                     }
                   />
@@ -1887,7 +2233,7 @@ export function CashClosingScreen({
                     label="Número de ventas"
                     value={String(
                       session.salesCount ??
-                        0,
+                      0,
                     )}
                   />
 
@@ -1896,7 +2242,7 @@ export function CashClosingScreen({
                     value={
                       formatMoney(
                         session.totalCashSales ??
-                          0,
+                        0,
                       )
                     }
                   />
@@ -1906,7 +2252,7 @@ export function CashClosingScreen({
                     value={
                       formatMoney(
                         session.totalCardSales ??
-                          0,
+                        0,
                       )
                     }
                   />
@@ -1916,7 +2262,7 @@ export function CashClosingScreen({
                     value={
                       formatMoney(
                         session.totalSales ??
-                          0,
+                        0,
                       )
                     }
                     highlighted
@@ -1940,7 +2286,7 @@ export function CashClosingScreen({
                     value={
                       formatMoney(
                         session.expectedCash ??
-                          0,
+                        0,
                       )
                     }
                   />
@@ -1950,7 +2296,7 @@ export function CashClosingScreen({
                     value={
                       formatMoney(
                         session.countedCash ??
-                          0,
+                        0,
                       )
                     }
                   />
@@ -1973,10 +2319,10 @@ export function CashClosingScreen({
                         styles.historyModalDifferenceValue,
 
                         differenceValue ===
-                        0
+                          0
                           ? styles.differenceNeutral
                           : differenceValue >
-                              0
+                            0
                             ? styles.differencePositive
                             : styles.differenceNegative,
                       ]}
@@ -2012,11 +2358,424 @@ export function CashClosingScreen({
     };
 
   /*
+* ============================
+* CANJE DE KONGS
+* ============================
+*/
+
+  const renderKongRedemption =
+    () => {
+      return (
+        <ScrollView
+          style={{
+            flex:
+              1,
+          }}
+          contentContainerStyle={
+            styles.promoScrollContent
+          }
+          showsVerticalScrollIndicator={
+            false
+          }
+          keyboardShouldPersistTaps="handled"
+        >
+          <View
+            style={[
+              styles.promoCard,
+
+              isPhone &&
+              styles.promoCardPhone,
+            ]}
+          >
+            <Text
+              style={
+                styles.promoTitle
+              }
+            >
+              🐾 Canjear Kongs
+            </Text>
+
+            <Text
+              style={
+                styles.promoSubtitle
+              }
+            >
+              Ingresa los cinco códigos
+              impresos en los Kongs del
+              cliente.
+            </Text>
+
+            <View
+              style={[
+                styles.kongInputsGrid,
+
+                isPhone &&
+                styles.kongInputsGridPhone,
+              ]}
+            >
+              {kongCodes.map(
+                (
+                  code,
+                  index,
+                ) => (
+                  <View
+                    key={
+                      index
+                    }
+                    style={[
+                      styles.kongInputContainer,
+
+                      isPhone &&
+                      styles.kongInputContainerPhone,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        styles.promoInputLabel
+                      }
+                    >
+                      Kong{' '}
+                      {index +
+                        1}
+                    </Text>
+
+                    <TextInput
+                      value={
+                        code
+                      }
+                      onChangeText={(
+                        value,
+                      ) =>
+                        handleKongCodeChange(
+                          index,
+                          value,
+                        )
+                      }
+                      editable={
+                        !isPromoProcessing
+                      }
+                      autoCapitalize="characters"
+                      autoCorrect={
+                        false
+                      }
+                      style={
+                        styles.promoInput
+                      }
+                      placeholder="BK-K..."
+                      placeholderTextColor="#666666"
+                    />
+                  </View>
+                ),
+              )}
+            </View>
+
+            <Text
+              style={
+                styles.promoSectionTitle
+              }
+            >
+              Selecciona el premio
+            </Text>
+
+            <View
+              style={[
+                styles.rewardGrid,
+
+                isPhone &&
+                styles.rewardGridPhone,
+              ]}
+            >
+              {PROMO_REWARD_OPTIONS.map(
+                (
+                  option,
+                ) => {
+                  const selected =
+                    option.value ===
+                    selectedReward;
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        option.value
+                      }
+                      style={[
+                        styles.rewardButton,
+
+                        isPhone &&
+                        styles.rewardButtonPhone,
+
+                        selected &&
+                        styles.rewardButtonActive,
+                      ]}
+                      disabled={
+                        isPromoProcessing
+                      }
+                      onPress={() =>
+                        setSelectedReward(
+                          option.value,
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.rewardButtonText,
+
+                          selected &&
+                          styles.rewardButtonTextActive,
+                        ]}
+                      >
+                        {
+                          option.label
+                        }
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                },
+              )}
+            </View>
+
+            <View
+              style={
+                styles.promoWarning
+              }
+            >
+              <Text
+                style={
+                  styles.promoWarningText
+                }
+              >
+                Los 5 códigos deben ser
+                diferentes, válidos y no
+                haber sido utilizados
+                anteriormente.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.promoPrimaryButton,
+
+                isPromoProcessing &&
+                styles.buttonDisabled,
+              ]}
+              disabled={
+                isPromoProcessing
+              }
+              onPress={
+                handleRedeemKongs
+              }
+            >
+              <Text
+                style={
+                  styles.promoPrimaryButtonText
+                }
+              >
+                {isPromoProcessing
+                  ? 'VALIDANDO...'
+                  : 'VALIDAR Y CANJEAR'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      );
+    };
+
+  /*
+ * ============================
+ * DORIAN DE LA SUERTE
+ * ============================
+ */
+
+  const renderDorianRedemption =
+    () => {
+      return (
+        <ScrollView
+          style={{
+            flex:
+              1,
+          }}
+          contentContainerStyle={
+            styles.promoScrollContent
+          }
+          keyboardShouldPersistTaps="handled"
+        >
+          <View
+            style={[
+              styles.promoCard,
+              styles.dorianCard,
+
+              isPhone &&
+              styles.promoCardPhone,
+            ]}
+          >
+            <Text
+              style={
+                styles.promoTitle
+              }
+            >
+              🍀 Dorian de la Suerte
+            </Text>
+
+            <Text
+              style={
+                styles.promoSubtitle
+              }
+            >
+              Ingresa el código impreso
+              en el Dorian presentado por
+              el cliente.
+            </Text>
+
+            <Text
+              style={
+                styles.promoInputLabel
+              }
+            >
+              Código Dorian
+            </Text>
+
+            <TextInput
+              value={
+                dorianCode
+              }
+              onChangeText={(
+                value,
+              ) =>
+                setDorianCode(
+                  value
+                    .toUpperCase()
+                    .replace(
+                      /\s/g,
+                      '',
+                    ),
+                )
+              }
+              autoCapitalize="characters"
+              autoCorrect={
+                false
+              }
+              style={
+                styles.promoInput
+              }
+              placeholder="BK-D..."
+              placeholderTextColor="#666666"
+            />
+
+            <View
+              style={
+                styles.dorianNotice
+              }
+            >
+              <Text
+                style={
+                  styles.dorianNoticeTitle
+                }
+              >
+                🎉 TU COMPRA ES GRATIS
+              </Text>
+
+              <Text
+                style={
+                  styles.dorianNoticeText
+                }
+              >
+                El sistema de validación
+                ya está listo. El reembolso
+                quedará habilitado cuando
+                terminemos de registrar la
+                devolución dentro del corte
+                de caja.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+  style={[
+    styles.promoPrimaryButton,
+
+    (
+      !dorianCode
+        .trim()
+        .toUpperCase()
+        .startsWith(
+          'BK-D',
+        ) ||
+      isPromoProcessing
+    ) &&
+      styles.buttonDisabled,
+  ]}
+  disabled={
+    !dorianCode
+      .trim()
+      .toUpperCase()
+      .startsWith(
+        'BK-D',
+      ) ||
+    isPromoProcessing
+  }
+  onPress={
+    handleRedeemDorian
+  }
+>
+  <Text
+    style={
+      styles.promoPrimaryButtonText
+    }
+  >
+    {isPromoProcessing
+      ? 'VALIDANDO...'
+      : 'VALIDAR DORIAN'}
+  </Text>
+</TouchableOpacity>
+          </View>
+        </ScrollView>
+      );
+    };
+
+  /*
    * ============================
    * VISTA HISTORIAL
    * ============================
    */
 
+  if (
+    activeView ===
+    'kongs'
+  ) {
+    return (
+      <View
+        style={[
+          styles.container,
+
+          isPhone &&
+          styles.containerPhone,
+        ]}
+      >
+        {renderNavigation()}
+
+        {renderKongRedemption()}
+      </View>
+    );
+  }
+
+  if (
+    activeView ===
+    'dorian'
+  ) {
+    return (
+      <View
+        style={[
+          styles.container,
+
+          isPhone &&
+          styles.containerPhone,
+        ]}
+      >
+        {renderNavigation()}
+
+        {renderDorianRedemption()}
+      </View>
+    );
+  }
   if (
     activeView ===
     'history'
@@ -2107,7 +2866,7 @@ export function CashClosingScreen({
               styles.primaryButton,
 
               isProcessing &&
-                styles.buttonDisabled,
+              styles.buttonDisabled,
             ]}
             disabled={
               isProcessing
@@ -2187,14 +2946,20 @@ export function CashClosingScreen({
       </View>
 
       <View
-        style={
-          styles.summaryContainer
-        }
+        style={[
+          styles.summaryContainer,
+
+          isPhone &&
+          styles.summaryContainerPhone,
+        ]}
       >
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -2217,9 +2982,12 @@ export function CashClosingScreen({
         </View>
 
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -2242,9 +3010,12 @@ export function CashClosingScreen({
         </View>
 
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -2267,9 +3038,12 @@ export function CashClosingScreen({
         </View>
 
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -2458,10 +3232,10 @@ export function CashClosingScreen({
 
               difference ===
                 null ||
-              difference === 0
+                difference === 0
                 ? styles.differenceNeutral
                 : difference >
-                    0
+                  0
                   ? styles.differencePositive
                   : styles.differenceNegative,
             ]}
@@ -2469,8 +3243,8 @@ export function CashClosingScreen({
             {difference === null
               ? '$0.00'
               : formatDifference(
-                  difference,
-                )}
+                difference,
+              )}
           </Text>
         </View>
 
@@ -2480,14 +3254,14 @@ export function CashClosingScreen({
 
             (
               countedCash ===
-                null ||
+              null ||
               isProcessing
             ) &&
-              styles.buttonDisabled,
+            styles.buttonDisabled,
           ]}
           disabled={
             countedCash ===
-              null ||
+            null ||
             isProcessing
           }
           onPress={
@@ -2588,7 +3362,7 @@ function HistoryMetric({
 interface DetailSectionProps {
   title: string;
   children:
-    React.ReactNode;
+  React.ReactNode;
 }
 
 function DetailSection({
@@ -2750,13 +3524,12 @@ function formatMoney(
 function formatDifference(
   difference: number,
 ): string {
-  return `${
-    difference > 0
-      ? '+'
-      : ''
-  }$${difference.toFixed(
-    2,
-  )}`;
+  return `${difference > 0
+    ? '+'
+    : ''
+    }$${difference.toFixed(
+      2,
+    )}`;
 }
 
 function startOfDay(
