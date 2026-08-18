@@ -33,32 +33,54 @@ import {
   Product,
 } from '../../types';
 
-import { styles } from '../../../App.styles';
-import { isDeliveryProduct } from '../../Utils/delivery';
-import { fetchOrderPaymentByOrderId } from '../../repositories/PaymentRepository';
+import {
+  styles,
+} from '../../../App.styles';
 
+import {
+  isDeliveryProduct,
+} from '../../Utils/delivery';
 
+import {
+  fetchOrderPaymentByOrderId,
+} from '../../repositories/PaymentRepository';
 
+import {
+  printOrderTicket,
+} from '../../services/printerService';
 
 interface KitchenProps {
-  pendingOrders: KitchenOrder[];
+  pendingOrders:
+  KitchenOrder[];
 
-  setPendingOrders: React.Dispatch<
-    React.SetStateAction<KitchenOrder[]>
+  setPendingOrders:
+  React.Dispatch<
+    React.SetStateAction<
+      KitchenOrder[]
+    >
   >;
 
-  editingOrderId: string | null;
+  editingOrderId:
+  string | null;
 
-  setEditingOrderId: React.Dispatch<
-    React.SetStateAction<string | null>
+  setEditingOrderId:
+  React.Dispatch<
+    React.SetStateAction<
+      string | null
+    >
   >;
 
-  setCart: React.Dispatch<
-    React.SetStateAction<Cart>
+  setCart:
+  React.Dispatch<
+    React.SetStateAction<
+      Cart
+    >
   >;
 
   setActiveTab: (
-    tab: 'pos' | 'kitchen',
+    tab:
+      | 'pos'
+      | 'kitchen',
   ) => void;
 }
 
@@ -73,462 +95,650 @@ export function KitchenScreen({
   const [
     paymentOrder,
     setPaymentOrder,
-  ] = useState<KitchenOrder | null>(
-    null,
-  );
+  ] =
+    useState<KitchenOrder | null>(
+      null,
+    );
 
   const [
     isProcessingPayment,
     setIsProcessingPayment,
-  ] = useState(false);
+  ] =
+    useState(false);
 
-  const handleDeliverPaidOrder = async (
-    order: KitchenOrder,
-  ): Promise<void> => {
-    try {
-      await deliverOrder(
-        order.id,
-      );
-
-      removeOrderFromPendingList(
-        order.id,
-      );
-
-      if (
-        editingOrderId ===
-        order.id
-      ) {
-        clearEditingOrder();
-      }
-    } catch (error) {
-      console.error(
-        'Error al entregar la orden pagada:',
-        error,
-      );
-
-      Alert.alert(
-        'Error',
-        error instanceof Error
-          ? error.message
-          : 'No se pudo entregar la orden.',
-      );
-    }
-  };
-
-  const handleOpenPayment = async (
-    order: KitchenOrder,
-  ): Promise<void> => {
-    try {
-      const existingPayment =
-        await fetchOrderPaymentByOrderId(
+  const handleDeliverPaidOrder =
+    async (
+      order: KitchenOrder,
+    ): Promise<void> => {
+      try {
+        await deliverOrder(
           order.id,
         );
 
-      if (existingPayment) {
-        Alert.alert(
-          'Orden ya pagada',
-          existingPayment.paymentMethod === 'cash'
-            ? `Esta orden ya fue pagada en efectivo.\n\nRecibido: $${(
-              existingPayment.amountReceived ?? 0
-            ).toFixed(2)}\nCambio: $${(
-              existingPayment.changeAmount ?? 0
-            ).toFixed(2)}`
-            : 'Esta orden ya fue pagada con tarjeta.',
-          [
-            {
-              text: 'Cancelar',
-              style: 'cancel',
-            },
-            {
-              text: 'Entregar',
-              onPress: () => {
-                void handleDeliverPaidOrder(
-                  order,
-                );
-              },
-            },
-          ],
+        removeOrderFromPendingList(
+          order.id,
         );
 
-        return;
-      }
-
-      setPaymentOrder(order);
-    } catch (error) {
-      console.error(
-        'Error al consultar el pago:',
-        error,
-      );
-
-      Alert.alert(
-        'Error',
-        error instanceof Error
-          ? error.message
-          : 'No se pudo consultar el estado del pago.',
-      );
-    }
-  };
-
-  const handleClosePayment = (): void => {
-    if (isProcessingPayment) {
-      return;
-    }
-
-    setPaymentOrder(null);
-  };
-
-  const handleConfirmPayment = async (
-    paymentMethod: PaymentMethod,
-    amountReceived: number | null,
-  ): Promise<void> => {
-    if (
-      !paymentOrder ||
-      isProcessingPayment
-    ) {
-      return;
-    }
-
-    const orderToPay =
-      paymentOrder;
-
-    try {
-      setIsProcessingPayment(true);
-
-      /*
-       * PASO 1:
-       * Registrar el pago.
-       *
-       * registerOrderPayment es idempotente:
-       * si el pago ya existe, devuelve el
-       * existente en lugar de duplicarlo.
-       */
-      try {
-        await registerOrderPayment({
-          orderId:
-            orderToPay.id,
-
-          paymentMethod,
-
-          totalAmount:
-            Number(
-              orderToPay.total,
-            ),
-
-          amountReceived,
-        });
+        if (
+          editingOrderId ===
+          order.id
+        ) {
+          clearEditingOrder();
+        }
       } catch (error) {
         console.error(
-          'Error al registrar el pago:',
+          'Error al entregar la orden pagada:',
           error,
         );
 
         Alert.alert(
-          'Error al cobrar',
+          'Error',
           error instanceof Error
             ? error.message
-            : 'No se pudo registrar el pago.',
+            : 'No se pudo entregar la orden.',
+        );
+      }
+    };
+
+  const handleOpenPayment =
+    async (
+      order: KitchenOrder,
+    ): Promise<void> => {
+      try {
+        const existingPayment =
+          await fetchOrderPaymentByOrderId(
+            order.id,
+          );
+
+        if (existingPayment) {
+          Alert.alert(
+            'Orden ya pagada',
+            existingPayment
+              .paymentMethod ===
+              'cash'
+              ? `Esta orden ya fue pagada en efectivo.\n\nRecibido: $${(
+                existingPayment
+                  .amountReceived ??
+                0
+              ).toFixed(
+                2,
+              )}\nCambio: $${(
+                existingPayment
+                  .changeAmount ??
+                0
+              ).toFixed(
+                2,
+              )}`
+              : 'Esta orden ya fue pagada con tarjeta.',
+            [
+              {
+                text:
+                  'Cancelar',
+
+                style:
+                  'cancel',
+              },
+              {
+                text:
+                  'Entregar',
+
+                onPress:
+                  () => {
+                    void handleDeliverPaidOrder(
+                      order,
+                    );
+                  },
+              },
+            ],
+          );
+
+          return;
+        }
+
+        setPaymentOrder(
+          order,
+        );
+      } catch (error) {
+        console.error(
+          'Error al consultar el pago:',
+          error,
         );
 
+        Alert.alert(
+          'Error',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo consultar el estado del pago.',
+        );
+      }
+    };
+
+  const handleClosePayment =
+    (): void => {
+      if (
+        isProcessingPayment
+      ) {
+        return;
+      }
+
+      setPaymentOrder(
+        null,
+      );
+    };
+
+  const handleConfirmPayment =
+    async (
+      paymentMethod:
+        PaymentMethod,
+
+      amountReceived:
+        number | null,
+    ): Promise<void> => {
+      if (
+        !paymentOrder ||
+        isProcessingPayment
+      ) {
         return;
       }
 
       /*
-       * PASO 2:
-       * El pago ya quedó registrado.
-       *
-       * A partir de aquí NO debemos decir
-       * que el cobro falló.
+       * Guardamos la referencia
+       * antes de hacer cualquier
+       * operación asíncrona.
        */
+      const orderToPay =
+        paymentOrder;
+
       try {
-        await deliverOrder(
-          orderToPay.id,
-        );
-      } catch (error) {
-        console.error(
-          'Pago registrado, pero no se pudo entregar la orden:',
-          error,
+        setIsProcessingPayment(
+          true,
         );
 
         /*
-         * Cerramos el modal porque el pago
-         * ya existe y no queremos inducir
-         * al usuario a cobrar nuevamente.
+         * =========================
+         * PASO 1
+         * REGISTRAR EL PAGO
+         * =========================
+         *
+         * registerOrderPayment es
+         * idempotente.
+         *
+         * Si este pago ya existe,
+         * devuelve el existente y
+         * no lo duplica.
          */
-        setPaymentOrder(null);
+        try {
+          await registerOrderPayment(
+            {
+              orderId:
+                orderToPay.id,
 
-        Alert.alert(
-          'Pago registrado',
-          'El pago se guardó correctamente, pero no se pudo marcar la orden como entregada.\n\nLa orden seguirá apareciendo como pendiente. Presiona "Cobrar / Entregar" nuevamente para completar la entrega.',
+              paymentMethod,
+
+              totalAmount:
+                Number(
+                  orderToPay.total,
+                ),
+
+              amountReceived,
+            },
+          );
+        } catch (error) {
+          console.error(
+            'Error al registrar el pago:',
+            error,
+          );
+
+          Alert.alert(
+            'Error al cobrar',
+            error instanceof Error
+              ? error.message
+              : 'No se pudo registrar el pago.',
+          );
+
+          return;
+        }
+
+        /*
+         * =========================
+         * PASO 2
+         * IMPRIMIR EL TICKET
+         * =========================
+         *
+         * En este punto el pago YA
+         * existe en BD.
+         *
+         * Una falla de impresión
+         * jamás debe provocar un
+         * segundo cobro.
+         */
+        try {
+          await printOrderTicket(
+            {
+              order:
+                orderToPay,
+
+              paymentMethod,
+
+              amountReceived,
+            },
+          );
+        } catch (error) {
+          console.error(
+            'Pago registrado, pero falló la impresión del ticket:',
+            error,
+          );
+
+          Alert.alert(
+            'Pago registrado',
+            'El cobro se guardó correctamente, pero no se pudo imprimir el ticket.\n\nPuedes continuar con la entrega.',
+          );
+        }
+
+        /*
+         * =========================
+         * PASO 3
+         * ENTREGAR LA ORDEN
+         * =========================
+         *
+         * El pago ya existe.
+         *
+         * Si falla este paso,
+         * dejamos la orden pendiente
+         * para poder completar la
+         * entrega después SIN volver
+         * a cobrar.
+         */
+        try {
+          await deliverOrder(
+            orderToPay.id,
+          );
+        } catch (error) {
+          console.error(
+            'Pago registrado, pero no se pudo entregar la orden:',
+            error,
+          );
+
+          /*
+           * Cerramos el modal porque
+           * el pago ya quedó guardado.
+           */
+          setPaymentOrder(
+            null,
+          );
+
+          Alert.alert(
+            'Pago registrado',
+            'El pago se guardó correctamente, pero no se pudo marcar la orden como entregada.\n\nLa orden seguirá apareciendo como pendiente. Presiona "Cobrar / Entregar" nuevamente para completar la entrega.',
+          );
+
+          return;
+        }
+
+        /*
+         * =========================
+         * PASO 4
+         * ACTUALIZAR INTERFAZ
+         * =========================
+         *
+         * Pago ✓
+         * Ticket intentado ✓
+         * Entrega en BD ✓
+         */
+        removeOrderFromPendingList(
+          orderToPay.id,
         );
 
-        return;
+        if (
+          editingOrderId ===
+          orderToPay.id
+        ) {
+          clearEditingOrder();
+        }
+
+        setPaymentOrder(
+          null,
+        );
+      } finally {
+        setIsProcessingPayment(
+          false,
+        );
       }
+    };
 
-      /*
-       * PASO 3:
-       * Pago y entrega completados.
-       */
-      removeOrderFromPendingList(
-        orderToPay.id,
-      );
-
-      if (
-        editingOrderId ===
-        orderToPay.id
-      ) {
-        clearEditingOrder();
-      }
-
-      setPaymentOrder(null);
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-
-  const handleCancelOrderPrompt = (
-    orderId: string,
-  ): void => {
-    const shortId = orderId
-      .slice(-6)
-      .toUpperCase();
-
-    Alert.alert(
-      '🚨 Cancelar pedido',
-      `¿Seguro que deseas cancelar la orden #${shortId}?`,
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Sí, cancelar',
-          style: 'destructive',
-          onPress: () => {
-            void executeCancelOrder(orderId);
-          },
-        },
-      ],
-    );
-  };
-
-  const executeCancelOrder = async (
-    orderId: string,
-  ): Promise<void> => {
-    try {
-      await cancelOrder(orderId);
-
-      removeOrderFromPendingList(orderId);
-
-      if (editingOrderId === orderId) {
-        clearEditingOrder();
-      }
-    } catch (error) {
-      console.error(
-        'Error al cancelar la orden:',
-        error,
-      );
+  const handleCancelOrderPrompt =
+    (
+      orderId: string,
+    ): void => {
+      const shortId =
+        orderId
+          .slice(
+            -6,
+          )
+          .toUpperCase();
 
       Alert.alert(
-        '❌ Error',
-        error instanceof Error
-          ? error.message
-          : 'No se pudo cancelar el pedido.',
+        '🚨 Cancelar pedido',
+        `¿Seguro que deseas cancelar la orden #${shortId}?`,
+        [
+          {
+            text:
+              'No',
+
+            style:
+              'cancel',
+          },
+          {
+            text:
+              'Sí, cancelar',
+
+            style:
+              'destructive',
+
+            onPress:
+              () => {
+                void executeCancelOrder(
+                  orderId,
+                );
+              },
+          },
+        ],
       );
-    }
-  };
+    };
+
+  const executeCancelOrder =
+    async (
+      orderId: string,
+    ): Promise<void> => {
+      try {
+        await cancelOrder(
+          orderId,
+        );
+
+        removeOrderFromPendingList(
+          orderId,
+        );
+
+        if (
+          editingOrderId ===
+          orderId
+        ) {
+          clearEditingOrder();
+        }
+      } catch (error) {
+        console.error(
+          'Error al cancelar la orden:',
+          error,
+        );
+
+        Alert.alert(
+          '❌ Error',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cancelar el pedido.',
+        );
+      }
+    };
 
   const handleEditOrder = (
     order: KitchenOrder,
   ): void => {
-    const groupedItems: Record<
-      string,
-      CartItem
-    > = {};
+    const groupedItems:
+      Record<
+        string,
+        CartItem
+      > = {};
 
-    order.order_items.forEach((line) => {
-      const cleanNotes = (
-        line.notes ?? ''
-      ).trim();
+    order.order_items.forEach(
+      (
+        line,
+      ) => {
+        const cleanNotes =
+          (
+            line.notes ??
+            ''
+          ).trim();
 
-      const modifiers =
-        line.modifiers ?? [];
+        const modifiers =
+          line.modifiers ??
+          [];
 
-      const components =
-        line.components ?? [];
+        const components =
+          line.components ??
+          [];
 
-      const modifierIdentifier =
-        modifiers
-          .map(
-            (modifier) =>
-              modifier.id,
-          )
-          .sort()
-          .join(',');
-
-      const componentIdentifier =
-        components
-          .map((component) => {
-            const componentModifiers =
-              component.modifiers ?? [];
-
-            return [
-              component.component_type,
-              component.product_id,
+        const modifierIdentifier =
+          modifiers
+            .map(
               (
-                component.notes ?? ''
-              ).trim(),
-              componentModifiers
-                .map(
-                  (modifier) =>
-                    modifier.id,
-                )
-                .sort()
-                .join(','),
-            ].join(':');
-          })
-          .sort()
-          .join('|');
-
-      const product =
-        createProductFromOrderItem(
-          line,
-        );
-
-      const isDeliveryItem =
-        isDeliveryProduct(product);
-
-      const uniqueItemId =
-        isDeliveryItem
-          ? `${product.id}-delivery`
-          : [
-            line.product_id,
-            cleanNotes,
-            modifierIdentifier,
-            componentIdentifier,
-          ].join('-');
-
-      const existingItem =
-        groupedItems[uniqueItemId];
-
-      if (
-        existingItem &&
-        !isDeliveryItem
-      ) {
-        existingItem.quantity +=
-          line.quantity;
-
-        return;
-      }
-
-      groupedItems[uniqueItemId] = {
-        id: uniqueItemId,
-
-        product,
-
-        quantity:
-          isDeliveryItem
-            ? 1
-            : line.quantity,
-
-        notes: cleanNotes,
-
-        selectedModifiers:
-          modifiers.map(
-            (modifier) => ({
-              ...modifier,
-            }),
-          ),
-
-        comboComponents:
-          components.length > 0
-            ? components.map(
-              (component) => ({
-                slotId:
-                  component.slot_id ??
-                  component.id,
-
-                type:
-                  component
-                    .component_type as
-                  | 'burger'
-                  | 'hotdog'
-                  | 'side'
-                  | 'drink',
-
-                label:
-                  component.label,
-
-                product:
-                  createProductFromComponent(
-                    component,
-                  ),
-
-                quantity:
-                  component.quantity,
-
-                notes: (
-                  component.notes ?? ''
-                ).trim(),
-
-                selectedModifiers: (
-                  component.modifiers ??
-                  []
-                ).map(
-                  (modifier) => ({
-                    ...modifier,
-                  }),
-                ),
-              }),
+                modifier,
+              ) =>
+                modifier.id,
             )
-            : undefined,
+            .sort()
+            .join(
+              ',',
+            );
 
-        deliveryDetails:
-          isDeliveryItem &&
-            order.deliveryDetails
-            ? {
-              customerName:
-                order.deliveryDetails
-                  .customerName,
+        const componentIdentifier =
+          components
+            .map(
+              (
+                component,
+              ) => {
+                const componentModifiers =
+                  component.modifiers ??
+                  [];
 
-              phone:
-                order.deliveryDetails
-                  .phone,
+                return [
+                  component.component_type,
 
-              street:
-                order.deliveryDetails
-                  .street,
+                  component.product_id,
 
-              exteriorNumber:
-                order.deliveryDetails
-                  .exteriorNumber,
+                  (
+                    component.notes ??
+                    ''
+                  ).trim(),
 
-              interiorNumber:
-                order.deliveryDetails
-                  .interiorNumber ?? '',
+                  componentModifiers
+                    .map(
+                      (
+                        modifier,
+                      ) =>
+                        modifier.id,
+                    )
+                    .sort()
+                    .join(
+                      ',',
+                    ),
+                ].join(
+                  ':',
+                );
+              },
+            )
+            .sort()
+            .join(
+              '|',
+            );
 
-              neighborhood:
-                order.deliveryDetails
-                  .neighborhood,
+        const product =
+          createProductFromOrderItem(
+            line,
+          );
 
-              postalCode:
-                order.deliveryDetails
-                  .postalCode ?? '',
+        const isDeliveryItem =
+          isDeliveryProduct(
+            product,
+          );
 
-              deliveryReferences:
-                order.deliveryDetails
-                  .deliveryReferences ?? '',
+        const uniqueItemId =
+          isDeliveryItem
+            ? `${product.id}-delivery`
+            : [
+              line.product_id,
 
-              latitude:
-                order.deliveryDetails
-                  .latitude,
+              cleanNotes,
 
-              longitude:
-                order.deliveryDetails
-                  .longitude,
-            }
-            : undefined,
-      };
-    });
+              modifierIdentifier,
+
+              componentIdentifier,
+            ].join(
+              '-',
+            );
+
+        const existingItem =
+          groupedItems[
+          uniqueItemId
+          ];
+
+        if (
+          existingItem &&
+          !isDeliveryItem
+        ) {
+          existingItem.quantity +=
+            line.quantity;
+
+          return;
+        }
+
+        groupedItems[
+          uniqueItemId
+        ] = {
+          id:
+            uniqueItemId,
+
+          product,
+
+          quantity:
+            isDeliveryItem
+              ? 1
+              : line.quantity,
+
+          notes:
+            cleanNotes,
+
+          selectedModifiers:
+            modifiers.map(
+              (
+                modifier,
+              ) => ({
+                ...modifier,
+              }),
+            ),
+
+          comboComponents:
+            components.length >
+              0
+              ? components.map(
+                (
+                  component,
+                ) => ({
+                  slotId:
+                    component
+                      .slot_id ??
+                    component.id,
+
+                  type:
+                    component
+                      .component_type as
+                    | 'burger'
+                    | 'hotdog'
+                    | 'side'
+                    | 'drink',
+
+                  label:
+                    component.label,
+
+                  product:
+                    createProductFromComponent(
+                      component,
+                    ),
+
+                  quantity:
+                    component.quantity,
+
+                  notes:
+                    (
+                      component.notes ??
+                      ''
+                    ).trim(),
+
+                  selectedModifiers:
+                    (
+                      component.modifiers ??
+                      []
+                    ).map(
+                      (
+                        modifier,
+                      ) => ({
+                        ...modifier,
+                      }),
+                    ),
+                }),
+              )
+              : undefined,
+
+          deliveryDetails:
+            isDeliveryItem &&
+              order.deliveryDetails
+              ? {
+                customerName:
+                  order
+                    .deliveryDetails
+                    .customerName,
+
+                phone:
+                  order
+                    .deliveryDetails
+                    .phone,
+
+                street:
+                  order
+                    .deliveryDetails
+                    .street,
+
+                exteriorNumber:
+                  order
+                    .deliveryDetails
+                    .exteriorNumber,
+
+                interiorNumber:
+                  order
+                    .deliveryDetails
+                    .interiorNumber ??
+                  '',
+
+                neighborhood:
+                  order
+                    .deliveryDetails
+                    .neighborhood,
+
+                postalCode:
+                  order
+                    .deliveryDetails
+                    .postalCode ??
+                  '',
+
+                deliveryReferences:
+                  order
+                    .deliveryDetails
+                    .deliveryReferences ??
+                  '',
+
+                latitude:
+                  order
+                    .deliveryDetails
+                    .latitude,
+
+                longitude:
+                  order
+                    .deliveryDetails
+                    .longitude,
+              }
+              : undefined,
+        };
+      },
+    );
 
     setCart(
       Object.values(
@@ -540,76 +750,124 @@ export function KitchenScreen({
       order.id,
     );
 
-    setActiveTab('pos');
-  };
-
-  const removeOrderFromPendingList = (
-    orderId: string,
-  ): void => {
-    setPendingOrders((currentOrders) =>
-      currentOrders.filter(
-        (order) => order.id !== orderId,
-      ),
+    setActiveTab(
+      'pos',
     );
   };
 
-  const clearEditingOrder = (): void => {
-    setCart([]);
-    setEditingOrderId(null);
-  };
+  const removeOrderFromPendingList =
+    (
+      orderId: string,
+    ): void => {
+      setPendingOrders(
+        (
+          currentOrders,
+        ) =>
+          currentOrders.filter(
+            (
+              order,
+            ) =>
+              order.id !==
+              orderId,
+          ),
+      );
+    };
+
+  const clearEditingOrder =
+    (): void => {
+      setCart(
+        [],
+      );
+
+      setEditingOrderId(
+        null,
+      );
+    };
 
   const renderComboComponent = (
-    component: KitchenOrderItemComponent,
+    component:
+      KitchenOrderItemComponent,
   ) => {
     const modifiers =
-      component.modifiers ?? [];
+      component.modifiers ??
+      [];
 
     return (
       <View
-        key={component.id}
+        key={
+          component.id
+        }
         style={{
-          marginTop: 5,
-          paddingLeft: 14,
+          marginTop:
+            5,
+
+          paddingLeft:
+            14,
         }}
       >
         <Text
           style={{
-            color: '#FFFFFF',
-            fontSize: 13,
-            fontWeight: '600',
+            color:
+              '#FFFFFF',
+
+            fontSize:
+              13,
+
+            fontWeight:
+              '600',
           }}
         >
-          ↳ {component.quantity}x{' '}
-          {component.products?.name ??
+          ↳{' '}
+          {component.quantity}
+          x{' '}
+          {component.products
+            ?.name ??
             component.label}
         </Text>
 
-        {modifiers.map((modifier) => (
-          <Text
-            key={`${component.id}-${modifier.id}`}
-            style={{
-              color: '#FFBF00',
-              fontSize: 12,
-              fontWeight: '600',
-              paddingLeft: 12,
-              marginTop: 2,
-            }}
-          >
-            • {modifier.name}
-            {modifier.group_name
-              ? ` (${modifier.group_name})`
-              : ''}
-          </Text>
-        ))}
+        {modifiers.map(
+          (
+            modifier,
+          ) => (
+            <Text
+              key={`${component.id}-${modifier.id}`}
+              style={{
+                color:
+                  '#FFBF00',
+
+                fontSize:
+                  12,
+
+                fontWeight:
+                  '600',
+
+                paddingLeft:
+                  12,
+
+                marginTop:
+                  2,
+              }}
+            >
+              •{' '}
+              {modifier.name}
+              {modifier.group_name
+                ? ` (${modifier.group_name})`
+                : ''}
+            </Text>
+          ),
+        )}
 
         {component.notes ? (
           <Text
             style={{
               ...styles.notesText,
-              paddingLeft: 12,
+
+              paddingLeft:
+                12,
             }}
           >
-            ⚠️ {component.notes}
+            ⚠️{' '}
+            {component.notes}
           </Text>
         ) : null}
       </View>
@@ -617,213 +875,365 @@ export function KitchenScreen({
   };
 
   const renderOrderItem = (
-    line: KitchenOrderItem,
+    line:
+      KitchenOrderItem,
   ) => {
-    const modifiers = line.modifiers ?? [];
-    const components = line.components ?? [];
+    const modifiers =
+      line.modifiers ??
+      [];
+
+    const components =
+      line.components ??
+      [];
 
     return (
       <View
-        key={line.id}
-        style={styles.itemRow}
+        key={
+          line.id
+        }
+        style={
+          styles.itemRow
+        }
       >
-        <Text style={styles.itemText}>
-          {line.quantity}x{' '}
-          {line.products?.name ?? 'Producto'}
+        <Text
+          style={
+            styles.itemText
+          }
+        >
+          {line.quantity}
+          x{' '}
+          {line.products
+            ?.name ??
+            'Producto'}
         </Text>
 
-        {modifiers.length > 0 && (
-          <View
-            style={{
-              paddingLeft: 12,
-              marginVertical: 4,
-            }}
-          >
-            {modifiers.map((modifier) => (
-              <Text
-                key={modifier.id}
-                style={{
-                  color: '#FFBF00',
-                  fontSize: 13,
-                  fontWeight: '600',
-                }}
-              >
-                • {modifier.name}
-                {modifier.group_name
-                  ? ` (${modifier.group_name})`
-                  : ''}
-              </Text>
-            ))}
-          </View>
-        )}
-
-        {components.length > 0 && (
-          <View
-            style={{
-              marginTop: 5,
-              marginBottom: 4,
-            }}
-          >
-            <Text
+        {modifiers.length >
+          0 && (
+            <View
               style={{
-                color: '#AFAFAF',
-                fontSize: 12,
-                fontWeight: '700',
-                paddingLeft: 12,
-                textTransform: 'uppercase',
+                paddingLeft:
+                  12,
+
+                marginVertical:
+                  4,
               }}
             >
-              Detalle del combo
-            </Text>
+              {modifiers.map(
+                (
+                  modifier,
+                ) => (
+                  <Text
+                    key={
+                      modifier.id
+                    }
+                    style={{
+                      color:
+                        '#FFBF00',
 
-            {components.map(
-              renderComboComponent,
-            )}
-          </View>
-        )}
+                      fontSize:
+                        13,
+
+                      fontWeight:
+                        '600',
+                    }}
+                  >
+                    •{' '}
+                    {modifier.name}
+                    {modifier.group_name
+                      ? ` (${modifier.group_name})`
+                      : ''}
+                  </Text>
+                ),
+              )}
+            </View>
+          )}
+
+        {components.length >
+          0 && (
+            <View
+              style={{
+                marginTop:
+                  5,
+
+                marginBottom:
+                  4,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    '#AFAFAF',
+
+                  fontSize:
+                    12,
+
+                  fontWeight:
+                    '700',
+
+                  paddingLeft:
+                    12,
+
+                  textTransform:
+                    'uppercase',
+                }}
+              >
+                Detalle del combo
+              </Text>
+
+              {components.map(
+                renderComboComponent,
+              )}
+            </View>
+          )}
 
         {line.notes ? (
-          <Text style={styles.notesText}>
-            ⚠️ {line.notes}
+          <Text
+            style={
+              styles.notesText
+            }
+          >
+            ⚠️{' '}
+            {line.notes}
           </Text>
         ) : null}
       </View>
     );
   };
 
-  const renderDeliveryDetails = (
-    order: KitchenOrder,
-  ) => {
-    const delivery =
-      order.deliveryDetails;
+  const renderDeliveryDetails =
+    (
+      order:
+        KitchenOrder,
+    ) => {
+      const delivery =
+        order.deliveryDetails;
 
-    if (!delivery) {
-      return null;
-    }
+      if (!delivery) {
+        return null;
+      }
 
-    return (
-      <View
-        style={{
-          marginBottom: 14,
-          padding: 12,
-          borderRadius: 8,
-          backgroundColor: '#202020',
-          borderWidth: 1,
-          borderColor: '#4CAF50',
-        }}
-      >
-        <Text
+      return (
+        <View
           style={{
-            color: '#4CAF50',
-            fontWeight: 'bold',
-            fontSize: 16,
-            marginBottom: 8,
+            marginBottom:
+              14,
+
+            padding:
+              12,
+
+            borderRadius:
+              8,
+
+            backgroundColor:
+              '#202020',
+
+            borderWidth:
+              1,
+
+            borderColor:
+              '#4CAF50',
           }}
         >
-          🏠 PEDIDO A DOMICILIO
-        </Text>
-
-        <Text
-          style={{
-            color: '#FFF',
-            marginBottom: 2,
-          }}
-        >
-          👤 {delivery.customerName}
-        </Text>
-
-        <Text
-          style={{
-            color: '#FFF',
-            marginBottom: 8,
-          }}
-        >
-          📞 {delivery.phone}
-        </Text>
-
-        <Text
-          style={{
-            color: '#FFF',
-          }}
-        >
-          📍 {delivery.street}{' '}
-          #{delivery.exteriorNumber}
-          {delivery.interiorNumber
-            ? ` Int. ${delivery.interiorNumber}`
-            : ''}
-        </Text>
-
-        <Text
-          style={{
-            color: '#FFF',
-            marginBottom: 8,
-          }}
-        >
-          {delivery.neighborhood}
-          {delivery.postalCode
-            ? ` C.P. ${delivery.postalCode}`
-            : ''}
-        </Text>
-
-        {delivery.deliveryReferences ? (
           <Text
             style={{
-              color: '#FFD54F',
+              color:
+                '#4CAF50',
+
+              fontWeight:
+                'bold',
+
+              fontSize:
+                16,
+
+              marginBottom:
+                8,
             }}
           >
-            🚩{' '}
-            {delivery.deliveryReferences}
+            🏠 PEDIDO A
+            DOMICILIO
           </Text>
-        ) : null}
-      </View>
-    );
-  };
+
+          <Text
+            style={{
+              color:
+                '#FFF',
+
+              marginBottom:
+                2,
+            }}
+          >
+            👤{' '}
+            {
+              delivery.customerName
+            }
+          </Text>
+
+          <Text
+            style={{
+              color:
+                '#FFF',
+
+              marginBottom:
+                8,
+            }}
+          >
+            📞{' '}
+            {delivery.phone}
+          </Text>
+
+          <Text
+            style={{
+              color:
+                '#FFF',
+            }}
+          >
+            📍{' '}
+            {delivery.street}{' '}
+            #
+            {
+              delivery.exteriorNumber
+            }
+            {delivery.interiorNumber
+              ? ` Int. ${delivery.interiorNumber}`
+              : ''}
+          </Text>
+
+          <Text
+            style={{
+              color:
+                '#FFF',
+
+              marginBottom:
+                8,
+            }}
+          >
+            {
+              delivery.neighborhood
+            }
+            {delivery.postalCode
+              ? ` C.P. ${delivery.postalCode}`
+              : ''}
+          </Text>
+
+          {delivery.deliveryReferences ? (
+            <Text
+              style={{
+                color:
+                  '#FFD54F',
+              }}
+            >
+              🚩{' '}
+              {
+                delivery.deliveryReferences
+              }
+            </Text>
+          ) : null}
+        </View>
+      );
+    };
 
   const renderOrder = ({
     item,
   }: {
-    item: KitchenOrder;
+    item:
+    KitchenOrder;
   }) => (
-    <View style={styles.orderCard}>
-      <View style={{ flex: 1 }}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.orderId}>
+    <View
+      style={
+        styles.orderCard
+      }
+    >
+      <View
+        style={{
+          flex:
+            1,
+        }}
+      >
+        <View
+          style={
+            styles.cardHeader
+          }
+        >
+          <Text
+            style={
+              styles.orderId
+            }
+          >
             Ticket #
             {item.id
-              .slice(-4)
+              .slice(
+                -4,
+              )
               .toUpperCase()}
           </Text>
 
-          <Text style={styles.orderTotal}>
-            ${Number(item.total).toFixed(2)}
+          <Text
+            style={
+              styles.orderTotal
+            }
+          >
+            $
+            {Number(
+              item.total,
+            ).toFixed(
+              2,
+            )}
           </Text>
         </View>
 
-        <Text style={styles.timeText}>
+        <Text
+          style={
+            styles.timeText
+          }
+        >
           Ingresó:{' '}
           {new Date(
             item.created_at,
-          ).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          ).toLocaleTimeString(
+            [],
+            {
+              hour:
+                '2-digit',
+
+              minute:
+                '2-digit',
+            },
+          )}
         </Text>
 
-        {renderDeliveryDetails(item)}
+        {renderDeliveryDetails(
+          item,
+        )}
 
-        <View style={styles.itemsContainer}>
+        <View
+          style={
+            styles.itemsContainer
+          }
+        >
           {item.order_items.map(
             renderOrderItem,
           )}
         </View>
       </View>
 
-      <View style={styles.actionBlock}>
-        <View style={styles.actionButtonsRow}>
+      <View
+        style={
+          styles.actionBlock
+        }
+      >
+        <View
+          style={
+            styles.actionButtonsRow
+          }
+        >
           <TouchableOpacity
-            style={styles.editOrderButton}
+            style={
+              styles.editOrderButton
+            }
             onPress={() =>
-              handleEditOrder(item)
+              handleEditOrder(
+                item,
+              )
             }
           >
             <Text
@@ -836,9 +1246,13 @@ export function KitchenScreen({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.deliverButton}
+            style={
+              styles.deliverButton
+            }
             onPress={() => {
-              void handleOpenPayment(item);
+              void handleOpenPayment(
+                item,
+              );
             }}
           >
             <Text
@@ -846,13 +1260,16 @@ export function KitchenScreen({
                 styles.deliverButtonText
               }
             >
-              Cobrar / Entregar
+              Cobrar /
+              Entregar
             </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={styles.cancelOrderButton}
+          style={
+            styles.cancelOrderButton
+          }
           onPress={() =>
             handleCancelOrderPrompt(
               item.id,
@@ -871,35 +1288,61 @@ export function KitchenScreen({
     </View>
   );
 
-  if (pendingOrders.length === 0) {
+  if (
+    pendingOrders.length ===
+    0
+  ) {
     return (
-      <View style={styles.emptyKitchen}>
+      <View
+        style={
+          styles.emptyKitchen
+        }
+      >
         <Text
-          style={styles.emptyKitchenText}
+          style={
+            styles.emptyKitchenText
+          }
         >
-          🎉 ¡No hay órdenes pendientes!
-          Todo despachado.
+          🎉 ¡No hay órdenes
+          pendientes! Todo
+          despachado.
         </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.kitchenContainer}>
+    <View
+      style={
+        styles.kitchenContainer
+      }
+    >
       <FlatList
-        data={pendingOrders}
-        keyExtractor={(item) => item.id}
+        data={
+          pendingOrders
+        }
+        keyExtractor={(
+          item,
+        ) =>
+          item.id
+        }
         horizontal
         contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingVertical: 20,
+          paddingHorizontal:
+            16,
+
+          paddingVertical:
+            20,
         }}
-        renderItem={renderOrder}
+        renderItem={
+          renderOrder
+        }
       />
 
       <PaymentModal
         visible={
-          paymentOrder !== null
+          paymentOrder !==
+          null
         }
         totalAmount={
           paymentOrder
@@ -929,54 +1372,101 @@ export function KitchenScreen({
 }
 
 function createProductFromOrderItem(
-  line: KitchenOrderItem,
+  line:
+    KitchenOrderItem,
 ): Product {
-  if (line.products) {
+  if (
+    line.products
+  ) {
     return {
       ...line.products,
-      price: Number(
-        line.price_at_purchase ??
-        line.products.price,
-      ),
+
+      price:
+        Number(
+          line.price_at_purchase ??
+          line.products
+            .price,
+        ),
     };
   }
 
   return {
-    id: line.product_id,
-    name: 'Producto',
-    price: Number(
-      line.price_at_purchase,
-    ),
-    category_id: '',
-    description: null,
-    is_active: true,
-    created_at: '',
-    image_url: null,
-    is_available: true,
+    id:
+      line.product_id,
+
+    name:
+      'Producto',
+
+    price:
+      Number(
+        line.price_at_purchase,
+      ),
+
+    category_id:
+      '',
+
+    description:
+      null,
+
+    is_active:
+      true,
+
+    created_at:
+      '',
+
+    image_url:
+      null,
+
+    is_available:
+      true,
   };
 }
 
 function createProductFromComponent(
-  component: KitchenOrderItemComponent,
+  component:
+    KitchenOrderItemComponent,
 ): Product {
-  if (component.products) {
+  if (
+    component.products
+  ) {
     return {
       ...component.products,
-      price: Number(
-        component.products.price,
-      ),
+
+      price:
+        Number(
+          component.products
+            .price,
+        ),
     };
   }
 
   return {
-    id: component.product_id,
-    name: component.label || 'Componente',
-    price: 0,
-    category_id: '',
-    description: null,
-    is_active: true,
-    created_at: '',
-    image_url: null,
-    is_available: true,
+    id:
+      component.product_id,
+
+    name:
+      component.label ||
+      'Componente',
+
+    price:
+      0,
+
+    category_id:
+      '',
+
+    description:
+      null,
+
+    is_active:
+      true,
+
+    created_at:
+      '',
+
+    image_url:
+      null,
+
+    is_available:
+      true,
   };
 }
