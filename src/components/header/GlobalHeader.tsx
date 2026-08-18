@@ -1,6 +1,7 @@
 import React from 'react';
 
 import {
+  Alert,
   Image,
   Text,
   TouchableOpacity,
@@ -15,6 +16,7 @@ import {
   canManageCash,
   canManageCatalog,
 } from '../../Utils/permissions';
+import { printTestTicket } from '../../services/printerService';
 
 export type MainTab =
   | 'pos'
@@ -47,12 +49,62 @@ export function GlobalHeader({
   user,
   logout,
 }: HeaderProps) {
+
+  const handlePrinterTest =
+  async (): Promise<void> => {
+    try {
+      await printTestTicket();
+
+      Alert.alert(
+        'Impresión enviada',
+        'La prueba se imprimió correctamente.',
+      );
+    } catch (error) {
+      console.error(
+        'Error de impresora:',
+        error,
+      );
+
+      Alert.alert(
+        'Error de impresora',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo imprimir.',
+      );
+    }
+  };
   return (
+    
     <View
       style={
         styles.header
       }
     >
+      <TouchableOpacity
+  onPress={() => {
+    void handlePrinterTest();
+  }}
+  style={{
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor:
+      '#2A2A2A',
+    borderWidth: 1,
+    borderColor:
+      '#555555',
+  }}
+>
+  <Text
+    style={{
+      color: '#FFBF00',
+      fontSize: 12,
+      fontWeight: '700',
+    }}
+  >
+    🖨️ Probar
+  </Text>
+</TouchableOpacity>
       <Image
         source={require(
           '../../../assets/OnlyBurgerKong.png'
