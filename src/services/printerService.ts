@@ -382,3 +382,7 @@ function normalizeAddress(
     .trim()
     .toUpperCase();
 }
+
+export async function resetPrinterConnection(): Promise<void> {
+  await disconnectPrinter();
+}

@@ -143,4 +143,77 @@ function mapPrinterSettings(
     updatedAt:
       record.updated_at,
   };
+
+  
+}
+
+export interface UpdatePrinterSettingsInput {
+  name: string;
+
+  connectionType:
+    PrinterConnectionType;
+
+  bluetoothAddress:
+    string | null;
+
+  ipAddress:
+    string | null;
+
+  port:
+    number | null;
+
+  isActive: boolean;
+}
+
+export async function updatePrinterSettings(
+  id: string,
+  input:
+    UpdatePrinterSettingsInput,
+): Promise<PrinterSettings> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('printer_settings')
+    .update({
+      name:
+        input.name.trim(),
+
+      connection_type:
+        input.connectionType,
+
+      bluetooth_address:
+        input.bluetoothAddress,
+
+      ip_address:
+        input.ipAddress,
+
+      port:
+        input.port,
+
+      is_active:
+        input.isActive,
+    })
+    .eq(
+      'id',
+      id,
+    )
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(
+      `No se pudo actualizar la impresora: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      'Supabase no devolvió la configuración actualizada.',
+    );
+  }
+
+  return mapPrinterSettings(
+    data as PrinterSettingsRecord,
+  );
 }

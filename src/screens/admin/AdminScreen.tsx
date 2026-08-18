@@ -19,22 +19,13 @@ import { AdminCategories } from '../../components/admin/categories/AdminCategori
 import {
     AdminModifiers,
 } from '../../components/admin/modifiers/AdminModifiers';
+import { AdminPrinter } from '../../components/admin/printer/AdminPrinter';
 
 type AdminSection =
     | 'products'
     | 'categories'
-    | 'modifiers';
-
-interface AdminScreenProps {
-    onProductsChanged:
-    () => Promise<void>;
-
-    onCategoriesChanged:
-    () => Promise<void>;
-
-    onModifiersChanged:
-    () => Promise<void>;
-}
+    | 'modifiers'
+    | 'printer';
 
 interface AdminScreenProps {
     onProductsChanged:
@@ -87,15 +78,23 @@ export function AdminScreen({
                 );
             }
 
+            if (
+                activeSection ===
+                'modifiers'
+            ) {
+                return (
+                    <AdminModifiers
+                        onModifiersChanged={
+                            onModifiersChanged
+                        }
+                    />
+                );
+            }
+
             return (
-                <AdminModifiers
-                    onModifiersChanged={
-                        onModifiersChanged
-                    }
-                />
+                <AdminPrinter />
             );
         };
-
     return (
         <View
             style={
@@ -121,8 +120,8 @@ export function AdminScreen({
                             styles.subtitle
                         }
                     >
-                        Configuración del catálogo
-                        de Burger Kong
+                        Configuración del punto de venta
+                        Burger Kong
                     </Text>
                 </View>
             </View>
@@ -210,6 +209,33 @@ export function AdminScreen({
                         ]}
                     >
                         MODIFICADORES
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.sectionTab,
+
+                        activeSection ===
+                        'printer' &&
+                        styles.sectionTabActive,
+                    ]}
+                    onPress={() =>
+                        setActiveSection(
+                            'printer',
+                        )
+                    }
+                >
+                    <Text
+                        style={[
+                            styles.sectionTabText,
+
+                            activeSection ===
+                            'printer' &&
+                            styles.sectionTabTextActive,
+                        ]}
+                    >
+                        IMPRESORA
                     </Text>
                 </TouchableOpacity>
             </View>
