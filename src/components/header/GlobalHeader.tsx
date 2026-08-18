@@ -17,6 +17,7 @@ import {
   canManageCatalog,
 } from '../../Utils/permissions';
 import { printTestTicket } from '../../services/printerService';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 
 export type MainTab =
   | 'pos'
@@ -50,93 +51,152 @@ export function GlobalHeader({
   logout,
 }: HeaderProps) {
 
+  const {
+    isPhone,
+  } = useResponsiveLayout();
+
   const handlePrinterTest =
-  async (): Promise<void> => {
-    try {
-      await printTestTicket();
+    async (): Promise<void> => {
+      try {
+        await printTestTicket();
 
-      Alert.alert(
-        'Impresión enviada',
-        'La prueba se imprimió correctamente.',
-      );
-    } catch (error) {
-      console.error(
-        'Error de impresora:',
-        error,
-      );
+        Alert.alert(
+          'Impresión enviada',
+          'La prueba se imprimió correctamente.',
+        );
+      } catch (error) {
+        console.error(
+          'Error de impresora:',
+          error,
+        );
 
-      Alert.alert(
-        'Error de impresora',
-        error instanceof Error
-          ? error.message
-          : 'No se pudo imprimir.',
-      );
-    }
-  };
-  return (
-    
-    <View
-      style={
-        styles.header
+        Alert.alert(
+          'Error de impresora',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo imprimir.',
+        );
       }
-    >
-      <TouchableOpacity
-  onPress={() => {
-    void handlePrinterTest();
-  }}
-  style={{
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor:
-      '#2A2A2A',
-    borderWidth: 1,
-    borderColor:
-      '#555555',
-  }}
->
-  <Text
-    style={{
-      color: '#FFBF00',
-      fontSize: 12,
-      fontWeight: '700',
-    }}
-  >
-    🖨️ Probar
-  </Text>
-</TouchableOpacity>
-      <Image
-        source={require(
-          '../../../assets/OnlyBurgerKong.png'
-        )}
-        style={
-          styles.headerLogo
-        }
-        resizeMode="contain"
-      />
+    };
+  return (
+    <View
+      style={[
+        styles.header,
 
-      <Image
-        source={require(
-          '../../../assets/logo.png'
-        )}
-        style={
-          styles.headerLogoLetters
-        }
-        resizeMode="contain"
-      />
+        isPhone &&
+        styles.headerPhone,
+      ]}
+    >
+      <View
+        style={[
+          styles.headerTopRow,
+
+          isPhone &&
+          styles.headerTopRowPhone,
+        ]}
+      >
+        <View
+          style={
+            styles.headerBrandContainer
+          }
+        >
+          <Image
+            source={require(
+              '../../../assets/OnlyBurgerKong.png'
+            )}
+            style={[
+              styles.headerLogo,
+
+              isPhone &&
+              styles.headerLogoPhone,
+            ]}
+            resizeMode="contain"
+          />
+
+          <Image
+            source={require(
+              '../../../assets/logo.png'
+            )}
+            style={[
+              styles.headerLogoLetters,
+
+              isPhone &&
+              styles.headerLogoLettersPhone,
+            ]}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View
+          style={[
+            styles.userContainer,
+
+            isPhone &&
+            styles.userContainerPhone,
+          ]}
+        >
+          {!isPhone ? (
+            <Text
+              style={
+                styles.userName
+              }
+            >
+              {user?.fullName}{' '}
+              (
+              {user?.role ===
+                'admin'
+                ? 'Admin'
+                : 'Caja'}
+              )
+            </Text>
+          ) : (
+            <Text
+              numberOfLines={1}
+              style={
+                styles.userNamePhone
+              }
+            >
+              {user?.fullName}
+            </Text>
+          )}
+
+          <TouchableOpacity
+            onPress={
+              logout
+            }
+            style={
+              styles.logoutButton
+            }
+          >
+            <Text
+              style={
+                styles.logoutText
+              }
+            >
+              Salir
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View
-        style={
-          styles.tabContainer
-        }
+        style={[
+          styles.tabContainer,
+
+          isPhone &&
+          styles.tabContainerPhone,
+        ]}
       >
         <TouchableOpacity
           style={[
             styles.tabButton,
 
+            isPhone &&
+            styles.tabButtonPhone,
+
             activeTab ===
-              'pos' &&
-              styles.tabActiveButton,
+            'pos' &&
+            styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -148,15 +208,15 @@ export function GlobalHeader({
             style={[
               styles.tabText,
 
+              isPhone &&
+              styles.tabTextPhone,
+
               activeTab ===
-                'pos' &&
-                styles.tabActiveText,
+              'pos' &&
+              styles.tabActiveText,
             ]}
           >
-            MENÚ{' '}
-            {editingOrderId
-              ? '⚠️ (Modificando)'
-              : ''}
+            MENÚ
           </Text>
         </TouchableOpacity>
 
@@ -164,9 +224,12 @@ export function GlobalHeader({
           style={[
             styles.tabButton,
 
+            isPhone &&
+            styles.tabButtonPhone,
+
             activeTab ===
-              'kitchen' &&
-              styles.tabActiveButton,
+            'kitchen' &&
+            styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -178,9 +241,12 @@ export function GlobalHeader({
             style={[
               styles.tabText,
 
+              isPhone &&
+              styles.tabTextPhone,
+
               activeTab ===
-                'kitchen' &&
-                styles.tabActiveText,
+              'kitchen' &&
+              styles.tabActiveText,
             ]}
           >
             PEDIDOS (
@@ -192,9 +258,12 @@ export function GlobalHeader({
           style={[
             styles.tabButton,
 
+            isPhone &&
+            styles.tabButtonPhone,
+
             activeTab ===
-              'sales' &&
-              styles.tabActiveButton,
+            'sales' &&
+            styles.tabActiveButton,
           ]}
           onPress={() =>
             setActiveTab(
@@ -206,23 +275,31 @@ export function GlobalHeader({
             style={[
               styles.tabText,
 
+              isPhone &&
+              styles.tabTextPhone,
+
               activeTab ===
-                'sales' &&
-                styles.tabActiveText,
+              'sales' &&
+              styles.tabActiveText,
             ]}
           >
             VENTAS
           </Text>
         </TouchableOpacity>
 
-        {canManageCash(user) ? (
+        {canManageCash(
+          user,
+        ) ? (
           <TouchableOpacity
             style={[
               styles.tabButton,
 
+              isPhone &&
+              styles.tabButtonPhone,
+
               activeTab ===
-                'cash' &&
-                styles.tabActiveButton,
+              'cash' &&
+              styles.tabActiveButton,
             ]}
             onPress={() =>
               setActiveTab(
@@ -234,9 +311,12 @@ export function GlobalHeader({
               style={[
                 styles.tabText,
 
+                isPhone &&
+                styles.tabTextPhone,
+
                 activeTab ===
-                  'cash' &&
-                  styles.tabActiveText,
+                'cash' &&
+                styles.tabActiveText,
               ]}
             >
               CAJA
@@ -244,14 +324,19 @@ export function GlobalHeader({
           </TouchableOpacity>
         ) : null}
 
-        {canManageCatalog(user) ? (
+        {canManageCatalog(
+          user,
+        ) ? (
           <TouchableOpacity
             style={[
               styles.tabButton,
 
+              isPhone &&
+              styles.tabButtonPhone,
+
               activeTab ===
-                'admin' &&
-                styles.tabActiveButton,
+              'admin' &&
+              styles.tabActiveButton,
             ]}
             onPress={() =>
               setActiveTab(
@@ -263,52 +348,58 @@ export function GlobalHeader({
               style={[
                 styles.tabText,
 
+                isPhone &&
+                styles.tabTextPhone,
+
                 activeTab ===
-                  'admin' &&
-                  styles.tabActiveText,
+                'admin' &&
+                styles.tabActiveText,
               ]}
             >
               ADMIN
             </Text>
           </TouchableOpacity>
         ) : null}
-      </View>
-
-      <View
-        style={
-          styles.userContainer
-        }
-      >
-        <Text
-          style={
-            styles.userName
-          }
-        >
-          {user?.fullName}{' '}
-          (
-          {user?.role === 'admin'
-            ? 'Admin'
-            : 'Caja'}
-          )
-        </Text>
 
         <TouchableOpacity
-          onPress={
-            logout
-          }
+          onPress={() => {
+            void handlePrinterTest();
+          }}
+          style={[
+            styles.printerTestButton,
+
+            isPhone &&
+            styles.printerTestButtonPhone,
+          ]}
+        >
+          <Text
+            style={
+              styles.printerTestText
+            }
+          >
+            🖨️
+            {isPhone
+              ? ''
+              : ' Probar'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {editingOrderId ? (
+        <View
           style={
-            styles.logoutButton
+            styles.editingOrderBanner
           }
         >
           <Text
             style={
-              styles.logoutText
+              styles.editingOrderBannerText
             }
           >
-            Salir
+            ⚠️ Modificando pedido
           </Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+      ) : null}
     </View>
   );
 }

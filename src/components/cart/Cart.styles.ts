@@ -483,4 +483,25 @@ export const styles =
       fontWeight: 'bold',
       fontSize: 16,
     },
+
+    cartSectionMobile: {
+      flex: 1,
+      width: '100%',
+      backgroundColor: '#181818',
+    },
+
+    cartHeaderMobile: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+
+    cartItemMainMobile: {
+  flexDirection: 'column',
+  alignItems: 'stretch',
+},
+
+cartItemControlsMobile: {
+  marginTop: 10,
+  justifyContent: 'flex-end',
+},
   });

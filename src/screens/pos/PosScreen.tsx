@@ -7,6 +7,7 @@ import React, {
 
 import {
   Alert,
+  Modal,
   Text,
   TextInput,
   TouchableOpacity,
@@ -64,6 +65,7 @@ import {
 import {
   isDeliveryProduct,
 } from '../../Utils/delivery';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 
 interface POSScreenProps {
   categories: Category[];
@@ -177,6 +179,52 @@ export function POSScreen({
     isProcessingOrder,
     setIsProcessingOrder,
   ] = useState(false);
+
+  const {
+    isPhone,
+  } = useResponsiveLayout();
+
+  const [
+    isMobileCartVisible,
+    setIsMobileCartVisible,
+  ] = useState(false);
+
+  const mobileCartSummary =
+    useMemo(() => {
+      const totalItems =
+        cart.reduce(
+          (
+            total,
+            item,
+          ) =>
+            isDeliveryProduct(
+              item.product,
+            )
+              ? total
+              : total +
+              item.quantity,
+          0,
+        );
+
+      const totalAmount =
+        cart.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            Number(
+              item.product.price,
+            ) *
+            item.quantity,
+          0,
+        );
+
+      return {
+        totalItems,
+        totalAmount,
+      };
+    }, [cart]);
 
   const pendingOrderRequest =
     useRef<{
@@ -924,12 +972,16 @@ export function POSScreen({
   return (
     <View
       style={
-        styles.contentRow
+        isPhone
+          ? styles.phoneContainer
+          : styles.contentRow
       }
     >
       <View
         style={
-          styles.menuSection
+          isPhone
+            ? styles.phoneMenuSection
+            : styles.menuSection
         }
       >
         <View
@@ -1008,27 +1060,211 @@ export function POSScreen({
         />
       </View>
 
-      <CartComponent
-        cart={cart}
-        onUpdateQuantity={
-          handleUpdateQuantity
+      {!isPhone ? (
+        <CartComponent
+          cart={cart}
+          onUpdateQuantity={
+            handleUpdateQuantity
+          }
+          onRemoveItem={
+            handleRemoveCartItem
+          }
+          onClearCart={
+            handleClearCart
+          }
+          onCheckout={
+            handleCheckout
+          }
+          onToggleDelivery={
+            handleToggleDelivery
+          }
+          onEditDelivery={
+            handleEditDelivery
+          }
+        />
+      ) : null}
+
+      {isPhone &&
+        cart.length > 0 ? (
+        <TouchableOpacity
+          style={
+            styles.mobileCartBar
+          }
+          activeOpacity={0.9}
+          onPress={() =>
+            setIsMobileCartVisible(
+              true,
+            )
+          }
+        >
+          <View
+            style={
+              styles.mobileCartBarLeft
+            }
+          >
+            <Text
+              style={
+                styles.mobileCartIcon
+              }
+            >
+              🛒
+            </Text>
+
+            <View>
+              <Text
+                style={
+                  styles.mobileCartTitle
+                }
+              >
+                Ver orden
+              </Text>
+
+              <Text
+                style={
+                  styles.mobileCartSubtitle
+                }
+              >
+                {
+                  mobileCartSummary.totalItems
+                }{' '}
+                {mobileCartSummary.totalItems ===
+                  1
+                  ? 'producto'
+                  : 'productos'}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={
+              styles.mobileCartBarRight
+            }
+          >
+            <Text
+              style={
+                styles.mobileCartTotal
+              }
+            >
+              $
+              {mobileCartSummary.totalAmount.toFixed(
+                2,
+              )}
+            </Text>
+
+            <Text
+              style={
+                styles.mobileCartArrow
+              }
+            >
+              ↑
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ) : null}
+
+      <Modal
+        visible={
+          isPhone &&
+          isMobileCartVisible
         }
-        onRemoveItem={
-          handleRemoveCartItem
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() =>
+          setIsMobileCartVisible(
+            false,
+          )
         }
-        onClearCart={
-          handleClearCart
-        }
-        onCheckout={
-          handleCheckout
-        }
-        onToggleDelivery={
-          handleToggleDelivery
-        }
-        onEditDelivery={
-          handleEditDelivery
-        }
-      />
+      >
+        <View
+          style={
+            styles.mobileCartModal
+          }
+        >
+          <View
+            style={
+              styles.mobileCartModalHeader
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.mobileCartModalTitle
+                }
+              >
+                Orden actual
+              </Text>
+
+              <Text
+                style={
+                  styles.mobileCartModalSubtitle
+                }
+              >
+                {
+                  mobileCartSummary.totalItems
+                }{' '}
+                {mobileCartSummary.totalItems ===
+                  1
+                  ? 'producto'
+                  : 'productos'}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={
+                styles.mobileCartCloseButton
+              }
+              onPress={() =>
+                setIsMobileCartVisible(
+                  false,
+                )
+              }
+            >
+              <Text
+                style={
+                  styles.mobileCartCloseText
+                }
+              >
+                ✕
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <CartComponent
+            cart={cart}
+            isMobile
+            onUpdateQuantity={
+              handleUpdateQuantity
+            }
+            onRemoveItem={
+              handleRemoveCartItem
+            }
+            onClearCart={() => {
+              handleClearCart();
+
+              setIsMobileCartVisible(
+                false,
+              );
+            }}
+            onCheckout={async (
+              totalAmount,
+            ) => {
+              await handleCheckout(
+                totalAmount,
+              );
+
+              setIsMobileCartVisible(
+                false,
+              );
+            }}
+            onToggleDelivery={
+              handleToggleDelivery
+            }
+            onEditDelivery={
+              handleEditDelivery
+            }
+          />
+        </View>
+      </Modal>
 
       <ProductConfiguratorModal
         visible={

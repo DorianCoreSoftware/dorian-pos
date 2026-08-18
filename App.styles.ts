@@ -275,5 +275,217 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
   },
+
+  phoneContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    paddingBottom: 74,
+  },
+
+  phoneMenuSection: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  mobileCartBar: {
+    position: 'absolute',
+    left: 10,
+    right: 10,
+    bottom: 10,
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D9A500',
+    backgroundColor: '#FFBF00',
+    elevation: 10,
+  },
+
+  mobileCartBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  mobileCartIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+
+  mobileCartTitle: {
+    color: '#111111',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  mobileCartSubtitle: {
+    color: '#493900',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+
+  mobileCartBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  mobileCartTotal: {
+    color: '#111111',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+
+  mobileCartArrow: {
+    color: '#111111',
+    fontSize: 20,
+    fontWeight: '900',
+    marginLeft: 10,
+  },
+
+  mobileCartModal: {
+    flex: 1,
+    backgroundColor: '#181818',
+    paddingTop: 40,
+  },
+
+  mobileCartModalHeader: {
+    minHeight: 66,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#292929',
+    backgroundColor: '#1D1D1D',
+  },
+
+  mobileCartModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  mobileCartModalSubtitle: {
+    color: '#999999',
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  mobileCartCloseButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#444444',
+    backgroundColor: '#292929',
+  },
+
+  mobileCartCloseText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  headerPhone: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+  },
+
+  headerTopRowPhone: {
+    width: '100%',
+  },
+
+  headerLogoPhone: {
+    width: 42,
+    height: 42,
+  },
+
+  headerLogoLettersPhone: {
+    width: 58,
+    height: 32,
+  },
+
+  userContainerPhone: {
+    flexShrink: 1,
+    gap: 8,
+  },
+
+  userNamePhone: {
+    maxWidth: 120,
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  tabContainerPhone: {
+    width: '100%',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 4,
+    padding: 4,
+  },
+
+  tabButtonPhone: {
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+
+  tabTextPhone: {
+    fontSize: 11,
+  },
+
+  printerTestButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#2A2A2A',
+    borderWidth: 1,
+    borderColor: '#555555',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  printerTestButtonPhone: {
+    minWidth: 42,
+    paddingHorizontal: 8,
+  },
+
+  printerTestText: {
+    color: '#FFBF00',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  editingOrderBanner: {
+    width: '100%',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: '#3A2F00',
+    borderWidth: 1,
+    borderColor: '#6D5900',
+  },
+
+  editingOrderBannerText: {
+    color: '#FFBF00',
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
 });
 
