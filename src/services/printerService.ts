@@ -7,8 +7,9 @@ import RNBluetoothClassic, {
   BluetoothDevice,
 } from 'react-native-bluetooth-classic';
 
-const PRINTER_ADDRESS =
-  '66:32:7E:0B:9D:18';
+import {
+  getActivePrinterSettings,
+} from './printerSettingsService';
 
 let connectedPrinter:
   BluetoothDevice | null = null;
@@ -82,6 +83,32 @@ export async function getPairedBluetoothDevices(): Promise<
 export async function getPrinterDevice(): Promise<
   BluetoothDevice
 > {
+  const settings =
+    await getActivePrinterSettings();
+
+  if (!settings) {
+    throw new Error(
+      'No hay una impresora configurada.',
+    );
+  }
+
+  if (
+    settings.connectionType !==
+    'bluetooth'
+  ) {
+    throw new Error(
+      'La impresora activa no está configurada por Bluetooth.',
+    );
+  }
+
+  if (
+    !settings.bluetoothAddress
+  ) {
+    throw new Error(
+      'La impresora no tiene una dirección Bluetooth configurada.',
+    );
+  }
+
   const devices =
     await getPairedBluetoothDevices();
 
@@ -92,13 +119,14 @@ export async function getPrinterDevice(): Promise<
           device.address,
         ) ===
         normalizeAddress(
-          PRINTER_ADDRESS,
+          settings.bluetoothAddress ??
+            '',
         ),
     );
 
   if (!printer) {
     throw new Error(
-      'No se encontró la impresora Bluetooth emparejada.',
+      `No se encontró "${settings.name}" entre los dispositivos Bluetooth emparejados.`,
     );
   }
 
