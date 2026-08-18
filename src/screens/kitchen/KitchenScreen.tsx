@@ -3,14 +3,6 @@ import React, {
 } from 'react';
 
 import {
-  PaymentModal,
-} from '../../components/payment-modal';
-
-import {
-  registerOrderPayment,
-} from '../../services/paymentService';
-
-import {
   Alert,
   FlatList,
   Text,
@@ -19,9 +11,30 @@ import {
 } from 'react-native';
 
 import {
+  PaymentModal,
+} from '../../components/payment-modal';
+
+import {
+  fetchOrderPaymentByOrderId,
+} from '../../repositories/PaymentRepository';
+
+import {
   cancelOrder,
   deliverOrder,
 } from '../../services/orderService';
+
+import {
+  registerOrderPayment,
+} from '../../services/paymentService';
+
+import {
+  getOrCreateOrderPromoCoupon,
+  PromoCoupon,
+} from '../../services/promoService';
+
+import {
+  printOrderTicket,
+} from '../../services/printerService';
 
 import {
   Cart,
@@ -34,48 +47,40 @@ import {
 } from '../../types';
 
 import {
-  styles,
-} from '../../../App.styles';
-
-import {
   isDeliveryProduct,
 } from '../../Utils/delivery';
 
 import {
-  fetchOrderPaymentByOrderId,
-} from '../../repositories/PaymentRepository';
-
-import {
-  printOrderTicket,
-} from '../../services/printerService';
+  styles,
+} from '../../../App.styles';
 
 interface KitchenProps {
   pendingOrders:
-  KitchenOrder[];
+    KitchenOrder[];
 
   setPendingOrders:
-  React.Dispatch<
-    React.SetStateAction<
-      KitchenOrder[]
-    >
-  >;
+    React.Dispatch<
+      React.SetStateAction<
+        KitchenOrder[]
+      >
+    >;
 
   editingOrderId:
-  string | null;
+    string | null;
 
   setEditingOrderId:
-  React.Dispatch<
-    React.SetStateAction<
-      string | null
-    >
-  >;
+    React.Dispatch<
+      React.SetStateAction<
+        string | null
+      >
+    >;
 
   setCart:
-  React.Dispatch<
-    React.SetStateAction<
-      Cart
-    >
-  >;
+    React.Dispatch<
+      React.SetStateAction<
+        Cart
+      >
+    >;
 
   setActiveTab: (
     tab:
@@ -106,6 +111,11 @@ export function KitchenScreen({
   ] =
     useState(false);
 
+  /*
+   * ============================
+   * ENTREGAR ORDEN YA PAGADA
+   * ============================
+   */
   const handleDeliverPaidOrder =
     async (
       order: KitchenOrder,
@@ -140,6 +150,11 @@ export function KitchenScreen({
       }
     };
 
+  /*
+   * ============================
+   * ABRIR COBRO
+   * ============================
+   */
   const handleOpenPayment =
     async (
       order: KitchenOrder,
@@ -150,26 +165,32 @@ export function KitchenScreen({
             order.id,
           );
 
+        /*
+         * Si ya existe pago,
+         * nunca volvemos a cobrar.
+         */
         if (existingPayment) {
           Alert.alert(
             'Orden ya pagada',
+
             existingPayment
               .paymentMethod ===
               'cash'
               ? `Esta orden ya fue pagada en efectivo.\n\nRecibido: $${(
-                existingPayment
-                  .amountReceived ??
-                0
-              ).toFixed(
-                2,
-              )}\nCambio: $${(
-                existingPayment
-                  .changeAmount ??
-                0
-              ).toFixed(
-                2,
-              )}`
+                  existingPayment
+                    .amountReceived ??
+                  0
+                ).toFixed(
+                  2,
+                )}\nCambio: $${(
+                  existingPayment
+                    .changeAmount ??
+                  0
+                ).toFixed(
+                  2,
+                )}`
               : 'Esta orden ya fue pagada con tarjeta.',
+
             [
               {
                 text:
@@ -213,6 +234,11 @@ export function KitchenScreen({
       }
     };
 
+  /*
+   * ============================
+   * CERRAR MODAL
+   * ============================
+   */
   const handleClosePayment =
     (): void => {
       if (
@@ -226,6 +252,11 @@ export function KitchenScreen({
       );
     };
 
+  /*
+   * ============================
+   * CONFIRMAR COBRO
+   * ============================
+   */
   const handleConfirmPayment =
     async (
       paymentMethod:
@@ -242,9 +273,9 @@ export function KitchenScreen({
       }
 
       /*
-       * Guardamos la referencia
-       * antes de hacer cualquier
-       * operación asíncrona.
+       * Conservamos la orden
+       * aunque después cerremos
+       * o cambiemos el modal.
        */
       const orderToPay =
         paymentOrder;
@@ -255,17 +286,16 @@ export function KitchenScreen({
         );
 
         /*
-         * =========================
+         * ========================
          * PASO 1
-         * REGISTRAR EL PAGO
-         * =========================
+         * REGISTRAR PAGO
+         * ========================
          *
-         * registerOrderPayment es
-         * idempotente.
-         *
-         * Si este pago ya existe,
-         * devuelve el existente y
-         * no lo duplica.
+         * Es idempotente.
+         * Nunca debemos imprimir
+         * o entregar si el pago
+         * todavía no quedó
+         * registrado.
          */
         try {
           await registerOrderPayment(
@@ -300,29 +330,74 @@ export function KitchenScreen({
         }
 
         /*
-         * =========================
+         * ========================
          * PASO 2
-         * IMPRIMIR EL TICKET
-         * =========================
+         * GENERAR PROMOCIÓN
+         * ========================
          *
-         * En este punto el pago YA
-         * existe en BD.
+         * Supabase decide si
+         * corresponde:
+         *
+         * - Kong
+         * - Lucky Dorian
+         *
+         * La RPC es idempotente:
+         * una orden siempre obtiene
+         * el mismo cupón.
+         *
+         * Si falla la promoción,
+         * NO afectamos el cobro.
+         */
+        let promoCoupon:
+          PromoCoupon | null =
+          null;
+
+        try {
+          promoCoupon =
+            await getOrCreateOrderPromoCoupon(
+              orderToPay.id,
+            );
+
+          console.log(
+            'Cupón promocional:',
+            promoCoupon,
+          );
+        } catch (error) {
+          console.error(
+            'Pago registrado, pero no se pudo generar la promoción:',
+            error,
+          );
+        }
+
+        /*
+         * ========================
+         * PASO 3
+         * IMPRIMIR TICKET
+         * ========================
+         *
+         * Si existe promoCoupon,
+         * printerService imprimirá
+         * Kong o Lucky Dorian.
+         *
+         * Si promoCoupon es null,
+         * imprime solamente el
+         * ticket normal.
          *
          * Una falla de impresión
-         * jamás debe provocar un
-         * segundo cobro.
+         * jamás debe ocasionar
+         * un segundo cobro.
          */
         try {
-          await printOrderTicket(
-            {
-              order:
-                orderToPay,
+          await printOrderTicket({
+            order:
+              orderToPay,
 
-              paymentMethod,
+            paymentMethod,
 
-              amountReceived,
-            },
-          );
+            amountReceived,
+
+            promoCoupon,
+          });
         } catch (error) {
           console.error(
             'Pago registrado, pero falló la impresión del ticket:',
@@ -336,18 +411,22 @@ export function KitchenScreen({
         }
 
         /*
-         * =========================
-         * PASO 3
-         * ENTREGAR LA ORDEN
-         * =========================
+         * ========================
+         * PASO 4
+         * ENTREGAR ORDEN
+         * ========================
          *
-         * El pago ya existe.
+         * En este momento:
          *
-         * Si falla este paso,
-         * dejamos la orden pendiente
-         * para poder completar la
-         * entrega después SIN volver
-         * a cobrar.
+         * Pago ✓
+         * Promoción intentada ✓
+         * Ticket intentado ✓
+         *
+         * Si falla entregar,
+         * dejamos la orden
+         * pendiente para poder
+         * recuperarla sin cobrar
+         * nuevamente.
          */
         try {
           await deliverOrder(
@@ -359,10 +438,6 @@ export function KitchenScreen({
             error,
           );
 
-          /*
-           * Cerramos el modal porque
-           * el pago ya quedó guardado.
-           */
           setPaymentOrder(
             null,
           );
@@ -376,14 +451,10 @@ export function KitchenScreen({
         }
 
         /*
-         * =========================
-         * PASO 4
+         * ========================
+         * PASO 5
          * ACTUALIZAR INTERFAZ
-         * =========================
-         *
-         * Pago ✓
-         * Ticket intentado ✓
-         * Entrega en BD ✓
+         * ========================
          */
         removeOrderFromPendingList(
           orderToPay.id,
@@ -406,6 +477,11 @@ export function KitchenScreen({
       }
     };
 
+  /*
+   * ============================
+   * CANCELAR ORDEN
+   * ============================
+   */
   const handleCancelOrderPrompt =
     (
       orderId: string,
@@ -480,6 +556,11 @@ export function KitchenScreen({
       }
     };
 
+  /*
+   * ============================
+   * EDITAR ORDEN
+   * ============================
+   */
   const handleEditOrder = (
     order: KitchenOrder,
   ): void => {
@@ -575,20 +656,17 @@ export function KitchenScreen({
           isDeliveryItem
             ? `${product.id}-delivery`
             : [
-              line.product_id,
-
-              cleanNotes,
-
-              modifierIdentifier,
-
-              componentIdentifier,
-            ].join(
-              '-',
-            );
+                line.product_id,
+                cleanNotes,
+                modifierIdentifier,
+                componentIdentifier,
+              ].join(
+                '-',
+              );
 
         const existingItem =
           groupedItems[
-          uniqueItemId
+            uniqueItemId
           ];
 
         if (
@@ -628,113 +706,113 @@ export function KitchenScreen({
 
           comboComponents:
             components.length >
-              0
+            0
               ? components.map(
-                (
-                  component,
-                ) => ({
-                  slotId:
-                    component
-                      .slot_id ??
-                    component.id,
+                  (
+                    component,
+                  ) => ({
+                    slotId:
+                      component
+                        .slot_id ??
+                      component.id,
 
-                  type:
-                    component
-                      .component_type as
-                    | 'burger'
-                    | 'hotdog'
-                    | 'side'
-                    | 'drink',
+                    type:
+                      component
+                        .component_type as
+                        | 'burger'
+                        | 'hotdog'
+                        | 'side'
+                        | 'drink',
 
-                  label:
-                    component.label,
+                    label:
+                      component.label,
 
-                  product:
-                    createProductFromComponent(
-                      component,
-                    ),
+                    product:
+                      createProductFromComponent(
+                        component,
+                      ),
 
-                  quantity:
-                    component.quantity,
+                    quantity:
+                      component.quantity,
 
-                  notes:
-                    (
-                      component.notes ??
-                      ''
-                    ).trim(),
-
-                  selectedModifiers:
-                    (
-                      component.modifiers ??
-                      []
-                    ).map(
+                    notes:
                       (
-                        modifier,
-                      ) => ({
-                        ...modifier,
-                      }),
-                    ),
-                }),
-              )
+                        component.notes ??
+                        ''
+                      ).trim(),
+
+                    selectedModifiers:
+                      (
+                        component.modifiers ??
+                        []
+                      ).map(
+                        (
+                          modifier,
+                        ) => ({
+                          ...modifier,
+                        }),
+                      ),
+                  }),
+                )
               : undefined,
 
           deliveryDetails:
             isDeliveryItem &&
-              order.deliveryDetails
+            order.deliveryDetails
               ? {
-                customerName:
-                  order
-                    .deliveryDetails
-                    .customerName,
+                  customerName:
+                    order
+                      .deliveryDetails
+                      .customerName,
 
-                phone:
-                  order
-                    .deliveryDetails
-                    .phone,
+                  phone:
+                    order
+                      .deliveryDetails
+                      .phone,
 
-                street:
-                  order
-                    .deliveryDetails
-                    .street,
+                  street:
+                    order
+                      .deliveryDetails
+                      .street,
 
-                exteriorNumber:
-                  order
-                    .deliveryDetails
-                    .exteriorNumber,
+                  exteriorNumber:
+                    order
+                      .deliveryDetails
+                      .exteriorNumber,
 
-                interiorNumber:
-                  order
-                    .deliveryDetails
-                    .interiorNumber ??
-                  '',
+                  interiorNumber:
+                    order
+                      .deliveryDetails
+                      .interiorNumber ??
+                    '',
 
-                neighborhood:
-                  order
-                    .deliveryDetails
-                    .neighborhood,
+                  neighborhood:
+                    order
+                      .deliveryDetails
+                      .neighborhood,
 
-                postalCode:
-                  order
-                    .deliveryDetails
-                    .postalCode ??
-                  '',
+                  postalCode:
+                    order
+                      .deliveryDetails
+                      .postalCode ??
+                    '',
 
-                deliveryReferences:
-                  order
-                    .deliveryDetails
-                    .deliveryReferences ??
-                  '',
+                  deliveryReferences:
+                    order
+                      .deliveryDetails
+                      .deliveryReferences ??
+                    '',
 
-                latitude:
-                  order
-                    .deliveryDetails
-                    .latitude,
+                  latitude:
+                    order
+                      .deliveryDetails
+                      .latitude,
 
-                longitude:
-                  order
-                    .deliveryDetails
-                    .longitude,
-              }
+                  longitude:
+                    order
+                      .deliveryDetails
+                      .longitude,
+                }
               : undefined,
         };
       },
@@ -755,6 +833,11 @@ export function KitchenScreen({
     );
   };
 
+  /*
+   * ============================
+   * HELPERS UI
+   * ============================
+   */
   const removeOrderFromPendingList =
     (
       orderId: string,
@@ -784,6 +867,11 @@ export function KitchenScreen({
       );
     };
 
+  /*
+   * ============================
+   * COMBOS
+   * ============================
+   */
   const renderComboComponent = (
     component:
       KitchenOrderItemComponent,
@@ -850,6 +938,7 @@ export function KitchenScreen({
             >
               •{' '}
               {modifier.name}
+
               {modifier.group_name
                 ? ` (${modifier.group_name})`
                 : ''}
@@ -874,6 +963,11 @@ export function KitchenScreen({
     );
   };
 
+  /*
+   * ============================
+   * ITEM ORDEN
+   * ============================
+   */
   const renderOrderItem = (
     line:
       KitchenOrderItem,
@@ -909,82 +1003,83 @@ export function KitchenScreen({
 
         {modifiers.length >
           0 && (
-            <View
-              style={{
-                paddingLeft:
-                  12,
+          <View
+            style={{
+              paddingLeft:
+                12,
 
-                marginVertical:
-                  4,
-              }}
-            >
-              {modifiers.map(
-                (
-                  modifier,
-                ) => (
-                  <Text
-                    key={
-                      modifier.id
-                    }
-                    style={{
-                      color:
-                        '#FFBF00',
+              marginVertical:
+                4,
+            }}
+          >
+            {modifiers.map(
+              (
+                modifier,
+              ) => (
+                <Text
+                  key={
+                    modifier.id
+                  }
+                  style={{
+                    color:
+                      '#FFBF00',
 
-                      fontSize:
-                        13,
+                    fontSize:
+                      13,
 
-                      fontWeight:
-                        '600',
-                    }}
-                  >
-                    •{' '}
-                    {modifier.name}
-                    {modifier.group_name
-                      ? ` (${modifier.group_name})`
-                      : ''}
-                  </Text>
-                ),
-              )}
-            </View>
-          )}
+                    fontWeight:
+                      '600',
+                  }}
+                >
+                  •{' '}
+                  {modifier.name}
+
+                  {modifier.group_name
+                    ? ` (${modifier.group_name})`
+                    : ''}
+                </Text>
+              ),
+            )}
+          </View>
+        )}
 
         {components.length >
           0 && (
-            <View
-              style={{
-                marginTop:
-                  5,
+          <View
+            style={{
+              marginTop:
+                5,
 
-                marginBottom:
-                  4,
+              marginBottom:
+                4,
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  '#AFAFAF',
+
+                fontSize:
+                  12,
+
+                fontWeight:
+                  '700',
+
+                paddingLeft:
+                  12,
+
+                textTransform:
+                  'uppercase',
               }}
             >
-              <Text
-                style={{
-                  color:
-                    '#AFAFAF',
+              Detalle del combo
+            </Text>
 
-                  fontSize:
-                    12,
-
-                  fontWeight:
-                    '700',
-
-                  paddingLeft:
-                    12,
-
-                  textTransform:
-                    'uppercase',
-                }}
-              >
-                Detalle del combo
-              </Text>
-
-              {components.map(
-                renderComboComponent,
-              )}
-            </View>
-          )}
+            {components.map(
+              renderComboComponent,
+            )}
+          </View>
+        )}
 
         {line.notes ? (
           <Text
@@ -1000,6 +1095,11 @@ export function KitchenScreen({
     );
   };
 
+  /*
+   * ============================
+   * DOMICILIO
+   * ============================
+   */
   const renderDeliveryDetails =
     (
       order:
@@ -1093,6 +1193,7 @@ export function KitchenScreen({
             {
               delivery.exteriorNumber
             }
+
             {delivery.interiorNumber
               ? ` Int. ${delivery.interiorNumber}`
               : ''}
@@ -1110,6 +1211,7 @@ export function KitchenScreen({
             {
               delivery.neighborhood
             }
+
             {delivery.postalCode
               ? ` C.P. ${delivery.postalCode}`
               : ''}
@@ -1132,11 +1234,16 @@ export function KitchenScreen({
       );
     };
 
+  /*
+   * ============================
+   * TARJETA DE ORDEN
+   * ============================
+   */
   const renderOrder = ({
     item,
   }: {
     item:
-    KitchenOrder;
+      KitchenOrder;
   }) => (
     <View
       style={
@@ -1288,6 +1395,11 @@ export function KitchenScreen({
     </View>
   );
 
+  /*
+   * ============================
+   * SIN ÓRDENES
+   * ============================
+   */
   if (
     pendingOrders.length ===
     0
@@ -1311,6 +1423,11 @@ export function KitchenScreen({
     );
   }
 
+  /*
+   * ============================
+   * VISTA
+   * ============================
+   */
   return (
     <View
       style={
@@ -1347,8 +1464,8 @@ export function KitchenScreen({
         totalAmount={
           paymentOrder
             ? Number(
-              paymentOrder.total,
-            )
+                paymentOrder.total,
+              )
             : 0
         }
         isProcessing={
@@ -1384,8 +1501,8 @@ function createProductFromOrderItem(
       price:
         Number(
           line.price_at_purchase ??
-          line.products
-            .price,
+            line.products
+              .price,
         ),
     };
   }
