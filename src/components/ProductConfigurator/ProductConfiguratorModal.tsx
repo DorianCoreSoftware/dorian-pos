@@ -11,6 +11,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from 'react-native';
 
@@ -81,6 +82,20 @@ export const ProductConfiguratorModal: React.FC<
     onClose,
     onConfirm,
 }) => {
+        const {
+            width,
+            height,
+        } = useWindowDimensions();
+
+        const isPhone =
+            width < 700;
+
+        const isSmallPhone =
+            width < 430;
+
+        const isShortScreen =
+            height < 700;
+
         const [
             selectedMeatIds,
             setSelectedMeatIds,
@@ -341,21 +356,46 @@ export const ProductConfiguratorModal: React.FC<
                 visible={visible}
                 onRequestClose={onClose}
             >
-                <View style={styles.modalBackdrop}>
+                <View
+                    style={[
+                        styles.modalBackdrop,
+
+                        isPhone &&
+                        styles.modalBackdropPhone,
+                    ]}
+                >
                     <View
                         style={[
                             styles.modalContent,
-                            {
-                                maxHeight: '85%',
-                            },
+
+                            isPhone &&
+                            styles.modalContentPhone,
+
+                            isSmallPhone &&
+                            styles.modalContentSmallPhone,
+
+                            isShortScreen &&
+                            styles.modalContentShort,
                         ]}
                     >
-                        <Text style={styles.modalTitle}>
+                        <Text
+                            style={[
+                                styles.modalTitle,
+
+                                isPhone &&
+                                styles.modalTitlePhone,
+                            ]}
+                        >
                             Ajustes de {product.name}
                         </Text>
 
                         <Text
-                            style={styles.modalSubtitle}
+                            style={[
+                                styles.modalSubtitle,
+
+                                isPhone &&
+                                styles.modalSubtitlePhone,
+                            ]}
                         >
                             {isCombo
                                 ? 'Configura los productos incluidos en el combo:'
@@ -367,19 +407,23 @@ export const ProductConfiguratorModal: React.FC<
                         </Text>
 
                         <ScrollView
-                            contentContainerStyle={{
-                                paddingVertical: 10,
-                            }}
+                            style={
+                                styles.modalScroll
+                            }
+                            contentContainerStyle={
+                                styles.modalScrollContent
+                            }
                             showsVerticalScrollIndicator={
                                 false
                             }
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
                         >
                             {!isCombo && isLoading && (
                                 <View
-                                    style={{
-                                        paddingVertical: 24,
-                                        alignItems: 'center',
-                                    }}
+                                    style={
+                                        styles.loadingContainer
+                                    }
                                 >
                                     <ActivityIndicator
                                         size="large"
@@ -387,10 +431,9 @@ export const ProductConfiguratorModal: React.FC<
                                     />
 
                                     <Text
-                                        style={{
-                                            marginTop: 10,
-                                            color: '#FFFFFF',
-                                        }}
+                                        style={
+                                            styles.loadingText
+                                        }
                                     >
                                         Cargando opciones...
                                     </Text>
@@ -399,11 +442,9 @@ export const ProductConfiguratorModal: React.FC<
 
                             {!isCombo && !isLoading && error && (
                                 <Text
-                                    style={{
-                                        color: '#FF5252',
-                                        textAlign: 'center',
-                                        marginVertical: 16,
-                                    }}
+                                    style={
+                                        styles.errorText
+                                    }
                                 >
                                     {error}
                                 </Text>
@@ -439,9 +480,12 @@ export const ProductConfiguratorModal: React.FC<
                                         </Text>
 
                                         <View
-                                            style={
-                                                styles.optionsContainerHorizontal
-                                            }
+                                            style={[
+                                                styles.optionsContainerHorizontal,
+
+                                                isPhone &&
+                                                styles.optionsContainerPhone,
+                                            ]}
                                         >
                                             {meats.map(
                                                 (modifier) => {
@@ -460,14 +504,13 @@ export const ProductConfiguratorModal: React.FC<
                                                             key={modifier.id}
                                                             style={[
                                                                 styles.optionButtonChip,
+
+                                                                isPhone
+                                                                    ? styles.optionButtonChipPhone
+                                                                    : styles.optionButtonChipTablet,
+
                                                                 isSelected &&
                                                                 styles.optionButtonSelected,
-                                                                {
-                                                                    minWidth:
-                                                                        '45%',
-                                                                    alignItems:
-                                                                        'center',
-                                                                },
                                                             ]}
                                                             onPress={() =>
                                                                 handleMeatPress(
@@ -481,6 +524,10 @@ export const ProductConfiguratorModal: React.FC<
                                                             <Text
                                                                 style={[
                                                                     styles.optionText,
+
+                                                                    isPhone &&
+                                                                    styles.optionTextPhone,
+
                                                                     isSelected &&
                                                                     styles.optionTextSelected,
                                                                 ]}
@@ -500,9 +547,9 @@ export const ProductConfiguratorModal: React.FC<
                                         {isKongBurger &&
                                             selectedSingleMeat && (
                                                 <TouchableOpacity
-                                                    style={{
-                                                        marginTop: 8,
-                                                    }}
+                                                    style={
+                                                        styles.doubleMeatButton
+                                                    }
                                                     onPress={() =>
                                                         handleDoubleMeat(
                                                             selectedSingleMeat.id,
@@ -510,13 +557,9 @@ export const ProductConfiguratorModal: React.FC<
                                                     }
                                                 >
                                                     <Text
-                                                        style={{
-                                                            color:
-                                                                '#FFBF00',
-                                                            fontSize: 13,
-                                                            textDecorationLine:
-                                                                'underline',
-                                                        }}
+                                                        style={
+                                                            styles.doubleMeatText
+                                                        }
                                                     >
                                                         ¿Hacerla doble de{' '}
                                                         {
@@ -557,9 +600,12 @@ export const ProductConfiguratorModal: React.FC<
                                         </Text>
 
                                         <View
-                                            style={
-                                                styles.optionsContainerHorizontal
-                                            }
+                                            style={[
+                                                styles.optionsContainerHorizontal,
+
+                                                isPhone &&
+                                                styles.optionsContainerPhone,
+                                            ]}
                                         >
                                             {sauces.map(
                                                 (modifier) => {
@@ -573,6 +619,11 @@ export const ProductConfiguratorModal: React.FC<
                                                             key={modifier.id}
                                                             style={[
                                                                 styles.optionButtonChip,
+
+                                                                isPhone
+                                                                    ? styles.optionButtonChipPhone
+                                                                    : styles.optionButtonChipTablet,
+
                                                                 isSelected &&
                                                                 styles.optionButtonSelected,
                                                             ]}
@@ -588,6 +639,10 @@ export const ProductConfiguratorModal: React.FC<
                                                             <Text
                                                                 style={[
                                                                     styles.optionText,
+
+                                                                    isPhone &&
+                                                                    styles.optionTextPhone,
+
                                                                     isSelected &&
                                                                     styles.optionTextSelected,
                                                                 ]}
@@ -607,9 +662,7 @@ export const ProductConfiguratorModal: React.FC<
                                     <Text
                                         style={[
                                             styles.sectionLabel,
-                                            {
-                                                marginTop: 16,
-                                            },
+                                            styles.notesLabel,
                                         ]}
                                     >
                                         Notas adicionales
@@ -617,7 +670,12 @@ export const ProductConfiguratorModal: React.FC<
                                     </Text>
 
                                     <TextInput
-                                        style={styles.notesInput}
+                                        style={[
+                                            styles.notesInput,
+
+                                            isPhone &&
+                                            styles.notesInputPhone,
+                                        ]}
                                         placeholder="Ej: Sin cebolla, extra aderezo, aderezo aparte..."
                                         placeholderTextColor="#666"
                                         value={notes}
@@ -634,14 +692,20 @@ export const ProductConfiguratorModal: React.FC<
                         {!isCombo && (
                             <>
                                 <View
-                                    style={
-                                        styles.modalActions
-                                    }
+                                    style={[
+                                        styles.modalActions,
+
+                                        isSmallPhone &&
+                                        styles.modalActionsPhone,
+                                    ]}
                                 >
                                     <TouchableOpacity
-                                        style={
-                                            styles.modalCancelBtn
-                                        }
+                                        style={[
+                                            styles.modalCancelBtn,
+
+                                            isSmallPhone &&
+                                            styles.modalActionButtonPhone,
+                                        ]}
                                         onPress={onClose}
                                         activeOpacity={0.7}
                                     >
@@ -657,6 +721,10 @@ export const ProductConfiguratorModal: React.FC<
                                     <TouchableOpacity
                                         style={[
                                             styles.modalAddBtn,
+
+                                            isSmallPhone &&
+                                            styles.modalActionButtonPhone,
+
                                             !isSelectionValid &&
                                             styles.modalAddBtnDisabled,
                                         ]}
@@ -681,9 +749,21 @@ export const ProductConfiguratorModal: React.FC<
                         )}
 
                         {isCombo && (
-                            <View style={styles.modalActions}>
+                            <View
+                                style={[
+                                    styles.modalActions,
+
+                                    isSmallPhone &&
+                                    styles.modalActionsPhone,
+                                ]}
+                            >
                                 <TouchableOpacity
-                                    style={styles.modalCancelBtn}
+                                    style={[
+                                        styles.modalCancelBtn,
+
+                                        isSmallPhone &&
+                                        styles.modalActionButtonPhone,
+                                    ]}
                                     onPress={onClose}
                                     activeOpacity={0.7}
                                 >
@@ -697,6 +777,10 @@ export const ProductConfiguratorModal: React.FC<
                                 <TouchableOpacity
                                     style={[
                                         styles.modalAddBtn,
+
+                                        isSmallPhone &&
+                                        styles.modalActionButtonPhone,
+
                                         !isSelectionValid &&
                                         styles.modalAddBtnDisabled,
                                     ]}

@@ -5,6 +5,7 @@ import React, {
 import {
     Text,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from 'react-native';
 
@@ -43,6 +44,16 @@ export function AdminScreen({
     onCategoriesChanged,
     onModifiersChanged,
 }: AdminScreenProps) {
+    const {
+        width,
+    } = useWindowDimensions();
+
+    const isPhone =
+        width < 700;
+
+    const isSmallPhone =
+        width < 430;
+
     const [
         activeSection,
         setActiveSection,
@@ -97,9 +108,12 @@ export function AdminScreen({
         };
     return (
         <View
-            style={
-                styles.container
-            }
+            style={[
+                styles.container,
+
+                isPhone &&
+                styles.containerPhone,
+            ]}
         >
             <View
                 style={
@@ -127,13 +141,19 @@ export function AdminScreen({
             </View>
 
             <View
-                style={
-                    styles.tabsContainer
-                }
+                style={[
+                    styles.tabsContainer,
+
+                    isPhone &&
+                    styles.tabsContainerPhone,
+                ]}
             >
                 <TouchableOpacity
                     style={[
                         styles.sectionTab,
+
+                        isPhone &&
+                        styles.sectionTabPhone,
 
                         activeSection ===
                         'products' &&
@@ -149,6 +169,9 @@ export function AdminScreen({
                         style={[
                             styles.sectionTabText,
 
+                            isSmallPhone &&
+                            styles.sectionTabTextSmall,
+
                             activeSection ===
                             'products' &&
                             styles.sectionTabTextActive,
@@ -161,6 +184,9 @@ export function AdminScreen({
                 <TouchableOpacity
                     style={[
                         styles.sectionTab,
+
+                        isPhone &&
+                        styles.sectionTabPhone,
 
                         activeSection ===
                         'categories' &&
@@ -176,6 +202,9 @@ export function AdminScreen({
                         style={[
                             styles.sectionTabText,
 
+                            isSmallPhone &&
+                            styles.sectionTabTextSmall,
+
                             activeSection ===
                             'categories' &&
                             styles.sectionTabTextActive,
@@ -188,6 +217,9 @@ export function AdminScreen({
                 <TouchableOpacity
                     style={[
                         styles.sectionTab,
+
+                        isPhone &&
+                        styles.sectionTabPhone,
 
                         activeSection ===
                         'modifiers' &&
@@ -203,6 +235,9 @@ export function AdminScreen({
                         style={[
                             styles.sectionTabText,
 
+                            isSmallPhone &&
+                            styles.sectionTabTextSmall,
+
                             activeSection ===
                             'modifiers' &&
                             styles.sectionTabTextActive,
@@ -215,6 +250,9 @@ export function AdminScreen({
                 <TouchableOpacity
                     style={[
                         styles.sectionTab,
+
+                        isPhone &&
+                        styles.sectionTabPhone,
 
                         activeSection ===
                         'printer' &&
@@ -229,6 +267,9 @@ export function AdminScreen({
                     <Text
                         style={[
                             styles.sectionTabText,
+
+                            isSmallPhone &&
+                            styles.sectionTabTextSmall,
 
                             activeSection ===
                             'printer' &&

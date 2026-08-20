@@ -2898,17 +2898,38 @@ const executeRedeemDorian =
 
   return (
     <View
-      style={
-        styles.container
-      }
+      style={[
+        styles.container,
+
+        isPhone &&
+        styles.containerPhone,
+      ]}
     >
       {renderNavigation()}
 
-      <View
-        style={
-          styles.header
+      <ScrollView
+        style={{
+          flex: 1,
+        }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: isPhone
+            ? 56
+            : 30,
+        }}
+        showsVerticalScrollIndicator={
+          false
         }
+        keyboardShouldPersistTaps="handled"
       >
+        <View
+          style={[
+            styles.header,
+
+            isPhone &&
+            styles.headerPhone,
+          ]}
+        >
         <View>
           <Text
             style={
@@ -3065,16 +3086,19 @@ const executeRedeemDorian =
         </View>
       </View>
 
-      <View
-        style={
-          styles.closingCard
-        }
-      >
         <View
           style={
-            styles.closingHeader
+            styles.closingCard
           }
         >
+          <View
+            style={[
+              styles.closingHeader,
+
+              isPhone &&
+              styles.closingHeaderPhone,
+            ]}
+          >
           <Text
             style={
               styles.closingTitle
@@ -3277,8 +3301,9 @@ const executeRedeemDorian =
               ? 'Cerrando...'
               : 'Cerrar caja'}
           </Text>
-        </TouchableOpacity>
-      </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }

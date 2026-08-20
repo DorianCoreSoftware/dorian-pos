@@ -95,4 +95,25 @@ export const styles =
       maxWidth: 420,
       lineHeight: 20,
     },
+
+    tabsContainerPhone: {
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+
+    sectionTabPhone: {
+      width: '48%',
+      minWidth: 0,
+      paddingHorizontal: 8,
+    },
+
+    sectionTabTextSmall: {
+      fontSize: 10,
+    },
+
+    containerPhone: {
+      paddingHorizontal: 12,
+      paddingTop: 12,
+      paddingBottom: 10,
+    },
   });

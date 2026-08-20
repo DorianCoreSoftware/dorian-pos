@@ -360,29 +360,6 @@ export function GlobalHeader({
             </Text>
           </TouchableOpacity>
         ) : null}
-
-        <TouchableOpacity
-          onPress={() => {
-            void handlePrinterTest();
-          }}
-          style={[
-            styles.printerTestButton,
-
-            isPhone &&
-            styles.printerTestButtonPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.printerTestText
-            }
-          >
-            🖨️
-            {isPhone
-              ? ''
-              : ' Probar'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {editingOrderId ? (
