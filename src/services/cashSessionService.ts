@@ -15,18 +15,32 @@ interface OpenCashSessionParams {
 }
 
 interface CloseCashSessionParams {
-  cashSessionId: string;
+  cashSessionId:
+    string;
 
-  countedCash: number;
+  countedCash:
+    number;
 
-  openingAmount: number;
+  openingAmount:
+    number;
 
-  totalCashSales: number;
-  totalCardSales: number;
+  totalCashSales:
+    number;
 
-  salesCount: number;
+  totalCardSales:
+    number;
 
-  closedBy?: string | null;
+  totalCashRefunds:
+    number;
+
+  totalCardRefunds:
+    number;
+
+  salesCount:
+    number;
+
+  closedBy?:
+    string | null;
 }
 
 export async function getOpenCashSession(): Promise<
@@ -69,10 +83,14 @@ export async function closeCashSession({
   openingAmount,
   totalCashSales,
   totalCardSales,
+  totalCashRefunds,
+  totalCardRefunds,
   salesCount,
   closedBy = null,
 }: CloseCashSessionParams): Promise<CashSession> {
-  if (!cashSessionId?.trim()) {
+  if (
+    !cashSessionId?.trim()
+  ) {
     throw new Error(
       'La sesión de caja no es válida.',
     );
@@ -98,6 +116,16 @@ export async function closeCashSession({
     'Las ventas con tarjeta',
   );
 
+  validateMoney(
+    totalCashRefunds,
+    'Los reembolsos en efectivo',
+  );
+
+  validateMoney(
+    totalCardRefunds,
+    'Los reembolsos con tarjeta',
+  );
+
   if (
     !Number.isInteger(
       salesCount,
@@ -109,16 +137,35 @@ export async function closeCashSession({
     );
   }
 
+  /*
+   * El efectivo esperado solamente
+   * disminuye con devoluciones que
+   * realmente salieron de la caja.
+   */
   const expectedCash =
     roundCurrency(
       openingAmount +
-        totalCashSales,
+      totalCashSales -
+      totalCashRefunds,
     );
 
+  /*
+   * Las ventas permanecen como el
+   * importe bruto vendido.
+   *
+   * Los reembolsos quedan guardados
+   * por separado.
+   */
   const totalSales =
     roundCurrency(
       totalCashSales +
-        totalCardSales,
+      totalCardSales,
+    );
+
+  const totalRefunds =
+    roundCurrency(
+      totalCashRefunds +
+      totalCardRefunds,
     );
 
   return closeCashSessionById({
@@ -142,6 +189,18 @@ export async function closeCashSession({
       ),
 
     totalSales,
+
+    totalCashRefunds:
+      roundCurrency(
+        totalCashRefunds,
+      ),
+
+    totalCardRefunds:
+      roundCurrency(
+        totalCardRefunds,
+      ),
+
+    totalRefunds,
 
     salesCount,
 

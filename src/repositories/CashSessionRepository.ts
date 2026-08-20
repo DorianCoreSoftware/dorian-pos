@@ -39,6 +39,15 @@ interface CashSessionRecord {
   total_sales:
   string | number | null;
 
+  total_cash_refunds:
+  string | number | null;
+
+  total_card_refunds:
+  string | number | null;
+
+  total_refunds:
+  string | number | null;
+
   sales_count: number | null;
 
   status: CashSessionStatus;
@@ -203,6 +212,15 @@ export async function closeCashSessionById(
         total_sales:
           input.totalSales,
 
+        total_cash_refunds:
+          input.totalCashRefunds,
+
+        total_card_refunds:
+          input.totalCardRefunds,
+
+        total_refunds:
+          input.totalRefunds,
+
         sales_count:
           input.salesCount,
 
@@ -291,6 +309,21 @@ function mapCashSession(
         record.total_sales,
       ),
 
+    totalCashRefunds:
+      toNullableNumber(
+        record.total_cash_refunds,
+      ) ?? 0,
+
+    totalCardRefunds:
+      toNullableNumber(
+        record.total_card_refunds,
+      ) ?? 0,
+
+    totalRefunds:
+      toNullableNumber(
+        record.total_refunds,
+      ) ?? 0,
+
     salesCount:
       record.sales_count,
 
@@ -341,14 +374,14 @@ function roundCurrency(
 function buildProfileName(
   profile:
     | {
-        first_name:
-          | string
-          | null;
+      first_name:
+      | string
+      | null;
 
-        last_name:
-          | string
-          | null;
-      }
+      last_name:
+      | string
+      | null;
+    }
     | null
     | undefined,
 ): string | null {

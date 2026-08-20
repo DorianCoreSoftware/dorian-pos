@@ -45,6 +45,7 @@ import {
 } from '../../context/AuthContext';
 import { PromoReward } from '../../repositories/PromoRepository';
 import { PROMO_REWARD_OPTIONS, redeemDorian, redeemKongs } from '../../services/promoService';
+import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefoundService';
 
 interface CashClosingScreenProps {
   cashSession:
@@ -237,6 +238,17 @@ export function CashClosingScreen({
     setIsPromoProcessing,
   ] = useState(false);
 
+  const [
+    refundSummary,
+    setRefundSummary,
+  ] = useState<CashRefundSummary>({
+    refunds: [],
+    cash: 0,
+    card: 0,
+    total: 0,
+    count: 0,
+  });
+
   /*
    * ============================
    * CARGA DE DATOS
@@ -272,6 +284,44 @@ export function CashClosingScreen({
         }
       },
       [],
+    );
+
+  const loadRefunds =
+    useCallback(
+      async (): Promise<void> => {
+        if (!cashSession) {
+          setRefundSummary({
+            refunds: [],
+            cash: 0,
+            card: 0,
+            total: 0,
+            count: 0,
+          });
+
+          return;
+        }
+
+        try {
+          const currentRefundSummary =
+            await getCashRefundSummary(
+              cashSession.id,
+            );
+
+          setRefundSummary(
+            currentRefundSummary,
+          );
+        } catch (error) {
+          console.error(
+            'Error al cargar reembolsos:',
+            error,
+          );
+
+          throw error;
+        }
+      },
+      [
+        cashSession,
+      ],
     );
 
   const loadHistory =
@@ -329,6 +379,10 @@ export function CashClosingScreen({
   useEffect(() => {
     void loadSales();
   }, [loadSales]);
+
+  useEffect(() => {
+    void loadRefunds();
+  }, [loadRefunds]);
 
   useEffect(() => {
     if (cashSession) {
@@ -457,11 +511,13 @@ export function CashClosingScreen({
 
       return roundCurrency(
         cashSession.openingAmount +
-        summary.cash,
+        summary.cash -
+        refundSummary.cash,
       );
     }, [
       cashSession,
       summary.cash,
+      refundSummary.cash,
     ]);
 
   const difference =
@@ -832,6 +888,10 @@ export function CashClosingScreen({
             2,
           )}`,
 
+          `Reembolsos Dorian en efectivo: -$${refundSummary.cash.toFixed(
+            2,
+          )}`,
+
           `Efectivo contado: $${countedCash.toFixed(
             2,
           )}`,
@@ -905,6 +965,12 @@ export function CashClosingScreen({
             totalCardSales:
               summary.card,
 
+            totalCashRefunds:
+              refundSummary.cash,
+
+            totalCardRefunds:
+              refundSummary.card,
+
             salesCount:
               sessionSales.length,
 
@@ -924,6 +990,14 @@ export function CashClosingScreen({
         setOpeningAmountText(
           '1000',
         );
+
+        setRefundSummary({
+          refunds: [],
+          cash: 0,
+          card: 0,
+          total: 0,
+          count: 0,
+        });
 
         Alert.alert(
           'Caja cerrada',
@@ -973,6 +1047,7 @@ export function CashClosingScreen({
         await Promise.all([
           fetchCashSession(),
           loadSales(),
+          loadRefunds(),
         ]);
       } finally {
         setIsProcessing(false);
@@ -1176,123 +1251,171 @@ export function CashClosingScreen({
       }
     };
 
-    const handleRedeemDorian =
-  (): void => {
-    if (
-      isPromoProcessing
-    ) {
-      return;
-    }
-
-    const normalizedCode =
-      dorianCode
-        .trim()
-        .toUpperCase();
-
-    if (
-      !normalizedCode
-    ) {
-      Alert.alert(
-        'Código requerido',
-        'Ingresa el código del Dorian de la Suerte.',
-      );
-
-      return;
-    }
-
-    if (
-      !normalizedCode.startsWith(
-        'BK-D',
-      )
-    ) {
-      Alert.alert(
-        'Código inválido',
-        'El código no corresponde a un Dorian de la Suerte.',
-      );
-
-      return;
-    }
-
-    Alert.alert(
-      'Validar Dorian',
-      [
-        `Código: ${normalizedCode}`,
-        '',
-        'Este cupón quedará marcado como canjeado.',
-        '',
-        '¿Deseas continuar?',
-      ].join(
-        '\n',
-      ),
-      [
-        {
-          text:
-            'Cancelar',
-
-          style:
-            'cancel',
-        },
-        {
-          text:
-            'Confirmar',
-
-          onPress:
-            () => {
-              void executeRedeemDorian();
-            },
-        },
-      ],
-    );
-  };
-
-const executeRedeemDorian =
-  async (): Promise<void> => {
-    if (
-      isPromoProcessing
-    ) {
-      return;
-    }
-
-    try {
-      setIsPromoProcessing(
-        true,
-      );
+  const handleRedeemDorian =
+    (): void => {
+      if (
+        isPromoProcessing
+      ) {
+        return;
+      }
 
       const normalizedCode =
         dorianCode
           .trim()
           .toUpperCase();
 
-      await redeemDorian(
-        normalizedCode,
-      );
+      if (
+        !normalizedCode
+      ) {
+        Alert.alert(
+          'Código requerido',
+          'Ingresa el código del Dorian de la Suerte.',
+        );
 
-      setDorianCode(
-        '',
-      );
+        return;
+      }
+
+      if (
+        !normalizedCode.startsWith(
+          'BK-D',
+        )
+      ) {
+        Alert.alert(
+          'Código inválido',
+          'El código no corresponde a un Dorian de la Suerte.',
+        );
+
+        return;
+      }
 
       Alert.alert(
-        '🍀 Dorian válido',
-        'El Dorian de la Suerte fue validado y marcado como canjeado correctamente.',
-      );
-    } catch (error) {
-      console.error(
-        'Error al canjear Dorian:',
-        error,
-      );
+        'Validar Dorian',
+        [
+          `Código: ${normalizedCode}`,
+          '',
+          'Este cupón quedará marcado como canjeado.',
+          '',
+          '¿Deseas continuar?',
+        ].join(
+          '\n',
+        ),
+        [
+          {
+            text:
+              'Cancelar',
 
-      Alert.alert(
-        'No se pudo canjear Dorian',
-        error instanceof Error
-          ? error.message
-          : 'Ocurrió un error al validar el código.',
+            style:
+              'cancel',
+          },
+          {
+            text:
+              'Confirmar',
+
+            onPress:
+              () => {
+                void executeRedeemDorian();
+              },
+          },
+        ],
       );
-    } finally {
-      setIsPromoProcessing(
-        false,
-      );
-    }
-  };
+    };
+
+  const executeRedeemDorian =
+    async (): Promise<void> => {
+      if (
+        isPromoProcessing
+      ) {
+        return;
+      }
+
+      try {
+        setIsPromoProcessing(
+          true,
+        );
+
+        const normalizedCode =
+          dorianCode
+            .trim()
+            .toUpperCase();
+
+        const result =
+          await redeemDorian(
+            normalizedCode,
+          );
+
+        setDorianCode(
+          '',
+        );
+
+        /*
+         * La RPC ya registró el
+         * reembolso dentro de la
+         * sesión de caja actual.
+         *
+         * Refrescamos el resumen para
+         * actualizar inmediatamente
+         * el efectivo esperado.
+         */
+        await loadRefunds();
+
+        const paymentMethodLabel =
+          result.paymentMethod ===
+            'cash'
+            ? 'EFECTIVO'
+            : 'TARJETA';
+
+        const refundInstruction =
+          result.paymentMethod ===
+            'cash'
+            ? [
+              '',
+              '💵 REEMBOLSO A ENTREGAR',
+              `$${result.amount.toFixed(
+                2,
+              )}`,
+              '',
+              'Entrega este monto al cliente en efectivo.',
+            ].join('\n')
+            : [
+              '',
+              '💳 REEMBOLSO',
+              `$${result.amount.toFixed(
+                2,
+              )}`,
+              '',
+              'Realiza la devolución por tarjeta.',
+            ].join('\n');
+
+        Alert.alert(
+          '🍀 Dorian de la Suerte',
+          [
+            'Código válido y canjeado correctamente.',
+            '',
+            `Compra original: $${result.amount.toFixed(
+              2,
+            )}`,
+            `Forma de pago: ${paymentMethodLabel}`,
+            refundInstruction,
+          ].join('\n'),
+        );
+      } catch (error) {
+        console.error(
+          'Error al canjear Dorian:',
+          error,
+        );
+
+        Alert.alert(
+          'No se pudo canjear Dorian',
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al validar el código.',
+        );
+      } finally {
+        setIsPromoProcessing(
+          false,
+        );
+      }
+    };
 
   /*
    * ============================
@@ -2679,53 +2802,52 @@ const executeRedeemDorian =
                   styles.dorianNoticeText
                 }
               >
-                El sistema de validación
-                ya está listo. El reembolso
-                quedará habilitado cuando
-                terminemos de registrar la
-                devolución dentro del corte
-                de caja.
+                Al validar el Dorian, el
+                sistema consultará la compra
+                original y te indicará el
+                monto exacto a devolver y
+                su forma de pago.
               </Text>
             </View>
 
             <TouchableOpacity
-  style={[
-    styles.promoPrimaryButton,
+              style={[
+                styles.promoPrimaryButton,
 
-    (
-      !dorianCode
-        .trim()
-        .toUpperCase()
-        .startsWith(
-          'BK-D',
-        ) ||
-      isPromoProcessing
-    ) &&
-      styles.buttonDisabled,
-  ]}
-  disabled={
-    !dorianCode
-      .trim()
-      .toUpperCase()
-      .startsWith(
-        'BK-D',
-      ) ||
-    isPromoProcessing
-  }
-  onPress={
-    handleRedeemDorian
-  }
->
-  <Text
-    style={
-      styles.promoPrimaryButtonText
-    }
-  >
-    {isPromoProcessing
-      ? 'VALIDANDO...'
-      : 'VALIDAR DORIAN'}
-  </Text>
-</TouchableOpacity>
+                (
+                  !dorianCode
+                    .trim()
+                    .toUpperCase()
+                    .startsWith(
+                      'BK-D',
+                    ) ||
+                  isPromoProcessing
+                ) &&
+                styles.buttonDisabled,
+              ]}
+              disabled={
+                !dorianCode
+                  .trim()
+                  .toUpperCase()
+                  .startsWith(
+                    'BK-D',
+                  ) ||
+                isPromoProcessing
+              }
+              onPress={
+                handleRedeemDorian
+              }
+            >
+              <Text
+                style={
+                  styles.promoPrimaryButtonText
+                }
+              >
+                {isPromoProcessing
+                  ? 'VALIDANDO...'
+                  : 'VALIDAR DORIAN'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       );
@@ -2930,161 +3052,161 @@ const executeRedeemDorian =
             styles.headerPhone,
           ]}
         >
-        <View>
-          <Text
+          <View>
+            <Text
+              style={
+                styles.title
+              }
+            >
+              Caja abierta
+            </Text>
+
+            <Text
+              style={
+                styles.subtitle
+              }
+            >
+              Desde{' '}
+              {formatDateTime(
+                cashSession.openedAt,
+              )}
+            </Text>
+          </View>
+
+          <View
             style={
-              styles.title
+              styles.openBadge
             }
           >
-            Caja abierta
-          </Text>
-
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            Desde{' '}
-            {formatDateTime(
-              cashSession.openedAt,
-            )}
-          </Text>
-        </View>
-
-        <View
-          style={
-            styles.openBadge
-          }
-        >
-          <Text
-            style={
-              styles.openBadgeText
-            }
-          >
-            ● ABIERTA
-          </Text>
-        </View>
-      </View>
-
-      <View
-        style={[
-          styles.summaryContainer,
-
-          isPhone &&
-          styles.summaryContainerPhone,
-        ]}
-      >
-        <View
-          style={[
-            styles.summaryCard,
-
-            isPhone &&
-            styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            Fondo inicial
-          </Text>
-
-          <Text
-            style={
-              styles.summaryValue
-            }
-          >
-            $
-            {cashSession
-              .openingAmount
-              .toFixed(2)}
-          </Text>
+            <Text
+              style={
+                styles.openBadgeText
+              }
+            >
+              ● ABIERTA
+            </Text>
+          </View>
         </View>
 
         <View
           style={[
-            styles.summaryCard,
+            styles.summaryContainer,
 
             isPhone &&
-            styles.summaryCardPhone,
+            styles.summaryContainerPhone,
           ]}
         >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            💵 Efectivo
-          </Text>
+          <View
+            style={[
+              styles.summaryCard,
 
-          <Text
-            style={
-              styles.summaryValue
-            }
+              isPhone &&
+              styles.summaryCardPhone,
+            ]}
           >
-            $
-            {summary.cash.toFixed(
-              2,
-            )}
-          </Text>
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              Fondo inicial
+            </Text>
+
+            <Text
+              style={
+                styles.summaryValue
+              }
+            >
+              $
+              {cashSession
+                .openingAmount
+                .toFixed(2)}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.summaryCard,
+
+              isPhone &&
+              styles.summaryCardPhone,
+            ]}
+          >
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              💵 Efectivo
+            </Text>
+
+            <Text
+              style={
+                styles.summaryValue
+              }
+            >
+              $
+              {summary.cash.toFixed(
+                2,
+              )}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.summaryCard,
+
+              isPhone &&
+              styles.summaryCardPhone,
+            ]}
+          >
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              💳 Tarjeta
+            </Text>
+
+            <Text
+              style={
+                styles.summaryValue
+              }
+            >
+              $
+              {summary.card.toFixed(
+                2,
+              )}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.summaryCard,
+
+              isPhone &&
+              styles.summaryCardPhone,
+            ]}
+          >
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              Ventas
+            </Text>
+
+            <Text
+              style={
+                styles.summaryValue
+              }
+            >
+              {
+                sessionSales.length
+              }
+            </Text>
+          </View>
         </View>
-
-        <View
-          style={[
-            styles.summaryCard,
-
-            isPhone &&
-            styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            💳 Tarjeta
-          </Text>
-
-          <Text
-            style={
-              styles.summaryValue
-            }
-          >
-            $
-            {summary.card.toFixed(
-              2,
-            )}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.summaryCard,
-
-            isPhone &&
-            styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            Ventas
-          </Text>
-
-          <Text
-            style={
-              styles.summaryValue
-            }
-          >
-            {
-              sessionSales.length
-            }
-          </Text>
-        </View>
-      </View>
 
         <View
           style={
@@ -3099,76 +3221,21 @@ const executeRedeemDorian =
               styles.closingHeaderPhone,
             ]}
           >
-          <Text
-            style={
-              styles.closingTitle
-            }
-          >
-            Cierre de caja
-          </Text>
-
-          <Text
-            style={
-              styles.totalSales
-            }
-          >
-            Total vendido: $
-            {summary.total.toFixed(
-              2,
-            )}
-          </Text>
-        </View>
-
-        <View
-          style={
-            styles.cashCalculation
-          }
-        >
-          <View
-            style={
-              styles.calculationRow
-            }
-          >
             <Text
               style={
-                styles.calculationLabel
+                styles.closingTitle
               }
             >
-              Fondo inicial
+              Cierre de caja
             </Text>
 
             <Text
               style={
-                styles.calculationValue
+                styles.totalSales
               }
             >
-              $
-              {cashSession
-                .openingAmount
-                .toFixed(2)}
-            </Text>
-          </View>
-
-          <View
-            style={
-              styles.calculationRow
-            }
-          >
-            <Text
-              style={
-                styles.calculationLabel
-              }
-            >
-              + Ventas en efectivo
-            </Text>
-
-            <Text
-              style={
-                styles.calculationValue
-              }
-            >
-              $
-              {summary.cash.toFixed(
+              Total vendido: $
+              {summary.total.toFixed(
                 2,
               )}
             </Text>
@@ -3176,131 +3243,246 @@ const executeRedeemDorian =
 
           <View
             style={
-              styles.calculationSeparator
+              styles.cashCalculation
             }
+          >
+            <View
+              style={
+                styles.calculationRow
+              }
+            >
+              <Text
+                style={
+                  styles.calculationLabel
+                }
+              >
+                Fondo inicial
+              </Text>
+
+              <Text
+                style={
+                  styles.calculationValue
+                }
+              >
+                $
+                {cashSession
+                  .openingAmount
+                  .toFixed(2)}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.calculationRow
+              }
+            >
+              <Text
+                style={
+                  styles.calculationLabel
+                }
+              >
+                + Ventas en efectivo
+              </Text>
+
+              <Text
+                style={
+                  styles.calculationValue
+                }
+              >
+                $
+                {summary.cash.toFixed(
+                  2,
+                )}
+              </Text>
+            </View>
+
+            {refundSummary.total >
+              0 ? (
+              <>
+                <View
+                  style={
+                    styles.calculationRow
+                  }
+                >
+                  <Text
+                    style={
+                      styles.calculationLabel
+                    }
+                  >
+                    - Reembolsos Dorian
+                    en efectivo
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.calculationValue
+                    }
+                  >
+                    -$
+                    {refundSummary.cash.toFixed(
+                      2,
+                    )}
+                  </Text>
+                </View>
+
+                {refundSummary.card >
+                  0 ? (
+                  <View
+                    style={
+                      styles.calculationRow
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.calculationLabel
+                      }
+                    >
+                      Reembolsos Dorian
+                      en tarjeta
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.calculationValue
+                      }
+                    >
+                      -$
+                      {refundSummary.card.toFixed(
+                        2,
+                      )}
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
+            <View
+              style={
+                styles.calculationSeparator
+              }
+            />
+
+            <View
+              style={
+                styles.calculationRow
+              }
+            >
+              <Text
+                style={
+                  styles.expectedLabel
+                }
+              >
+                Efectivo esperado
+              </Text>
+
+              <Text
+                style={
+                  styles.expectedValue
+                }
+              >
+                $
+                {expectedCash.toFixed(
+                  2,
+                )}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={
+              styles.inputLabel
+            }
+          >
+            Efectivo contado en caja
+          </Text>
+
+          <TextInput
+            value={
+              countedCashText
+            }
+            onChangeText={(
+              value,
+            ) =>
+              handleMoneyInput(
+                value,
+                setCountedCashText,
+              )
+            }
+            keyboardType="decimal-pad"
+            editable={
+              !isProcessing
+            }
+            style={
+              styles.input
+            }
+            placeholder="0.00"
+            placeholderTextColor="#777777"
           />
 
           <View
             style={
-              styles.calculationRow
+              styles.differenceContainer
             }
           >
             <Text
               style={
-                styles.expectedLabel
+                styles.differenceLabel
               }
             >
-              Efectivo esperado
+              Diferencia
             </Text>
 
             <Text
-              style={
-                styles.expectedValue
-              }
+              style={[
+                styles.differenceValue,
+
+                difference ===
+                  null ||
+                  difference === 0
+                  ? styles.differenceNeutral
+                  : difference >
+                    0
+                    ? styles.differencePositive
+                    : styles.differenceNegative,
+              ]}
             >
-              $
-              {expectedCash.toFixed(
-                2,
-              )}
+              {difference === null
+                ? '$0.00'
+                : formatDifference(
+                  difference,
+                )}
             </Text>
           </View>
-        </View>
 
-        <Text
-          style={
-            styles.inputLabel
-          }
-        >
-          Efectivo contado en caja
-        </Text>
-
-        <TextInput
-          value={
-            countedCashText
-          }
-          onChangeText={(
-            value,
-          ) =>
-            handleMoneyInput(
-              value,
-              setCountedCashText,
-            )
-          }
-          keyboardType="decimal-pad"
-          editable={
-            !isProcessing
-          }
-          style={
-            styles.input
-          }
-          placeholder="0.00"
-          placeholderTextColor="#777777"
-        />
-
-        <View
-          style={
-            styles.differenceContainer
-          }
-        >
-          <Text
-            style={
-              styles.differenceLabel
-            }
-          >
-            Diferencia
-          </Text>
-
-          <Text
+          <TouchableOpacity
             style={[
-              styles.differenceValue,
+              styles.closeButton,
 
-              difference ===
+              (
+                countedCash ===
                 null ||
-                difference === 0
-                ? styles.differenceNeutral
-                : difference >
-                  0
-                  ? styles.differencePositive
-                  : styles.differenceNegative,
+                isProcessing
+              ) &&
+              styles.buttonDisabled,
             ]}
-          >
-            {difference === null
-              ? '$0.00'
-              : formatDifference(
-                difference,
-              )}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.closeButton,
-
-            (
+            disabled={
               countedCash ===
               null ||
               isProcessing
-            ) &&
-            styles.buttonDisabled,
-          ]}
-          disabled={
-            countedCash ===
-            null ||
-            isProcessing
-          }
-          onPress={
-            handleCloseCashPrompt
-          }
-        >
-          <Text
-            style={
-              styles.closeButtonText
+            }
+            onPress={
+              handleCloseCashPrompt
             }
           >
-            {isProcessing
-              ? 'Cerrando...'
-              : 'Cerrar caja'}
-          </Text>
+            <Text
+              style={
+                styles.closeButtonText
+              }
+            >
+              {isProcessing
+                ? 'Cerrando...'
+                : 'Cerrar caja'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

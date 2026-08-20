@@ -5,49 +5,108 @@ export type CashSessionStatus =
 export interface CashSession {
   id: string;
 
-  openedBy: string | null;
+  openedBy:
+    string | null;
+
   openedAt: string;
 
-  openingAmount: number;
+  openingAmount:
+    number;
 
-  closedAt: string | null;
-  closedBy: string | null;
+  closedAt:
+    string | null;
 
-  expectedCash: number | null;
-  countedCash: number | null;
-  differenceAmount: number | null;
+  closedBy:
+    string | null;
 
-  totalCashSales: number | null;
-  totalCardSales: number | null;
-  totalSales: number | null;
+  expectedCash:
+    number | null;
 
-  salesCount: number | null;
+  countedCash:
+    number | null;
 
-  status: CashSessionStatus;
+  differenceAmount:
+    number | null;
 
-  createdAt: string;
+  totalCashSales:
+    number | null;
 
-  openedByName?: string | null;
-  closedByName?: string | null;
+  totalCardSales:
+    number | null;
+
+  totalSales:
+    number | null;
+
+  /*
+   * ============================
+   * REEMBOLSOS
+   * ============================
+   */
+
+  totalCashRefunds:
+    number;
+
+  totalCardRefunds:
+    number;
+
+  totalRefunds:
+    number;
+
+  salesCount:
+    number | null;
+
+  status:
+    CashSessionStatus;
+
+  createdAt:
+    string;
+
+  openedByName?:
+    string | null;
+
+  closedByName?:
+    string | null;
 }
 
 export interface OpenCashSessionInput {
-  openingAmount: number;
-  openedBy?: string | null;
+  openingAmount:
+    number;
+
+  openedBy?:
+    string | null;
 }
 
 export interface CloseCashSessionInput {
-  cashSessionId: string;
+  cashSessionId:
+    string;
 
-  countedCash: number;
+  countedCash:
+    number;
 
-  expectedCash: number;
+  expectedCash:
+    number;
 
-  totalCashSales: number;
-  totalCardSales: number;
-  totalSales: number;
+  totalCashSales:
+    number;
 
-  salesCount: number;
+  totalCardSales:
+    number;
 
-  closedBy?: string | null;
+  totalSales:
+    number;
+
+  totalCashRefunds:
+    number;
+
+  totalCardRefunds:
+    number;
+
+  totalRefunds:
+    number;
+
+  salesCount:
+    number;
+
+  closedBy?:
+    string | null;
 }

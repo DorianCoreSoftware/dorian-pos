@@ -1,5 +1,6 @@
 import {
   createOrGetOrderPromoCoupon,
+  LuckyDorianRefundResult,
   PromoCouponRecord,
   PromoCouponType,
   PromoReward,
@@ -133,7 +134,7 @@ export async function redeemKongs(
 
 export async function redeemDorian(
   code: string,
-): Promise<string> {
+): Promise<LuckyDorianRefundResult> {
   const normalizedCode =
     normalizePromoCode(
       code,

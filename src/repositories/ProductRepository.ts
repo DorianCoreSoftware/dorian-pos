@@ -300,3 +300,13 @@ export async function updateProductPriceById(
 
   return data as Product;
 }
+
+export interface LuckyDorianRefundResult {
+  redemptionId: string;
+  refundId: string;
+  orderId: string;
+  paymentMethod:
+    | 'cash'
+    | 'card';
+  amount: number;
+}

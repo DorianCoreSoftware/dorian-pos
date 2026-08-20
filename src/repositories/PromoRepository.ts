@@ -8,13 +8,19 @@ export type PromoCouponType =
 
 export interface PromoCouponRecord {
   id: string;
+
   order_id: string;
+
   code: string;
+
   coupon_type:
     PromoCouponType;
+
   redeemed: boolean;
+
   redeemed_at:
     string | null;
+
   created_at: string;
 }
 
@@ -40,15 +46,20 @@ export async function createOrGetOrderPromoCoupon(
   }
 
   if (
-    !Array.isArray(data) ||
-    data.length === 0
+    !Array.isArray(
+      data,
+    ) ||
+    data.length ===
+      0
   ) {
     throw new Error(
       'Supabase no devolvió el cupón promocional.',
     );
   }
 
-  return data[0] as PromoCouponRecord;
+  return data[
+    0
+  ] as PromoCouponRecord;
 }
 
 export type PromoReward =
@@ -85,7 +96,8 @@ export async function redeemKongCoupons(
 
   if (
     !data ||
-    typeof data !== 'string'
+    typeof data !==
+      'string'
   ) {
     throw new Error(
       'Supabase no devolvió el identificador del canje.',
@@ -95,9 +107,29 @@ export async function redeemKongCoupons(
   return data;
 }
 
+/*
+ * ============================
+ * DORIAN DE LA SUERTE
+ * ============================
+ */
+
+export interface LuckyDorianRefundResult {
+  redemptionId: string;
+
+  refundId: string;
+
+  orderId: string;
+
+  paymentMethod:
+    | 'cash'
+    | 'card';
+
+  amount: number;
+}
+
 export async function redeemLuckyDorian(
   code: string,
-): Promise<string> {
+): Promise<LuckyDorianRefundResult> {
   const {
     data,
     error,
@@ -118,12 +150,86 @@ export async function redeemLuckyDorian(
 
   if (
     !data ||
-    typeof data !== 'string'
+    typeof data !==
+      'object'
   ) {
     throw new Error(
-      'Supabase no devolvió el identificador del canje.',
+      'Supabase no devolvió la información del reembolso.',
     );
   }
 
-  return data;
+  const result =
+    data as {
+      redemptionId?:
+        unknown;
+
+      refundId?:
+        unknown;
+
+      orderId?:
+        unknown;
+
+      paymentMethod?:
+        unknown;
+
+      amount?:
+        unknown;
+    };
+
+  if (
+    typeof result.redemptionId !==
+      'string' ||
+    typeof result.refundId !==
+      'string' ||
+    typeof result.orderId !==
+      'string' ||
+    (
+      result.paymentMethod !==
+        'cash' &&
+      result.paymentMethod !==
+        'card'
+    ) ||
+    (
+      typeof result.amount !==
+        'number' &&
+      typeof result.amount !==
+        'string'
+    )
+  ) {
+    throw new Error(
+      'La respuesta del reembolso no tiene el formato esperado.',
+    );
+  }
+
+  const amount =
+    Number(
+      result.amount,
+    );
+
+  if (
+    !Number.isFinite(
+      amount,
+    ) ||
+    amount <= 0
+  ) {
+    throw new Error(
+      'Supabase devolvió un monto de reembolso inválido.',
+    );
+  }
+
+  return {
+    redemptionId:
+      result.redemptionId,
+
+    refundId:
+      result.refundId,
+
+    orderId:
+      result.orderId,
+
+    paymentMethod:
+      result.paymentMethod,
+
+    amount,
+  };
 }
