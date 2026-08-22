@@ -45,7 +45,7 @@ import {
 } from '../../context/AuthContext';
 import { PromoReward } from '../../repositories/PromoRepository';
 import { PROMO_REWARD_OPTIONS, redeemDorian, redeemKongs } from '../../services/promoService';
-import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefoundService';
+import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefundService';
 
 interface CashClosingScreenProps {
   cashSession:
@@ -2393,6 +2393,41 @@ export function CashClosingScreen({
                 </DetailSection>
 
                 <DetailSection
+                  title="Reembolsos Dorian"
+                >
+                  <DetailRow
+                    label="Reembolsos en efectivo"
+                    value={
+                      `-${formatMoney(
+                        session.totalCashRefunds ??
+                        0,
+                      )}`
+                    }
+                  />
+
+                  <DetailRow
+                    label="Reembolsos en tarjeta"
+                    value={
+                      `-${formatMoney(
+                        session.totalCardRefunds ??
+                        0,
+                      )}`
+                    }
+                  />
+
+                  <DetailRow
+                    label="Total reembolsado"
+                    value={
+                      `-${formatMoney(
+                        session.totalRefunds ??
+                        0,
+                      )}`
+                    }
+                    highlighted
+                  />
+                </DetailSection>
+
+                <DetailSection
                   title="Arqueo de caja"
                 >
                   <DetailRow
@@ -3337,7 +3372,7 @@ export function CashClosingScreen({
                         styles.calculationLabel
                       }
                     >
-                      Reembolsos Dorian
+                      - Reembolsos Dorian
                       en tarjeta
                     </Text>
 
