@@ -436,4 +436,60 @@ export const styles =
       fontSize: 13,
       fontWeight: '900',
     },
+
+    saleActions: {
+  marginTop: 14,
+  paddingTop: 14,
+  borderTopWidth: 1,
+  borderTopColor: '#333333',
+},
+
+reprintButton: {
+  minHeight: 44,
+  paddingHorizontal: 18,
+  paddingVertical: 12,
+  borderRadius: 8,
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#FFBF00',
+},
+
+reprintButtonDisabled: {
+  opacity: 0.6,
+},
+
+reprintButtonText: {
+  color: '#121212',
+  fontSize: 13,
+  fontWeight: '900',
+  textTransform: 'uppercase',
+},
+
+reprintMessage: {
+  marginBottom: 12,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  borderRadius: 8,
+  borderWidth: 1,
+},
+
+reprintMessageSuccess: {
+  backgroundColor:
+    'rgba(76, 175, 80, 0.12)',
+  borderColor:
+    'rgba(76, 175, 80, 0.45)',
+},
+
+reprintMessageError: {
+  backgroundColor:
+    'rgba(244, 67, 54, 0.12)',
+  borderColor:
+    'rgba(244, 67, 54, 0.45)',
+},
+
+reprintMessageText: {
+  color: '#FFFFFF',
+  fontSize: 13,
+  fontWeight: '700',
+},
   });

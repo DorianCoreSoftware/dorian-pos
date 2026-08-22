@@ -284,6 +284,55 @@ export async function fetchPendingOrders(): Promise<
   ) as PendingOrderRecord[];
 }
 
+export async function fetchOrderById(
+  orderId: string,
+): Promise<PendingOrderRecord | null> {
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from(
+        'orders',
+      )
+      .select(`
+        *,
+        order_delivery_details(
+          *
+        ),
+        order_items(
+          *,
+          products(*),
+          order_item_modifiers(
+            modifiers(*)
+          ),
+          order_item_components(
+            *,
+            products(*),
+            order_item_component_modifiers(
+              modifiers(*)
+            )
+          )
+        )
+      `)
+      .eq(
+        'id',
+        orderId,
+      )
+      .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `No se pudo obtener la orden: ${error.message}`,
+    );
+  }
+
+  return (
+    data ??
+    null
+  ) as PendingOrderRecord | null;
+}
+
 /**
  * Actualiza el estado de una orden.
  */

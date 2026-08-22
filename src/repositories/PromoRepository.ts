@@ -233,3 +233,34 @@ export async function redeemLuckyDorian(
     amount,
   };
 }
+
+export async function fetchOrderPromoCoupon(
+  orderId: string,
+): Promise<PromoCouponRecord | null> {
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from(
+        'promo_coupons',
+      )
+      .select('*')
+      .eq(
+        'order_id',
+        orderId,
+      )
+      .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `No se pudo consultar el cupón promocional: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return data as PromoCouponRecord;
+}

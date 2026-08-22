@@ -2,7 +2,9 @@ import {
   CreateKitchenOrderRpcDelivery,
   CreateKitchenOrderRpcItem,
   createKitchenOrderTransaction,
+  fetchOrderById,
   fetchPendingOrders,
+  PendingOrderRecord,
   updateOrderStatusById,
 } from '../repositories/OrderRepository';
 
@@ -167,6 +169,10 @@ export async function createKitchenOrder(
  * Obtiene las órdenes pendientes y transforma la respuesta
  * de Supabase al modelo que utiliza KitchenScreen.
  */
+/**
+ * Obtiene las órdenes pendientes y transforma la respuesta
+ * de Supabase al modelo que utiliza KitchenScreen.
+ */
 export async function getPendingOrders(): Promise<
   KitchenOrder[]
 > {
@@ -174,218 +180,269 @@ export async function getPendingOrders(): Promise<
     await fetchPendingOrders();
 
   return orders.map(
-    (order): KitchenOrder => {
-      const rawDeliveryDetails =
-        order.order_delivery_details ??
-        null;
+    mapOrderToKitchenOrder,
+  );
+}
 
-      return {
-        id: order.id,
-        total: order.total,
-        status: order.status,
-        created_at:
-          order.created_at,
+/**
+ * Obtiene una orden específica por su identificador.
+ *
+ * Se utiliza, entre otras cosas, para reconstruir una
+ * venta histórica al momento de reimprimir su ticket.
+ */
+export async function getOrderById(
+  orderId: string,
+): Promise<KitchenOrder> {
+  validateOrderId(
+    orderId,
+  );
 
-        deliveryDetails:
-          rawDeliveryDetails
+  const order =
+    await fetchOrderById(
+      orderId,
+    );
+
+  if (!order) {
+    throw new Error(
+      'No se encontró la orden.',
+    );
+  }
+
+  return mapOrderToKitchenOrder(
+    order,
+  );
+}
+
+/**
+ * Transforma la estructura devuelta por Supabase
+ * al modelo utilizado por la aplicación.
+ *
+ * Esta función sirve tanto para órdenes pendientes
+ * como para órdenes ya entregadas.
+ */
+function mapOrderToKitchenOrder(
+  order: PendingOrderRecord,
+): KitchenOrder {
+  const rawDeliveryDetails =
+    order.order_delivery_details ??
+    null;
+
+  return {
+    id:
+      order.id,
+
+    total:
+      order.total,
+
+    status:
+      order.status,
+
+    created_at:
+      order.created_at,
+
+    deliveryDetails:
+      rawDeliveryDetails
+        ? {
+          id:
+            rawDeliveryDetails.id,
+
+          orderId:
+            rawDeliveryDetails
+              .order_id,
+
+          customerName:
+            rawDeliveryDetails
+              .customer_name,
+
+          phone:
+            rawDeliveryDetails
+              .phone,
+
+          street:
+            rawDeliveryDetails
+              .street,
+
+          exteriorNumber:
+            rawDeliveryDetails
+              .exterior_number,
+
+          interiorNumber:
+            rawDeliveryDetails
+              .interior_number,
+
+          neighborhood:
+            rawDeliveryDetails
+              .neighborhood,
+
+          postalCode:
+            rawDeliveryDetails
+              .postal_code,
+
+          deliveryReferences:
+            rawDeliveryDetails
+              .delivery_references,
+
+          latitude:
+            rawDeliveryDetails
+              .latitude,
+
+          longitude:
+            rawDeliveryDetails
+              .longitude,
+
+          createdAt:
+            rawDeliveryDetails
+              .created_at,
+
+          updatedAt:
+            rawDeliveryDetails
+              .updated_at,
+        }
+        : null,
+
+    order_items: (
+      order.order_items ??
+      []
+    ).map(
+      (
+        item,
+      ): KitchenOrderItem => ({
+        id:
+          item.id,
+
+        order_id:
+          item.order_id,
+
+        product_id:
+          item.product_id,
+
+        quantity:
+          item.quantity,
+
+        price_at_purchase:
+          item.price_at_purchase,
+
+        notes:
+          item.notes,
+
+        products:
+          item.products
             ? {
-              id:
-                rawDeliveryDetails.id,
+              ...item.products,
 
-              orderId:
-                rawDeliveryDetails
-                  .order_id,
-
-              customerName:
-                rawDeliveryDetails
-                  .customer_name,
-
-              phone:
-                rawDeliveryDetails
-                  .phone,
-
-              street:
-                rawDeliveryDetails
-                  .street,
-
-              exteriorNumber:
-                rawDeliveryDetails
-                  .exterior_number,
-
-              interiorNumber:
-                rawDeliveryDetails
-                  .interior_number,
-
-              neighborhood:
-                rawDeliveryDetails
-                  .neighborhood,
-
-              postalCode:
-                rawDeliveryDetails
-                  .postal_code,
-
-              deliveryReferences:
-                rawDeliveryDetails
-                  .delivery_references,
-
-              latitude:
-                rawDeliveryDetails
-                  .latitude,
-
-              longitude:
-                rawDeliveryDetails
-                  .longitude,
-
-              createdAt:
-                rawDeliveryDetails
-                  .created_at,
-
-              updatedAt:
-                rawDeliveryDetails
-                  .updated_at,
+              price:
+                Number(
+                  item.products
+                    .price,
+                ),
             }
             : null,
 
-        order_items: (
-          order.order_items ?? []
-        ).map(
-          (
-            item,
-          ): KitchenOrderItem => ({
-            id: item.id,
+        modifiers: (
+          item.order_item_modifiers ??
+          []
+        )
+          .map(
+            (relation) =>
+              relation.modifiers,
+          )
+          .filter(
+            (
+              modifier,
+            ): modifier is NonNullable<
+              typeof modifier
+            > =>
+              modifier !==
+              null,
+          ),
 
-            order_id:
-              item.order_id,
+        components: (
+          item.order_item_components ??
+          []
+        )
+          .map(
+            (
+              component,
+            ): KitchenOrderItemComponent => ({
+              id:
+                component.id,
 
-            product_id:
-              item.product_id,
+              order_item_id:
+                component
+                  .order_item_id,
 
-            quantity:
-              item.quantity,
+              product_id:
+                component
+                  .product_id,
 
-            price_at_purchase:
-              item.price_at_purchase,
+              component_type:
+                component
+                  .component_type,
 
-            notes:
-              item.notes,
+              label:
+                component.label,
 
-            products:
-              item.products
-                ? {
-                  ...item.products,
+              quantity:
+                component.quantity,
 
-                  price: Number(
-                    item.products
-                      .price,
-                  ),
-                }
-                : null,
+              notes:
+                component.notes,
 
-            modifiers: (
-              item.order_item_modifiers ??
-              []
-            )
-              .map(
-                (relation) =>
-                  relation.modifiers,
+              position:
+                component.position ??
+                null,
+
+              products:
+                component.products
+                  ? {
+                    ...component.products,
+
+                    price:
+                      Number(
+                        component
+                          .products
+                          .price,
+                      ),
+                  }
+                  : null,
+
+              modifiers: (
+                component
+                  .order_item_component_modifiers ??
+                []
               )
-              .filter(
-                (
-                  modifier,
-                ): modifier is NonNullable<
-                  typeof modifier
-                > =>
-                  modifier !== null,
-              ),
-
-            components: (
-              item.order_item_components ??
-              []
-            )
-              .map(
-                (
-                  component,
-                ): KitchenOrderItemComponent => ({
-                  id:
-                    component.id,
-
-                  order_item_id:
-                    component
-                      .order_item_id,
-
-                  product_id:
-                    component
-                      .product_id,
-
-                  component_type:
-                    component
-                      .component_type,
-
-                  label:
-                    component.label,
-
-                  quantity:
-                    component.quantity,
-
-                  notes:
-                    component.notes,
-
-                  position:
-                    component.position ??
+                .map(
+                  (relation) =>
+                    relation.modifiers,
+                )
+                .filter(
+                  (
+                    modifier,
+                  ): modifier is NonNullable<
+                    typeof modifier
+                  > =>
+                    modifier !==
                     null,
-
-                  products:
-                    component.products
-                      ? {
-                        ...component.products,
-
-                        price: Number(
-                          component
-                            .products
-                            .price,
-                        ),
-                      }
-                      : null,
-
-                  modifiers: (
-                    component
-                      .order_item_component_modifiers ??
-                    []
-                  )
-                    .map(
-                      (relation) =>
-                        relation.modifiers,
-                    )
-                    .filter(
-                      (
-                        modifier,
-                      ): modifier is NonNullable<
-                        typeof modifier
-                      > =>
-                        modifier !==
-                        null,
-                    ),
-                }),
-              )
-              .sort(
-                (
-                  first,
-                  second,
-                ) =>
-                  (
-                    first.position ??
-                    0
-                  ) -
-                  (
-                    second.position ??
-                    0
-                  ),
+                ),
+            }),
+          )
+          .sort(
+            (
+              first,
+              second,
+            ) =>
+              (
+                first.position ??
+                0
+              ) -
+              (
+                second.position ??
+                0
               ),
-          }),
-        ),
-      };
-    },
-  );
+          ),
+      }),
+    ),
+  };
 }
 
 /**

@@ -1,5 +1,6 @@
 import {
   createOrGetOrderPromoCoupon,
+  fetchOrderPromoCoupon,
   LuckyDorianRefundResult,
   PromoCouponRecord,
   PromoCouponType,
@@ -268,4 +269,46 @@ function validateOrderId(
       'El identificador de la orden es obligatorio.',
     );
   }
+}
+
+export async function getExistingOrderPromoCoupon(
+  orderId: string,
+): Promise<PromoCoupon | null> {
+  if (!orderId?.trim()) {
+    throw new Error(
+      'La orden no es válida.',
+    );
+  }
+
+  const coupon =
+    await fetchOrderPromoCoupon(
+      orderId,
+    );
+
+  if (!coupon) {
+    return null;
+  }
+
+  return {
+    id:
+      coupon.id,
+
+    orderId:
+      coupon.order_id,
+
+    code:
+      coupon.code,
+
+    couponType:
+      coupon.coupon_type,
+
+    redeemed:
+      coupon.redeemed,
+
+    redeemedAt:
+      coupon.redeemed_at,
+
+    createdAt:
+      coupon.created_at,
+  };
 }

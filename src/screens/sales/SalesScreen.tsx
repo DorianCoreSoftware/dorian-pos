@@ -29,6 +29,9 @@ import {
 import {
   styles,
 } from './SalesScreen.styles';
+import { printOrderTicket } from '../../services/printerService';
+import { getExistingOrderPromoCoupon } from '../../services/promoService';
+import { getOrderById } from '../../services/orderService';
 
 type SalesFilter =
   | 'today'
@@ -65,6 +68,23 @@ export function SalesScreen() {
     errorMessage,
     setErrorMessage,
   ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    reprintingOrderId,
+    setReprintingOrderId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    reprintMessage,
+    setReprintMessage,
+  ] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(
     null,
   );
 
@@ -356,6 +376,91 @@ export function SalesScreen() {
       );
     };
 
+  const handleReprintTicket =
+    async (
+      sale: CompletedSale,
+    ): Promise<void> => {
+      if (reprintingOrderId) {
+        return;
+      }
+
+      try {
+        setReprintingOrderId(
+          sale.orderId,
+        );
+
+        setReprintMessage(
+          null,
+        );
+
+        const [
+          order,
+          promoCoupon,
+        ] =
+          await Promise.all([
+            getOrderById(
+              sale.orderId,
+            ),
+
+            getExistingOrderPromoCoupon(
+              sale.orderId,
+            ),
+          ]);
+
+        const originalDate =
+          parseSupabaseDate(
+            sale.payment
+              .createdAt,
+          );
+
+        await printOrderTicket({
+          order,
+
+          paymentMethod:
+            sale.payment
+              .paymentMethod,
+
+          amountReceived:
+            sale.payment
+              .amountReceived,
+
+          promoCoupon,
+
+          ticketDate:
+            originalDate ??
+            undefined,
+
+          isReprint:
+            true,
+        });
+
+        setReprintMessage({
+          type: 'success',
+          text:
+            `Ticket #${sale.orderId
+              .slice(-4)
+              .toUpperCase()} reimpreso correctamente.`,
+        });
+      } catch (error) {
+        console.error(
+          'Error al reimprimir ticket:',
+          error,
+        );
+
+        setReprintMessage({
+          type: 'error',
+          text:
+            error instanceof Error
+              ? error.message
+              : 'No se pudo reimprimir el ticket.',
+        });
+      } finally {
+        setReprintingOrderId(
+          null,
+        );
+      }
+    };
+
   const renderSale = ({
     item,
   }: {
@@ -514,6 +619,71 @@ export function SalesScreen() {
             </View>
           </View>
         ) : null}
+        <View
+          style={
+            styles.saleActions
+          }
+        >
+          <TouchableOpacity
+            style={[
+              styles.reprintButton,
+
+              reprintingOrderId ===
+              item.orderId &&
+              styles.reprintButtonDisabled,
+            ]}
+            disabled={
+              reprintingOrderId !==
+              null
+            }
+            onPress={() => {
+              void handleReprintTicket(
+                item,
+              );
+            }}
+          >
+            {reprintingOrderId ===
+              item.orderId ? (
+              <ActivityIndicator
+                size="small"
+                color="#121212"
+              />
+            ) : (
+              <Text
+                style={
+                  styles.reprintButtonText
+                }
+              >
+                🖨️ Reimprimir ticket
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+        {reprintMessage ? (
+          <View
+            style={[
+              styles.reprintMessage,
+
+              reprintMessage.type ===
+                'success'
+                ? styles.reprintMessageSuccess
+                : styles.reprintMessageError,
+            ]}
+          >
+            <Text
+              style={
+                styles.reprintMessageText
+              }
+            >
+              {reprintMessage.type ===
+                'success'
+                ? '✓ '
+                : '⚠️ '}
+
+              {reprintMessage.text}
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -651,8 +821,8 @@ export function SalesScreen() {
             styles.filterButton,
 
             salesFilter ===
-              'today' &&
-              styles.filterButtonActive,
+            'today' &&
+            styles.filterButtonActive,
           ]}
           onPress={() =>
             setSalesFilter(
@@ -665,8 +835,8 @@ export function SalesScreen() {
               styles.filterButtonText,
 
               salesFilter ===
-                'today' &&
-                styles.filterButtonTextActive,
+              'today' &&
+              styles.filterButtonTextActive,
             ]}
           >
             Hoy
@@ -678,8 +848,8 @@ export function SalesScreen() {
             styles.filterButton,
 
             salesFilter ===
-              '7days' &&
-              styles.filterButtonActive,
+            '7days' &&
+            styles.filterButtonActive,
           ]}
           onPress={() =>
             setSalesFilter(
@@ -692,8 +862,8 @@ export function SalesScreen() {
               styles.filterButtonText,
 
               salesFilter ===
-                '7days' &&
-                styles.filterButtonTextActive,
+              '7days' &&
+              styles.filterButtonTextActive,
             ]}
           >
             Últimos 7 días
@@ -705,8 +875,8 @@ export function SalesScreen() {
             styles.filterButton,
 
             salesFilter ===
-              'all' &&
-              styles.filterButtonActive,
+            'all' &&
+            styles.filterButtonActive,
           ]}
           onPress={() =>
             setSalesFilter(
@@ -719,8 +889,8 @@ export function SalesScreen() {
               styles.filterButtonText,
 
               salesFilter ===
-                'all' &&
-                styles.filterButtonTextActive,
+              'all' &&
+              styles.filterButtonTextActive,
             ]}
           >
             Todo
@@ -732,8 +902,8 @@ export function SalesScreen() {
             styles.filterButton,
 
             salesFilter ===
-              'custom' &&
-              styles.filterButtonActive,
+            'custom' &&
+            styles.filterButtonActive,
           ]}
           onPress={() =>
             setSalesFilter(
@@ -746,8 +916,8 @@ export function SalesScreen() {
               styles.filterButtonText,
 
               salesFilter ===
-                'custom' &&
-                styles.filterButtonTextActive,
+              'custom' &&
+              styles.filterButtonTextActive,
             ]}
           >
             Personalizado
@@ -756,7 +926,7 @@ export function SalesScreen() {
       </View>
 
       {salesFilter ===
-      'custom' ? (
+        'custom' ? (
         <View
           style={
             styles.customDateContainer
@@ -978,7 +1148,7 @@ export function SalesScreen() {
       ) : null}
 
       {filteredSales.length ===
-      0 ? (
+        0 ? (
         <View
           style={
             styles.emptyContainer

@@ -309,6 +309,8 @@ export async function printOrderTicket({
   paymentMethod,
   amountReceived,
   promoCoupon,
+  ticketDate,
+  isReprint = false,
 }: PrintOrderTicketParams): Promise<void> {
   const printer =
     await connectPrinter();
@@ -338,6 +340,7 @@ export async function printOrderTicket({
       .toUpperCase();
 
   const orderDate =
+    ticketDate ??
     new Date();
 
   /*
@@ -371,6 +374,22 @@ export async function printOrderTicket({
   await printer.write(
     'TICKET DE VENTA\n',
   );
+
+  if (isReprint) {
+    await setBold(
+      printer,
+      false,
+    );
+
+    await printer.write(
+      '*** REIMPRESION ***\n',
+    );
+
+    await setBold(
+      printer,
+      true,
+    );
+  }
 
   await setBold(
     printer,
@@ -794,6 +813,12 @@ interface PrintOrderTicketParams {
 
   promoCoupon:
   PromoCoupon | null;
+
+  ticketDate?:
+  Date;
+
+  isReprint?:
+  boolean;
 }
 
 async function setAlignment(
