@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "pos-burger-kong",
-    "slug": "pos-burger-kong",
+    "name": "Burger Kong",
+    "slug": "burger-kong",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/app-icon.png",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#000000"
       },
       "permissions": [
         "android.permission.BLUETOOTH",
@@ -25,18 +25,12 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_SCAN",
-        "android.permission.BLUETOOTH_ADVERTISE",
-        "android.permission.BLUETOOTH",
-        "android.permission.BLUETOOTH_ADMIN",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_ADVERTISE"
       ],
-      "package": "com.anonymous.posburgerkong"
+      "package": "com.burgerkong.pos"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/app-icon.png"
     },
     "plugins": [
       "expo-sqlite",
@@ -48,6 +42,11 @@
           "alwaysUsageDescription": "Burger Kong necesita Bluetooth para imprimir tickets."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "14f8bcc3-9327-4987-b505-899cc734c274"
+      }
+    }
   }
 }
