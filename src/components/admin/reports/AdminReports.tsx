@@ -72,6 +72,7 @@ export function AdminReports() {
     ] = useState<DailySalesReport[]>(
         [],
     );
+
     const [
         dateFilter,
         setDateFilter,
@@ -244,6 +245,7 @@ export function AdminReports() {
                     setMeats(
                         meatData,
                     );
+
                     setDailySales(
                         dailySalesData,
                     );
@@ -410,12 +412,6 @@ export function AdminReports() {
             selectedDate,
         );
 
-        /*
-         * Si movemos "Desde"
-         * después de "Hasta",
-         * ajustamos automáticamente
-         * la fecha final.
-         */
         if (
             selectedDate >
             customEndDate
@@ -653,17 +649,36 @@ export function AdminReports() {
                     />
                 </View>
 
-                {/* GRÁFICA DE VENTAS */}
+                {/* GRÁFICAS */}
                 <DailySalesChart
-                    data={dailySales}
+                    data={
+                        dailySales
+                    }
                 />
 
                 <TopProductsChart
-                    data={products}
-                    metric={productChartMetric}
+                    data={
+                        products
+                    }
+                    metric={
+                        productChartMetric
+                    }
                     onMetricChange={
                         setProductChartMetric
                     }
+                />
+
+                <SauceSalesChart
+                    data={
+                        sauces
+                    }
+                />
+
+                <ModifierGroupsChart
+                    data={[
+                        ...meats,
+                        ...flavors,
+                    ]}
                 />
 
                 {/* SECCIONES */}
@@ -693,7 +708,7 @@ export function AdminReports() {
                     )}
                 </View>
 
-                {/* PRODUCTOS */}
+                {/* RANKINGS */}
                 {activeSection ===
                     'products' ? (
                     <>
@@ -827,7 +842,6 @@ export function AdminReports() {
                 )}
             </ScrollView>
 
-            {/* DATE PICKER DESDE */}
             {showStartDatePicker ? (
                 <DateTimePicker
                     value={
@@ -844,7 +858,6 @@ export function AdminReports() {
                 />
             ) : null}
 
-            {/* DATE PICKER HASTA */}
             {showEndDatePicker ? (
                 <DateTimePicker
                     value={
@@ -1000,14 +1013,6 @@ function getDateRange(
                 customStartDate,
             );
 
-        /*
-         * p_to es exclusivo en nuestras RPC:
-         *
-         * created_at < p_to
-         *
-         * Por eso enviamos el día
-         * posterior a "Hasta".
-         */
         to =
             addDays(
                 startOfDay(
@@ -1330,269 +1335,652 @@ function formatCompactCurrency(
 }
 
 interface TopProductsChartProps {
-  data: ProductSalesReport[];
+    data: ProductSalesReport[];
 
-  metric:
+    metric:
     ProductChartMetric;
 
-  onMetricChange: (
-    metric:
-      ProductChartMetric,
-  ) => void;
+    onMetricChange: (
+        metric:
+            ProductChartMetric,
+    ) => void;
 }
 
 function TopProductsChart({
-  data,
-  metric,
-  onMetricChange,
+    data,
+    metric,
+    onMetricChange,
 }: TopProductsChartProps) {
-  const topProducts =
-    [...data]
-      .sort(
-        (
-          first,
-          second,
-        ) => {
-          if (
-            metric ===
-            'revenue'
-          ) {
-            return (
-              second.revenue -
-              first.revenue
-            );
-          }
-
-          return (
-            second.units_sold -
-            first.units_sold
-          );
-        },
-      )
-      .slice(
-        0,
-        10,
-      );
-
-  const maximumValue =
-    topProducts.reduce(
-      (
-        maximum,
-        product,
-      ) => {
-        const value =
-          metric ===
-            'revenue'
-            ? product.revenue
-            : product.units_sold;
-
-        return Math.max(
-          maximum,
-          value,
-        );
-      },
-      0,
-    );
-
-  return (
-    <View
-      style={
-        styles.topProductsCard
-      }
-    >
-      <View
-        style={
-          styles.topProductsTitleRow
-        }
-      >
-        <View
-          style={
-            styles.topProductsTitleContainer
-          }
-        >
-          <Text
-            style={
-              styles.chartTitle
-            }
-          >
-            Top productos
-          </Text>
-
-          <Text
-            style={
-              styles.chartSubtitle
-            }
-          >
-            {metric ===
-              'units'
-              ? 'Productos con más unidades vendidas'
-              : 'Productos que generan mayor ingreso'}
-          </Text>
-        </View>
-
-        <View
-          style={
-            styles.metricSwitch
-          }
-        >
-          <TouchableOpacity
-            style={[
-              styles.metricButton,
-
-              metric ===
-                'units' &&
-              styles.metricButtonActive,
-            ]}
-            onPress={() =>
-              onMetricChange(
-                'units',
-              )
-            }
-          >
-            <Text
-              style={[
-                styles.metricButtonText,
-
-                metric ===
-                  'units' &&
-                styles.metricButtonTextActive,
-              ]}
-            >
-              UNIDADES
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.metricButton,
-
-              metric ===
-                'revenue' &&
-              styles.metricButtonActive,
-            ]}
-            onPress={() =>
-              onMetricChange(
-                'revenue',
-              )
-            }
-          >
-            <Text
-              style={[
-                styles.metricButtonText,
-
-                metric ===
-                  'revenue' &&
-                styles.metricButtonTextActive,
-              ]}
-            >
-              INGRESOS
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {topProducts.length ===
-        0 ? (
-        <View
-          style={
-            styles.chartEmpty
-          }
-        >
-          <Text
-            style={
-              styles.chartEmptyText
-            }
-          >
-            No hay ventas en este periodo
-          </Text>
-        </View>
-      ) : (
-        <View
-          style={
-            styles.topProductsList
-          }
-        >
-          {topProducts.map(
-            (
-              product,
-              index,
-            ) => {
-              const value =
-                metric ===
-                  'revenue'
-                  ? product.revenue
-                  : product.units_sold;
-
-              const width =
-                maximumValue > 0
-                  ? (
-                    value /
-                    maximumValue
-                  ) * 100
-                  : 0;
-
-              return (
-                <View
-                  key={
-                    product.id
-                  }
-                  style={
-                    styles.topProductRow
-                  }
-                >
-                  <View
-                    style={
-                      styles.topProductHeader
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.topProductName
-                      }
-                      numberOfLines={
-                        1
-                      }
-                    >
-                      {index + 1}.{' '}
-                      {product.name}
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.topProductValue
-                      }
-                    >
-                      {metric ===
+    const topProducts =
+        [...data]
+            .sort(
+                (
+                    first,
+                    second,
+                ) => {
+                    if (
+                        metric ===
                         'revenue'
-                        ? formatCurrency(
-                          product.revenue,
-                        )
-                        : `${product.units_sold} u.`}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.topProductBarBackground
+                    ) {
+                        return (
+                            second.revenue -
+                            first.revenue
+                        );
                     }
-                  >
-                    <View
-                      style={[
-                        styles.topProductBar,
 
-                        {
-                          width:
-                            `${width}%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              );
+                    return (
+                        second.units_sold -
+                        first.units_sold
+                    );
+                },
+            )
+            .slice(
+                0,
+                10,
+            );
+
+    const maximumValue =
+        topProducts.reduce(
+            (
+                maximum,
+                product,
+            ) => {
+                const value =
+                    metric ===
+                        'revenue'
+                        ? product.revenue
+                        : product.units_sold;
+
+                return Math.max(
+                    maximum,
+                    value,
+                );
             },
-          )}
+            0,
+        );
+
+    return (
+        <View
+            style={
+                styles.topProductsCard
+            }
+        >
+            <View
+                style={
+                    styles.topProductsTitleRow
+                }
+            >
+                <View
+                    style={
+                        styles.topProductsTitleContainer
+                    }
+                >
+                    <Text
+                        style={
+                            styles.chartTitle
+                        }
+                    >
+                        Top productos
+                    </Text>
+
+                    <Text
+                        style={
+                            styles.chartSubtitle
+                        }
+                    >
+                        {metric ===
+                            'units'
+                            ? 'Productos con más unidades vendidas'
+                            : 'Productos que generan mayor ingreso'}
+                    </Text>
+                </View>
+
+                <View
+                    style={
+                        styles.metricSwitch
+                    }
+                >
+                    <TouchableOpacity
+                        style={[
+                            styles.metricButton,
+
+                            metric ===
+                            'units' &&
+                            styles.metricButtonActive,
+                        ]}
+                        onPress={() =>
+                            onMetricChange(
+                                'units',
+                            )
+                        }
+                    >
+                        <Text
+                            style={[
+                                styles.metricButtonText,
+
+                                metric ===
+                                'units' &&
+                                styles.metricButtonTextActive,
+                            ]}
+                        >
+                            UNIDADES
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.metricButton,
+
+                            metric ===
+                            'revenue' &&
+                            styles.metricButtonActive,
+                        ]}
+                        onPress={() =>
+                            onMetricChange(
+                                'revenue',
+                            )
+                        }
+                    >
+                        <Text
+                            style={[
+                                styles.metricButtonText,
+
+                                metric ===
+                                'revenue' &&
+                                styles.metricButtonTextActive,
+                            ]}
+                        >
+                            INGRESOS
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {topProducts.length ===
+                0 ? (
+                <View
+                    style={
+                        styles.chartEmpty
+                    }
+                >
+                    <Text
+                        style={
+                            styles.chartEmptyText
+                        }
+                    >
+                        No hay ventas en este periodo
+                    </Text>
+                </View>
+            ) : (
+                <View
+                    style={
+                        styles.topProductsList
+                    }
+                >
+                    {topProducts.map(
+                        (
+                            product,
+                            index,
+                        ) => {
+                            const value =
+                                metric ===
+                                    'revenue'
+                                    ? product.revenue
+                                    : product.units_sold;
+
+                            const width =
+                                maximumValue > 0
+                                    ? (
+                                        value /
+                                        maximumValue
+                                    ) * 100
+                                    : 0;
+
+                            return (
+                                <View
+                                    key={
+                                        product.id
+                                    }
+                                    style={
+                                        styles.topProductRow
+                                    }
+                                >
+                                    <View
+                                        style={
+                                            styles.topProductHeader
+                                        }
+                                    >
+                                        <Text
+                                            style={
+                                                styles.topProductName
+                                            }
+                                            numberOfLines={
+                                                1
+                                            }
+                                        >
+                                            {index + 1}.{' '}
+                                            {product.name}
+                                        </Text>
+
+                                        <Text
+                                            style={
+                                                styles.topProductValue
+                                            }
+                                        >
+                                            {metric ===
+                                                'revenue'
+                                                ? formatCurrency(
+                                                    product.revenue,
+                                                )
+                                                : `${product.units_sold} u.`}
+                                        </Text>
+                                    </View>
+
+                                    <View
+                                        style={
+                                            styles.topProductBarBackground
+                                        }
+                                    >
+                                        <View
+                                            style={[
+                                                styles.topProductBar,
+
+                                                {
+                                                    width:
+                                                        `${width}%`,
+                                                },
+                                            ]}
+                                        />
+                                    </View>
+                                </View>
+                            );
+                        },
+                    )}
+                </View>
+            )}
         </View>
-      )}
-    </View>
-  );
+    );
+}
+
+interface SauceSalesChartProps {
+    data: ModifierSalesReport[];
+}
+
+function SauceSalesChart({
+    data,
+}: SauceSalesChartProps) {
+    const sauces =
+        [...data].sort(
+            (
+                first,
+                second,
+            ) =>
+                second.units_sold -
+                first.units_sold,
+        );
+
+    const maxUnits =
+        sauces.reduce(
+            (
+                maximum,
+                sauce,
+            ) =>
+                Math.max(
+                    maximum,
+                    sauce.units_sold,
+                ),
+            0,
+        );
+
+    const leastSoldSauces =
+        [...data]
+            .sort(
+                (
+                    first,
+                    second,
+                ) =>
+                    first.units_sold -
+                    second.units_sold,
+            )
+            .slice(
+                0,
+                5,
+            );
+
+    return (
+        <View
+            style={
+                styles.sauceChartCard
+            }
+        >
+            <View>
+                <Text
+                    style={
+                        styles.chartTitle
+                    }
+                >
+                    Rendimiento de salsas
+                </Text>
+
+                <Text
+                    style={
+                        styles.chartSubtitle
+                    }
+                >
+                    Popularidad y rotación de sabores
+                </Text>
+            </View>
+
+            {sauces.length ===
+                0 ? (
+                <View
+                    style={
+                        styles.chartEmpty
+                    }
+                >
+                    <Text
+                        style={
+                            styles.chartEmptyText
+                        }
+                    >
+                        No hay salsas disponibles
+                    </Text>
+                </View>
+            ) : (
+                <>
+                    <View
+                        style={
+                            styles.sauceRanking
+                        }
+                    >
+                        {sauces.map(
+                            (
+                                sauce,
+                                index,
+                            ) => {
+                                const width =
+                                    maxUnits > 0
+                                        ? (
+                                            sauce.units_sold /
+                                            maxUnits
+                                        ) * 100
+                                        : 0;
+
+                                return (
+                                    <View
+                                        key={
+                                            sauce.id
+                                        }
+                                        style={
+                                            styles.sauceRow
+                                        }
+                                    >
+                                        <View
+                                            style={
+                                                styles.sauceHeader
+                                            }
+                                        >
+                                            <Text
+                                                style={
+                                                    styles.sauceName
+                                                }
+                                                numberOfLines={
+                                                    1
+                                                }
+                                            >
+                                                {index + 1}.{' '}
+                                                {sauce.name}
+                                            </Text>
+
+                                            <Text
+                                                style={
+                                                    styles.sauceUnits
+                                                }
+                                            >
+                                                {sauce.units_sold} u.
+                                            </Text>
+                                        </View>
+
+                                        <View
+                                            style={
+                                                styles.sauceBarBackground
+                                            }
+                                        >
+                                            <View
+                                                style={[
+                                                    styles.sauceBar,
+                                                    {
+                                                        width:
+                                                            `${width}%`,
+                                                    },
+                                                ]}
+                                            />
+                                        </View>
+                                    </View>
+                                );
+                            },
+                        )}
+                    </View>
+
+                    <View
+                        style={
+                            styles.lowRotationContainer
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.lowRotationTitle
+                            }
+                        >
+                            BAJA ROTACIÓN
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.lowRotationSubtitle
+                            }
+                        >
+                            Candidatas para Salsa de la Semana
+                        </Text>
+
+                        <View
+                            style={
+                                styles.lowRotationList
+                            }
+                        >
+                            {leastSoldSauces.map(
+                                sauce => (
+                                    <View
+                                        key={
+                                            sauce.id
+                                        }
+                                        style={
+                                            styles.lowRotationBadge
+                                        }
+                                    >
+                                        <Text
+                                            style={
+                                                styles.lowRotationName
+                                            }
+                                        >
+                                            {sauce.name}
+                                        </Text>
+
+                                        <Text
+                                            style={
+                                                styles.lowRotationUnits
+                                            }
+                                        >
+                                            {sauce.units_sold}{' '}
+                                            ventas
+                                        </Text>
+                                    </View>
+                                ),
+                            )}
+                        </View>
+                    </View>
+                </>
+            )}
+        </View>
+    );
+}
+
+interface ModifierGroupsChartProps {
+    data: ModifierSalesReport[];
+}
+
+function ModifierGroupsChart({
+    data,
+}: ModifierGroupsChartProps) {
+    const groups = [
+        'Carne',
+        'Sabor',
+    ];
+
+    return (
+        <View
+            style={
+                styles.modifierGroupsCard
+            }
+        >
+            <Text
+                style={
+                    styles.chartTitle
+                }
+            >
+                Modificadores
+            </Text>
+
+            <Text
+                style={
+                    styles.chartSubtitle
+                }
+            >
+                Preferencias por tipo de modificador
+            </Text>
+
+            <View
+                style={
+                    styles.modifierGroupsContainer
+                }
+            >
+                {groups.map(
+                    group => {
+                        const groupData =
+                            data
+                                .filter(
+                                    modifier =>
+                                        modifier.group_name ===
+                                        group,
+                                )
+                                .sort(
+                                    (
+                                        first,
+                                        second,
+                                    ) =>
+                                        second.units_sold -
+                                        first.units_sold,
+                                );
+
+                        const maximum =
+                            groupData.reduce(
+                                (
+                                    max,
+                                    modifier,
+                                ) =>
+                                    Math.max(
+                                        max,
+                                        modifier.units_sold,
+                                    ),
+                                0,
+                            );
+
+                        return (
+                            <View
+                                key={
+                                    group
+                                }
+                                style={
+                                    styles.modifierGroup
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.modifierGroupTitle
+                                    }
+                                >
+                                    {group.toUpperCase()}
+                                </Text>
+
+                                {groupData.map(
+                                    modifier => {
+                                        const width =
+                                            maximum > 0
+                                                ? (
+                                                    modifier.units_sold /
+                                                    maximum
+                                                ) *
+                                                100
+                                                : 0;
+
+                                        return (
+                                            <View
+                                                key={
+                                                    modifier.id
+                                                }
+                                                style={
+                                                    styles.modifierGroupRow
+                                                }
+                                            >
+                                                <View
+                                                    style={
+                                                        styles.modifierGroupHeader
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.modifierGroupName
+                                                        }
+                                                        numberOfLines={
+                                                            1
+                                                        }
+                                                    >
+                                                        {modifier.name}
+                                                    </Text>
+
+                                                    <Text
+                                                        style={
+                                                            styles.modifierGroupUnits
+                                                        }
+                                                    >
+                                                        {modifier.units_sold} u.
+                                                    </Text>
+                                                </View>
+
+                                                <View
+                                                    style={
+                                                        styles.modifierGroupBarBackground
+                                                    }
+                                                >
+                                                    <View
+                                                        style={[
+                                                            styles.modifierGroupBar,
+                                                            {
+                                                                width:
+                                                                    `${width}%`,
+                                                            },
+                                                        ]}
+                                                    />
+                                                </View>
+                                            </View>
+                                        );
+                                    },
+                                )}
+                            </View>
+                        );
+                    },
+                )}
+            </View>
+        </View>
+    );
 }

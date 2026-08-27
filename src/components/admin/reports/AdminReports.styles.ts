@@ -411,5 +411,176 @@ export const styles =
         metricButtonTextActive: {
             color: '#111111',
         },
+
+        sauceChartCard: {
+            padding: 16,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#303030',
+            backgroundColor: '#1D1D1D',
+            marginBottom: 18,
+        },
+
+        sauceRanking: {
+            marginTop: 18,
+            gap: 12,
+        },
+
+        sauceRow: {
+            width: '100%',
+        },
+
+        sauceHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 5,
+        },
+
+        sauceName: {
+            flex: 1,
+            color: '#DDDDDD',
+            fontSize: 12,
+            fontWeight: '700',
+            marginRight: 12,
+        },
+
+        sauceUnits: {
+            color: '#FFBF00',
+            fontSize: 12,
+            fontWeight: '900',
+        },
+
+        sauceBarBackground: {
+            width: '100%',
+            height: 9,
+            borderRadius: 5,
+            backgroundColor: '#303030',
+            overflow: 'hidden',
+        },
+
+        sauceBar: {
+            height: '100%',
+            borderRadius: 5,
+            backgroundColor: '#FFBF00',
+        },
+
+        lowRotationContainer: {
+            marginTop: 24,
+            paddingTop: 18,
+            borderTopWidth: 1,
+            borderTopColor: '#333333',
+        },
+
+        lowRotationTitle: {
+            color: '#FFBF00',
+            fontSize: 12,
+            fontWeight: '900',
+        },
+
+        lowRotationSubtitle: {
+            color: '#888888',
+            fontSize: 11,
+            marginTop: 3,
+        },
+
+        lowRotationList: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginTop: 12,
+        },
+
+        lowRotationBadge: {
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: '#444444',
+            backgroundColor: '#252525',
+        },
+
+        lowRotationName: {
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '800',
+        },
+
+        lowRotationUnits: {
+            color: '#999999',
+            fontSize: 10,
+            marginTop: 2,
+        },
+
+        modifierGroupsCard: {
+            padding: 16,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#303030',
+            backgroundColor: '#1D1D1D',
+            marginBottom: 18,
+        },
+
+        modifierGroupsContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 16,
+            marginTop: 18,
+        },
+
+        modifierGroup: {
+            flex: 1,
+            minWidth: 260,
+            padding: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: '#303030',
+            backgroundColor: '#202020',
+        },
+
+        modifierGroupTitle: {
+            color: '#FFBF00',
+            fontSize: 12,
+            fontWeight: '900',
+            marginBottom: 14,
+        },
+
+        modifierGroupRow: {
+            marginBottom: 12,
+        },
+
+        modifierGroupHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 5,
+        },
+
+        modifierGroupName: {
+            flex: 1,
+            color: '#DDDDDD',
+            fontSize: 12,
+            fontWeight: '700',
+            marginRight: 10,
+        },
+
+        modifierGroupUnits: {
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '900',
+        },
+
+        modifierGroupBarBackground: {
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: '#303030',
+            overflow: 'hidden',
+        },
+
+        modifierGroupBar: {
+            height: '100%',
+            borderRadius: 4,
+            backgroundColor: '#FFBF00',
+        },
     });
 
