@@ -46,6 +46,10 @@ import {
 import { PromoReward } from '../../repositories/PromoRepository';
 import { PROMO_REWARD_OPTIONS, redeemDorian, redeemKongs } from '../../services/promoService';
 import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefundService';
+import {
+  getPromotionSettings,
+  PromotionSettings,
+} from '../../services/promotionService';
 
 interface CashClosingScreenProps {
   cashSession:
@@ -213,13 +217,16 @@ export function CashClosingScreen({
   const [
     kongCodes,
     setKongCodes,
-  ] = useState<string[]>([
-    '',
-    '',
-    '',
-    '',
-    '',
-  ]);
+  ] = useState<string[]>(
+    [],
+  );
+
+  const [
+    promotionSettings,
+    setPromotionSettings,
+  ] = useState<
+    PromotionSettings | null
+  >(null);
 
   const [
     selectedReward,
@@ -254,6 +261,30 @@ export function CashClosingScreen({
    * CARGA DE DATOS
    * ============================
    */
+
+  const loadPromotionSettings =
+    useCallback(
+      async (): Promise<void> => {
+        try {
+          const settings =
+            await getPromotionSettings();
+
+          setPromotionSettings(
+            settings,
+          );
+        } catch (error) {
+          console.error(
+            'Error loading promotion settings:',
+            error,
+          );
+
+          setPromotionSettings(
+            null,
+          );
+        }
+      },
+      [],
+    );
 
   const loadSales =
     useCallback(
@@ -379,6 +410,79 @@ export function CashClosingScreen({
   useEffect(() => {
     void loadSales();
   }, [loadSales]);
+
+  useEffect(() => {
+    void loadPromotionSettings();
+  }, [
+    loadPromotionSettings,
+  ]);
+
+  useEffect(() => {
+    const requiredKongs =
+      promotionSettings
+        ?.required_kongs ??
+      0;
+
+    if (
+      requiredKongs <= 0
+    ) {
+      setKongCodes(
+        [],
+      );
+
+      return;
+    }
+
+    setKongCodes(
+      currentCodes =>
+        Array.from(
+          {
+            length:
+              requiredKongs,
+          },
+          (
+            _,
+            index,
+          ) =>
+            currentCodes[
+              index
+            ] ??
+            '',
+        ),
+    );
+  }, [
+    promotionSettings
+      ?.required_kongs,
+  ]);
+
+  useEffect(() => {
+    if (
+      activeView ===
+        'kongs' &&
+      promotionSettings &&
+      !promotionSettings
+        .kong_enabled
+    ) {
+      setActiveView(
+        'current',
+      );
+    }
+
+    if (
+      activeView ===
+        'dorian' &&
+      promotionSettings &&
+      !promotionSettings
+        .lucky_dorian_enabled
+    ) {
+      setActiveView(
+        'current',
+      );
+    }
+  }, [
+    activeView,
+    promotionSettings,
+  ]);
 
   useEffect(() => {
     void loadRefunds();
@@ -1048,6 +1152,7 @@ export function CashClosingScreen({
           fetchCashSession(),
           loadSales(),
           loadRefunds(),
+          loadPromotionSettings(),
         ]);
       } finally {
         setIsProcessing(false);
@@ -1130,13 +1235,20 @@ export function CashClosingScreen({
 
   const clearKongRedemption =
     (): void => {
-      setKongCodes([
-        '',
-        '',
-        '',
-        '',
-        '',
-      ]);
+      const requiredKongs =
+        promotionSettings
+          ?.required_kongs ??
+        0;
+
+      setKongCodes(
+        Array.from(
+          {
+            length:
+              requiredKongs,
+          },
+          () => '',
+        ),
+      );
 
       setSelectedReward(
         'special_burger',
@@ -1163,7 +1275,11 @@ export function CashClosingScreen({
       Alert.alert(
         'Canjear Kongs',
         [
-          'Se utilizarán los 5 códigos ingresados.',
+          `Se utilizarán los ${
+            promotionSettings
+              ?.required_kongs ??
+            kongCodes.length
+          } códigos ingresados.`,
           '',
           `Premio: ${reward?.label ??
           'Premio'
@@ -1228,7 +1344,11 @@ export function CashClosingScreen({
 
         Alert.alert(
           '✅ Canje realizado',
-          `Los 5 Kongs fueron canjeados correctamente por:\n\n${reward?.label ??
+          `Los ${
+            promotionSettings
+              ?.required_kongs ??
+            kongCodes.length
+          } Kongs fueron canjeados correctamente por:\n\n${reward?.label ??
           'Premio'
           }`,
         );
@@ -1513,18 +1633,34 @@ export function CashClosingScreen({
             label:
               'HISTORIAL',
           },
-          {
-            value:
-              'kongs',
-            label:
-              'CANJEAR KONGS',
-          },
-          {
-            value:
-              'dorian',
-            label:
-              'DORIAN',
-          },
+
+          ...(
+            promotionSettings
+              ?.kong_enabled
+              ? [
+                {
+                  value:
+                    'kongs' as CashView,
+                  label:
+                    'CANJEAR KONGS',
+                },
+              ]
+              : []
+          ),
+
+          ...(
+            promotionSettings
+              ?.lucky_dorian_enabled
+              ? [
+                {
+                  value:
+                    'dorian' as CashView,
+                  label:
+                    'DORIAN',
+                },
+              ]
+              : []
+          ),
         ];
 
       return (
@@ -2558,9 +2694,12 @@ export function CashClosingScreen({
                 styles.promoSubtitle
               }
             >
-              Ingresa los cinco códigos
-              impresos en los Kongs del
-              cliente.
+              Ingresa los{' '}
+              {promotionSettings
+                ?.required_kongs ??
+                0}{' '}
+              códigos impresos en los Kongs
+              del cliente.
             </Text>
 
             <View
@@ -2702,10 +2841,13 @@ export function CashClosingScreen({
                   styles.promoWarningText
                 }
               >
-                Los 5 códigos deben ser
-                diferentes, válidos y no
-                haber sido utilizados
-                anteriormente.
+                Los{' '}
+                {promotionSettings
+                  ?.required_kongs ??
+                  0}{' '}
+                códigos deben ser diferentes,
+                válidos y no haber sido
+                utilizados anteriormente.
               </Text>
             </View>
 
@@ -2896,7 +3038,9 @@ export function CashClosingScreen({
 
   if (
     activeView ===
-    'kongs'
+      'kongs' &&
+    promotionSettings
+      ?.kong_enabled
   ) {
     return (
       <View
@@ -2916,7 +3060,9 @@ export function CashClosingScreen({
 
   if (
     activeView ===
-    'dorian'
+      'dorian' &&
+    promotionSettings
+      ?.lucky_dorian_enabled
   ) {
     return (
       <View

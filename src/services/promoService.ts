@@ -8,6 +8,7 @@ import {
   redeemKongCoupons,
   redeemLuckyDorian,
 } from '../repositories/PromoRepository';
+import { getPromotionSettings } from './promotionService';
 
 export interface PromoCoupon {
   id: string;
@@ -23,16 +24,19 @@ export interface PromoCoupon {
 
 export async function getOrCreateOrderPromoCoupon(
   orderId: string,
-): Promise<PromoCoupon> {
+): Promise<PromoCoupon | null> {
   validateOrderId(
     orderId,
   );
 
-  const record:
-    PromoCouponRecord =
+  const record =
     await createOrGetOrderPromoCoupon(
       orderId,
     );
+
+  if (!record) {
+    return null;
+  }
 
   return {
     id:
@@ -119,8 +123,12 @@ export async function redeemKongs(
       input.codes,
     );
 
+  const settings =
+    await getPromotionSettings();
+
   validateKongCodes(
     normalizedCodes,
+    settings.required_kongs,
   );
 
   validateReward(
@@ -183,16 +191,29 @@ function normalizePromoCode(
 
 function validateKongCodes(
   codes: string[],
+  requiredKongs: number,
 ): void {
+  if (
+    !Number.isInteger(
+      requiredKongs,
+    ) ||
+    requiredKongs <
+    1
+  ) {
+    throw new Error(
+      'La configuración de Kongs no es válida.',
+    );
+  }
+
   if (
     !Array.isArray(
       codes,
     ) ||
     codes.length !==
-      5
+    requiredKongs
   ) {
     throw new Error(
-      'Se necesitan exactamente 5 códigos Kong.',
+      `Se necesitan exactamente ${requiredKongs} códigos Kong.`,
     );
   }
 
@@ -205,7 +226,7 @@ function validateKongCodes(
     )
   ) {
     throw new Error(
-      'Ingresa los 5 códigos Kong.',
+      `Ingresa los ${requiredKongs} códigos Kong.`,
     );
   }
 
@@ -231,10 +252,10 @@ function validateKongCodes(
 
   if (
     uniqueCodes.size !==
-    5
+    requiredKongs
   ) {
     throw new Error(
-      'Los 5 códigos Kong deben ser diferentes.',
+      `Los ${requiredKongs} códigos Kong deben ser diferentes.`,
     );
   }
 }

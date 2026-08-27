@@ -26,7 +26,7 @@ export interface PromoCouponRecord {
 
 export async function createOrGetOrderPromoCoupon(
   orderId: string,
-): Promise<PromoCouponRecord> {
+): Promise<PromoCouponRecord | null> {
   const {
     data,
     error,
@@ -52,9 +52,7 @@ export async function createOrGetOrderPromoCoupon(
     data.length ===
       0
   ) {
-    throw new Error(
-      'Supabase no devolvió el cupón promocional.',
-    );
+    return null;
   }
 
   return data[

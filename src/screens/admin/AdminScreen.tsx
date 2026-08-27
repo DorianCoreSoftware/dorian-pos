@@ -32,13 +32,15 @@ import {
 import {
   styles,
 } from './AdminScreen.styles';
+import { AdminPromotions } from '../../components/admin/promotions/AdminPromotions';
 
 type AdminSection =
   | 'products'
   | 'categories'
   | 'modifiers'
   | 'reports'
-  | 'printer';
+  | 'printer'
+  | 'promotions';
 
 interface AdminScreenProps {
   onProductsChanged:
@@ -120,6 +122,15 @@ export function AdminScreen({
       ) {
         return (
           <AdminReports />
+        );
+      }
+
+      if (
+        activeSection ===
+        'promotions'
+      ) {
+        return (
+          <AdminPromotions />
         );
       }
 
@@ -234,6 +245,11 @@ export function AdminScreen({
         {renderTab(
           'printer',
           'IMPRESORA',
+        )}
+
+        {renderTab(
+          'promotions',
+          'PROMOCIONES',
         )}
       </View>
 
