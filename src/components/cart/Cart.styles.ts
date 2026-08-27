@@ -6,15 +6,15 @@ export const styles =
   StyleSheet.create({
     cartSection: {
       flex: 0.3,
+      minHeight: 0,
       backgroundColor: '#181818',
-      justifyContent:
-        'space-between',
+      overflow: 'hidden',
     },
 
     cartHeader: {
+      flexShrink: 0,
       flexDirection: 'row',
-      justifyContent:
-        'space-between',
+      justifyContent: 'space-between',
       alignItems: 'center',
       padding: 20,
       borderBottomWidth: 1,
@@ -127,6 +127,7 @@ export const styles =
      * DELIVERY
      */
     deliveryContainer: {
+      flexShrink: 0,
       marginHorizontal: 12,
       marginTop: 10,
       marginBottom: 8,
@@ -252,11 +253,13 @@ export const styles =
      */
     cartScroll: {
       flex: 1,
-      padding: 12,
+      minHeight: 0,
+      paddingHorizontal: 12,
     },
 
     cartScrollContent: {
-      paddingBottom: 10,
+      paddingTop: 12,
+      paddingBottom: 12,
     },
 
     cartItemCard: {
@@ -442,6 +445,7 @@ export const styles =
      * FOOTER
      */
     cartFooter: {
+      flexShrink: 0,
       padding: 20,
       backgroundColor: '#1C1C1C',
       borderTopWidth: 1,
@@ -486,8 +490,10 @@ export const styles =
 
     cartSectionMobile: {
       flex: 1,
+      minHeight: 0,
       width: '100%',
       backgroundColor: '#181818',
+      overflow: 'hidden',
     },
 
     cartHeaderMobile: {
@@ -496,12 +502,12 @@ export const styles =
     },
 
     cartItemMainMobile: {
-  flexDirection: 'column',
-  alignItems: 'stretch',
-},
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
 
-cartItemControlsMobile: {
-  marginTop: 10,
-  justifyContent: 'flex-end',
-},
+    cartItemControlsMobile: {
+      marginTop: 10,
+      justifyContent: 'flex-end',
+    },
   });

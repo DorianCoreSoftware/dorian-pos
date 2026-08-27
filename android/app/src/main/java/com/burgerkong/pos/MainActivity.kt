@@ -1,4 +1,4 @@
-package com.anonymous.posburgerkong
+package com.burgerkong.pos
 
 import android.os.Build
 import android.os.Bundle

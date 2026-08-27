@@ -3,6 +3,7 @@
     "name": "Burger Kong",
     "slug": "burger-kong",
     "version": "1.0.0",
+    "newArchEnabled": false,
     "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "dark",

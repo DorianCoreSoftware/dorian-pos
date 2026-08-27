@@ -87,16 +87,31 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.posburgerkong'
-    defaultConfig {
-        applicationId 'com.anonymous.posburgerkong'
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+    namespace 'com.burgerkong.pos'
 
-        buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
-    }
+def isDevBuild = System.getenv("APP_VARIANT") == "development"
+
+defaultConfig {
+    applicationId isDevBuild
+        ? 'com.burgerkong.pos.dev'
+        : 'com.burgerkong.pos'
+
+    minSdkVersion rootProject.ext.minSdkVersion
+    targetSdkVersion rootProject.ext.targetSdkVersion
+
+    versionCode 1
+    versionName "1.0.0"
+
+    resValue "string",
+        "app_name",
+        isDevBuild
+            ? "Burger Kong DEV"
+            : "Burger Kong"
+
+    buildConfigField "String",
+        "REACT_NATIVE_RELEASE_LEVEL",
+        "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+}
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

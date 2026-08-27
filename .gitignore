@@ -33,3 +33,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Android / Gradle local cache
+android/.gradle/
+.gradle/
+node_modules/
+.expo/
+*.log
