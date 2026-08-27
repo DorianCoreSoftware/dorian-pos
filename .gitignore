@@ -40,3 +40,5 @@ android/.gradle/
 node_modules/
 .expo/
 *.log
+.eas-inspect/
+.eas-inspect
