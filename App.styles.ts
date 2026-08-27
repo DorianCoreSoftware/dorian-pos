@@ -352,6 +352,12 @@ export const styles = StyleSheet.create({
     paddingTop: 40,
   },
 
+  mobileCartContent: {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+
   mobileCartModalHeader: {
     minHeight: 66,
     flexDirection: 'row',

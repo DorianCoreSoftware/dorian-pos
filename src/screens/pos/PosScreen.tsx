@@ -189,6 +189,11 @@ export function POSScreen({
     setIsMobileCartVisible,
   ] = useState(false);
 
+  const [
+    isMobileCartReady,
+    setIsMobileCartReady,
+  ] = useState(false);
+
   const mobileCartSummary =
     useMemo(() => {
       const totalItems =
@@ -1091,11 +1096,10 @@ export function POSScreen({
             styles.mobileCartBar
           }
           activeOpacity={0.9}
-          onPress={() =>
-            setIsMobileCartVisible(
-              true,
-            )
-          }
+          onPress={() => {
+            setIsMobileCartReady(false);
+            setIsMobileCartVisible(true);
+          }}
         >
           <View
             style={
@@ -1169,11 +1173,13 @@ export function POSScreen({
         }
         animationType="slide"
         presentationStyle="fullScreen"
-        onRequestClose={() =>
-          setIsMobileCartVisible(
-            false,
-          )
-        }
+        onShow={() => {
+          setIsMobileCartReady(true);
+        }}
+        onRequestClose={() => {
+          setIsMobileCartReady(false);
+          setIsMobileCartVisible(false);
+        }}
       >
         <View
           style={
@@ -1213,11 +1219,10 @@ export function POSScreen({
               style={
                 styles.mobileCartCloseButton
               }
-              onPress={() =>
-                setIsMobileCartVisible(
-                  false,
-                )
-              }
+              onPress={() => {
+                setIsMobileCartReady(false);
+                setIsMobileCartVisible(false);
+              }}
             >
               <Text
                 style={
@@ -1229,40 +1234,52 @@ export function POSScreen({
             </TouchableOpacity>
           </View>
 
-          <CartComponent
-            cart={cart}
-            isMobile
-            onUpdateQuantity={
-              handleUpdateQuantity
-            }
-            onRemoveItem={
-              handleRemoveCartItem
-            }
-            onClearCart={() => {
-              handleClearCart();
+          <View style={styles.mobileCartContent}>
+            {isMobileCartReady ? (
+              <CartComponent
+                cart={cart}
+                isMobile
+                onUpdateQuantity={
+                  handleUpdateQuantity
+                }
+                onRemoveItem={
+                  handleRemoveCartItem
+                }
+                onClearCart={() => {
+                  handleClearCart();
 
-              setIsMobileCartVisible(
-                false,
-              );
-            }}
-            onCheckout={async (
-              totalAmount,
-            ) => {
-              await handleCheckout(
-                totalAmount,
-              );
+                  setIsMobileCartReady(
+                    false,
+                  );
 
-              setIsMobileCartVisible(
-                false,
-              );
-            }}
-            onToggleDelivery={
-              handleToggleDelivery
-            }
-            onEditDelivery={
-              handleEditDelivery
-            }
-          />
+                  setIsMobileCartVisible(
+                    false,
+                  );
+                }}
+                onCheckout={async (
+                  totalAmount,
+                ) => {
+                  await handleCheckout(
+                    totalAmount,
+                  );
+
+                  setIsMobileCartReady(
+                    false,
+                  );
+
+                  setIsMobileCartVisible(
+                    false,
+                  );
+                }}
+                onToggleDelivery={
+                  handleToggleDelivery
+                }
+                onEditDelivery={
+                  handleEditDelivery
+                }
+              />
+            ) : null}
+          </View>
         </View>
       </Modal>
 
