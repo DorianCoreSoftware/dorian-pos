@@ -380,3 +380,138 @@ export interface PendingOrderDeliveryDetailsRecord {
   created_at: string;
   updated_at: string;
 }
+
+export interface OrderWeeklySauceDiscountRecord {
+  id: string;
+
+  order_id: string;
+
+  order_item_id:
+    | string
+    | null;
+
+  order_item_component_id:
+    | string
+    | null;
+
+  modifier_id: string;
+
+  discount_amount:
+    | string
+    | number;
+
+  created_at: string;
+
+  modifiers:
+    | {
+        id: string;
+        name: string;
+      }
+    | null;
+}
+
+export interface OrderWeeklySauceDiscount {
+  id: string;
+
+  orderId: string;
+
+  orderItemId:
+    | string
+    | null;
+
+  orderItemComponentId:
+    | string
+    | null;
+
+  modifierId: string;
+
+  modifierName: string;
+
+  discountAmount: number;
+
+  createdAt: string;
+}
+
+export async function fetchOrderWeeklySauceDiscounts(
+  orderId: string,
+): Promise<OrderWeeklySauceDiscount[]> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      'order_weekly_sauce_discounts',
+    )
+    .select(`
+      id,
+      order_id,
+      order_item_id,
+      order_item_component_id,
+      modifier_id,
+      discount_amount,
+      created_at,
+      modifiers(
+        id,
+        name
+      )
+    `)
+    .eq(
+      'order_id',
+      orderId,
+    )
+    .order(
+      'created_at',
+      {
+        ascending: true,
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      `No se pudieron consultar los descuentos de Salsa de la Semana: ${error.message}`,
+    );
+  }
+
+  return (
+    data ?? []
+  ).map(
+    (record) => {
+      const typedRecord =
+        record as unknown as
+          OrderWeeklySauceDiscountRecord;
+
+      return {
+        id:
+          typedRecord.id,
+
+        orderId:
+          typedRecord.order_id,
+
+        orderItemId:
+          typedRecord
+            .order_item_id,
+
+        orderItemComponentId:
+          typedRecord
+            .order_item_component_id,
+
+        modifierId:
+          typedRecord.modifier_id,
+
+        modifierName:
+          typedRecord.modifiers
+            ?.name ??
+          'Salsa de la Semana',
+
+        discountAmount:
+          Number(
+            typedRecord
+              .discount_amount,
+          ),
+
+        createdAt:
+          typedRecord.created_at,
+      };
+    },
+  );
+}

@@ -30,6 +30,10 @@ import {
   getComboRecipeByProductId,
 } from '../../services/comboService';
 
+import {
+  WeeklySauce,
+} from '../../services/weeklySauceService';
+
 export interface ComboConfiguratorSelection {
   components: ComboComponentSelection[];
   isValid: boolean;
@@ -39,6 +43,12 @@ interface ComboConfiguratorProps {
   product: Product;
 
   meats: SelectedModifier[];
+
+  sauces: SelectedModifier[];
+
+  weeklySauce:
+    | WeeklySauce
+    | null;
 
   onSelectionChange?: (
     selection: ComboConfiguratorSelection,
@@ -50,40 +60,53 @@ export const ComboConfigurator: React.FC<
 > = ({
   product,
   meats,
+  sauces,
+  weeklySauce,
   onSelectionChange,
 }) => {
+  const MAXIMUM_SAUCES = 3;
+
   const [
     recipe,
     setRecipe,
-  ] = useState<ComboRecipe | null>(null);
+  ] = useState<
+    ComboRecipe | null
+  >(null);
 
   const [
     selectedOptionIds,
     setSelectedOptionIds,
-  ] = useState<Record<string, string>>(
-    {},
-  );
+  ] = useState<
+    Record<string, string>
+  >({});
 
   const [
     selectedFlavorIds,
     setSelectedFlavorIds,
-  ] = useState<Record<string, string>>(
-    {},
-  );
+  ] = useState<
+    Record<string, string>
+  >({});
 
   const [
     selectedMeatIds,
     setSelectedMeatIds,
-  ] = useState<Record<string, string>>(
-    {},
-  );
+  ] = useState<
+    Record<string, string>
+  >({});
+
+  const [
+    selectedSauceIds,
+    setSelectedSauceIds,
+  ] = useState<
+    Record<string, string[]>
+  >({});
 
   const [
     componentNotes,
     setComponentNotes,
-  ] = useState<Record<string, string>>(
-    {},
-  );
+  ] = useState<
+    Record<string, string>
+  >({});
 
   const [
     isLoading,
@@ -93,7 +116,9 @@ export const ComboConfigurator: React.FC<
   const [
     error,
     setError,
-  ] = useState<string | null>(null);
+  ] = useState<
+    string | null
+  >(null);
 
   const isSelectionValid =
     useMemo(() => {
@@ -103,20 +128,26 @@ export const ComboConfigurator: React.FC<
 
       return recipe.components.every(
         (component) => {
-          /*
-           * Si el componente requiere tipo de
-           * carne, debe existir una selección.
-           *
-           * Si no hay carnes disponibles, no se
-           * bloquea para evitar dejar inutilizable
-           * el combo por un catálogo vacío.
-           */
           if (
             component.requiresMeat &&
             meats.length > 0 &&
             !selectedMeatIds[
               component.id
             ]
+          ) {
+            return false;
+          }
+
+          if (
+            component.requiresSauce &&
+            sauces.length > 0 &&
+            (
+              selectedSauceIds[
+                component.id
+              ]?.length ??
+              0
+            ) ===
+              0
           ) {
             return false;
           }
@@ -158,14 +189,12 @@ export const ComboConfigurator: React.FC<
           }
 
           const availableFlavors =
-            selectedOption.flavors ?? [];
+            selectedOption.flavors ??
+            [];
 
-          /*
-           * El componente pide sabor, pero la
-           * opción concreta no maneja sabores.
-           */
           if (
-            availableFlavors.length === 0
+            availableFlavors.length ===
+            0
           ) {
             return true;
           }
@@ -189,24 +218,42 @@ export const ComboConfigurator: React.FC<
     }, [
       recipe,
       meats,
+      sauces,
       selectedOptionIds,
       selectedFlavorIds,
       selectedMeatIds,
+      selectedSauceIds,
     ]);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadRecipe(): Promise<void> {
+    async function loadRecipe():
+    Promise<void> {
       try {
         setIsLoading(true);
         setError(null);
         setRecipe(null);
 
-        setSelectedOptionIds({});
-        setSelectedFlavorIds({});
-        setSelectedMeatIds({});
-        setComponentNotes({});
+        setSelectedOptionIds(
+          {},
+        );
+
+        setSelectedFlavorIds(
+          {},
+        );
+
+        setSelectedMeatIds(
+          {},
+        );
+
+        setSelectedSauceIds(
+          {},
+        );
+
+        setComponentNotes(
+          {},
+        );
 
         const loadedRecipe =
           await getComboRecipeByProductId(
@@ -225,7 +272,9 @@ export const ComboConfigurator: React.FC<
           return;
         }
 
-        setRecipe(loadedRecipe);
+        setRecipe(
+          loadedRecipe,
+        );
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -254,7 +303,9 @@ export const ComboConfigurator: React.FC<
   ]);
 
   const selectedComponents =
-    useMemo<ComboComponentSelection[]>(
+    useMemo<
+      ComboComponentSelection[]
+    >(
       () => {
         if (!recipe) {
           return [];
@@ -305,12 +356,34 @@ export const ComboConfigurator: React.FC<
                   selectedMeatId,
               );
 
-            const selectedModifiers:
-              SelectedModifier[] = [];
+            const componentSauceIds =
+              selectedSauceIds[
+                component.id
+              ] ??
+              [];
 
-            /*
-             * Agrega primero la carne.
-             */
+            const selectedSauces =
+              componentSauceIds
+                .map(
+                  (sauceId) =>
+                    sauces.find(
+                      (sauce) =>
+                        sauce.id ===
+                        sauceId,
+                    ),
+                )
+                .filter(
+                  (
+                    sauce,
+                  ): sauce is SelectedModifier =>
+                    sauce !==
+                    undefined,
+                );
+
+            const selectedModifiers:
+              SelectedModifier[] =
+              [];
+
             if (
               component.requiresMeat &&
               selectedMeat
@@ -320,10 +393,6 @@ export const ComboConfigurator: React.FC<
               });
             }
 
-            /*
-             * Agrega después el sabor,
-             * cuando corresponda.
-             */
             if (selectedFlavor) {
               selectedModifiers.push({
                 id:
@@ -331,7 +400,8 @@ export const ComboConfigurator: React.FC<
                     .modifierId,
 
                 name:
-                  selectedFlavor.name,
+                  selectedFlavor
+                    .name,
 
                 extra_price:
                   '0.00',
@@ -345,13 +415,24 @@ export const ComboConfigurator: React.FC<
               });
             }
 
+            if (
+              component.requiresSauce
+            ) {
+              selectedModifiers.push(
+                ...selectedSauces,
+              );
+            }
+
             return [
               {
-                slotId: component.id,
+                slotId:
+                  component.id,
 
-                type: component.type,
+                type:
+                  component.type,
 
-                label: component.label,
+                label:
+                  component.label,
 
                 product:
                   mapComboProductToProduct(
@@ -363,7 +444,8 @@ export const ComboConfigurator: React.FC<
                 notes:
                   componentNotes[
                     component.id
-                  ]?.trim() ?? '',
+                  ]?.trim() ??
+                  '',
 
                 selectedModifiers,
               },
@@ -374,17 +456,22 @@ export const ComboConfigurator: React.FC<
       [
         recipe,
         meats,
+        sauces,
         selectedOptionIds,
         selectedFlavorIds,
         selectedMeatIds,
+        selectedSauceIds,
         componentNotes,
       ],
     );
 
   useEffect(() => {
     onSelectionChange?.({
-      components: selectedComponents,
-      isValid: isSelectionValid,
+      components:
+        selectedComponents,
+
+      isValid:
+        isSelectionValid,
     });
   }, [
     selectedComponents,
@@ -399,14 +486,12 @@ export const ComboConfigurator: React.FC<
     setSelectedOptionIds(
       (currentSelections) => ({
         ...currentSelections,
-        [componentId]: optionId,
+
+        [componentId]:
+          optionId,
       }),
     );
 
-    /*
-     * Al cambiar la opción seleccionada,
-     * se elimina cualquier sabor anterior.
-     */
     setSelectedFlavorIds(
       (currentSelections) => {
         const nextSelections = {
@@ -429,7 +514,9 @@ export const ComboConfigurator: React.FC<
     setSelectedFlavorIds(
       (currentSelections) => ({
         ...currentSelections,
-        [componentId]: flavorId,
+
+        [componentId]:
+          flavorId,
       }),
     );
   }
@@ -441,8 +528,58 @@ export const ComboConfigurator: React.FC<
     setSelectedMeatIds(
       (currentSelections) => ({
         ...currentSelections,
-        [componentId]: meatId,
+
+        [componentId]:
+          meatId,
       }),
+    );
+  }
+
+  function selectSauce(
+    componentId: string,
+    sauceId: string,
+  ): void {
+    setSelectedSauceIds(
+      (currentSelections) => {
+        const current =
+          currentSelections[
+            componentId
+          ] ??
+          [];
+
+        if (
+          current.includes(
+            sauceId,
+          )
+        ) {
+          return {
+            ...currentSelections,
+
+            [componentId]:
+              current.filter(
+                (id) =>
+                  id !==
+                  sauceId,
+              ),
+          };
+        }
+
+        if (
+          current.length >=
+          MAXIMUM_SAUCES
+        ) {
+          return currentSelections;
+        }
+
+        return {
+          ...currentSelections,
+
+          [componentId]: [
+            ...current,
+            sauceId,
+          ],
+        };
+      },
     );
   }
 
@@ -453,7 +590,9 @@ export const ComboConfigurator: React.FC<
     setComponentNotes(
       (currentNotes) => ({
         ...currentNotes,
-        [componentId]: notes,
+
+        [componentId]:
+          notes,
       }),
     );
   }
@@ -463,16 +602,21 @@ export const ComboConfigurator: React.FC<
       id: string;
       categoryId: string;
       name: string;
-      description: string | null;
+      description:
+        | string
+        | null;
       price: number;
-      imageUrl: string | null;
+      imageUrl:
+        | string
+        | null;
       isAvailable: boolean;
       isActive: boolean;
       isComboOption: boolean;
     },
   ): Product {
     return {
-      id: comboProduct.id,
+      id:
+        comboProduct.id,
 
       category_id:
         comboProduct.categoryId,
@@ -496,14 +640,18 @@ export const ComboConfigurator: React.FC<
         comboProduct.isActive,
 
       created_at:
-        new Date().toISOString(),
+        new Date()
+          .toISOString(),
     };
   }
 
   function getNotesPlaceholder(
-    component: ComboRecipeComponent,
+    component:
+      ComboRecipeComponent,
   ): string {
-    switch (component.type) {
+    switch (
+      component.type
+    ) {
       case 'burger':
         return 'Ej. sin cebolla';
 
@@ -516,9 +664,12 @@ export const ComboConfigurator: React.FC<
   }
 
   function renderComponentNotes(
-    component: ComboRecipeComponent,
+    component:
+      ComboRecipeComponent,
   ): React.ReactNode {
-    if (!component.allowsNotes) {
+    if (
+      !component.allowsNotes
+    ) {
       return null;
     }
 
@@ -530,10 +681,17 @@ export const ComboConfigurator: React.FC<
       >
         <Text
           style={{
-            color: '#FFFFFF',
-            fontSize: 14,
-            fontWeight: '700',
-            marginBottom: 8,
+            color:
+              '#FFFFFF',
+
+            fontSize:
+              14,
+
+            fontWeight:
+              '700',
+
+            marginBottom:
+              8,
           }}
         >
           Indicaciones
@@ -543,13 +701,15 @@ export const ComboConfigurator: React.FC<
           value={
             componentNotes[
               component.id
-            ] ?? ''
+            ] ??
+            ''
           }
-          onChangeText={(notes) =>
-            updateComponentNotes(
-              component.id,
-              notes,
-            )
+          onChangeText={
+            (notes) =>
+              updateComponentNotes(
+                component.id,
+                notes,
+              )
           }
           placeholder={
             getNotesPlaceholder(
@@ -561,31 +721,56 @@ export const ComboConfigurator: React.FC<
           maxLength={250}
           textAlignVertical="top"
           style={{
-            minHeight: 74,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: '#555555',
-            backgroundColor: '#202020',
-            color: '#FFFFFF',
-            fontSize: 14,
+            minHeight:
+              74,
+
+            paddingVertical:
+              10,
+
+            paddingHorizontal:
+              12,
+
+            borderRadius:
+              8,
+
+            borderWidth:
+              1,
+
+            borderColor:
+              '#555555',
+
+            backgroundColor:
+              '#202020',
+
+            color:
+              '#FFFFFF',
+
+            fontSize:
+              14,
           }}
         />
 
         <Text
           style={{
-            color: '#888888',
-            fontSize: 11,
-            marginTop: 4,
-            textAlign: 'right',
+            color:
+              '#888888',
+
+            fontSize:
+              11,
+
+            marginTop:
+              4,
+
+            textAlign:
+              'right',
           }}
         >
           {
             (
               componentNotes[
                 component.id
-              ] ?? ''
+              ] ??
+              ''
             ).length
           }
           /250
@@ -595,18 +780,27 @@ export const ComboConfigurator: React.FC<
   }
 
   function renderMeatSelector(
-    component: ComboRecipeComponent,
+    component:
+      ComboRecipeComponent,
   ): React.ReactNode {
-    if (!component.requiresMeat) {
+    if (
+      !component.requiresMeat
+    ) {
       return null;
     }
 
-    if (meats.length === 0) {
+    if (
+      meats.length ===
+      0
+    ) {
       return (
         <Text
           style={{
-            color: '#FF5252',
-            marginTop: 12,
+            color:
+              '#FF5252',
+
+            marginTop:
+              12,
           }}
         >
           No hay tipos de carne disponibles.
@@ -627,73 +821,316 @@ export const ComboConfigurator: React.FC<
       >
         <Text
           style={{
-            color: '#FFFFFF',
-            fontSize: 15,
-            fontWeight: '700',
-            marginBottom: 8,
+            color:
+              '#FFFFFF',
+
+            fontSize:
+              15,
+
+            fontWeight:
+              '700',
+
+            marginBottom:
+              8,
           }}
         >
           Elige el tipo de carne
         </Text>
 
-        {meats.map((meat) => {
-          const isSelected =
-            selectedMeatId === meat.id;
+        {meats.map(
+          (meat) => {
+            const isSelected =
+              selectedMeatId ===
+              meat.id;
 
-          return (
-            <TouchableOpacity
-              key={meat.id}
-              onPress={() =>
-                selectMeat(
-                  component.id,
-                  meat.id,
-                )
-              }
-              style={{
-                padding: 12,
-                borderRadius: 8,
-                borderWidth: 1,
-                marginBottom: 8,
-
-                borderColor:
-                  isSelected
-                    ? '#FFBF00'
-                    : '#555555',
-
-                backgroundColor:
-                  isSelected
-                    ? '#463800'
-                    : '#292929',
-              }}
-            >
-              <Text
+            return (
+              <TouchableOpacity
+                key={
+                  meat.id
+                }
+                onPress={() =>
+                  selectMeat(
+                    component.id,
+                    meat.id,
+                  )
+                }
                 style={{
-                  color: '#FFFFFF',
+                  padding:
+                    12,
 
-                  fontWeight:
+                  borderRadius:
+                    8,
+
+                  borderWidth:
+                    1,
+
+                  marginBottom:
+                    8,
+
+                  borderColor:
                     isSelected
-                      ? '700'
-                      : '400',
+                      ? '#FFBF00'
+                      : '#555555',
+
+                  backgroundColor:
+                    isSelected
+                      ? '#463800'
+                      : '#292929',
                 }}
               >
-                {meat.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  style={{
+                    color:
+                      '#FFFFFF',
+
+                    fontWeight:
+                      isSelected
+                        ? '700'
+                        : '400',
+                  }}
+                >
+                  {meat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          },
+        )}
+      </View>
+    );
+  }
+
+  function renderSauceSelector(
+    component:
+      ComboRecipeComponent,
+  ): React.ReactNode {
+    if (
+      !component.requiresSauce
+    ) {
+      return null;
+    }
+
+    if (
+      sauces.length ===
+      0
+    ) {
+      return (
+        <Text
+          style={{
+            color:
+              '#FF5252',
+
+            marginTop:
+              12,
+          }}
+        >
+          No hay salsas disponibles.
+        </Text>
+      );
+    }
+
+    const componentSauces =
+      selectedSauceIds[
+        component.id
+      ] ??
+      [];
+
+    return (
+      <View
+        style={{
+          marginTop: 12,
+        }}
+      >
+        <Text
+          style={{
+            color:
+              '#FFFFFF',
+
+            fontSize:
+              15,
+
+            fontWeight:
+              '700',
+
+            marginBottom:
+              4,
+          }}
+        >
+          Elige de 1 a 3 salsas
+        </Text>
+
+        <Text
+          style={{
+            color:
+              '#AAAAAA',
+
+            fontSize:
+              11,
+
+            marginBottom:
+              8,
+          }}
+        >
+          {
+            componentSauces.length
+          }
+          /{MAXIMUM_SAUCES} seleccionadas
+        </Text>
+
+        {weeklySauce && (
+          <View
+            style={{
+              padding:
+                9,
+
+              marginBottom:
+                8,
+
+              borderRadius:
+                8,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                '#8A6A00',
+
+              backgroundColor:
+                '#302800',
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  '#FFBF00',
+
+                fontSize:
+                  11,
+
+                fontWeight:
+                  '900',
+              }}
+            >
+              🌶️ {weeklySauce.modifier_name}
+              {' '}· Ahorra $
+              {weeklySauce.discount_amount.toFixed(
+                2,
+              )}
+            </Text>
+          </View>
+        )}
+
+        {sauces.map(
+          (sauce) => {
+            const isSelected =
+              componentSauces.includes(
+                sauce.id,
+              );
+
+            const isWeeklySauce =
+              weeklySauce
+                ?.modifier_id ===
+              sauce.id;
+
+            return (
+              <TouchableOpacity
+                key={
+                  sauce.id
+                }
+                onPress={() =>
+                  selectSauce(
+                    component.id,
+                    sauce.id,
+                  )
+                }
+                style={{
+                  padding:
+                    12,
+
+                  borderRadius:
+                    8,
+
+                  borderWidth:
+                    isWeeklySauce
+                      ? 2
+                      : 1,
+
+                  marginBottom:
+                    8,
+
+                  borderColor:
+                    isSelected ||
+                    isWeeklySauce
+                      ? '#FFBF00'
+                      : '#555555',
+
+                  backgroundColor:
+                    isSelected
+                      ? '#463800'
+                      : '#292929',
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      isWeeklySauce
+                        ? '#FFBF00'
+                        : '#FFFFFF',
+
+                    fontWeight:
+                      isSelected ||
+                      isWeeklySauce
+                        ? '700'
+                        : '400',
+                  }}
+                >
+                  {isWeeklySauce
+                    ? '🌶️ '
+                    : ''}
+                  {sauce.name}
+                </Text>
+
+                {isWeeklySauce && (
+                  <Text
+                    style={{
+                      color:
+                        '#D6C98A',
+
+                      fontSize:
+                        10,
+
+                      marginTop:
+                        3,
+                    }}
+                  >
+                    Salsa de la Semana · Ahorra $
+                    {weeklySauce.discount_amount.toFixed(
+                      2,
+                    )}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          },
+        )}
       </View>
     );
   }
 
   function renderFixedComponent(
-    component: ComboRecipeComponent,
+    component:
+      ComboRecipeComponent,
   ): React.ReactNode {
-    if (!component.fixedProduct) {
+    if (
+      !component.fixedProduct
+    ) {
       return (
         <Text
           style={{
-            color: '#FF5252',
-            marginTop: 6,
+            color:
+              '#FF5252',
+
+            marginTop:
+              6,
           }}
         >
           Producto fijo no disponible.
@@ -704,26 +1141,41 @@ export const ComboConfigurator: React.FC<
     return (
       <View
         style={{
-          marginTop: 8,
-          padding: 12,
-          borderRadius: 8,
-          backgroundColor: '#292929',
+          marginTop:
+            8,
+
+          padding:
+            12,
+
+          borderRadius:
+            8,
+
+          backgroundColor:
+            '#292929',
         }}
       >
         <Text
           style={{
-            color: '#FFFFFF',
-            fontWeight: '600',
+            color:
+              '#FFFFFF',
+
+            fontWeight:
+              '600',
           }}
         >
-          {component.fixedProduct.name}
+          {
+            component
+              .fixedProduct
+              .name
+          }
         </Text>
       </View>
     );
   }
 
   function renderSelectableComponent(
-    component: ComboRecipeComponent,
+    component:
+      ComboRecipeComponent,
   ): React.ReactNode {
     const selectedOptionId =
       selectedOptionIds[
@@ -738,20 +1190,26 @@ export const ComboConfigurator: React.FC<
       );
 
     const flavors =
-      selectedOption?.flavors ?? [];
+      selectedOption
+        ?.flavors ??
+      [];
 
     return (
       <View
         style={{
-          marginTop: 8,
-          gap: 8,
+          marginTop:
+            8,
+
+          gap:
+            8,
         }}
       >
         {component.options.length ===
         0 ? (
           <Text
             style={{
-              color: '#FF5252',
+              color:
+                '#FF5252',
             }}
           >
             No hay opciones disponibles.
@@ -765,7 +1223,9 @@ export const ComboConfigurator: React.FC<
 
               return (
                 <TouchableOpacity
-                  key={option.id}
+                  key={
+                    option.id
+                  }
                   onPress={() =>
                     selectOption(
                       component.id,
@@ -773,9 +1233,14 @@ export const ComboConfigurator: React.FC<
                     )
                   }
                   style={{
-                    padding: 12,
-                    borderRadius: 8,
-                    borderWidth: 1,
+                    padding:
+                      12,
+
+                    borderRadius:
+                      8,
+
+                    borderWidth:
+                      1,
 
                     borderColor:
                       isSelected
@@ -790,7 +1255,8 @@ export const ComboConfigurator: React.FC<
                 >
                   <Text
                     style={{
-                      color: '#FFFFFF',
+                      color:
+                        '#FFFFFF',
 
                       fontWeight:
                         isSelected
@@ -809,18 +1275,27 @@ export const ComboConfigurator: React.FC<
         {component
           .requiresDrinkFlavor &&
           selectedOption &&
-          flavors.length > 0 && (
+          flavors.length >
+            0 && (
             <View
               style={{
-                marginTop: 12,
+                marginTop:
+                  12,
               }}
             >
               <Text
                 style={{
-                  color: '#FFFFFF',
-                  fontSize: 15,
-                  fontWeight: '700',
-                  marginBottom: 8,
+                  color:
+                    '#FFFFFF',
+
+                  fontSize:
+                    15,
+
+                  fontWeight:
+                    '700',
+
+                  marginBottom:
+                    8,
                 }}
               >
                 Elige el sabor
@@ -831,11 +1306,14 @@ export const ComboConfigurator: React.FC<
                   const isFlavorSelected =
                     selectedFlavorIds[
                       component.id
-                    ] === flavor.id;
+                    ] ===
+                    flavor.id;
 
                   return (
                     <TouchableOpacity
-                      key={flavor.id}
+                      key={
+                        flavor.id
+                      }
                       onPress={() =>
                         selectFlavor(
                           component.id,
@@ -843,10 +1321,17 @@ export const ComboConfigurator: React.FC<
                         )
                       }
                       style={{
-                        padding: 12,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        marginBottom: 8,
+                        padding:
+                          12,
+
+                        borderRadius:
+                          8,
+
+                        borderWidth:
+                          1,
+
+                        marginBottom:
+                          8,
 
                         borderColor:
                           isFlavorSelected
@@ -861,7 +1346,8 @@ export const ComboConfigurator: React.FC<
                     >
                       <Text
                         style={{
-                          color: '#FFFFFF',
+                          color:
+                            '#FFFFFF',
 
                           fontWeight:
                             isFlavorSelected
@@ -869,7 +1355,9 @@ export const ComboConfigurator: React.FC<
                               : '400',
                         }}
                       >
-                        {flavor.name}
+                        {
+                          flavor.name
+                        }
                       </Text>
                     </TouchableOpacity>
                   );
@@ -885,8 +1373,11 @@ export const ComboConfigurator: React.FC<
     return (
       <View
         style={{
-          paddingVertical: 30,
-          alignItems: 'center',
+          paddingVertical:
+            30,
+
+          alignItems:
+            'center',
         }}
       >
         <ActivityIndicator
@@ -896,8 +1387,11 @@ export const ComboConfigurator: React.FC<
 
         <Text
           style={{
-            color: '#FFFFFF',
-            marginTop: 12,
+            color:
+              '#FFFFFF',
+
+            marginTop:
+              12,
           }}
         >
           Cargando configuración del combo...
@@ -910,13 +1404,17 @@ export const ComboConfigurator: React.FC<
     return (
       <View
         style={{
-          paddingVertical: 20,
+          paddingVertical:
+            20,
         }}
       >
         <Text
           style={{
-            color: '#FF5252',
-            textAlign: 'center',
+            color:
+              '#FF5252',
+
+            textAlign:
+              'center',
           }}
         >
           {error}
@@ -932,16 +1430,26 @@ export const ComboConfigurator: React.FC<
   return (
     <View
       style={{
-        paddingVertical: 16,
+        paddingVertical:
+          16,
       }}
     >
       <Text
         style={{
-          color: '#FFFFFF',
-          fontSize: 18,
-          fontWeight: '700',
-          textAlign: 'center',
-          marginBottom: 16,
+          color:
+            '#FFFFFF',
+
+          fontSize:
+            18,
+
+          fontWeight:
+            '700',
+
+          textAlign:
+            'center',
+
+          marginBottom:
+            16,
         }}
       >
         Configura {product.name}
@@ -950,49 +1458,82 @@ export const ComboConfigurator: React.FC<
       {recipe.components.map(
         (component) => (
           <View
-            key={component.id}
+            key={
+              component.id
+            }
             style={{
-              paddingVertical: 12,
-              paddingHorizontal: 14,
-              marginBottom: 12,
-              borderWidth: 1,
-              borderColor: '#555555',
-              borderRadius: 8,
+              paddingVertical:
+                12,
+
+              paddingHorizontal:
+                14,
+
+              marginBottom:
+                12,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                '#555555',
+
+              borderRadius:
+                8,
             }}
           >
             <Text
               style={{
-                color: '#FFFFFF',
-                fontSize: 15,
-                fontWeight: '700',
+                color:
+                  '#FFFFFF',
+
+                fontSize:
+                  15,
+
+                fontWeight:
+                  '700',
               }}
             >
-              {component.label}
+              {
+                component.label
+              }
             </Text>
 
             <Text
               style={{
-                color: '#AAAAAA',
-                fontSize: 12,
-                marginTop: 3,
+                color:
+                  '#AAAAAA',
+
+                fontSize:
+                  12,
+
+                marginTop:
+                  3,
               }}
             >
-              {component.selectionMode ===
-              'fixed'
-                ? 'Incluido en el combo'
-                : 'Selecciona una opción'}
+              {
+                component.selectionMode ===
+                'fixed'
+                  ? 'Incluido en el combo'
+                  : 'Selecciona una opción'
+              }
             </Text>
 
-            {component.selectionMode ===
-            'fixed'
-              ? renderFixedComponent(
-                  component,
-                )
-              : renderSelectableComponent(
-                  component,
-                )}
+            {
+              component.selectionMode ===
+              'fixed'
+                ? renderFixedComponent(
+                    component,
+                  )
+                : renderSelectableComponent(
+                    component,
+                  )
+            }
 
             {renderMeatSelector(
+              component,
+            )}
+
+            {renderSauceSelector(
               component,
             )}
 

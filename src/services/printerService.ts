@@ -18,6 +18,7 @@ import {
   LUCKY_DORIAN,
 } from '../generated/printerAssets';
 import { PromoCoupon } from './promoService';
+import { fetchOrderWeeklySauceDiscounts } from '../repositories/OrderRepository';
 
 let connectedPrinter:
   BluetoothDevice | null = null;
@@ -320,6 +321,32 @@ export async function printOrderTicket({
       order.total,
     );
 
+    const weeklySauceDiscounts =
+  await fetchOrderWeeklySauceDiscounts(
+    order.id,
+  );
+
+const weeklySauceDiscountTotal =
+  roundCurrency(
+    weeklySauceDiscounts.reduce(
+      (
+        accumulated,
+        discount,
+      ) =>
+        accumulated +
+        Number(
+          discount.discountAmount,
+        ),
+      0,
+    ),
+  );
+
+const subtotal =
+  roundCurrency(
+    total +
+    weeklySauceDiscountTotal,
+  );
+
   const received =
     paymentMethod === 'cash'
       ? Number(
@@ -614,7 +641,7 @@ export async function printOrderTicket({
     }
   }
 
-  /*
+    /*
    * ============================
    * PAGO
    * ============================
@@ -623,6 +650,78 @@ export async function printOrderTicket({
   await printer.write(
     separator(),
   );
+
+  /*
+   * ============================
+   * SUBTOTAL
+   * ============================
+   *
+   * Solamente lo mostramos
+   * separado cuando hubo Salsa
+   * de la Semana.
+   */
+
+  if (
+    weeklySauceDiscountTotal > 0
+  ) {
+    await printer.write(
+      createAmountRow(
+        'SUBTOTAL',
+        subtotal,
+      ),
+    );
+
+    await setBold(
+      printer,
+      true,
+    );
+
+    await printer.write(
+      '\nSALSA DE LA SEMANA\n',
+    );
+
+    await setBold(
+      printer,
+      false,
+    );
+
+    /*
+     * Podemos tener más de una
+     * fila cuando diferentes
+     * productos o componentes
+     * calificaron.
+     */
+    for (
+      const discount of
+      weeklySauceDiscounts
+    ) {
+      const sauceName =
+        sanitizeTicketText(
+          discount.modifierName,
+        );
+
+      await printer.write(
+        createAmountRow(
+          `  ${sauceName}`,
+          -Math.abs(
+            Number(
+              discount.discountAmount,
+            ),
+          ),
+        ),
+      );
+    }
+
+    await printer.write(
+      '\n',
+    );
+  }
+
+  /*
+   * ============================
+   * TOTAL
+   * ============================
+   */
 
   await setBold(
     printer,
@@ -652,8 +751,7 @@ export async function printOrderTicket({
   );
 
   if (
-    paymentMethod ===
-    'cash' &&
+    paymentMethod === 'cash' &&
     received !== null
   ) {
     await printer.write(
@@ -874,9 +972,16 @@ function createAmountRow(
   label: string,
   amount: number,
 ): string {
+  const formattedAmount =
+    amount < 0
+      ? `-$${Math.abs(
+          amount,
+        ).toFixed(2)}`
+      : `$${amount.toFixed(2)}`;
+
   return createTextRow(
     label,
-    `$${amount.toFixed(2)}`,
+    formattedAmount,
   );
 }
 

@@ -22,6 +22,11 @@ import {
   isDeliveryProduct,
 } from '../../Utils/delivery';
 
+import {
+  getActiveWeeklySauce,
+  WeeklySauce,
+} from '../../services/weeklySauceService';
+
 interface CartProps {
   cart: CartItem[];
 
@@ -64,6 +69,13 @@ export const Cart: React.FC<
       setIsCollapsed,
     ] = useState(false);
 
+    const [
+      weeklySauce,
+      setWeeklySauce,
+    ] = useState<
+      WeeklySauce | null
+    >(null);
+
     const deliveryItem =
       cart.find(
         (item) =>
@@ -91,7 +103,7 @@ export const Cart: React.FC<
         0,
       );
 
-    const totalAmount =
+    const subtotalAmount =
       cart.reduce(
         (sum, item) =>
           sum +
@@ -102,6 +114,26 @@ export const Cart: React.FC<
         0,
       );
 
+    const weeklySauceDiscount =
+      weeklySauce
+        ? regularItems.reduce(
+            (sum, item) =>
+              sum +
+              getWeeklySauceDiscountForItem(
+                item,
+                weeklySauce,
+              ),
+            0,
+          )
+        : 0;
+
+    const totalAmount =
+      Math.max(
+        0,
+        subtotalAmount -
+        weeklySauceDiscount,
+      );
+
     const cannotCheckout =
       regularItems.length === 0;
 
@@ -109,6 +141,41 @@ export const Cart: React.FC<
       deliveryItem
         ?.deliveryDetails ??
       null;
+
+    useEffect(() => {
+      let isMounted = true;
+
+      const loadWeeklySauce =
+        async () => {
+          try {
+            const data =
+              await getActiveWeeklySauce();
+
+            if (isMounted) {
+              setWeeklySauce(
+                data,
+              );
+            }
+          } catch (error) {
+            console.error(
+              'Error loading weekly sauce in cart:',
+              error,
+            );
+
+            if (isMounted) {
+              setWeeklySauce(
+                null,
+              );
+            }
+          }
+        };
+
+      void loadWeeklySauce();
+
+      return () => {
+        isMounted = false;
+      };
+    }, []);
 
     /*
      * Si el carrito queda completamente
@@ -655,6 +722,59 @@ export const Cart: React.FC<
                         item.quantity
                       ).toFixed(2)}
                     </Text>
+
+                    {weeklySauce &&
+                      getWeeklySauceDiscountForItem(
+                        item,
+                        weeklySauce,
+                      ) >
+                        0 ? (
+                      <View
+                        style={{
+                          marginTop: 6,
+                          alignSelf:
+                            'flex-start',
+                          paddingVertical: 5,
+                          paddingHorizontal: 8,
+                          borderRadius: 6,
+                          borderWidth: 1,
+                          borderColor:
+                            '#5A4A00',
+                          backgroundColor:
+                            '#302800',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color:
+                              '#FFBF00',
+                            fontSize: 10,
+                            fontWeight:
+                              '900',
+                          }}
+                        >
+                          🌶️ Salsa de la Semana
+                        </Text>
+
+                        <Text
+                          style={{
+                            color:
+                              '#D6C98A',
+                            fontSize: 10,
+                            marginTop: 2,
+                          }}
+                        >
+                          {weeklySauce.modifier_name}
+                          {' '}· -$
+                          {getWeeklySauceDiscountForItem(
+                            item,
+                            weeklySauce,
+                          ).toFixed(
+                            2,
+                          )}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   {/* CANTIDAD */}
@@ -756,6 +876,93 @@ export const Cart: React.FC<
             styles.cartFooter
           }
         >
+          {weeklySauceDiscount >
+            0 ? (
+            <>
+              <View
+                style={{
+                  flexDirection:
+                    'row',
+                  alignItems:
+                    'center',
+                  justifyContent:
+                    'space-between',
+                  marginBottom:
+                    6,
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      '#AAAAAA',
+                    fontSize:
+                      12,
+                  }}
+                >
+                  Subtotal
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      '#CCCCCC',
+                    fontSize:
+                      12,
+                    fontWeight:
+                      '700',
+                  }}
+                >
+                  $
+                  {subtotalAmount.toFixed(
+                    2,
+                  )}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  flexDirection:
+                    'row',
+                  alignItems:
+                    'center',
+                  justifyContent:
+                    'space-between',
+                  marginBottom:
+                    8,
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      '#FFBF00',
+                    fontSize:
+                      12,
+                    fontWeight:
+                      '800',
+                  }}
+                >
+                  🌶️ Salsa de la Semana
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      '#FFBF00',
+                    fontSize:
+                      12,
+                    fontWeight:
+                      '900',
+                  }}
+                >
+                  -$
+                  {weeklySauceDiscount.toFixed(
+                    2,
+                  )}
+                </Text>
+              </View>
+            </>
+          ) : null}
+
           <View
             style={
               styles.totalRow
@@ -809,6 +1016,95 @@ export const Cart: React.FC<
       </View>
     );
   };
+
+
+function getWeeklySauceDiscountForItem(
+  item: CartItem,
+  weeklySauce: WeeklySauce,
+): number {
+  const discountPerEligibleUnit =
+    Number(
+      weeklySauce.discount_amount,
+    );
+
+  if (
+    !Number.isFinite(
+      discountPerEligibleUnit,
+    ) ||
+    discountPerEligibleUnit <=
+      0
+  ) {
+    return 0;
+  }
+
+  const hasDirectWeeklySauce =
+    item.selectedModifiers?.some(
+      (modifier) =>
+        modifier.id ===
+        weeklySauce.modifier_id,
+    ) ??
+    false;
+
+  const directEligibleUnits =
+    hasDirectWeeklySauce
+      ? item.quantity
+      : 0;
+
+  const comboEligibleUnits =
+    (
+      item.comboComponents ??
+      []
+    ).reduce(
+      (
+        total,
+        component,
+      ) => {
+        const hasWeeklySauce =
+          component
+            .selectedModifiers
+            ?.some(
+              (modifier) =>
+                modifier.id ===
+                weeklySauce.modifier_id,
+            ) ??
+          false;
+
+        if (!hasWeeklySauce) {
+          return total;
+        }
+
+        const componentQuantity =
+          Number(
+            component.quantity ??
+            1,
+          );
+
+        return (
+          total +
+          (
+            Number.isFinite(
+              componentQuantity,
+            ) &&
+            componentQuantity >
+              0
+              ? componentQuantity
+              : 1
+          )
+        );
+      },
+      0,
+    );
+
+  const eligibleUnits =
+    directEligibleUnits +
+    comboEligibleUnits *
+      item.quantity;
+
+  return (
+    eligibleUnits *
+    discountPerEligibleUnit
+  );
+}
 
 function getModifierColor(
   groupName:

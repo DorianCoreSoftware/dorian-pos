@@ -1,11 +1,13 @@
 import React, {
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   Switch,
   Text,
@@ -21,10 +23,100 @@ import {
 } from '../../../services/promotionService';
 
 import {
+  getAvailableSauces,
+  getWeeklySauceSettings,
+  SauceOption,
+  saveWeeklySauceSettings,
+} from '../../../services/weeklySauceService';
+
+import {
   styles,
 } from './AdminPromotions.styles';
 
+function formatLocalDate(
+  date: Date,
+): string {
+  const year = date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(
+    2,
+    '0',
+  );
+
+  const day = String(
+    date.getDate(),
+  ).padStart(
+    2,
+    '0',
+  );
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultWeeklySauceDates() {
+  const start = new Date();
+  const end = new Date(start);
+
+  end.setDate(
+    end.getDate() + 6,
+  );
+
+  return {
+    startsAt:
+      formatLocalDate(
+        start,
+      ),
+
+    endsAt:
+      formatLocalDate(
+        end,
+      ),
+  };
+}
+
+function isValidDateInput(
+  value: string,
+): boolean {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = value
+    .split('-')
+    .map(Number);
+
+  const date =
+    new Date(
+      year,
+      month - 1,
+      day,
+    );
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
 export function AdminPromotions() {
+  const defaultDates =
+    useMemo(
+      () =>
+        getDefaultWeeklySauceDates(),
+      [],
+    );
+
   const [
     settings,
     setSettings,
@@ -50,7 +142,57 @@ export function AdminPromotions() {
   const [
     luckyDorianChance,
     setLuckyDorianChance,
-  ] = useState('0');
+  ] = useState('100');
+
+  const [
+    weeklySauceSettingsId,
+    setWeeklySauceSettingsId,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    weeklySauceEnabled,
+    setWeeklySauceEnabled,
+  ] = useState(false);
+
+  const [
+    weeklySauceModifierId,
+    setWeeklySauceModifierId,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    weeklySauceDiscount,
+    setWeeklySauceDiscount,
+  ] = useState('5.00');
+
+  const [
+    weeklySauceStartsAt,
+    setWeeklySauceStartsAt,
+  ] = useState(
+    defaultDates.startsAt,
+  );
+
+  const [
+    weeklySauceEndsAt,
+    setWeeklySauceEndsAt,
+  ] = useState(
+    defaultDates.endsAt,
+  );
+
+  const [
+    sauces,
+    setSauces,
+  ] = useState<
+    SauceOption[]
+  >([]);
+
+  const [
+    sauceSelectorVisible,
+    setSauceSelectorVisible,
+  ] = useState(false);
 
   const [
     isLoading,
@@ -69,44 +211,111 @@ export function AdminPromotions() {
     string | null
   >(null);
 
+  const selectedSauce =
+    useMemo(
+      () =>
+        sauces.find(
+          sauce =>
+            sauce.id ===
+            weeklySauceModifierId,
+        ) ?? null,
+      [
+        sauces,
+        weeklySauceModifierId,
+      ],
+    );
+
   useEffect(() => {
     const loadSettings =
       async () => {
         try {
-          setIsLoading(
-            true,
-          );
+          setIsLoading(true);
+          setErrorMessage(null);
 
-          setErrorMessage(
-            null,
-          );
-
-          const data =
-            await getPromotionSettings();
+          const [
+            promotionData,
+            weeklySauceData,
+            sauceOptions,
+          ] =
+            await Promise.all([
+              getPromotionSettings(),
+              getWeeklySauceSettings(),
+              getAvailableSauces(),
+            ]);
 
           setSettings(
-            data,
+            promotionData,
           );
 
           setKongEnabled(
-            data.kong_enabled,
+            promotionData
+              .kong_enabled,
           );
 
           setRequiredKongs(
             String(
-              data.required_kongs,
+              promotionData
+                .required_kongs,
             ),
           );
 
           setLuckyDorianEnabled(
-            data.lucky_dorian_enabled,
+            promotionData
+              .lucky_dorian_enabled,
           );
 
           setLuckyDorianChance(
             String(
-              data.lucky_dorian_chance,
+              promotionData
+                .lucky_dorian_chance,
             ),
           );
+
+          setSauces(
+            sauceOptions,
+          );
+
+          if (
+            weeklySauceData
+          ) {
+            setWeeklySauceSettingsId(
+              weeklySauceData.id,
+            );
+
+            setWeeklySauceEnabled(
+              weeklySauceData
+                .is_enabled,
+            );
+
+            setWeeklySauceModifierId(
+              weeklySauceData
+                .modifier_id,
+            );
+
+            setWeeklySauceDiscount(
+              Number(
+                weeklySauceData
+                  .discount_amount ??
+                5,
+              ).toFixed(
+                2,
+              ),
+            );
+
+            setWeeklySauceStartsAt(
+              weeklySauceData
+                .starts_at ??
+              defaultDates
+                .startsAt,
+            );
+
+            setWeeklySauceEndsAt(
+              weeklySauceData
+                .ends_at ??
+              defaultDates
+                .endsAt,
+            );
+          }
         } catch (error) {
           console.error(
             'Error loading promotion settings:',
@@ -119,14 +328,15 @@ export function AdminPromotions() {
               : 'No se pudo cargar la configuración de promociones.',
           );
         } finally {
-          setIsLoading(
-            false,
-          );
+          setIsLoading(false);
         }
       };
 
     void loadSettings();
-  }, []);
+  }, [
+    defaultDates.endsAt,
+    defaultDates.startsAt,
+  ]);
 
   const handleSave =
     async () => {
@@ -144,12 +354,17 @@ export function AdminPromotions() {
           luckyDorianChance,
         );
 
+      const parsedWeeklySauceDiscount =
+        Number(
+          weeklySauceDiscount,
+        );
+
       if (
         !Number.isInteger(
           parsedRequiredKongs,
         ) ||
         parsedRequiredKongs <
-        1
+          1
       ) {
         Alert.alert(
           'Dato inválido',
@@ -160,26 +375,95 @@ export function AdminPromotions() {
       }
 
       if (
-        !Number.isInteger(
-          parsedDorianChance,
-        ) ||
-        parsedDorianChance <
-        0 ||
-        parsedDorianChance >
-        100
+        luckyDorianEnabled &&
+        (
+          !Number.isInteger(
+            parsedDorianChance,
+          ) ||
+          parsedDorianChance <
+            1 ||
+          parsedDorianChance >
+            100
+        )
       ) {
         Alert.alert(
           'Dato inválido',
-          'La probabilidad de Dorian debe ser un número entero entre 0 y 100.',
+          'Dorian debe usar un valor entero entre 1 y 100. Ejemplo: 1 = siempre, 10 = 1 de cada 10 ventas, 100 = 1 de cada 100 ventas.',
+        );
+
+        return;
+      }
+
+      if (
+        weeklySauceEnabled &&
+        !weeklySauceModifierId
+      ) {
+        Alert.alert(
+          'Salsa requerida',
+          'Selecciona la Salsa de la Semana.',
+        );
+
+        return;
+      }
+
+      if (
+        !Number.isFinite(
+          parsedWeeklySauceDiscount,
+        ) ||
+        parsedWeeklySauceDiscount <
+          0
+      ) {
+        Alert.alert(
+          'Descuento inválido',
+          'El descuento de la Salsa de la Semana debe ser mayor o igual a 0.',
+        );
+
+        return;
+      }
+
+      if (
+        weeklySauceEnabled &&
+        !isValidDateInput(
+          weeklySauceStartsAt,
+        )
+      ) {
+        Alert.alert(
+          'Fecha inválida',
+          'La fecha de inicio debe tener el formato AAAA-MM-DD.',
+        );
+
+        return;
+      }
+
+      if (
+        weeklySauceEnabled &&
+        !isValidDateInput(
+          weeklySauceEndsAt,
+        )
+      ) {
+        Alert.alert(
+          'Fecha inválida',
+          'La fecha de fin debe tener el formato AAAA-MM-DD.',
+        );
+
+        return;
+      }
+
+      if (
+        weeklySauceEnabled &&
+        weeklySauceEndsAt <
+          weeklySauceStartsAt
+      ) {
+        Alert.alert(
+          'Vigencia inválida',
+          'La fecha de fin no puede ser anterior a la fecha de inicio.',
         );
 
         return;
       }
 
       try {
-        setIsSaving(
-          true,
-        );
+        setIsSaving(true);
 
         await updatePromotionSettings(
           settings.id,
@@ -196,6 +480,33 @@ export function AdminPromotions() {
             lucky_dorian_chance:
               parsedDorianChance,
           },
+        );
+
+        const weeklySauceId =
+          await saveWeeklySauceSettings(
+            weeklySauceSettingsId,
+            {
+              modifier_id:
+                weeklySauceModifierId,
+
+              discount_amount:
+                parsedWeeklySauceDiscount,
+
+              is_enabled:
+                weeklySauceEnabled,
+
+              starts_at:
+                weeklySauceStartsAt ||
+                null,
+
+              ends_at:
+                weeklySauceEndsAt ||
+                null,
+            },
+          );
+
+        setWeeklySauceSettingsId(
+          weeklySauceId,
         );
 
         setSettings({
@@ -226,12 +537,12 @@ export function AdminPromotions() {
 
         Alert.alert(
           'Error',
-          'No se pudo guardar la configuración de promociones.',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo guardar la configuración de promociones.',
         );
       } finally {
-        setIsSaving(
-          false,
-        );
+        setIsSaving(false);
       }
     };
 
@@ -289,324 +600,729 @@ export function AdminPromotions() {
   }
 
   return (
-  <ScrollView
-    style={
-      styles.container
-    }
-    contentContainerStyle={
-      styles.scrollContent
-    }
-    showsVerticalScrollIndicator={
-      true
-    }
-    keyboardShouldPersistTaps="handled"
-  >
-      <View
+    <>
+      <ScrollView
         style={
-          styles.header
+          styles.container
         }
-      >
-        <Text
-          style={
-            styles.title
-          }
-        >
-          Promociones
-        </Text>
-
-        <Text
-          style={
-            styles.subtitle
-          }
-        >
-          Activa, desactiva y configura
-          las promociones del punto de venta.
-        </Text>
-      </View>
-
-      {/* KONGS */}
-      <View
-        style={
-          styles.card
+        contentContainerStyle={
+          styles.scrollContent
         }
+        showsVerticalScrollIndicator
+        keyboardShouldPersistTaps="handled"
       >
         <View
           style={
-            styles.cardHeader
+            styles.header
+          }
+        >
+          <Text
+            style={
+              styles.title
+            }
+          >
+            Promociones
+          </Text>
+
+          <Text
+            style={
+              styles.subtitle
+            }
+          >
+            Activa, desactiva y configura
+            las promociones del punto de venta.
+          </Text>
+        </View>
+
+        {/* KONGS */}
+        <View
+          style={
+            styles.card
           }
         >
           <View
             style={
-              styles.cardHeaderText
+              styles.cardHeader
             }
           >
-            <Text
+            <View
               style={
-                styles.cardTitle
+                styles.cardHeaderText
               }
             >
-              Kongs
-            </Text>
+              <Text
+                style={
+                  styles.cardTitle
+                }
+              >
+                Kongs
+              </Text>
 
-            <Text
-              style={
-                styles.cardDescription
+              <Text
+                style={
+                  styles.cardDescription
+                }
+              >
+                Controla la acumulación y canje
+                de cupones Kong.
+              </Text>
+            </View>
+
+            <Switch
+              value={
+                kongEnabled
               }
-            >
-              Controla la acumulación y canje
-              de cupones Kong.
-            </Text>
+              onValueChange={
+                setKongEnabled
+              }
+              trackColor={{
+                false:
+                  '#444444',
+
+                true:
+                  '#8A6A00',
+              }}
+              thumbColor={
+                kongEnabled
+                  ? '#FFBF00'
+                  : '#888888'
+              }
+            />
           </View>
 
-          <Switch
-            value={
-              kongEnabled
-            }
-            onValueChange={
-              setKongEnabled
-            }
-            trackColor={{
-              false:
-                '#444444',
-              true:
-                '#8A6A00',
-            }}
-            thumbColor={
-              kongEnabled
-                ? '#FFBF00'
-                : '#888888'
-            }
-          />
-        </View>
-
-        <View
-          style={
-            styles.fieldContainer
-          }
-        >
-          <Text
-            style={
-              styles.fieldLabel
-            }
-          >
-            Kongs necesarios para premio
-          </Text>
-
-          <TextInput
-            value={
-              requiredKongs
-            }
-            onChangeText={
-              setRequiredKongs
-            }
-            keyboardType="number-pad"
-            editable={
-              kongEnabled
-            }
-            maxLength={2}
-            style={[
-              styles.input,
-
-              !kongEnabled &&
-              styles.inputDisabled,
-            ]}
-          />
-
-          <Text
-            style={
-              styles.fieldHelp
-            }
-          >
-            Actualmente el cliente necesita
-            {` ${requiredKongs || '0'} `}
-            cupones Kong para completar la promoción.
-          </Text>
-        </View>
-      </View>
-
-      {/* DORIAN */}
-      <View
-        style={
-          styles.card
-        }
-      >
-        <View
-          style={
-            styles.cardHeader
-          }
-        >
           <View
             style={
-              styles.cardHeaderText
+              styles.fieldContainer
             }
           >
             <Text
               style={
-                styles.cardTitle
+                styles.fieldLabel
               }
             >
-              Dorian de la Suerte
+              Kongs necesarios para premio
             </Text>
 
-            <Text
-              style={
-                styles.cardDescription
-              }
-            >
-              Controla si las ventas pueden
-              generar un Dorian de la Suerte.
-            </Text>
-          </View>
-
-          <Switch
-            value={
-              luckyDorianEnabled
-            }
-            onValueChange={
-              setLuckyDorianEnabled
-            }
-            trackColor={{
-              false:
-                '#444444',
-              true:
-                '#8A6A00',
-            }}
-            thumbColor={
-              luckyDorianEnabled
-                ? '#FFBF00'
-                : '#888888'
-            }
-          />
-        </View>
-
-        <View
-          style={
-            styles.fieldContainer
-          }
-        >
-          <Text
-            style={
-              styles.fieldLabel
-            }
-          >
-            Probabilidad
-          </Text>
-
-          <View
-            style={
-              styles.percentageRow
-            }
-          >
             <TextInput
               value={
-                luckyDorianChance
+                requiredKongs
               }
               onChangeText={
-                setLuckyDorianChance
+                setRequiredKongs
               }
               keyboardType="number-pad"
               editable={
-                luckyDorianEnabled
+                kongEnabled
               }
-              maxLength={3}
+              maxLength={2}
               style={[
                 styles.input,
-                styles.percentageInput,
 
-                !luckyDorianEnabled &&
+                !kongEnabled &&
                 styles.inputDisabled,
               ]}
             />
 
             <Text
               style={
-                styles.percentageSymbol
+                styles.fieldHelp
               }
             >
-              %
+              Actualmente el cliente necesita
+              {` ${requiredKongs || '0'} `}
+              cupones Kong para completar la promoción.
             </Text>
           </View>
-
-          <Text
-            style={
-              styles.fieldHelp
-            }
-          >
-            Debe ser un valor entre 0 y 100.
-          </Text>
         </View>
-      </View>
 
-      {/* SALSA DE LA SEMANA */}
-      <View
-        style={[
-          styles.card,
-          styles.comingSoonCard,
-        ]}
-      >
+        {/* DORIAN */}
         <View
           style={
-            styles.cardHeaderText
+            styles.card
           }
         >
-          <Text
+          <View
             style={
-              styles.cardTitle
+              styles.cardHeader
             }
           >
-            Salsa de la Semana
-          </Text>
+            <View
+              style={
+                styles.cardHeaderText
+              }
+            >
+              <Text
+                style={
+                  styles.cardTitle
+                }
+              >
+                Dorian de la Suerte
+              </Text>
 
-          <Text
-            style={
-              styles.cardDescription
-            }
-          >
-            Esta promoción usará las estadísticas
-            de rotación para favorecer salsas
-            con menor salida.
-          </Text>
+              <Text
+                style={
+                  styles.cardDescription
+                }
+              >
+                Controla si las ventas pueden
+                generar un Dorian de la Suerte.
+              </Text>
+            </View>
+
+            <Switch
+              value={
+                luckyDorianEnabled
+              }
+              onValueChange={
+                setLuckyDorianEnabled
+              }
+              trackColor={{
+                false:
+                  '#444444',
+
+                true:
+                  '#8A6A00',
+              }}
+              thumbColor={
+                luckyDorianEnabled
+                  ? '#FFBF00'
+                  : '#888888'
+              }
+            />
+          </View>
 
           <View
             style={
-              styles.comingSoonBadge
+              styles.fieldContainer
             }
           >
             <Text
               style={
-                styles.comingSoonText
+                styles.fieldLabel
               }
             >
-              PRÓXIMAMENTE
+              1 oportunidad entre
+            </Text>
+
+            <View
+              style={
+                styles.inlineFieldRow
+              }
+            >
+              <TextInput
+                value={
+                  luckyDorianChance
+                }
+                onChangeText={
+                  setLuckyDorianChance
+                }
+                keyboardType="number-pad"
+                editable={
+                  luckyDorianEnabled
+                }
+                maxLength={3}
+                style={[
+                  styles.input,
+                  styles.compactInput,
+
+                  !luckyDorianEnabled &&
+                  styles.inputDisabled,
+                ]}
+              />
+
+              <Text
+                style={
+                  styles.inlineSuffix
+                }
+              >
+                ventas
+              </Text>
+            </View>
+
+            <Text
+              style={
+                styles.fieldHelp
+              }
+            >
+              1 = 100%, 2 = 50%, 10 = 10% y
+              100 = 1% de probabilidad.
             </Text>
           </View>
         </View>
-      </View>
 
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-
-          isSaving &&
-          styles.saveButtonDisabled,
-        ]}
-        disabled={
-          isSaving
-        }
-        onPress={
-          handleSave
-        }
-      >
-        <Text
+        {/* SALSA DE LA SEMANA */}
+        <View
           style={
-            styles.saveButtonText
+            styles.card
           }
         >
-          {isSaving
-            ? 'GUARDANDO...'
-            : 'GUARDAR CONFIGURACIÓN'}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <View
+            style={
+              styles.cardHeader
+            }
+          >
+            <View
+              style={
+                styles.cardHeaderText
+              }
+            >
+              <Text
+                style={
+                  styles.cardTitle
+                }
+              >
+                🌶️ Salsa de la Semana
+              </Text>
+
+              <Text
+                style={
+                  styles.cardDescription
+                }
+              >
+                Destaca una salsa de baja rotación
+                y ofrece un descuento cuando el
+                cliente la elija.
+              </Text>
+            </View>
+
+            <Switch
+              value={
+                weeklySauceEnabled
+              }
+              onValueChange={
+                setWeeklySauceEnabled
+              }
+              trackColor={{
+                false:
+                  '#444444',
+
+                true:
+                  '#8A6A00',
+              }}
+              thumbColor={
+                weeklySauceEnabled
+                  ? '#FFBF00'
+                  : '#888888'
+              }
+            />
+          </View>
+
+          <View
+            style={
+              styles.fieldContainer
+            }
+          >
+            <Text
+              style={
+                styles.fieldLabel
+              }
+            >
+              Salsa
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.selector,
+
+                !weeklySauceEnabled &&
+                styles.inputDisabled,
+              ]}
+              disabled={
+                !weeklySauceEnabled
+              }
+              onPress={() =>
+                setSauceSelectorVisible(
+                  true,
+                )
+              }
+            >
+              <Text
+                style={[
+                  styles.selectorText,
+
+                  !selectedSauce &&
+                  styles.selectorPlaceholder,
+                ]}
+              >
+                {selectedSauce?.name ??
+                  'Seleccionar salsa'}
+              </Text>
+
+              <Text
+                style={
+                  styles.selectorArrow
+                }
+              >
+                ▼
+              </Text>
+            </TouchableOpacity>
+
+            <Text
+              style={
+                styles.fieldHelp
+              }
+            >
+              Solo se muestran salsas disponibles
+              del catálogo.
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.fieldContainer
+            }
+          >
+            <Text
+              style={
+                styles.fieldLabel
+              }
+            >
+              Descuento
+            </Text>
+
+            <View
+              style={
+                styles.inlineFieldRow
+              }
+            >
+              <Text
+                style={
+                  styles.currencySymbol
+                }
+              >
+                $
+              </Text>
+
+              <TextInput
+                value={
+                  weeklySauceDiscount
+                }
+                onChangeText={
+                  value =>
+                    setWeeklySauceDiscount(
+                      value.replace(
+                        ',',
+                        '.',
+                      ),
+                    )
+                }
+                keyboardType="decimal-pad"
+                editable={
+                  weeklySauceEnabled
+                }
+                style={[
+                  styles.input,
+                  styles.discountInput,
+
+                  !weeklySauceEnabled &&
+                  styles.inputDisabled,
+                ]}
+              />
+
+              <Text
+                style={
+                  styles.inlineSuffix
+                }
+              >
+                MXN
+              </Text>
+            </View>
+
+            <Text
+              style={
+                styles.fieldHelp
+              }
+            >
+              Este descuento se aplicará una sola
+              vez por producto elegible.
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.fieldContainer
+            }
+          >
+            <Text
+              style={
+                styles.fieldLabel
+              }
+            >
+              Vigencia
+            </Text>
+
+            <View
+              style={
+                styles.dateRow
+              }
+            >
+              <View
+                style={
+                  styles.dateField
+                }
+              >
+                <Text
+                  style={
+                    styles.dateLabel
+                  }
+                >
+                  Inicio
+                </Text>
+
+                <TextInput
+                  value={
+                    weeklySauceStartsAt
+                  }
+                  onChangeText={
+                    setWeeklySauceStartsAt
+                  }
+                  editable={
+                    weeklySauceEnabled
+                  }
+                  placeholder="AAAA-MM-DD"
+                  placeholderTextColor="#666666"
+                  autoCapitalize="none"
+                  style={[
+                    styles.input,
+                    styles.dateInput,
+
+                    !weeklySauceEnabled &&
+                    styles.inputDisabled,
+                  ]}
+                />
+              </View>
+
+              <View
+                style={
+                  styles.dateField
+                }
+              >
+                <Text
+                  style={
+                    styles.dateLabel
+                  }
+                >
+                  Fin
+                </Text>
+
+                <TextInput
+                  value={
+                    weeklySauceEndsAt
+                  }
+                  onChangeText={
+                    setWeeklySauceEndsAt
+                  }
+                  editable={
+                    weeklySauceEnabled
+                  }
+                  placeholder="AAAA-MM-DD"
+                  placeholderTextColor="#666666"
+                  autoCapitalize="none"
+                  style={[
+                    styles.input,
+                    styles.dateInput,
+
+                    !weeklySauceEnabled &&
+                    styles.inputDisabled,
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+
+          {weeklySauceEnabled &&
+            selectedSauce && (
+              <View
+                style={
+                  styles.weeklySaucePreview
+                }
+              >
+                <Text
+                  style={
+                    styles.weeklySaucePreviewTitle
+                  }
+                >
+                  🌶️ {selectedSauce.name}
+                </Text>
+
+                <Text
+                  style={
+                    styles.weeklySaucePreviewText
+                  }
+                >
+                  El cliente recibe $
+                  {Number(
+                    weeklySauceDiscount ||
+                    0,
+                  ).toFixed(
+                    2,
+                  )}{' '}
+                  de descuento al elegir esta salsa.
+                </Text>
+              </View>
+            )}
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+
+            isSaving &&
+            styles.saveButtonDisabled,
+          ]}
+          disabled={
+            isSaving
+          }
+          onPress={
+            handleSave
+          }
+        >
+          <Text
+            style={
+              styles.saveButtonText
+            }
+          >
+            {isSaving
+              ? 'GUARDANDO...'
+              : 'GUARDAR CONFIGURACIÓN'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <Modal
+        visible={
+          sauceSelectorVisible
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setSauceSelectorVisible(
+            false,
+          )
+        }
+      >
+        <View
+          style={
+            styles.modalBackdrop
+          }
+        >
+          <View
+            style={
+              styles.modalCard
+            }
+          >
+            <View
+              style={
+                styles.modalHeader
+              }
+            >
+              <View
+                style={
+                  styles.modalHeaderText
+                }
+              >
+                <Text
+                  style={
+                    styles.modalTitle
+                  }
+                >
+                  Seleccionar salsa
+                </Text>
+
+                <Text
+                  style={
+                    styles.modalSubtitle
+                  }
+                >
+                  Elige la salsa que tendrá
+                  descuento esta semana.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={
+                  styles.modalCloseButton
+                }
+                onPress={() =>
+                  setSauceSelectorVisible(
+                    false,
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.modalCloseText
+                  }
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={
+                styles.sauceList
+              }
+              contentContainerStyle={
+                styles.sauceListContent
+              }
+              keyboardShouldPersistTaps="handled"
+            >
+              {sauces.map(
+                sauce => {
+                  const selected =
+                    sauce.id ===
+                    weeklySauceModifierId;
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        sauce.id
+                      }
+                      style={[
+                        styles.sauceOption,
+
+                        selected &&
+                        styles.sauceOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setWeeklySauceModifierId(
+                          sauce.id,
+                        );
+
+                        setSauceSelectorVisible(
+                          false,
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.sauceOptionText,
+
+                          selected &&
+                          styles.sauceOptionTextSelected,
+                        ]}
+                      >
+                        {sauce.name}
+                      </Text>
+
+                      {selected && (
+                        <Text
+                          style={
+                            styles.sauceOptionCheck
+                          }
+                        >
+                          ✓
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                },
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }

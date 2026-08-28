@@ -357,13 +357,13 @@ export function KitchenScreen({
             await getOrCreateOrderPromoCoupon(
               orderToPay.id,
             );
-          if (!promoCoupon) {
-            return;
+
+          if (promoCoupon) {
+            console.log(
+              'Cupón promocional:',
+              promoCoupon,
+            );
           }
-          console.log(
-            'Cupón promocional:',
-            promoCoupon,
-          );
         } catch (error) {
           console.error(
             'Pago registrado, pero no se pudo generar la promoción:',
