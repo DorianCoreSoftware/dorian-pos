@@ -321,31 +321,31 @@ export async function printOrderTicket({
       order.total,
     );
 
-    const weeklySauceDiscounts =
-  await fetchOrderWeeklySauceDiscounts(
-    order.id,
-  );
+  const weeklySauceDiscounts =
+    await fetchOrderWeeklySauceDiscounts(
+      order.id,
+    );
 
-const weeklySauceDiscountTotal =
-  roundCurrency(
-    weeklySauceDiscounts.reduce(
-      (
-        accumulated,
-        discount,
-      ) =>
-        accumulated +
-        Number(
-          discount.discountAmount,
-        ),
-      0,
-    ),
-  );
+  const weeklySauceDiscountTotal =
+    roundCurrency(
+      weeklySauceDiscounts.reduce(
+        (
+          accumulated,
+          discount,
+        ) =>
+          accumulated +
+          Number(
+            discount.discountAmount,
+          ),
+        0,
+      ),
+    );
 
-const subtotal =
-  roundCurrency(
-    total +
-    weeklySauceDiscountTotal,
-  );
+  const subtotal =
+    roundCurrency(
+      total +
+      weeklySauceDiscountTotal,
+    );
 
   const received =
     paymentMethod === 'cash'
@@ -546,9 +546,6 @@ const subtotal =
       );
     }
 
-    await printer.write(
-      '\n',
-    );
   }
 
   /*
@@ -641,11 +638,11 @@ const subtotal =
     }
   }
 
-    /*
-   * ============================
-   * PAGO
-   * ============================
-   */
+  /*
+ * ============================
+ * PAGO
+ * ============================
+ */
 
   await printer.write(
     separator(),
@@ -677,7 +674,7 @@ const subtotal =
     );
 
     await printer.write(
-      '\nSALSA DE LA SEMANA\n',
+      'SALSA DE LA SEMANA\n',
     );
 
     await setBold(
@@ -712,9 +709,6 @@ const subtotal =
       );
     }
 
-    await printer.write(
-      '\n',
-    );
   }
 
   /*
@@ -790,16 +784,12 @@ const subtotal =
   );
 
   await printer.write(
-    '\nGRACIAS POR TU COMPRA\n',
+    'GRACIAS POR TU COMPRA\n',
   );
 
   await setBold(
     printer,
     false,
-  );
-
-  await printer.write(
-    'BURGER KONG\n',
   );
 
   if (
@@ -813,7 +803,7 @@ const subtotal =
 
   await feedPaper(
     printer,
-    4,
+    2,
   );
 
   await cutPaper(
@@ -975,8 +965,8 @@ function createAmountRow(
   const formattedAmount =
     amount < 0
       ? `-$${Math.abs(
-          amount,
-        ).toFixed(2)}`
+        amount,
+      ).toFixed(2)}`
       : `$${amount.toFixed(2)}`;
 
   return createTextRow(
@@ -1070,8 +1060,12 @@ async function printPromoCoupon(
   promoCoupon:
     PromoCoupon,
 ): Promise<void> {
+  /*
+   * Una sola línea de separación
+   * entre el ticket y el cupón.
+   */
   await printer.write(
-    '\n\n',
+    '\n',
   );
 
   await setAlignment(
@@ -1080,7 +1074,7 @@ async function printPromoCoupon(
   );
 
   await printer.write(
-    '--------------------------------\n',
+    separator(),
   );
 
   if (
@@ -1107,13 +1101,18 @@ async function printKongCoupon(
   promoCoupon:
     PromoCoupon,
 ): Promise<void> {
+  await setAlignment(
+    printer,
+    'center',
+  );
+
   await setBold(
     printer,
     true,
   );
 
   await printer.write(
-    'RECORTA TU KONG\n\n',
+    'RECORTA TU KONG\n',
   );
 
   await setBold(
@@ -1121,41 +1120,37 @@ async function printKongCoupon(
     false,
   );
 
+  /*
+   * BURGER_KONG_PROMO se genera
+   * ahora a un ancho menor desde
+   * generatePrinterAssets.js.
+   */
   await printRasterImage(
     printer,
     BURGER_KONG_PROMO,
   );
 
+  /*
+   * El código sustituye a los
+   * textos separados "KONG" y
+   * "CODIGO" del formato anterior.
+   */
   await setBold(
     printer,
     true,
   );
 
-  await setTextSize(
-    printer,
-    'double',
+  await printer.write(
+    `${promoCoupon.code}\n`,
   );
 
   await printer.write(
-    'KONG\n',
-  );
-
-  await setTextSize(
-    printer,
-    'normal',
-  );
-
-  await printer.write(
-    '\nJUNTA 5 KONGS\n',
+    'JUNTA 5 KONGS Y CANJEA POR:\n',
   );
 
   await setBold(
     printer,
     false,
-  );
-
-  await printer.write(
-    '\nCANJEALOS POR UNO DE:\n\n',
   );
 
   await printer.write(
@@ -1163,87 +1158,42 @@ async function printKongCoupon(
   );
 
   await printer.write(
-    'BONELESS 150 G\n',
+    'BONELESS 150 G | ALITAS 6 PZAS\n',
   );
 
   await printer.write(
-    'ALITAS 6 PZAS\n',
+    'PAPAS GRANDES | MALTEADA KONG\n',
   );
 
   await printer.write(
-    'PAPAS GRANDES\n',
+    'CONSERVA TU KONG Y SU CODIGO\n',
   );
 
   await printer.write(
-    'MALTEADA KONG\n',
+    'CODIGOS REPETIDOS NO APLICAN\n',
   );
 
   await printer.write(
-    '\n',
-  );
-
-  await setBold(
-    printer,
-    true,
-  );
-
-  await printer.write(
-    'CODIGO\n',
-  );
-
-  await printer.write(
-    `${promoCoupon.code}\n`,
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
-  await printer.write(
-    '\nCONSERVA ESTE KONG Y SU CODIGO\n',
-  );
-
-  await printer.write(
-    '\nCODIGOS REPETIDOS O SIN CODIGO\n',
-  );
-
-  await printer.write(
-    'NO APLICAN PARA PROMOCION\n',
-  );
-
-  await printer.write(
-    '\n--------------------------------\n',
+    separator(),
   );
 }
 
 async function printLuckyDorianCoupon(
-  printer:
-    BluetoothDevice,
-  promoCoupon:
-    PromoCoupon,
+  printer: BluetoothDevice,
+  promoCoupon: PromoCoupon,
 ): Promise<void> {
+  await setAlignment(
+    printer,
+    'center',
+  );
+
   await setBold(
     printer,
     true,
   );
 
-  await setTextSize(
-    printer,
-    'double',
-  );
-
   await printer.write(
-    'DORIAN\n',
-  );
-
-  await setTextSize(
-    printer,
-    'normal',
-  );
-
-  await printer.write(
-    'DE LA SUERTE\n\n',
+    'DORIAN DE LA SUERTE\n',
   );
 
   await setBold(
@@ -1262,57 +1212,17 @@ async function printLuckyDorianCoupon(
   );
 
   await printer.write(
-    '\nFELICIDADES!\n\n',
-  );
-
-  await setTextSize(
-    printer,
-    'double',
+    'FELICIDADES!\n',
   );
 
   await printer.write(
-    'TU COMPRA\n',
+    'TU COMPRA ES GRATIS\n',
   );
 
-  await printer.write(
-    'ES GRATIS!\n',
-  );
-
-  await setTextSize(
-    printer,
-    'normal',
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
-  await printer.write(
-    '\nPRESENTA ESTE CUPON\n',
-  );
-
-  await printer.write(
-    'EN CAJA PARA RECIBIR\n',
-  );
-
-  await printer.write(
-    'EL TOTAL DE TU COMPRA\n',
-  );
-
-  await printer.write(
-    '\n',
-  );
-
-  await setBold(
-    printer,
-    true,
-  );
-
-  await printer.write(
-    'CODIGO\n',
-  );
-
+  /*
+   * El código reemplaza
+   * el bloque "CODIGO".
+   */
   await printer.write(
     `${promoCoupon.code}\n`,
   );
@@ -1323,22 +1233,22 @@ async function printLuckyDorianCoupon(
   );
 
   await printer.write(
-    '\nCONSERVA ESTE CUPON\n',
+    'PRESENTA ESTE CUPON EN CAJA\n',
   );
 
   await printer.write(
-    '\nCODIGOS REPETIDOS O SIN CODIGO\n',
+    'CONSERVA EL CUPON Y SU CODIGO\n',
   );
 
   await printer.write(
-    'NO APLICAN PARA PROMOCION\n',
+    'CODIGOS REPETIDOS NO APLICAN\n',
   );
 
   await printer.write(
-    '\nNO ACUMULABLE CON OTRAS PROMOS\n',
+    'NO ACUMULABLE CON OTRAS PROMOS\n',
   );
 
   await printer.write(
-    '\n--------------------------------\n',
+    separator(),
   );
 }

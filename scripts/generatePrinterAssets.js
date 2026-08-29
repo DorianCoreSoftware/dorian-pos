@@ -13,19 +13,16 @@ const ASSETS = [
             'BURGER_KONG_LOGO',
 
         file:
-            'BurgerKongWOFondo.png',
+            'BurgerKongLetters.png',
 
         width:
-            320,
+            300,
 
         mode:
-            'dither',
+            'threshold',
 
-        brightness:
-            1.25,
-
-        contrast:
-            1.05,
+        threshold:
+            165,
     },
     {
         name:
@@ -51,7 +48,7 @@ const ASSETS = [
             'Lucky-Dorian.png',
 
         width:
-            340,
+            250,
 
         mode:
             'dither',
