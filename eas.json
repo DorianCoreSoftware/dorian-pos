@@ -16,8 +16,7 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "APP_VARIANT": "preview",
-        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+        "APP_VARIANT": "preview"
       },
       "android": {
         "buildType": "apk"
@@ -26,8 +25,7 @@
     "production": {
       "environment": "production",
       "env": {
-        "APP_VARIANT": "production",
-        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+        "APP_VARIANT": "production"
       },
       "autoIncrement": true,
       "android": {
