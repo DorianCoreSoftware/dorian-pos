@@ -1,0 +1,33 @@
+# Dependencies - EAS installs these from package-lock.json
+node_modules/
+node_modules_backup/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Local EAS inspection
+.eas-inspect/
+
+# Android generated files
+android/.gradle/
+android/app/build/
+.gradle/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Misc
+.DS_Store
+*.tsbuildinfo
+
+.eas-archive-inspect/
