@@ -44,21 +44,21 @@ interface DeliveryFormErrors {
 
 const EMPTY_DELIVERY_DETAILS:
   DeliveryDetails = {
-    customerName: '',
-    phone: '',
+  customerName: '',
+  phone: '',
 
-    street: '',
-    exteriorNumber: '',
-    interiorNumber: '',
+  street: '',
+  exteriorNumber: '',
+  interiorNumber: '',
 
-    neighborhood: '',
-    postalCode: '',
+  neighborhood: '',
+  postalCode: '',
 
-    deliveryReferences: '',
+  deliveryReferences: '',
 
-    latitude: null,
-    longitude: null,
-  };
+  latitude: null,
+  longitude: null,
+};
 
 export function DeliveryConfiguratorModal({
   visible,
@@ -89,11 +89,11 @@ export function DeliveryConfiguratorModal({
     setForm(
       initialValue
         ? {
-            ...initialValue,
-          }
+          ...initialValue,
+        }
         : {
-            ...EMPTY_DELIVERY_DETAILS,
-          },
+          ...EMPTY_DELIVERY_DETAILS,
+        },
     );
 
     setErrors({});
@@ -107,12 +107,12 @@ export function DeliveryConfiguratorModal({
     () =>
       Boolean(
         form.customerName.trim() &&
-          normalizePhone(
-            form.phone,
-          ).length >= 10 &&
-          form.street.trim() &&
-          form.exteriorNumber.trim() &&
-          form.neighborhood.trim(),
+        normalizePhone(
+          form.phone,
+        ).length === 10 &&
+        form.street.trim() &&
+        form.exteriorNumber.trim() &&
+        form.neighborhood.trim(),
       ),
     [
       form.customerName,
@@ -167,10 +167,10 @@ export function DeliveryConfiguratorModal({
       nextErrors.phone =
         'El teléfono es obligatorio.';
     } else if (
-      normalizedPhone.length < 10
+      normalizedPhone.length !== 10
     ) {
       nextErrors.phone =
-        'El teléfono debe tener al menos 10 dígitos.';
+        'El teléfono debe tener exactamente 10 dígitos.';
     }
 
     if (!form.street.trim()) {
@@ -307,6 +307,7 @@ export function DeliveryConfiguratorModal({
               placeholder="Ej. Juan Pérez"
               error={errors.customerName}
               autoCapitalize="words"
+              maxLength={80}
               onChangeText={(value) =>
                 updateField(
                   'customerName',
@@ -321,12 +322,13 @@ export function DeliveryConfiguratorModal({
               placeholder="Ej. 5512345678"
               error={errors.phone}
               keyboardType="phone-pad"
-              maxLength={15}
+              maxLength={10}
               onChangeText={(value) =>
                 updateField(
                   'phone',
-                  sanitizePhoneInput(
-                    value,
+                  value.replace(
+                    /\D/g,
+                    '',
                   ),
                 )
               }
@@ -342,6 +344,7 @@ export function DeliveryConfiguratorModal({
               placeholder="Ej. Avenida Central"
               error={errors.street}
               autoCapitalize="words"
+              maxLength={100}
               onChangeText={(value) =>
                 updateField(
                   'street',
@@ -361,6 +364,8 @@ export function DeliveryConfiguratorModal({
                   error={
                     errors.exteriorNumber
                   }
+                  maxLength={10}
+                  autoCapitalize="characters"
                   onChangeText={(value) =>
                     updateField(
                       'exteriorNumber',
@@ -377,6 +382,8 @@ export function DeliveryConfiguratorModal({
                     form.interiorNumber
                   }
                   placeholder="Opcional"
+                  maxLength={10}
+                  autoCapitalize="characters"
                   onChangeText={(value) =>
                     updateField(
                       'interiorNumber',
@@ -393,6 +400,7 @@ export function DeliveryConfiguratorModal({
               placeholder="Ej. Centro"
               error={errors.neighborhood}
               autoCapitalize="words"
+              maxLength={100}
               onChangeText={(value) =>
                 updateField(
                   'neighborhood',
@@ -471,7 +479,7 @@ export function DeliveryConfiguratorModal({
                 styles.confirmButton,
 
                 !isFormValid &&
-                  styles.confirmButtonDisabled,
+                styles.confirmButtonDisabled,
               ]}
               disabled={!isFormValid}
               onPress={handleConfirm}
@@ -481,7 +489,7 @@ export function DeliveryConfiguratorModal({
                   styles.confirmButtonText,
 
                   !isFormValid &&
-                    styles.confirmButtonTextDisabled,
+                  styles.confirmButtonTextDisabled,
                 ]}
               >
                 Agregar entrega
@@ -519,15 +527,15 @@ interface FormInputProps {
   maxLength?: number;
 
   keyboardType?:
-    | 'default'
-    | 'phone-pad'
-    | 'number-pad';
+  | 'default'
+  | 'phone-pad'
+  | 'number-pad';
 
   autoCapitalize?:
-    | 'none'
-    | 'sentences'
-    | 'words'
-    | 'characters';
+  | 'none'
+  | 'sentences'
+  | 'words'
+  | 'characters';
 
   onChangeText: (
     value: string,
@@ -569,10 +577,10 @@ function FormInput({
           styles.input,
 
           multiline &&
-            styles.multilineInput,
+          styles.multilineInput,
 
           Boolean(error) &&
-            styles.inputError,
+          styles.inputError,
         ]}
       />
 
@@ -589,17 +597,6 @@ function FormInput({
       ) : null}
     </View>
   );
-}
-
-function sanitizePhoneInput(
-  value: string,
-): string {
-  return value
-    .replace(
-      /[^\d+\s()-]/g,
-      '',
-    )
-    .slice(0, 15);
 }
 
 function normalizePhone(
