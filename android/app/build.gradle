@@ -92,9 +92,12 @@ android {
 def isDevBuild = System.getenv("APP_VARIANT") == "development"
 
 defaultConfig {
-    applicationId isDevBuild
-        ? 'com.burgerkong.pos.dev'
-        : 'com.burgerkong.pos'
+
+    applicationId 'com.burgerkong.pos'
+
+    if (isDevBuild) {
+        applicationIdSuffix '.dev'
+    }
 
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion

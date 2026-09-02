@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -45,17 +46,48 @@ export const AuthProvider: React.FC<
   const [loading, setLoading] =
     useState(true);
 
-  const fetchAndSetProfile =
+  const isMountedRef = useRef(true);
+
+  /*
+   * Cada sincronización recibe un identificador.
+   * Si una operación más nueva comienza antes de que
+   * termine la anterior, la anterior ya no puede
+   * modificar el estado.
+   */
+  const syncIdRef = useRef(0);
+
+  const syncAuthenticatedUser =
     useCallback(
       async (
         authenticatedUser:
-          AuthenticatedUser,
+          AuthenticatedUser | null,
       ): Promise<void> => {
+        const syncId =
+          ++syncIdRef.current;
+
+        if (!authenticatedUser) {
+          if (
+            isMountedRef.current &&
+            syncId === syncIdRef.current
+          ) {
+            setUser(null);
+          }
+
+          return;
+        }
+
         try {
           const profile =
             await getUserProfile(
               authenticatedUser.id,
             );
+
+          if (
+            !isMountedRef.current ||
+            syncId !== syncIdRef.current
+          ) {
+            return;
+          }
 
           setUser({
             id: authenticatedUser.id,
@@ -71,67 +103,41 @@ export const AuthProvider: React.FC<
             error,
           );
 
-          setUser(null);
+          if (
+            isMountedRef.current &&
+            syncId === syncIdRef.current
+          ) {
+            setUser(null);
+          }
         }
       },
       [],
     );
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
-    const loadInitialSession =
-      async (): Promise<void> => {
-        try {
-          const activeUser =
-            await getActiveUser();
-
-          if (
-            activeUser &&
-            isMounted
-          ) {
-            await fetchAndSetProfile(
-              activeUser,
-            );
-          }
-        } catch (error) {
-          console.error(
-            'Error al recuperar la sesión inicial:',
-            error,
-          );
-
-          if (isMounted) {
-            setUser(null);
-          }
-        } finally {
-          if (isMounted) {
-            setLoading(false);
-          }
-        }
-      };
-
-    void loadInitialSession();
-
+    /*
+     * El listener se registra primero para no perder
+     * ningún cambio de sesión que ocurra durante
+     * la inicialización.
+     */
     const subscription =
       listenToAuthChanges(
         ({ user: authenticatedUser }) => {
           void (async () => {
-            if (!isMounted) {
+            if (!isMountedRef.current) {
               return;
             }
 
             setLoading(true);
 
             try {
-              if (authenticatedUser) {
-                await fetchAndSetProfile(
-                  authenticatedUser,
-                );
-              } else {
-                setUser(null);
-              }
+              await syncAuthenticatedUser(
+                authenticatedUser,
+              );
             } finally {
-              if (isMounted) {
+              if (isMountedRef.current) {
                 setLoading(false);
               }
             }
@@ -139,19 +145,65 @@ export const AuthProvider: React.FC<
         },
       );
 
+    const initializeAuth =
+      async (): Promise<void> => {
+        try {
+          const activeUser =
+            await getActiveUser();
+
+          if (!isMountedRef.current) {
+            return;
+          }
+
+          await syncAuthenticatedUser(
+            activeUser,
+          );
+        } catch (error) {
+          console.error(
+            'Error al recuperar la sesión inicial:',
+            error,
+          );
+
+          if (isMountedRef.current) {
+            setUser(null);
+          }
+        } finally {
+          if (isMountedRef.current) {
+            setLoading(false);
+          }
+        }
+      };
+
+    void initializeAuth();
+
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
+
+      /*
+       * Invalida cualquier operación async pendiente.
+       */
+      syncIdRef.current += 1;
+
       subscription.unsubscribe();
     };
-  }, [fetchAndSetProfile]);
+  }, [syncAuthenticatedUser]);
 
   const logout =
     async (): Promise<void> => {
       try {
         setLoading(true);
 
+        /*
+         * Invalida cualquier carga de perfil que
+         * pudiera seguir pendiente.
+         */
+        syncIdRef.current += 1;
+
         await signOut();
-        setUser(null);
+
+        if (isMountedRef.current) {
+          setUser(null);
+        }
       } catch (error) {
         console.error(
           'Error al cerrar sesión:',
@@ -160,7 +212,9 @@ export const AuthProvider: React.FC<
 
         throw error;
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 

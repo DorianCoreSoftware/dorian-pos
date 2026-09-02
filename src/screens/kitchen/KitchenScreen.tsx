@@ -5,6 +5,7 @@ import React, {
 import {
   Alert,
   FlatList,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -1244,72 +1245,50 @@ export function KitchenScreen({
   const renderOrder = ({
     item,
   }: {
-    item:
-    KitchenOrder;
+    item: KitchenOrder;
   }) => (
-    <View
-      style={
-        styles.orderCard
-      }
-    >
-      <View
-        style={{
-          flex:
-            1,
-        }}
-      >
-        <View
-          style={
-            styles.cardHeader
-          }
-        >
-          <Text
-            style={
-              styles.orderId
-            }
-          >
-            Ticket #
-            {item.id
-              .slice(
-                -4,
-              )
-              .toUpperCase()}
-          </Text>
-
-          <Text
-            style={
-              styles.orderTotal
-            }
-          >
-            $
-            {Number(
-              item.total,
-            ).toFixed(
-              2,
-            )}
-          </Text>
-        </View>
-
-        <Text
-          style={
-            styles.timeText
-          }
-        >
-          Ingresó:{' '}
-          {new Date(
-            item.created_at,
-          ).toLocaleTimeString(
-            [],
-            {
-              hour:
-                '2-digit',
-
-              minute:
-                '2-digit',
-            },
-          )}
+    <View style={styles.orderCard}>
+      {/* HEADER FIJO */}
+      <View style={styles.cardHeader}>
+        <Text style={styles.orderId}>
+          Ticket #
+          {item.id
+            .slice(-4)
+            .toUpperCase()}
         </Text>
 
+        <Text style={styles.orderTotal}>
+          $
+          {Number(
+            item.total,
+          ).toFixed(2)}
+        </Text>
+      </View>
+
+      <Text style={styles.timeText}>
+        Ingresó:{' '}
+        {new Date(
+          item.created_at,
+        ).toLocaleTimeString(
+          [],
+          {
+            hour: '2-digit',
+            minute: '2-digit',
+          },
+        )}
+      </Text>
+
+      {/* CONTENIDO CON SCROLL */}
+      <ScrollView
+        style={{
+          flex: 1,
+        }}
+        contentContainerStyle={{
+          paddingBottom: 12,
+        }}
+        showsVerticalScrollIndicator
+        nestedScrollEnabled
+      >
         {renderDeliveryDetails(
           item,
         )}
@@ -1323,8 +1302,9 @@ export function KitchenScreen({
             renderOrderItem,
           )}
         </View>
-      </View>
+      </ScrollView>
 
+      {/* ACCIONES FIJAS */}
       <View
         style={
           styles.actionBlock
@@ -1369,8 +1349,7 @@ export function KitchenScreen({
                 styles.deliverButtonText
               }
             >
-              Cobrar /
-              Entregar
+              Cobrar / Entregar
             </Text>
           </TouchableOpacity>
         </View>
