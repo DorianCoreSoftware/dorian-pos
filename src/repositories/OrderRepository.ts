@@ -4,6 +4,14 @@ import {
   OrderStatus,
 } from '../types';
 
+export type OrderSource =
+  | 'pos'
+  | 'web';
+
+export type FulfillmentType =
+  | 'pickup'
+  | 'delivery';
+
 export interface OrderDeliveryDetailsRecord {
   id: string;
   order_id: string;
@@ -28,6 +36,8 @@ export interface OrderRecord {
   id: string;
   total: string | number;
   status: OrderStatus;
+  order_source: OrderSource;
+  fulfillment_type: FulfillmentType;
   created_at: string;
 }
 
@@ -124,12 +134,16 @@ export interface PendingOrderRecord
  */
 export async function insertOrder(
   totalAmount: number,
+  orderSource: OrderSource = 'pos',
+  fulfillmentType: FulfillmentType = 'pickup',
 ): Promise<OrderRecord> {
   const { data, error } = await supabase
     .from('orders')
     .insert({
       total: totalAmount,
       status: 'pending',
+      order_source: orderSource,
+      fulfillment_type: fulfillmentType,
     })
     .select()
     .single();
@@ -198,6 +212,8 @@ export async function createKitchenOrderTransaction(
   delivery:
     CreateKitchenOrderRpcDelivery | null,
   clientRequestId: string,
+  orderSource: OrderSource,
+  fulfillmentType: FulfillmentType,
 ): Promise<string> {
   const {
     data,
@@ -216,6 +232,12 @@ export async function createKitchenOrderTransaction(
 
       p_client_request_id:
         clientRequestId,
+
+      p_order_source:
+        orderSource,
+
+      p_fulfillment_type:
+        fulfillmentType,
     },
   );
 

@@ -45,6 +45,15 @@ export interface KitchenOrder {
   id: string;
   total: string | number;
   status: OrderStatus;
+
+  orderSource:
+    | 'pos'
+    | 'web';
+
+  fulfillmentType:
+    | 'pickup'
+    | 'delivery';
+
   created_at: string;
 
   deliveryDetails:

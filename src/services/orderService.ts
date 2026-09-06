@@ -4,6 +4,8 @@ import {
   createKitchenOrderTransaction,
   fetchOrderById,
   fetchPendingOrders,
+  FulfillmentType,
+  OrderSource,
   PendingOrderRecord,
   updateOrderStatusById,
 } from '../repositories/OrderRepository';
@@ -38,6 +40,8 @@ export async function createKitchenOrder(
   cart: CartItem[],
   totalAmount: number,
   clientRequestId: string,
+  orderSource: OrderSource = 'pos',
+  fulfillmentType?: FulfillmentType,
 ): Promise<CreateOrderResult> {
   validateOrder(
     cart,
@@ -48,6 +52,15 @@ export async function createKitchenOrder(
     getDeliveryDetailsFromCart(
       cart,
     );
+
+  const resolvedFulfillmentType:
+    FulfillmentType =
+      fulfillmentType ??
+      (
+        deliveryDetails
+          ? 'delivery'
+          : 'pickup'
+      );
 
   const rpcItems =
     cart.map(
@@ -157,6 +170,8 @@ export async function createKitchenOrder(
       rpcItems,
       rpcDelivery,
       clientRequestId,
+      orderSource,
+      resolvedFulfillmentType,
     );
 
   return {
@@ -236,6 +251,12 @@ function mapOrderToKitchenOrder(
 
     status:
       order.status,
+
+    orderSource:
+      order.order_source,
+
+    fulfillmentType:
+      order.fulfillment_type,
 
     created_at:
       order.created_at,
@@ -744,6 +765,12 @@ export async function updateKitchenOrder(
       cart,
     );
 
+  const fulfillmentType:
+    FulfillmentType =
+      deliveryDetails
+        ? 'delivery'
+        : 'pickup';
+
   const rpcItems =
     cart.map(
       (item) => ({
@@ -851,6 +878,7 @@ export async function updateKitchenOrder(
     totalAmount,
     rpcItems,
     rpcDelivery,
+    fulfillmentType,
   );
 }
 
@@ -860,6 +888,7 @@ export async function updateKitchenOrderTransaction(
   items: CreateKitchenOrderRpcItem[],
   delivery:
     CreateKitchenOrderRpcDelivery | null,
+  fulfillmentType: FulfillmentType,
 ): Promise<void> {
   const {
     error,
@@ -877,6 +906,9 @@ export async function updateKitchenOrderTransaction(
 
       p_delivery:
         delivery,
+
+      p_fulfillment_type:
+        fulfillmentType,
     },
   );
 
