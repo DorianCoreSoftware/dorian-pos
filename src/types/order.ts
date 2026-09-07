@@ -47,18 +47,24 @@ export interface KitchenOrder {
   status: OrderStatus;
 
   orderSource:
-    | 'pos'
-    | 'web';
+  | 'pos'
+  | 'web';
 
   fulfillmentType:
-    | 'pickup'
-    | 'delivery';
+  | 'pickup'
+  | 'delivery';
 
   created_at: string;
 
   deliveryDetails:
-    OrderDeliveryDetails | null;
+  OrderDeliveryDetails | null;
 
   order_items:
-    KitchenOrderItem[];
+  KitchenOrderItem[];
+
+  customerName:
+  string | null;
+
+  customerPhone:
+  string | null;
 }

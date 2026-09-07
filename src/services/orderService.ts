@@ -55,12 +55,12 @@ export async function createKitchenOrder(
 
   const resolvedFulfillmentType:
     FulfillmentType =
-      fulfillmentType ??
-      (
-        deliveryDetails
-          ? 'delivery'
-          : 'pickup'
-      );
+    fulfillmentType ??
+    (
+      deliveryDetails
+        ? 'delivery'
+        : 'pickup'
+    );
 
   const rpcItems =
     cart.map(
@@ -260,6 +260,12 @@ function mapOrderToKitchenOrder(
 
     created_at:
       order.created_at,
+
+    customerName:
+      order.customer_name,
+
+    customerPhone:
+      order.customer_phone,
 
     deliveryDetails:
       rawDeliveryDetails
@@ -767,9 +773,9 @@ export async function updateKitchenOrder(
 
   const fulfillmentType:
     FulfillmentType =
-      deliveryDetails
-        ? 'delivery'
-        : 'pickup';
+    deliveryDetails
+      ? 'delivery'
+      : 'pickup';
 
   const rpcItems =
     cart.map(

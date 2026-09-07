@@ -34,11 +34,28 @@ export interface OrderDeliveryDetailsRecord {
  */
 export interface OrderRecord {
   id: string;
-  total: string | number;
-  status: OrderStatus;
-  order_source: OrderSource;
-  fulfillment_type: FulfillmentType;
-  created_at: string;
+
+  total:
+    | string
+    | number;
+
+  status:
+    OrderStatus;
+
+  order_source:
+    OrderSource;
+
+  fulfillment_type:
+    FulfillmentType;
+
+  customer_name:
+    string | null;
+
+  customer_phone:
+    string | null;
+
+  created_at:
+    string;
 }
 
 /**

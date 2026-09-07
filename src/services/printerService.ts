@@ -20,6 +20,10 @@ import {
 import { PromoCoupon } from './promoService';
 import { fetchOrderWeeklySauceDiscounts } from '../repositories/OrderRepository';
 
+import {
+  getOrderTrackingCode,
+} from '../Utils/orderTracking';
+
 let connectedPrinter:
   BluetoothDevice | null = null;
 
@@ -361,10 +365,10 @@ export async function printOrderTicket({
       )
       : null;
 
-  const shortId =
-    order.id
-      .slice(-6)
-      .toUpperCase();
+  const trackingCode =
+    getOrderTrackingCode(
+      order.id,
+    );
 
   const orderDate =
     ticketDate ??
@@ -437,7 +441,19 @@ export async function printOrderTicket({
   );
 
   await printer.write(
-    `Ticket: #${shortId}\n`,
+    `Pedido: #${trackingCode}\n`,
+  );
+
+  await printer.write(
+    `Origen: ${
+      order.orderSource === 'web'
+        ? 'WEB'
+        : 'POS'
+    } - ${
+      order.fulfillmentType === 'delivery'
+        ? 'DOMICILIO'
+        : 'RECOGER'
+    }\n`,
   );
 
   await printer.write(
@@ -546,6 +562,59 @@ export async function printOrderTicket({
       );
     }
 
+  }
+
+  /*
+   * ============================
+   * CLIENTE WEB PARA RECOGER
+   * ============================
+   */
+
+  if (
+    order.orderSource === 'web' &&
+    order.fulfillmentType === 'pickup' &&
+    (
+      order.customerName ||
+      order.customerPhone
+    )
+  ) {
+    await printer.write(
+      separator(),
+    );
+
+    await setBold(
+      printer,
+      true,
+    );
+
+    await printer.write(
+      'DATOS DEL CLIENTE\n',
+    );
+
+    await setBold(
+      printer,
+      false,
+    );
+
+    if (
+      order.customerName
+    ) {
+      await printer.write(
+        `Cliente: ${sanitizeTicketText(
+          order.customerName,
+        )}\n`,
+      );
+    }
+
+    if (
+      order.customerPhone
+    ) {
+      await printer.write(
+        `Tel: ${sanitizeTicketText(
+          order.customerPhone,
+        )}\n`,
+      );
+    }
   }
 
   /*
