@@ -203,7 +203,7 @@ export async function fetchCompletedSales(): Promise<
     `)
     .eq(
       'status',
-      'entregado',
+      'delivered',
     )
     .order(
       'created_at',

@@ -5,10 +5,11 @@ import { Product } from './product';
 
 export type OrderStatus =
   | 'pending'
-  | 'completed'
-  | 'cancelled'
-  | 'entregado'
-  | 'cancelado';
+  | 'preparing'
+  | 'ready'
+  | 'on_the_way'
+  | 'delivered'
+  | 'cancelled';
 
 export interface KitchenOrderItemComponent {
   id: string;

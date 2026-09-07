@@ -277,7 +277,7 @@ export async function createKitchenOrderTransaction(
 }
 
 /**
- * Obtiene solamente órdenes pendientes.
+ * Obtiene órdenes activas de cocina.
  *
  * La transformación de la respuesta pertenece al service,
  * no al repository.
@@ -307,7 +307,12 @@ export async function fetchPendingOrders(): Promise<
         )
       )
     `)
-    .eq('status', 'pending')
+    .in('status', [
+      'pending',
+      'preparing',
+      'ready',
+      'on_the_way',
+    ])
     .order('created_at', {
       ascending: true,
     });

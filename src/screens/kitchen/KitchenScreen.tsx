@@ -22,6 +22,9 @@ import {
 import {
   cancelOrder,
   deliverOrder,
+  markOrderOnTheWay,
+  markOrderReady,
+  startPreparingOrder,
 } from '../../services/orderService';
 
 import {
@@ -380,6 +383,151 @@ export function KitchenScreen({
           false,
         );
       }
+    };
+
+  const updateOrderInPendingList =
+    (
+      orderId: string,
+      status: KitchenOrder['status'],
+    ): void => {
+      setPendingOrders(
+        (
+          currentOrders,
+        ) =>
+          currentOrders.map(
+            (
+              order,
+            ) =>
+              order.id ===
+              orderId
+                ? {
+                    ...order,
+                    status,
+                  }
+                : order,
+          ),
+      );
+    };
+
+  const handleAdvanceOrderStatus =
+    async (
+      order: KitchenOrder,
+    ): Promise<void> => {
+      try {
+        if (
+          order.status ===
+          'pending'
+        ) {
+          await startPreparingOrder(
+            order.id,
+          );
+
+          updateOrderInPendingList(
+            order.id,
+            'preparing',
+          );
+
+          return;
+        }
+
+        if (
+          order.status ===
+          'preparing'
+        ) {
+          if (
+            order.fulfillmentType ===
+            'delivery'
+          ) {
+            await markOrderOnTheWay(
+              order.id,
+            );
+
+            updateOrderInPendingList(
+              order.id,
+              'on_the_way',
+            );
+
+            return;
+          }
+
+          await markOrderReady(
+            order.id,
+          );
+
+          updateOrderInPendingList(
+            order.id,
+            'ready',
+          );
+        }
+      } catch (error) {
+        console.error(
+          'Error al actualizar el estado de la orden:',
+          error,
+        );
+
+        Alert.alert(
+          'Error',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo actualizar el estado del pedido.',
+        );
+      }
+    };
+
+  const getOrderStatusLabel =
+    (
+      order: KitchenOrder,
+    ): string => {
+      switch (
+        order.status
+      ) {
+        case 'pending':
+          return 'PEDIDO RECIBIDO';
+
+        case 'preparing':
+          return 'EN PREPARACIÓN';
+
+        case 'ready':
+          return 'LISTO PARA RECOGER';
+
+        case 'on_the_way':
+          return 'EN CAMINO';
+
+        case 'delivered':
+          return 'ENTREGADO';
+
+        case 'cancelled':
+          return 'CANCELADO';
+
+        default:
+          return String(
+            order.status,
+          ).toUpperCase();
+      }
+    };
+
+  const getPrimaryActionLabel =
+    (
+      order: KitchenOrder,
+    ): string => {
+      if (
+        order.status ===
+        'pending'
+      ) {
+        return 'Iniciar preparación';
+      }
+
+      if (
+        order.status ===
+        'preparing'
+      ) {
+        return order.fulfillmentType ===
+          'delivery'
+          ? 'En camino'
+          : 'Listo para recoger';
+      }
+
+      return 'Cobrar / Entregar';
     };
 
   const handleCancelOrderPrompt =
@@ -1261,6 +1409,33 @@ export function KitchenScreen({
         </Text>
       </View>
 
+      <View
+        style={{
+          alignSelf: 'flex-start',
+          backgroundColor: '#202020',
+          borderWidth: 1,
+          borderColor: '#666',
+          borderRadius: 8,
+          paddingHorizontal: 10,
+          paddingVertical: 5,
+          marginTop: 4,
+          marginBottom: 6,
+        }}
+      >
+        <Text
+          style={{
+            color: '#FFFFFF',
+            fontSize: 12,
+            fontWeight: '800',
+          }}
+        >
+          ESTADO ·{' '}
+          {getOrderStatusLabel(
+            item,
+          )}
+        </Text>
+      </View>
+
       <Text style={styles.timeText}>
         Ingresó:{' '}
         {new Date(
@@ -1337,7 +1512,20 @@ export function KitchenScreen({
               styles.deliverButton
             }
             onPress={() => {
-              void handleOpenPayment(
+              if (
+                item.status ===
+                  'ready' ||
+                item.status ===
+                  'on_the_way'
+              ) {
+                void handleOpenPayment(
+                  item,
+                );
+
+                return;
+              }
+
+              void handleAdvanceOrderStatus(
                 item,
               );
             }}
@@ -1347,7 +1535,9 @@ export function KitchenScreen({
                 styles.deliverButtonText
               }
             >
-              Cobrar / Entregar
+              {getPrimaryActionLabel(
+                item,
+              )}
             </Text>
           </TouchableOpacity>
         </View>

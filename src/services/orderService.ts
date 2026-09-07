@@ -181,11 +181,7 @@ export async function createKitchenOrder(
 }
 
 /**
- * Obtiene las órdenes pendientes y transforma la respuesta
- * de Supabase al modelo que utiliza KitchenScreen.
- */
-/**
- * Obtiene las órdenes pendientes y transforma la respuesta
+ * Obtiene las órdenes activas de cocina y transforma la respuesta
  * de Supabase al modelo que utiliza KitchenScreen.
  */
 export async function getPendingOrders(): Promise<
@@ -482,7 +478,7 @@ export async function deliverOrder(
 
   return updateOrderStatusById(
     orderId,
-    'entregado',
+    'delivered',
   );
 }
 
@@ -496,7 +492,7 @@ export async function cancelOrder(
 
   return updateOrderStatusById(
     orderId,
-    'cancelado',
+    'cancelled',
   );
 }
 
@@ -943,5 +939,44 @@ function getDeliveryDetailsFromCart(
   return (
     deliveryItems[0]
       ?.deliveryDetails ?? null
+  );
+}
+
+export async function startPreparingOrder(
+  orderId: string,
+) {
+  validateOrderId(
+    orderId,
+  );
+
+  return updateOrderStatusById(
+    orderId,
+    'preparing',
+  );
+}
+
+export async function markOrderReady(
+  orderId: string,
+) {
+  validateOrderId(
+    orderId,
+  );
+
+  return updateOrderStatusById(
+    orderId,
+    'ready',
+  );
+}
+
+export async function markOrderOnTheWay(
+  orderId: string,
+) {
+  validateOrderId(
+    orderId,
+  );
+
+  return updateOrderStatusById(
+    orderId,
+    'on_the_way',
   );
 }
