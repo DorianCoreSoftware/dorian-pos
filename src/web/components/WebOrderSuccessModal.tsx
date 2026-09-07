@@ -8,24 +8,34 @@ import {
 } from 'react-native';
 
 import styles from './WebOrderSuccessModal.styles';
-import { getOrderTrackingCode } from '../../Utils/orderTracking';
+
+import {
+  getOrderTrackingCode,
+} from '../../Utils/orderTracking';
 
 interface WebOrderSuccessModalProps {
   visible: boolean;
-  orderId: string | null;
+
+  orderId:
+    | string
+    | null;
+
   onClose: () => void;
+
+  onTrackOrder: () => void;
 }
 
 export default function WebOrderSuccessModal({
   visible,
   orderId,
   onClose,
+  onTrackOrder,
 }: WebOrderSuccessModalProps) {
   const shortId =
     orderId
       ? getOrderTrackingCode(
-        orderId,
-      )
+          orderId,
+        )
       : '';
 
   return (
@@ -108,23 +118,56 @@ export default function WebOrderSuccessModal({
               styles.hint
             }
           >
-            Guarda este número por si necesitas identificar tu pedido.
+            Guarda este número para consultar el estado de tu pedido.
           </Text>
+
+          {!!shortId && (
+            <Pressable
+              onPress={
+                onTrackOrder
+              }
+              style={({ pressed }) => [
+                styles.button,
+                pressed &&
+                  styles.buttonPressed,
+              ]}
+            >
+              <Text
+                style={
+                  styles.buttonText
+                }
+              >
+                Ver estado de mi pedido
+              </Text>
+            </Pressable>
+          )}
 
           <Pressable
             onPress={
               onClose
             }
-            style={({ pressed }) => [
-              styles.button,
-              pressed &&
-              styles.buttonPressed,
-            ]}
+            style={({ pressed }) => ({
+              width: '100%',
+              marginTop: 10,
+              minHeight: 46,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: '#FFB000',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 16,
+              opacity:
+                pressed
+                  ? 0.75
+                  : 1,
+            })}
           >
             <Text
-              style={
-                styles.buttonText
-              }
+              style={{
+                color: '#FFB000',
+                fontWeight: '900',
+                fontSize: 15,
+              }}
             >
               Volver al menú
             </Text>

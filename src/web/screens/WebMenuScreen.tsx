@@ -7,6 +7,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
@@ -46,6 +47,10 @@ import {
 } from '../../Utils/delivery';
 
 import {
+  getOrderTrackingCode,
+} from '../../Utils/orderTracking';
+
+import {
   Cart,
   Category,
   DeliveryDetails,
@@ -58,6 +63,7 @@ import WebCategoryTabs from '../components/WebCategoryTabs';
 import WebCheckoutModal from '../components/WebCheckoutModal';
 import WebHeader from '../components/WebHeader';
 import WebOrderSuccessModal from '../components/WebOrderSuccessModal';
+import { WebOrderTrackingModal } from '../components/WebOrderTrackingModal';
 import WebProductCard from '../components/WebProductCard';
 
 import {
@@ -210,6 +216,18 @@ export default function WebMenuScreen() {
   const [
     successfulOrderId,
     setSuccessfulOrderId,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    isTrackingVisible,
+    setIsTrackingVisible,
+  ] = useState(false);
+
+  const [
+    trackingInitialCode,
+    setTrackingInitialCode,
   ] = useState<
     string | null
   >(null);
@@ -682,9 +700,89 @@ export default function WebMenuScreen() {
     }
   }
 
+  function handleOpenManualTracking() {
+    setTrackingInitialCode(
+      null,
+    );
+
+    setIsTrackingVisible(
+      true,
+    );
+  }
+
+  function handleTrackSuccessfulOrder() {
+    if (
+      !successfulOrderId
+    ) {
+      return;
+    }
+
+    setTrackingInitialCode(
+      getOrderTrackingCode(
+        successfulOrderId,
+      ),
+    );
+
+    setSuccessfulOrderId(
+      null,
+    );
+
+    setIsTrackingVisible(
+      true,
+    );
+  }
+
+  function handleCloseTracking() {
+    setIsTrackingVisible(
+      false,
+    );
+
+    setTrackingInitialCode(
+      null,
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <WebHeader />
+
+      <View
+        style={{
+          width: '100%',
+          maxWidth: 1180,
+          alignSelf: 'center',
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          alignItems: 'flex-end',
+        }}
+      >
+        <Pressable
+          onPress={
+            handleOpenManualTracking
+          }
+          style={({ pressed }) => ({
+            borderWidth: 1,
+            borderColor: '#FFB000',
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            backgroundColor:
+              pressed
+                ? '#2B250C'
+                : '#151515',
+          })}
+        >
+          <Text
+            style={{
+              color: '#FFB000',
+              fontWeight: '900',
+              fontSize: 13,
+            }}
+          >
+            Seguir pedido
+          </Text>
+        </Pressable>
+      </View>
 
       {visibleCategories.length >
         0 && (
@@ -1034,10 +1132,25 @@ export default function WebMenuScreen() {
         orderId={
           successfulOrderId
         }
+        onTrackOrder={
+          handleTrackSuccessfulOrder
+        }
         onClose={() =>
           setSuccessfulOrderId(
             null,
           )
+        }
+      />
+
+      <WebOrderTrackingModal
+        visible={
+          isTrackingVisible
+        }
+        initialTrackingCode={
+          trackingInitialCode
+        }
+        onClose={
+          handleCloseTracking
         }
       />
     </View>
