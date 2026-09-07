@@ -32,6 +32,11 @@ import {
 } from '../../services/weeklySauceService';
 
 import {
+  getAvailableProductFlavors,
+  ProductFlavor,
+} from '../../services/productFlavorService';
+
+import {
   styles,
 } from '../modifier-modal/ModifierModal.styles';
 
@@ -116,6 +121,30 @@ export const ProductConfiguratorModal: React.FC<
   ] = useState<string[]>([]);
 
   const [
+    productFlavors,
+    setProductFlavors,
+  ] = useState<ProductFlavor[]>([]);
+
+  const [
+    selectedFlavorId,
+    setSelectedFlavorId,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    areFlavorsLoading,
+    setAreFlavorsLoading,
+  ] = useState(false);
+
+  const [
+    flavorsError,
+    setFlavorsError,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
     comboSelection,
     setComboSelection,
   ] = useState<
@@ -180,13 +209,48 @@ export const ProductConfiguratorModal: React.FC<
               modifier !== undefined,
           );
 
+      const selectedFlavor =
+        selectedFlavorId
+          ? productFlavors.find(
+              (flavor) =>
+                flavor.id ===
+                selectedFlavorId,
+            )
+          : undefined;
+
+      const flavorModifier:
+        SelectedModifier | null =
+        selectedFlavor
+          ? {
+              id:
+                selectedFlavor.modifierId,
+
+              name:
+                selectedFlavor.name,
+
+              extra_price:
+                '0.00',
+
+              group_name:
+                'Sabor',
+
+              is_available:
+                selectedFlavor.isAvailable,
+            }
+          : null;
+
       return [
         ...selectedMeats,
         ...selectedSauces,
+        ...(flavorModifier
+          ? [flavorModifier]
+          : []),
       ];
     }, [
       selectedMeatIds,
       selectedSauceIds,
+      selectedFlavorId,
+      productFlavors,
       meats,
       sauces,
     ]);
@@ -202,7 +266,9 @@ export const ProductConfiguratorModal: React.FC<
 
       if (
         isLoading ||
-        error
+        error ||
+        areFlavorsLoading ||
+        flavorsError
       ) {
         return false;
       }
@@ -221,16 +287,27 @@ export const ProductConfiguratorModal: React.FC<
         return false;
       }
 
+      if (
+        productFlavors.length > 0 &&
+        !selectedFlavorId
+      ) {
+        return false;
+      }
+
       return true;
     }, [
       isCombo,
       comboSelection,
       isLoading,
       error,
+      areFlavorsLoading,
+      flavorsError,
       isBurger,
       requiresSauce,
       selectedMeatIds,
       selectedSauceIds,
+      productFlavors,
+      selectedFlavorId,
     ]);
 
   useEffect(() => {
@@ -240,7 +317,10 @@ export const ProductConfiguratorModal: React.FC<
 
     setSelectedMeatIds([]);
     setSelectedSauceIds([]);
+    setSelectedFlavorId(null);
+    setProductFlavors([]);
     setComboSelection(null);
+    setFlavorsError(null);
 
     let isMounted = true;
 
@@ -269,7 +349,58 @@ export const ProductConfiguratorModal: React.FC<
         }
       };
 
+    const loadProductFlavors =
+      async () => {
+        if (
+          !product?.id ||
+          isCombo
+        ) {
+          return;
+        }
+
+        try {
+          setAreFlavorsLoading(
+            true,
+          );
+
+          const flavors =
+            await getAvailableProductFlavors(
+              product.id,
+            );
+
+          if (!isMounted) {
+            return;
+          }
+
+          setProductFlavors(
+            flavors,
+          );
+        } catch (flavorLoadError) {
+          console.error(
+            'Error loading product flavors:',
+            flavorLoadError,
+          );
+
+          if (!isMounted) {
+            return;
+          }
+
+          setFlavorsError(
+            flavorLoadError instanceof Error
+              ? flavorLoadError.message
+              : 'No se pudieron cargar los sabores.',
+          );
+        } finally {
+          if (isMounted) {
+            setAreFlavorsLoading(
+              false,
+            );
+          }
+        }
+      };
+
     void loadWeeklySauce();
+    void loadProductFlavors();
 
     return () => {
       isMounted = false;
@@ -277,6 +408,7 @@ export const ProductConfiguratorModal: React.FC<
   }, [
     visible,
     product?.id,
+    isCombo,
   ]);
 
   if (!product) {
@@ -741,6 +873,31 @@ export const ProductConfiguratorModal: React.FC<
                                 ? styles.optionButtonChipPhone
                                 : styles.optionButtonChipTablet,
 
+                              {
+                                flexBasis:
+                                  isPhone
+                                    ? '100%'
+                                    : '48%',
+
+                                flexGrow:
+                                  1,
+
+                                flexShrink:
+                                  1,
+
+                                minHeight:
+                                  46,
+
+                                justifyContent:
+                                  'center',
+
+                                alignItems:
+                                  'center',
+
+                                paddingHorizontal:
+                                  10,
+                              },
+
                               isSelected &&
                               styles.optionButtonSelected,
 
@@ -761,8 +918,19 @@ export const ProductConfiguratorModal: React.FC<
                             }
                           >
                             <Text
+                              numberOfLines={
+                                2
+                              }
                               style={[
                                 styles.optionText,
+
+                                {
+                                  width:
+                                    '100%',
+
+                                  textAlign:
+                                    'center',
+                                },
 
                                 isPhone &&
                                 styles.optionTextPhone,
@@ -807,6 +975,149 @@ export const ProductConfiguratorModal: React.FC<
                                   )}
                               </Text>
                             )}
+                          </TouchableOpacity>
+                        );
+                      },
+                    )}
+                  </View>
+                </View>
+              )}
+
+            {!isCombo &&
+              areFlavorsLoading && (
+                <View
+                  style={
+                    styles.loadingContainer
+                  }
+                >
+                  <ActivityIndicator
+                    size="small"
+                    color="#FFBF00"
+                  />
+
+                  <Text
+                    style={
+                      styles.loadingText
+                    }
+                  >
+                    Cargando sabores...
+                  </Text>
+                </View>
+              )}
+
+            {!isCombo &&
+              !areFlavorsLoading &&
+              flavorsError && (
+                <Text
+                  style={
+                    styles.errorText
+                  }
+                >
+                  {flavorsError}
+                </Text>
+              )}
+
+            {!isCombo &&
+              !areFlavorsLoading &&
+              !flavorsError &&
+              productFlavors.length > 0 && (
+                <View
+                  style={
+                    styles.requiredSection
+                  }
+                >
+                  <Text
+                    style={
+                      styles.sectionLabel
+                    }
+                  >
+                    Sabor * (Obligatorio)
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.optionsContainerHorizontal,
+
+                      isPhone &&
+                      styles.optionsContainerPhone,
+                    ]}
+                  >
+                    {productFlavors.map(
+                      (flavor) => {
+                        const isSelected =
+                          selectedFlavorId ===
+                          flavor.id;
+
+                        return (
+                          <TouchableOpacity
+                            key={
+                              flavor.id
+                            }
+                            style={[
+                              styles.optionButtonChip,
+
+                              isPhone
+                                ? styles.optionButtonChipPhone
+                                : styles.optionButtonChipTablet,
+
+                              {
+                                flexBasis:
+                                  isPhone
+                                    ? '100%'
+                                    : '48%',
+
+                                flexGrow:
+                                  1,
+
+                                flexShrink:
+                                  1,
+
+                                minHeight:
+                                  46,
+
+                                justifyContent:
+                                  'center',
+
+                                alignItems:
+                                  'center',
+                              },
+
+                              isSelected &&
+                              styles.optionButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedFlavorId(
+                                flavor.id,
+                              )
+                            }
+                            activeOpacity={
+                              0.8
+                            }
+                          >
+                            <Text
+                              numberOfLines={
+                                2
+                              }
+                              style={[
+                                styles.optionText,
+
+                                {
+                                  width:
+                                    '100%',
+
+                                  textAlign:
+                                    'center',
+                                },
+
+                                isPhone &&
+                                styles.optionTextPhone,
+
+                                isSelected &&
+                                styles.optionTextSelected,
+                              ]}
+                            >
+                              {flavor.name}
+                            </Text>
                           </TouchableOpacity>
                         );
                       },

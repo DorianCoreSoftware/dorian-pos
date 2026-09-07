@@ -1,6 +1,7 @@
 import React from 'react';
 
 import {
+  DimensionValue,
   Image,
   Pressable,
   Text,
@@ -15,7 +16,10 @@ import styles from './WebProductCard.styles';
 
 interface WebProductCardProps {
   product: Product;
-  width: number | string;
+
+  width:
+    DimensionValue;
+
   onPress:
     (product: Product) => void;
 }
@@ -26,10 +30,15 @@ function formatPrice(
   return new Intl.NumberFormat(
     'es-MX',
     {
-      style: 'currency',
-      currency: 'MXN',
+      style:
+        'currency',
+
+      currency:
+        'MXN',
     },
-  ).format(price);
+  ).format(
+    price,
+  );
 }
 
 export default function WebProductCard({
@@ -40,25 +49,36 @@ export default function WebProductCard({
   return (
     <Pressable
       onPress={() =>
-        onPress(product)
+        onPress(
+          product,
+        )
       }
       style={({ pressed }) => [
         styles.card,
+
         {
           width,
         },
-        pressed &&
-          styles.cardPressed,
+
+        pressed
+          ? styles.cardPressed
+          : null,
       ]}
     >
-      <View style={styles.imageBox}>
+      <View
+        style={
+          styles.imageBox
+        }
+      >
         {product.image_url ? (
           <Image
             source={{
               uri:
                 product.image_url,
             }}
-            style={styles.image}
+            style={
+              styles.image
+            }
             resizeMode="cover"
           />
         ) : (
@@ -78,27 +98,59 @@ export default function WebProductCard({
         )}
       </View>
 
-      <View style={styles.body}>
-        <Text
-          style={styles.name}
-          numberOfLines={2}
+      <View
+        style={
+          styles.body
+        }
+      >
+        <View
+          style={
+            styles.nameBox
+          }
         >
-          {product.name}
-        </Text>
-
-        {!!product.description && (
           <Text
             style={
-              styles.description
+              styles.name
             }
-            numberOfLines={3}
+            numberOfLines={
+              2
+            }
           >
-            {product.description}
+            {product.name}
           </Text>
-        )}
+        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.price}>
+        <View
+          style={
+            styles.descriptionBox
+          }
+        >
+          {!!product.description && (
+            <Text
+              style={
+                styles.description
+              }
+              numberOfLines={
+                3
+              }
+            >
+              {
+                product.description
+              }
+            </Text>
+          )}
+        </View>
+
+        <View
+          style={
+            styles.footer
+          }
+        >
+          <Text
+            style={
+              styles.price
+            }
+          >
             {formatPrice(
               Number(
                 product.price,

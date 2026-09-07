@@ -15,8 +15,10 @@ import styles from './WebCategoryTabs.styles';
 
 interface WebCategoryTabsProps {
   categories: Category[];
+
   selectedCategoryId:
     string | null;
+
   onSelectCategory:
     (categoryId: string) => void;
 }
@@ -27,11 +29,18 @@ export default function WebCategoryTabs({
   onSelectCategory,
 }: WebCategoryTabsProps) {
   return (
-    <View style={styles.wrapper}>
+    <View
+      style={
+        styles.wrapper
+      }
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={
           false
+        }
+        style={
+          styles.scroll
         }
         contentContainerStyle={
           styles.content
@@ -55,8 +64,10 @@ export default function WebCategoryTabs({
                 }
                 style={({ pressed }) => [
                   styles.tab,
+
                   selected &&
                     styles.tabSelected,
+
                   pressed &&
                     styles.tabPressed,
                 ]}
@@ -64,6 +75,7 @@ export default function WebCategoryTabs({
                 <Text
                   style={[
                     styles.tabText,
+
                     selected &&
                       styles.tabTextSelected,
                   ]}
