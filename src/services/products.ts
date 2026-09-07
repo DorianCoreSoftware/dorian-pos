@@ -7,6 +7,7 @@ import {
   insertProduct,
   setProductActiveById,
   updateProductById,
+  updateProductImageById,
   updateProductPriceById,
 } from '../repositories/ProductRepository';
 
@@ -27,6 +28,7 @@ export interface AdminUpdateProductInput {
   price: number;
   categoryId: string;
   isAvailable: boolean;
+  imageUrl?: string | null;
 }
 
 export interface CreateProductInput {
@@ -194,10 +196,6 @@ export async function createProduct(
   }
 }
 
-/*
- * Se conserva porque MenuList
- * todavía utiliza esta función.
- */
 export async function updateProduct(
   productId: string,
   input:
@@ -286,6 +284,9 @@ export async function adminUpdateProduct(
 
           isAvailable:
             input.isAvailable,
+
+          imageUrl:
+            input.imageUrl,
         },
       );
 
@@ -300,6 +301,33 @@ export async function adminUpdateProduct(
 
     throw new Error(
       'No se pudo actualizar el producto.',
+    );
+  }
+}
+
+export async function setProductImage(
+  productId: string,
+  imageUrl:
+    string | null,
+): Promise<Product> {
+  try {
+    const updatedProduct =
+      await updateProductImageById(
+        productId,
+        imageUrl,
+      );
+
+    return normalizeProduct(
+      updatedProduct,
+    );
+  } catch (error) {
+    console.error(
+      'Error al actualizar la imagen del producto:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudo guardar la imagen del producto.',
     );
   }
 }
@@ -332,13 +360,6 @@ export async function setProductActive(
   }
 }
 
-/*
- * También se conserva temporalmente
- * por compatibilidad con MenuList.
- *
- * En realidad no borra físicamente:
- * cambia is_active a false.
- */
 export async function deleteProduct(
   productId: string,
 ): Promise<Product> {

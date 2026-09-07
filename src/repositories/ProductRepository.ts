@@ -19,6 +19,7 @@ export interface AdminUpdateProductData {
   price: number;
   categoryId: string;
   isAvailable: boolean;
+  imageUrl?: string | null;
 }
 
 export interface CreateProductData {
@@ -197,26 +198,75 @@ export async function adminUpdateProductById(
   productData:
     AdminUpdateProductData,
 ): Promise<Product> {
+  const updateData: {
+    name: string;
+    description: string | null;
+    price: number;
+    category_id: string;
+    is_available: boolean;
+    image_url?: string | null;
+  } = {
+    name:
+      productData.name,
+
+    description:
+      productData.description,
+
+    price:
+      productData.price,
+
+    category_id:
+      productData.categoryId,
+
+    is_available:
+      productData.isAvailable,
+  };
+
+  if (
+    productData.imageUrl !==
+    undefined
+  ) {
+    updateData.image_url =
+      productData.imageUrl;
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('products')
+    .update(
+      updateData,
+    )
+    .eq(
+      'id',
+      productId,
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message,
+    );
+  }
+
+  return data as Product;
+}
+
+export async function updateProductImageById(
+  productId: string,
+  imageUrl:
+    string | null,
+): Promise<Product> {
   const {
     data,
     error,
   } = await supabase
     .from('products')
     .update({
-      name:
-        productData.name,
-
-      description:
-        productData.description,
-
-      price:
-        productData.price,
-
-      category_id:
-        productData.categoryId,
-
-      is_available:
-        productData.isAvailable,
+      image_url:
+        imageUrl,
     })
     .eq(
       'id',

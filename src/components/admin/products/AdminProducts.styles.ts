@@ -452,4 +452,85 @@ export const styles =
     buttonDisabled: {
       opacity: 0.5,
     },
+
+    productThumbnailBox: {
+      width: 64,
+      height: 64,
+      marginRight: 12,
+      borderRadius: 9,
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#252525',
+      borderWidth: 1,
+      borderColor: '#343434',
+    },
+
+    productThumbnail: {
+      width: '100%',
+      height: '100%',
+    },
+
+    productThumbnailPlaceholder: {
+      color: '#FFBF00',
+      fontSize: 18,
+      fontWeight: '900',
+    },
+
+    imagePickerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginBottom: 6,
+    },
+
+    imagePreviewBox: {
+      width: 110,
+      height: 82,
+      borderRadius: 10,
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#252525',
+      borderWidth: 1,
+      borderColor: '#444444',
+    },
+
+    imagePreview: {
+      width: '100%',
+      height: '100%',
+    },
+
+    imagePreviewPlaceholder: {
+      color: '#FFBF00',
+      fontSize: 26,
+      fontWeight: '900',
+    },
+
+    imagePickerActions: {
+      flex: 1,
+      gap: 7,
+    },
+
+    imagePickerButton: {
+      minHeight: 40,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#FFBF00',
+      backgroundColor: '#292300',
+    },
+
+    imagePickerButtonText: {
+      color: '#FFBF00',
+      fontSize: 12,
+      fontWeight: '900',
+    },
+
+    imageHint: {
+      color: '#888888',
+      fontSize: 10,
+    },
   });

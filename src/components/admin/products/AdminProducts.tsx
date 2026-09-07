@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Image,
     Modal,
     Switch,
     Text,
@@ -23,7 +24,10 @@ import {
     getAllProducts,
     getCategories,
     setProductActive,
+    setProductImage,
 } from '../../../services/products';
+
+import * as ImagePicker from 'expo-image-picker';
 
 import {
     Category,
@@ -33,6 +37,7 @@ import {
 import {
     styles,
 } from './AdminProducts.styles';
+import { uploadProductImage } from '../../../services/productImageService';
 
 interface ProductFormState {
     name: string;
@@ -113,6 +118,13 @@ export function AdminProducts({
     ] = useState<string | null>(
         null,
     );
+
+    const [
+        pendingImage,
+        setPendingImage,
+    ] = useState<
+        ImagePicker.ImagePickerAsset | null
+    >(null);
 
     const loadData =
         useCallback(
@@ -208,6 +220,8 @@ export function AdminProducts({
         (): void => {
             setSelectedProduct(null);
 
+            setPendingImage(null);
+
             setForm({
                 ...INITIAL_FORM,
 
@@ -225,6 +239,8 @@ export function AdminProducts({
         setSelectedProduct(
             product,
         );
+
+        setPendingImage(null);
 
         setForm({
             name:
@@ -260,8 +276,86 @@ export function AdminProducts({
 
             setSelectedProduct(null);
 
+            setPendingImage(null);
+
             setForm(
                 INITIAL_FORM,
+            );
+        };
+
+    const handlePickImage =
+        async (): Promise<void> => {
+            if (isProcessing) {
+                return;
+            }
+
+            const permission =
+                await ImagePicker
+                    .requestMediaLibraryPermissionsAsync();
+
+            if (!permission.granted) {
+                Alert.alert(
+                    'Permiso requerido',
+                    'Necesitamos acceso a tus fotos para seleccionar una imagen del producto.',
+                );
+
+                return;
+            }
+
+            const result =
+                await ImagePicker
+                    .launchImageLibraryAsync({
+                        mediaTypes:
+                            ImagePicker
+                                .MediaTypeOptions
+                                .Images,
+
+                        allowsEditing: true,
+
+                        aspect: [
+                            4,
+                            3,
+                        ],
+
+                        quality: 0.85,
+                    });
+
+            if (result.canceled) {
+                return;
+            }
+
+            const asset =
+                result.assets[0];
+
+            if (
+                asset.fileSize &&
+                asset.fileSize >
+                    5 * 1024 * 1024
+            ) {
+                Alert.alert(
+                    'Imagen demasiado grande',
+                    'Selecciona una imagen de máximo 5 MB.',
+                );
+
+                return;
+            }
+
+            if (
+                asset.mimeType &&
+                !asset.mimeType.startsWith(
+                    'image/',
+                )
+            ) {
+                Alert.alert(
+                    'Archivo inválido',
+                    'Selecciona un archivo de imagen.',
+                );
+
+                return;
+            }
+
+            setPendingImage(
+                asset,
             );
         };
 
@@ -319,6 +413,20 @@ export function AdminProducts({
                 if (
                     selectedProduct
                 ) {
+                    let imageUrl =
+                        selectedProduct.image_url ??
+                        null;
+
+                    if (pendingImage) {
+                        imageUrl =
+                            await uploadProductImage(
+                                selectedProduct.id,
+                                pendingImage.uri,
+                                pendingImage.mimeType ??
+                                    'image/jpeg',
+                            );
+                    }
+
                     await adminUpdateProduct(
                         selectedProduct.id,
                         {
@@ -336,6 +444,8 @@ export function AdminProducts({
 
                             isAvailable:
                                 form.isAvailable,
+
+                            imageUrl,
                         },
                     );
 
@@ -344,19 +454,35 @@ export function AdminProducts({
                         `${cleanName} fue actualizado correctamente.`,
                     );
                 } else {
-                    await createProduct({
-                        name:
-                            cleanName,
+                    const createdProduct =
+                        await createProduct({
+                            name:
+                                cleanName,
 
-                        description:
-                            form.description,
+                            description:
+                                form.description,
 
-                        price:
-                            parsedPrice,
+                            price:
+                                parsedPrice,
 
-                        categoryId:
-                            form.categoryId,
-                    });
+                            categoryId:
+                                form.categoryId,
+                        });
+
+                    if (pendingImage) {
+                        const imageUrl =
+                            await uploadProductImage(
+                                createdProduct.id,
+                                pendingImage.uri,
+                                pendingImage.mimeType ??
+                                    'image/jpeg',
+                            );
+
+                        await setProductImage(
+                            createdProduct.id,
+                            imageUrl,
+                        );
+                    }
 
                     Alert.alert(
                         'Producto creado',
@@ -369,6 +495,10 @@ export function AdminProducts({
                 );
 
                 setSelectedProduct(
+                    null,
+                );
+
+                setPendingImage(
                     null,
                 );
 
@@ -503,6 +633,33 @@ export function AdminProducts({
                     styles.productCardInactive,
                 ]}
             >
+                <View
+                    style={
+                        styles.productThumbnailBox
+                    }
+                >
+                    {item.image_url ? (
+                        <Image
+                            source={{
+                                uri:
+                                    item.image_url,
+                            }}
+                            style={
+                                styles.productThumbnail
+                            }
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <Text
+                            style={
+                                styles.productThumbnailPlaceholder
+                            }
+                        >
+                            BK
+                        </Text>
+                    )}
+                </View>
+
                 <View
                     style={
                         styles.productInfo
@@ -1037,6 +1194,91 @@ export function AdminProducts({
                                 !isProcessing
                             }
                         />
+
+                        <Text
+                            style={
+                                styles.inputLabel
+                            }
+                        >
+                            Imagen del producto
+                        </Text>
+
+                        <View
+                            style={
+                                styles.imagePickerRow
+                            }
+                        >
+                            <View
+                                style={
+                                    styles.imagePreviewBox
+                                }
+                            >
+                                {pendingImage?.uri ||
+                                selectedProduct
+                                    ?.image_url ? (
+                                    <Image
+                                        source={{
+                                            uri:
+                                                pendingImage
+                                                    ?.uri ??
+                                                selectedProduct
+                                                    ?.image_url ??
+                                                '',
+                                        }}
+                                        style={
+                                            styles.imagePreview
+                                        }
+                                        resizeMode="cover"
+                                    />
+                                ) : (
+                                    <Text
+                                        style={
+                                            styles.imagePreviewPlaceholder
+                                        }
+                                    >
+                                        BK
+                                    </Text>
+                                )}
+                            </View>
+
+                            <View
+                                style={
+                                    styles.imagePickerActions
+                                }
+                            >
+                                <TouchableOpacity
+                                    style={
+                                        styles.imagePickerButton
+                                    }
+                                    disabled={
+                                        isProcessing
+                                    }
+                                    onPress={() => {
+                                        void handlePickImage();
+                                    }}
+                                >
+                                    <Text
+                                        style={
+                                            styles.imagePickerButtonText
+                                        }
+                                    >
+                                        {pendingImage ||
+                                        selectedProduct
+                                            ?.image_url
+                                            ? 'Cambiar imagen'
+                                            : 'Seleccionar imagen'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <Text
+                                    style={
+                                        styles.imageHint
+                                    }
+                                >
+                                    JPG, PNG o WEBP · máximo 5 MB
+                                </Text>
+                            </View>
+                        </View>
 
                         <Text
                             style={
