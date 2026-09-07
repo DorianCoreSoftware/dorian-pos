@@ -83,6 +83,11 @@ import {
   createWebOrderFingerprint,
 } from '../utils/webOrderRequest';
 
+import {
+  getLastWebOrderTrackingCode,
+  saveLastWebOrderTrackingCode,
+} from '../utils/webOrderHistory';
+
 import styles from './WebMenuScreen.styles';
 
 function getColumns(
@@ -121,6 +126,57 @@ function normalizeText(
     .toLocaleLowerCase(
       'es',
     );
+}
+
+function getTrackingCodeFromPath():
+  | string
+  | null {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return null;
+  }
+
+  const match =
+    window.location.pathname.match(
+      /^\/pedido\/([0-9a-fA-F]{8})\/?$/,
+    );
+
+  return match?.[1]
+    ? match[1].toUpperCase()
+    : null;
+}
+
+function updateTrackingPath(
+  trackingCode:
+    | string
+    | null,
+): void {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return;
+  }
+
+  const nextPath =
+    trackingCode
+      ? `/pedido/${trackingCode}`
+      : '/';
+
+  if (
+    window.location.pathname ===
+    nextPath
+  ) {
+    return;
+  }
+
+  window.history.pushState(
+    {},
+    '',
+    nextPath,
+  );
 }
 
 export default function WebMenuScreen() {
@@ -216,6 +272,13 @@ export default function WebMenuScreen() {
   const [
     successfulOrderId,
     setSuccessfulOrderId,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    lastTrackingCode,
+    setLastTrackingCode,
   ] = useState<
     string | null
   >(null);
@@ -415,6 +478,61 @@ export default function WebMenuScreen() {
 
   useEffect(() => {
     void loadMenu();
+  }, []);
+
+  useEffect(() => {
+    setLastTrackingCode(
+      getLastWebOrderTrackingCode(),
+    );
+  }, []);
+
+  useEffect(() => {
+    const syncTrackingFromPath =
+      () => {
+        const code =
+          getTrackingCodeFromPath();
+
+        if (code) {
+          setTrackingInitialCode(
+            code,
+          );
+
+          setIsTrackingVisible(
+            true,
+          );
+
+          return;
+        }
+
+        setIsTrackingVisible(
+          false,
+        );
+
+        setTrackingInitialCode(
+          null,
+        );
+      };
+
+    syncTrackingFromPath();
+
+    if (
+      typeof window ===
+      'undefined'
+    ) {
+      return;
+    }
+
+    window.addEventListener(
+      'popstate',
+      syncTrackingFromPath,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'popstate',
+        syncTrackingFromPath,
+      );
+    };
   }, []);
 
   const visibleProducts =
@@ -669,6 +787,19 @@ export default function WebMenuScreen() {
         result.orderId,
       );
 
+      const trackingCode =
+        getOrderTrackingCode(
+          result.orderId,
+        );
+
+      saveLastWebOrderTrackingCode(
+        trackingCode,
+      );
+
+      setLastTrackingCode(
+        trackingCode,
+      );
+
       setCart([]);
 
       setIsCartVisible(
@@ -700,7 +831,31 @@ export default function WebMenuScreen() {
     }
   }
 
+  function handleOpenLastOrderTracking() {
+    if (
+      !lastTrackingCode
+    ) {
+      return;
+    }
+
+    updateTrackingPath(
+      lastTrackingCode,
+    );
+
+    setTrackingInitialCode(
+      lastTrackingCode,
+    );
+
+    setIsTrackingVisible(
+      true,
+    );
+  }
+
   function handleOpenManualTracking() {
+    updateTrackingPath(
+      null,
+    );
+
     setTrackingInitialCode(
       null,
     );
@@ -717,10 +872,17 @@ export default function WebMenuScreen() {
       return;
     }
 
-    setTrackingInitialCode(
+    const trackingCode =
       getOrderTrackingCode(
         successfulOrderId,
-      ),
+      );
+
+    updateTrackingPath(
+      trackingCode,
+    );
+
+    setTrackingInitialCode(
+      trackingCode,
     );
 
     setSuccessfulOrderId(
@@ -733,6 +895,10 @@ export default function WebMenuScreen() {
   }
 
   function handleCloseTracking() {
+    updateTrackingPath(
+      null,
+    );
+
     setIsTrackingVisible(
       false,
     );
@@ -753,9 +919,42 @@ export default function WebMenuScreen() {
           alignSelf: 'center',
           paddingHorizontal: 20,
           paddingTop: 12,
-          alignItems: 'flex-end',
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: 10,
+          flexWrap: 'wrap',
         }}
       >
+        {lastTrackingCode ? (
+          <Pressable
+            onPress={
+              handleOpenLastOrderTracking
+            }
+            style={({ pressed }) => ({
+              borderWidth: 1,
+              borderColor: '#444',
+              borderRadius: 10,
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              backgroundColor:
+                pressed
+                  ? '#242424'
+                  : '#151515',
+            })}
+          >
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontWeight: '800',
+                fontSize: 13,
+              }}
+            >
+              Último pedido #{lastTrackingCode}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
           onPress={
             handleOpenManualTracking
