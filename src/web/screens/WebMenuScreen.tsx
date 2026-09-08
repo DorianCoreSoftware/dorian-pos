@@ -95,6 +95,7 @@ import {
 } from '../utils/webOrderHistory';
 
 import styles from './WebMenuScreen.styles';
+import { WebFeedbackModal } from '../components/WebFeedbackModal';
 
 function getColumns(
   width: number,
@@ -278,6 +279,10 @@ function getBusinessAvailabilityText(
 }
 
 export default function WebMenuScreen() {
+  const [
+    isFeedbackVisible,
+    setIsFeedbackVisible,
+  ] = useState(false);
   const {
     width: windowWidth,
   } = useWindowDimensions();
@@ -1241,6 +1246,34 @@ export default function WebMenuScreen() {
             Seguir pedido
           </Text>
         </Pressable>
+        <Pressable
+          onPress={() =>
+            setIsFeedbackVisible(
+              true,
+            )
+          }
+          style={({ pressed }) => ({
+            borderWidth: 1,
+            borderColor: '#444',
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            backgroundColor:
+              pressed
+                ? '#242424'
+                : '#151515',
+          })}
+        >
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontWeight: '800',
+              fontSize: 13,
+            }}
+          >
+            💬 Sugerencias
+          </Text>
+        </Pressable>
       </View>
 
       <View
@@ -1694,6 +1727,17 @@ export default function WebMenuScreen() {
         }
         onClose={
           handleCloseTracking
+        }
+      />
+
+      <WebFeedbackModal
+        visible={
+          isFeedbackVisible
+        }
+        onClose={() =>
+          setIsFeedbackVisible(
+            false,
+          )
         }
       />
     </View>

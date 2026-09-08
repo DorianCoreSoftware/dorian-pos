@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, {
+  useState,
+} from 'react';
+
 import {
   Text,
   TouchableOpacity,
@@ -6,15 +9,41 @@ import {
   View,
 } from 'react-native';
 
-import { AdminProducts } from '../../components/admin/products/AdminProducts';
-import { AdminCategories } from '../../components/admin/categories/AdminCategories';
-import { AdminModifiers } from '../../components/admin/modifiers/AdminModifiers';
-import { AdminPrinter } from '../../components/admin/printer/AdminPrinter';
-import { AdminReports } from '../../components/admin/reports/AdminReports';
-import { AdminPromotions } from '../../components/admin/promotions/AdminPromotions';
+import {
+  AdminProducts,
+} from '../../components/admin/products/AdminProducts';
 
-import { styles } from './AdminScreen.styles';
-import { AdminBusinessHours } from '../../components/admin/business-hours/AdminBusinessHours';
+import {
+  AdminCategories,
+} from '../../components/admin/categories/AdminCategories';
+
+import {
+  AdminModifiers,
+} from '../../components/admin/modifiers/AdminModifiers';
+
+import {
+  AdminPrinter,
+} from '../../components/admin/printer/AdminPrinter';
+
+import {
+  AdminReports,
+} from '../../components/admin/reports/AdminReports';
+
+import {
+  AdminPromotions,
+} from '../../components/admin/promotions/AdminPromotions';
+
+import {
+  AdminBusinessHours,
+} from '../../components/admin/business-hours/AdminBusinessHours';
+
+import {
+  AdminFeedback,
+} from '../../components/admin/feedback/AdminFeedback';
+
+import {
+  styles,
+} from './AdminScreen.styles';
 
 type AdminSection =
   | 'products'
@@ -23,12 +52,18 @@ type AdminSection =
   | 'reports'
   | 'printer'
   | 'promotions'
-  | 'hours';
+  | 'hours'
+  | 'feedback';
 
 interface AdminScreenProps {
-  onProductsChanged: () => Promise<void>;
-  onCategoriesChanged: () => Promise<void>;
-  onModifiersChanged: () => Promise<void>;
+  onProductsChanged:
+    () => Promise<void>;
+
+  onCategoriesChanged:
+    () => Promise<void>;
+
+  onModifiersChanged:
+    () => Promise<void>;
 }
 
 export function AdminScreen({
@@ -36,77 +71,179 @@ export function AdminScreen({
   onCategoriesChanged,
   onModifiersChanged,
 }: AdminScreenProps) {
-  const { width } = useWindowDimensions();
-  const isPhone = width < 700;
-  const isSmallPhone = width < 430;
+  const {
+    width,
+  } = useWindowDimensions();
 
-  const [activeSection, setActiveSection] =
-    useState<AdminSection>('products');
+  const isPhone =
+    width < 700;
 
-  const renderContent = () => {
-    if (activeSection === 'products') {
-      return <AdminProducts onProductsChanged={onProductsChanged} />;
-    }
+  const isSmallPhone =
+    width < 430;
 
-    if (activeSection === 'categories') {
-      return <AdminCategories onCategoriesChanged={onCategoriesChanged} />;
-    }
+  const [
+    activeSection,
+    setActiveSection,
+  ] = useState<AdminSection>(
+    'products',
+  );
 
-    if (activeSection === 'modifiers') {
-      return <AdminModifiers onModifiersChanged={onModifiersChanged} />;
-    }
+  const renderContent =
+    () => {
+      if (
+        activeSection ===
+        'products'
+      ) {
+        return (
+          <AdminProducts
+            onProductsChanged={
+              onProductsChanged
+            }
+          />
+        );
+      }
 
-    if (activeSection === 'reports') {
-      return <AdminReports />;
-    }
+      if (
+        activeSection ===
+        'categories'
+      ) {
+        return (
+          <AdminCategories
+            onCategoriesChanged={
+              onCategoriesChanged
+            }
+          />
+        );
+      }
 
-    if (activeSection === 'promotions') {
-      return <AdminPromotions />;
-    }
+      if (
+        activeSection ===
+        'modifiers'
+      ) {
+        return (
+          <AdminModifiers
+            onModifiersChanged={
+              onModifiersChanged
+            }
+          />
+        );
+      }
 
-    if (activeSection === 'hours') {
-      return <AdminBusinessHours />;
-    }
+      if (
+        activeSection ===
+        'reports'
+      ) {
+        return (
+          <AdminReports />
+        );
+      }
 
-    return <AdminPrinter />;
-  };
+      if (
+        activeSection ===
+        'promotions'
+      ) {
+        return (
+          <AdminPromotions />
+        );
+      }
 
-  const renderTab = (section: AdminSection, label: string) => {
-    const isActive = activeSection === section;
+      if (
+        activeSection ===
+        'hours'
+      ) {
+        return (
+          <AdminBusinessHours />
+        );
+      }
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.sectionTab,
-          isPhone && styles.sectionTabPhone,
-          isActive && styles.sectionTabActive,
-        ]}
-        onPress={() => setActiveSection(section)}
-      >
-        <Text
+      if (
+        activeSection ===
+        'feedback'
+      ) {
+        return (
+          <AdminFeedback />
+        );
+      }
+
+      return (
+        <AdminPrinter />
+      );
+    };
+
+  const renderTab =
+    (
+      section:
+        AdminSection,
+
+      label:
+        string,
+    ) => {
+      const isActive =
+        activeSection ===
+        section;
+
+      return (
+        <TouchableOpacity
           style={[
-            styles.sectionTabText,
-            isSmallPhone && styles.sectionTabTextSmall,
-            isActive && styles.sectionTabTextActive,
+            styles.sectionTab,
+
+            isPhone &&
+            styles.sectionTabPhone,
+
+            isActive &&
+            styles.sectionTabActive,
           ]}
+          onPress={() =>
+            setActiveSection(
+              section,
+            )
+          }
         >
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
+          <Text
+            style={[
+              styles.sectionTabText,
+
+              isSmallPhone &&
+              styles.sectionTabTextSmall,
+
+              isActive &&
+              styles.sectionTabTextActive,
+            ]}
+          >
+            {label}
+          </Text>
+        </TouchableOpacity>
+      );
+    };
 
   return (
     <View
       style={[
         styles.container,
-        isPhone && styles.containerPhone,
+
+        isPhone &&
+        styles.containerPhone,
       ]}
     >
-      <View style={styles.header}>
+      <View
+        style={
+          styles.header
+        }
+      >
         <View>
-          <Text style={styles.title}>Administración</Text>
-          <Text style={styles.subtitle}>
+          <Text
+            style={
+              styles.title
+            }
+          >
+            Administración
+          </Text>
+
+          <Text
+            style={
+              styles.subtitle
+            }
+          >
             Configuración del punto de venta Burger Kong
           </Text>
         </View>
@@ -115,19 +252,57 @@ export function AdminScreen({
       <View
         style={[
           styles.tabsContainer,
-          isPhone && styles.tabsContainerPhone,
+
+          isPhone &&
+          styles.tabsContainerPhone,
         ]}
       >
-        {renderTab('products', 'PRODUCTOS')}
-        {renderTab('categories', 'CATEGORÍAS')}
-        {renderTab('modifiers', 'MODIFICADORES')}
-        {renderTab('reports', 'REPORTES')}
-        {renderTab('printer', 'IMPRESORA')}
-        {renderTab('promotions', 'PROMOCIONES')}
-        {renderTab('hours', 'HORARIOS')}
+        {renderTab(
+          'products',
+          'PRODUCTOS',
+        )}
+
+        {renderTab(
+          'categories',
+          'CATEGORÍAS',
+        )}
+
+        {renderTab(
+          'modifiers',
+          'MODIFICADORES',
+        )}
+
+        {renderTab(
+          'reports',
+          'REPORTES',
+        )}
+
+        {renderTab(
+          'printer',
+          'IMPRESORA',
+        )}
+
+        {renderTab(
+          'promotions',
+          'PROMOCIONES',
+        )}
+
+        {renderTab(
+          'hours',
+          'HORARIOS',
+        )}
+
+        {renderTab(
+          'feedback',
+          'BUZÓN',
+        )}
       </View>
 
-      <View style={styles.content}>
+      <View
+        style={
+          styles.content
+        }
+      >
         {renderContent()}
       </View>
     </View>
