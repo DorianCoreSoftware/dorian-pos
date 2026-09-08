@@ -19,6 +19,10 @@ export interface PublicBusinessStatus {
     | string
     | null;
   isWithinBusinessHours: boolean;
+  todayIsException: boolean;
+  exceptionReason:
+    | string
+    | null;
 }
 
 interface PublicBusinessStatusRow {
@@ -38,6 +42,10 @@ interface PublicBusinessStatusRow {
     | string
     | null;
   is_within_business_hours: boolean;
+  today_is_exception: boolean;
+  exception_reason:
+    | string
+    | null;
 }
 
 export async function getPublicBusinessStatus():
@@ -98,5 +106,11 @@ export async function getPublicBusinessStatus():
 
     isWithinBusinessHours:
       row.is_within_business_hours,
+
+    todayIsException:
+      row.today_is_exception,
+
+    exceptionReason:
+      row.exception_reason,
   };
 }

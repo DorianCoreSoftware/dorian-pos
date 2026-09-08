@@ -246,23 +246,35 @@ function getBusinessAvailabilityText(
     );
   }
 
+  if (
+    status.todayIsException &&
+    !status.todayIsOpen
+  ) {
+    return (
+      status.exceptionReason?.trim() ||
+      'Hoy no laboramos.'
+    );
+  }
+
   if (!status.todayIsOpen) {
     return 'Hoy no laboramos.';
   }
 
-  if (!status.isWithinBusinessHours) {
-    return `Horario de hoy: ${formatBusinessTime(
+  const schedule =
+    `Horario de hoy: ${formatBusinessTime(
       status.todayOpenTime,
     )} - ${formatBusinessTime(
       status.todayCloseTime,
     )}`;
+
+  if (
+    status.todayIsException &&
+    status.exceptionReason?.trim()
+  ) {
+    return `${status.exceptionReason.trim()} · ${schedule}`;
   }
 
-  return `Horario de hoy: ${formatBusinessTime(
-    status.todayOpenTime,
-  )} - ${formatBusinessTime(
-    status.todayCloseTime,
-  )}`;
+  return schedule;
 }
 
 export default function WebMenuScreen() {

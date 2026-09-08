@@ -13,6 +13,24 @@ export interface WebOrderSettings {
   webOrdersPauseMessage: string;
 }
 
+export interface BusinessHourException {
+  id: string;
+  exceptionDate: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  reason: string;
+}
+
+export interface SaveBusinessHourExceptionInput {
+  id?: string;
+  exceptionDate: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  reason: string;
+}
+
 interface BusinessHourRow {
   id: string;
   day_of_week: number;
@@ -25,6 +43,15 @@ interface BusinessSettingsRow {
   timezone: string;
   web_orders_enabled: boolean;
   web_orders_pause_message: string | null;
+}
+
+interface BusinessHourExceptionRow {
+  id: string;
+  exception_date: string;
+  is_open: boolean;
+  open_time: string | null;
+  close_time: string | null;
+  reason: string | null;
 }
 
 export async function getBusinessHours(): Promise<BusinessHour[]> {
@@ -110,7 +137,8 @@ export async function getBusinessSettings(): Promise<{
     );
   }
 
-  const row = data as BusinessSettingsRow;
+  const row =
+    data as BusinessSettingsRow;
 
   return {
     timezone:
@@ -168,6 +196,223 @@ export async function saveWebOrderSettings(
   if (error) {
     throw new Error(
       `No se pudo guardar la configuración de pedidos web: ${error.message}`,
+    );
+  }
+}
+
+export async function getBusinessHourExceptions():
+  Promise<BusinessHourException[]> {
+  const { data, error } = await supabase
+    .from('business_hour_exceptions')
+    .select(
+      'id, exception_date, is_open, open_time, close_time, reason',
+    )
+    .order(
+      'exception_date',
+      { ascending: true },
+    )
+    .limit(100);
+
+  if (error) {
+    throw new Error(
+      `No se pudieron obtener las excepciones: ${error.message}`,
+    );
+  }
+
+  return (
+    (data ?? []) as BusinessHourExceptionRow[]
+  ).map(
+    (row) => ({
+      id:
+        row.id,
+
+      exceptionDate:
+        row.exception_date,
+
+      isOpen:
+        row.is_open,
+
+      openTime:
+        row.open_time?.slice(0, 5) ??
+        '17:00',
+
+      closeTime:
+        row.close_time?.slice(0, 5) ??
+        '23:00',
+
+      reason:
+        row.reason ??
+        '',
+    }),
+  );
+}
+
+export async function saveBusinessHourException(
+  input: SaveBusinessHourExceptionInput,
+): Promise<void> {
+  validateExceptionDate(
+    input.exceptionDate,
+  );
+
+  if (input.isOpen) {
+    validateTime(
+      input.openTime,
+    );
+
+    validateTime(
+      input.closeTime,
+    );
+
+    if (
+      input.openTime ===
+      input.closeTime
+    ) {
+      throw new Error(
+        'La hora de apertura y cierre no pueden ser iguales.',
+      );
+    }
+  }
+
+  const reason =
+    input.reason
+      .trim()
+      .slice(0, 120);
+
+  const row = {
+    exception_date:
+      input.exceptionDate,
+
+    is_open:
+      input.isOpen,
+
+    open_time:
+      input.isOpen
+        ? input.openTime
+        : null,
+
+    close_time:
+      input.isOpen
+        ? input.closeTime
+        : null,
+
+    reason:
+      reason || null,
+
+    updated_at:
+      new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } =
+      await supabase
+        .from(
+          'business_hour_exceptions',
+        )
+        .update(
+          row,
+        )
+        .eq(
+          'id',
+          input.id,
+        );
+
+    if (error) {
+      throw new Error(
+        `No se pudo actualizar la excepción: ${error.message}`,
+      );
+    }
+
+    return;
+  }
+
+  const { error } =
+    await supabase
+      .from(
+        'business_hour_exceptions',
+      )
+      .insert(
+        row,
+      );
+
+  if (error) {
+    if (
+      error.code ===
+      '23505'
+    ) {
+      throw new Error(
+        'Ya existe una excepción para esa fecha.',
+      );
+    }
+
+    throw new Error(
+      `No se pudo crear la excepción: ${error.message}`,
+    );
+  }
+}
+
+export async function deleteBusinessHourException(
+  id: string,
+): Promise<void> {
+  const { error } =
+    await supabase
+      .from(
+        'business_hour_exceptions',
+      )
+      .delete()
+      .eq(
+        'id',
+        id,
+      );
+
+  if (error) {
+    throw new Error(
+      `No se pudo eliminar la excepción: ${error.message}`,
+    );
+  }
+}
+
+function validateExceptionDate(
+  value: string,
+): void {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      value,
+    )
+  ) {
+    throw new Error(
+      'La fecha debe usar el formato AAAA-MM-DD.',
+    );
+  }
+
+  const date =
+    new Date(
+      `${value}T12:00:00`,
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    ) ||
+    date.toISOString()
+      .slice(0, 10) !==
+      value
+  ) {
+    throw new Error(
+      'La fecha no es válida.',
+    );
+  }
+}
+
+function validateTime(
+  value: string,
+): void {
+  if (
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(
+      value,
+    )
+  ) {
+    throw new Error(
+      'Los horarios deben usar el formato HH:MM.',
     );
   }
 }
