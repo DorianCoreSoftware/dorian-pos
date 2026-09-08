@@ -1,7 +1,4 @@
-import React, {
-  useState,
-} from 'react';
-
+import React, { useState } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -9,30 +6,15 @@ import {
   View,
 } from 'react-native';
 
-import {
-  AdminProducts,
-} from '../../components/admin/products/AdminProducts';
-
-import {
-  AdminCategories,
-} from '../../components/admin/categories/AdminCategories';
-
-import {
-  AdminModifiers,
-} from '../../components/admin/modifiers/AdminModifiers';
-
-import {
-  AdminPrinter,
-} from '../../components/admin/printer/AdminPrinter';
-
-import {
-  AdminReports,
-} from '../../components/admin/reports/AdminReports';
-
-import {
-  styles,
-} from './AdminScreen.styles';
+import { AdminProducts } from '../../components/admin/products/AdminProducts';
+import { AdminCategories } from '../../components/admin/categories/AdminCategories';
+import { AdminModifiers } from '../../components/admin/modifiers/AdminModifiers';
+import { AdminPrinter } from '../../components/admin/printer/AdminPrinter';
+import { AdminReports } from '../../components/admin/reports/AdminReports';
 import { AdminPromotions } from '../../components/admin/promotions/AdminPromotions';
+
+import { styles } from './AdminScreen.styles';
+import { AdminBusinessHours } from '../../components/admin/business-hours/AdminBusinessHours';
 
 type AdminSection =
   | 'products'
@@ -40,17 +22,13 @@ type AdminSection =
   | 'modifiers'
   | 'reports'
   | 'printer'
-  | 'promotions';
+  | 'promotions'
+  | 'hours';
 
 interface AdminScreenProps {
-  onProductsChanged:
-  () => Promise<void>;
-
-  onCategoriesChanged:
-  () => Promise<void>;
-
-  onModifiersChanged:
-  () => Promise<void>;
+  onProductsChanged: () => Promise<void>;
+  onCategoriesChanged: () => Promise<void>;
+  onModifiersChanged: () => Promise<void>;
 }
 
 export function AdminScreen({
@@ -58,120 +36,58 @@ export function AdminScreen({
   onCategoriesChanged,
   onModifiersChanged,
 }: AdminScreenProps) {
-  const {
-    width,
-  } = useWindowDimensions();
+  const { width } = useWindowDimensions();
+  const isPhone = width < 700;
+  const isSmallPhone = width < 430;
 
-  const isPhone =
-    width < 700;
+  const [activeSection, setActiveSection] =
+    useState<AdminSection>('products');
 
-  const isSmallPhone =
-    width < 430;
+  const renderContent = () => {
+    if (activeSection === 'products') {
+      return <AdminProducts onProductsChanged={onProductsChanged} />;
+    }
 
-  const [
-    activeSection,
-    setActiveSection,
-  ] = useState<AdminSection>(
-    'products',
-  );
+    if (activeSection === 'categories') {
+      return <AdminCategories onCategoriesChanged={onCategoriesChanged} />;
+    }
 
-  const renderContent =
-    () => {
-      if (
-        activeSection ===
-        'products'
-      ) {
-        return (
-          <AdminProducts
-            onProductsChanged={
-              onProductsChanged
-            }
-          />
-        );
-      }
+    if (activeSection === 'modifiers') {
+      return <AdminModifiers onModifiersChanged={onModifiersChanged} />;
+    }
 
-      if (
-        activeSection ===
-        'categories'
-      ) {
-        return (
-          <AdminCategories
-            onCategoriesChanged={
-              onCategoriesChanged
-            }
-          />
-        );
-      }
+    if (activeSection === 'reports') {
+      return <AdminReports />;
+    }
 
-      if (
-        activeSection ===
-        'modifiers'
-      ) {
-        return (
-          <AdminModifiers
-            onModifiersChanged={
-              onModifiersChanged
-            }
-          />
-        );
-      }
+    if (activeSection === 'promotions') {
+      return <AdminPromotions />;
+    }
 
-      if (
-        activeSection ===
-        'reports'
-      ) {
-        return (
-          <AdminReports />
-        );
-      }
+    if (activeSection === 'hours') {
+      return <AdminBusinessHours />;
+    }
 
-      if (
-        activeSection ===
-        'promotions'
-      ) {
-        return (
-          <AdminPromotions />
-        );
-      }
+    return <AdminPrinter />;
+  };
 
-      return (
-        <AdminPrinter />
-      );
-    };
-
-  const renderTab = (
-    section: AdminSection,
-    label: string,
-  ) => {
-    const isActive =
-      activeSection === section;
+  const renderTab = (section: AdminSection, label: string) => {
+    const isActive = activeSection === section;
 
     return (
       <TouchableOpacity
         style={[
           styles.sectionTab,
-
-          isPhone &&
-          styles.sectionTabPhone,
-
-          isActive &&
-          styles.sectionTabActive,
+          isPhone && styles.sectionTabPhone,
+          isActive && styles.sectionTabActive,
         ]}
-        onPress={() =>
-          setActiveSection(
-            section,
-          )
-        }
+        onPress={() => setActiveSection(section)}
       >
         <Text
           style={[
             styles.sectionTabText,
-
-            isSmallPhone &&
-            styles.sectionTabTextSmall,
-
-            isActive &&
-            styles.sectionTabTextActive,
+            isSmallPhone && styles.sectionTabTextSmall,
+            isActive && styles.sectionTabTextActive,
           ]}
         >
           {label}
@@ -184,32 +100,14 @@ export function AdminScreen({
     <View
       style={[
         styles.container,
-
-        isPhone &&
-        styles.containerPhone,
+        isPhone && styles.containerPhone,
       ]}
     >
-      <View
-        style={
-          styles.header
-        }
-      >
+      <View style={styles.header}>
         <View>
-          <Text
-            style={
-              styles.title
-            }
-          >
-            Administración
-          </Text>
-
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            Configuración del punto de venta
-            Burger Kong
+          <Text style={styles.title}>Administración</Text>
+          <Text style={styles.subtitle}>
+            Configuración del punto de venta Burger Kong
           </Text>
         </View>
       </View>
@@ -217,47 +115,19 @@ export function AdminScreen({
       <View
         style={[
           styles.tabsContainer,
-
-          isPhone &&
-          styles.tabsContainerPhone,
+          isPhone && styles.tabsContainerPhone,
         ]}
       >
-        {renderTab(
-          'products',
-          'PRODUCTOS',
-        )}
-
-        {renderTab(
-          'categories',
-          'CATEGORÍAS',
-        )}
-
-        {renderTab(
-          'modifiers',
-          'MODIFICADORES',
-        )}
-
-        {renderTab(
-          'reports',
-          'REPORTES',
-        )}
-
-        {renderTab(
-          'printer',
-          'IMPRESORA',
-        )}
-
-        {renderTab(
-          'promotions',
-          'PROMOCIONES',
-        )}
+        {renderTab('products', 'PRODUCTOS')}
+        {renderTab('categories', 'CATEGORÍAS')}
+        {renderTab('modifiers', 'MODIFICADORES')}
+        {renderTab('reports', 'REPORTES')}
+        {renderTab('printer', 'IMPRESORA')}
+        {renderTab('promotions', 'PROMOCIONES')}
+        {renderTab('hours', 'HORARIOS')}
       </View>
 
-      <View
-        style={
-          styles.content
-        }
-      >
+      <View style={styles.content}>
         {renderContent()}
       </View>
     </View>

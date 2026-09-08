@@ -269,6 +269,30 @@ const styles =
         'underline',
     },
 
+    closedNotice: {
+      marginBottom: 12,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#633333',
+      backgroundColor:
+        '#2A1717',
+    },
+
+    closedNoticeTitle: {
+      color: '#FF8A80',
+      fontSize: 12,
+      fontWeight: '900',
+    },
+
+    closedNoticeText: {
+      color: '#D0B8B8',
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 4,
+    },
+
     checkoutButton: {
       backgroundColor:
         '#FFB000',
@@ -281,10 +305,22 @@ const styles =
       opacity: 0.9,
     },
 
+    checkoutButtonDisabled: {
+      backgroundColor:
+        '#2C2C2C',
+      borderWidth: 1,
+      borderColor:
+        '#404040',
+    },
+
     checkoutButtonText: {
       color: '#111111',
       fontSize: 14,
       fontWeight: '900',
+    },
+
+    checkoutButtonTextDisabled: {
+      color: '#777777',
     },
   });
 

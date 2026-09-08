@@ -7,6 +7,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -70,6 +71,11 @@ import {
   createWebOrder,
   WebFulfillmentType,
 } from '../services/webOrderService';
+
+import {
+  getPublicBusinessStatus,
+  PublicBusinessStatus,
+} from '../services/webBusinessHoursService';
 
 import {
   addConfiguredProductToCart,
@@ -178,6 +184,74 @@ function updateTrackingPath(
     nextPath,
   );
 }
+
+function formatBusinessTime(
+  value:
+    | string
+    | null
+    | undefined,
+): string {
+  if (!value) {
+    return '';
+  }
+
+  const [
+    hourText,
+    minuteText,
+  ] = value
+    .slice(
+      0,
+      5,
+    )
+    .split(':');
+
+  const hour =
+    Number(
+      hourText,
+    );
+
+  if (
+    !Number.isFinite(
+      hour,
+    )
+  ) {
+    return value;
+  }
+
+  const suffix =
+    hour >= 12
+      ? 'PM'
+      : 'AM';
+
+  const hour12 =
+    hour % 12 ||
+    12;
+
+  return `${hour12}:${minuteText} ${suffix}`;
+}
+
+function getTodayScheduleText(
+  status:
+    | PublicBusinessStatus
+    | null,
+): string {
+  if (!status) {
+    return 'No pudimos confirmar el horario.';
+  }
+
+  if (
+    !status.todayIsOpen
+  ) {
+    return 'Hoy no laboramos.';
+  }
+
+  return `Horario de hoy: ${formatBusinessTime(
+    status.todayOpenTime,
+  )} - ${formatBusinessTime(
+    status.todayCloseTime,
+  )}`;
+}
+
 
 export default function WebMenuScreen() {
   const {
@@ -295,6 +369,25 @@ export default function WebMenuScreen() {
     string | null
   >(null);
 
+  const [
+    businessStatus,
+    setBusinessStatus,
+  ] = useState<
+    PublicBusinessStatus | null
+  >(null);
+
+  const [
+    isBusinessStatusLoading,
+    setIsBusinessStatusLoading,
+  ] = useState(true);
+
+  const [
+    businessStatusError,
+    setBusinessStatusError,
+  ] = useState<
+    string | null
+  >(null);
+
   const pendingWebOrderRequest =
     useRef<{
       id: string;
@@ -305,9 +398,9 @@ export default function WebMenuScreen() {
     meats,
     sauces,
     isLoading:
-      areModifiersLoading,
+    areModifiersLoading,
     error:
-      modifiersError,
+    modifiersError,
   } = useModifiers();
 
   const visibleCategories =
@@ -361,9 +454,48 @@ export default function WebMenuScreen() {
   const deliveryFee =
     deliveryProduct
       ? Number(
-          deliveryProduct.price,
-        )
+        deliveryProduct.price,
+      )
       : 0;
+
+  async function loadBusinessStatus():
+    Promise<
+      PublicBusinessStatus | null
+    > {
+    try {
+      setBusinessStatusError(
+        null,
+      );
+
+      const status =
+        await getPublicBusinessStatus();
+
+      setBusinessStatus(
+        status,
+      );
+
+      return status;
+    } catch (statusError) {
+      console.error(
+        'Error cargando horario del negocio:',
+        statusError,
+      );
+
+      setBusinessStatusError(
+        'No pudimos confirmar si estamos abiertos.',
+      );
+
+      setBusinessStatus(
+        null,
+      );
+
+      return null;
+    } finally {
+      setIsBusinessStatusLoading(
+        false,
+      );
+    }
+  }
 
   async function loadMenu(
     isRefresh = false,
@@ -381,11 +513,16 @@ export default function WebMenuScreen() {
         loadedCategories,
         loadedProducts,
         loadedWeeklySauce,
+        loadedBusinessStatus,
       ] =
         await Promise.all([
           getActiveCategories(),
           getActiveProducts(),
           getActiveWeeklySauce()
+            .catch(
+              () => null,
+            ),
+          getPublicBusinessStatus()
             .catch(
               () => null,
             ),
@@ -401,6 +538,20 @@ export default function WebMenuScreen() {
 
       setWeeklySauce(
         loadedWeeklySauce,
+      );
+
+      setBusinessStatus(
+        loadedBusinessStatus,
+      );
+
+      setBusinessStatusError(
+        loadedBusinessStatus
+          ? null
+          : 'No pudimos confirmar si estamos abiertos.',
+      );
+
+      setIsBusinessStatusLoading(
+        false,
       );
 
       const hiddenCategoryNames =
@@ -481,6 +632,22 @@ export default function WebMenuScreen() {
   }, []);
 
   useEffect(() => {
+    const intervalId =
+      setInterval(
+        () => {
+          void loadBusinessStatus();
+        },
+        60_000,
+      );
+
+    return () => {
+      clearInterval(
+        intervalId,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     setLastTrackingCode(
       getLastWebOrderTrackingCode(),
     );
@@ -540,44 +707,44 @@ export default function WebMenuScreen() {
       () =>
         selectedCategoryId
           ? products
-              .filter(
-                (product) =>
-                  product.category_id ===
-                    selectedCategoryId &&
-                  !isDeliveryProduct(
-                    product,
-                  ),
-              )
-              .sort(
-                (
-                  first,
-                  second,
-                ) => {
-                  const priceDifference =
-                    Number(
-                      first.price,
-                    ) -
-                    Number(
-                      second.price,
-                    );
-
-                  if (
-                    priceDifference !==
-                    0
-                  ) {
-                    return priceDifference;
-                  }
-
-                  return first.name.localeCompare(
-                    second.name,
-                    'es',
-                    {
-                      sensitivity:
-                        'base',
-                    },
+            .filter(
+              (product) =>
+                product.category_id ===
+                selectedCategoryId &&
+                !isDeliveryProduct(
+                  product,
+                ),
+            )
+            .sort(
+              (
+                first,
+                second,
+              ) => {
+                const priceDifference =
+                  Number(
+                    first.price,
+                  ) -
+                  Number(
+                    second.price,
                   );
-                },
-              )
+
+                if (
+                  priceDifference !==
+                  0
+                ) {
+                  return priceDifference;
+                }
+
+                return first.name.localeCompare(
+                  second.name,
+                  'es',
+                  {
+                    sensitivity:
+                      'base',
+                  },
+                );
+              },
+            )
           : [],
       [
         products,
@@ -637,9 +804,18 @@ export default function WebMenuScreen() {
       (
         availableWidth -
         gap *
-          (columns - 1)
+        (columns - 1)
       ) /
-        columns,
+      columns,
+    );
+
+  const canCheckout =
+    businessStatus?.isOpen ===
+    true;
+
+  const businessScheduleText =
+    getTodayScheduleText(
+      businessStatus,
     );
 
   const handleProductPress = (
@@ -707,22 +883,82 @@ export default function WebMenuScreen() {
       .current = null;
   }
 
+  function handleContinueToCheckout():
+    void {
+    if (
+      isBusinessStatusLoading
+    ) {
+      Alert.alert(
+        'Verificando horario',
+        'Espera un momento mientras confirmamos si estamos recibiendo pedidos.',
+      );
+
+      return;
+    }
+
+    if (
+      !canCheckout
+    ) {
+      Alert.alert(
+        'Pedidos no disponibles',
+        businessStatusError ??
+        (
+          businessStatus
+            ? `En este momento estamos cerrados. ${businessScheduleText}`
+            : 'No pudimos confirmar el horario. Intenta nuevamente en un momento.'
+        ),
+      );
+
+      return;
+    }
+
+    setSubmitError(
+      null,
+    );
+
+    setIsCartVisible(
+      false,
+    );
+
+    setIsCheckoutVisible(
+      true,
+    );
+  }
+
   async function handleSubmitWebOrder(
     data: {
       fulfillmentType:
-        WebFulfillmentType;
+      WebFulfillmentType;
 
       customerName: string;
       customerPhone: string;
 
       deliveryDetails:
-        DeliveryDetails | null;
+      DeliveryDetails | null;
     },
   ) {
     if (
       cart.length === 0 ||
       isSubmittingOrder
     ) {
+      return;
+    }
+
+    const latestBusinessStatus =
+      await loadBusinessStatus();
+
+    if (
+      !latestBusinessStatus
+        ?.isOpen
+    ) {
+      setSubmitError(
+        latestBusinessStatus
+          ? `En este momento estamos cerrados. ${getTodayScheduleText(
+            latestBusinessStatus,
+          )}`
+          : 'No pudimos confirmar el horario de atención. Intenta nuevamente.',
+      );
+
       return;
     }
 
@@ -743,7 +979,7 @@ export default function WebMenuScreen() {
       pendingWebOrderRequest
         .current
         .fingerprint !==
-        fingerprint
+      fingerprint
     ) {
       pendingWebOrderRequest
         .current = {
@@ -983,28 +1219,107 @@ export default function WebMenuScreen() {
         </Pressable>
       </View>
 
+      <View
+        style={
+          styles.businessStatusOuter
+        }
+      >
+        <View
+          style={[
+            styles.businessStatusCard,
+
+            canCheckout
+              ? styles.businessStatusCardOpen
+              : styles.businessStatusCardClosed,
+          ]}
+        >
+          <View
+            style={
+              styles.businessStatusMain
+            }
+          >
+            <Text
+              style={
+                styles.businessStatusIcon
+              }
+            >
+              {isBusinessStatusLoading
+                ? '⏳'
+                : canCheckout
+                  ? '🟢'
+                  : '🔴'}
+            </Text>
+
+            <View
+              style={
+                styles.businessStatusTextBox
+              }
+            >
+              <Text
+                style={[
+                  styles.businessStatusTitle,
+
+                  canCheckout
+                    ? styles.businessStatusTitleOpen
+                    : styles.businessStatusTitleClosed,
+                ]}
+              >
+                {isBusinessStatusLoading
+                  ? 'Verificando horario'
+                  : canCheckout
+                    ? 'Abierto · Estamos recibiendo pedidos'
+                    : 'Cerrado · Pedidos pausados'}
+              </Text>
+
+              <Text
+                style={
+                  styles.businessStatusSubtitle
+                }
+              >
+                {isBusinessStatusLoading
+                  ? 'Consultando el horario de atención...'
+                  : businessStatusError ??
+                  businessScheduleText}
+              </Text>
+            </View>
+          </View>
+
+          {!canCheckout &&
+            !isBusinessStatusLoading && (
+              <Text
+                style={
+                  styles.businessStatusNotice
+                }
+              >
+                Puedes consultar el menú y preparar tu carrito, pero el checkout
+                estará disponible cuando el negocio esté abierto.
+              </Text>
+            )}
+        </View>
+      </View>
+
       {visibleCategories.length >
         0 && (
-        <WebCategoryTabs
-          categories={
-            visibleCategories
-          }
-          selectedCategoryId={
-            selectedCategoryId
-          }
-          onSelectCategory={
-            setSelectedCategoryId
-          }
-        />
-      )}
+          <WebCategoryTabs
+            categories={
+              visibleCategories
+            }
+            selectedCategoryId={
+              selectedCategoryId
+            }
+            onSelectCategory={
+              setSelectedCategoryId
+            }
+          />
+        )}
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
           cartSummary.totalItems >
-            0 &&
-            styles.scrollContentWithCart,
+          0 &&
+          styles.scrollContentWithCart,
         ]}
         refreshControl={
           <RefreshControl
@@ -1094,7 +1409,7 @@ export default function WebMenuScreen() {
                 producto
                 {
                   visibleProducts.length ===
-                  1
+                    1
                     ? ''
                     : 's'
                 }
@@ -1102,7 +1417,7 @@ export default function WebMenuScreen() {
             </View>
 
             {visibleProducts.length ===
-            0 ? (
+              0 ? (
               <View
                 style={
                   styles.centerState
@@ -1206,6 +1521,19 @@ export default function WebMenuScreen() {
       />
 
       <WebCartModal
+        canCheckout={
+          canCheckout
+        }
+        checkoutDisabledMessage={
+          isBusinessStatusLoading
+            ? 'Estamos verificando el horario de atención.'
+            : businessStatusError ??
+            (
+              businessStatus
+                ? businessScheduleText
+                : 'No pudimos confirmar el horario de atención. Intenta nuevamente en un momento.'
+            )
+        }
         visible={
           isCartVisible
         }
@@ -1266,19 +1594,9 @@ export default function WebMenuScreen() {
             false,
           );
         }}
-        onContinue={() => {
-          setSubmitError(
-            null,
-          );
-
-          setIsCartVisible(
-            false,
-          );
-
-          setIsCheckoutVisible(
-            true,
-          );
-        }}
+        onContinue={
+          handleContinueToCheckout
+        }
       />
 
       <WebCheckoutModal

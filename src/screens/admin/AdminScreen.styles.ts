@@ -30,6 +30,7 @@ export const styles =
 
     tabsContainer: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 10,
       marginBottom: 18,
     },

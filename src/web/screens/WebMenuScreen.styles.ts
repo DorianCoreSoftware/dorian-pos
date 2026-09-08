@@ -6,6 +6,7 @@ const styles =
   StyleSheet.create({
     screen: {
       flex: 1,
+
       backgroundColor:
         '#0F0F0F',
     },
@@ -16,10 +17,15 @@ const styles =
 
     scrollContent: {
       width: '100%',
+
       maxWidth: 1180,
+
       alignSelf: 'center',
+
       paddingHorizontal: 20,
+
       paddingTop: 28,
+
       paddingBottom: 60,
     },
 
@@ -27,54 +33,174 @@ const styles =
       paddingBottom: 120,
     },
 
+    businessStatusOuter: {
+      width: '100%',
+
+      maxWidth: 1180,
+
+      alignSelf: 'center',
+
+      paddingHorizontal: 20,
+
+      paddingTop: 12,
+    },
+
+    businessStatusCard: {
+      width: '100%',
+
+      borderWidth: 1,
+
+      borderRadius: 12,
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 12,
+    },
+
+    businessStatusCardOpen: {
+      borderColor:
+        '#315F35',
+
+      backgroundColor:
+        '#142517',
+    },
+
+    businessStatusCardClosed: {
+      borderColor:
+        '#633333',
+
+      backgroundColor:
+        '#2A1717',
+    },
+
+    businessStatusMain: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 10,
+    },
+
+    businessStatusIcon: {
+      fontSize: 18,
+    },
+
+    businessStatusTextBox: {
+      flex: 1,
+    },
+
+    businessStatusTitle: {
+      fontSize: 13,
+
+      fontWeight: '900',
+    },
+
+    businessStatusTitleOpen: {
+      color:
+        '#66D06F',
+    },
+
+    businessStatusTitleClosed: {
+      color:
+        '#FF8A80',
+    },
+
+    businessStatusSubtitle: {
+      color:
+        '#C7C7C7',
+
+      fontSize: 11,
+
+      lineHeight: 16,
+
+      marginTop: 3,
+    },
+
+    businessStatusNotice: {
+      color:
+        '#B9B9B9',
+
+      fontSize: 10,
+
+      lineHeight: 15,
+
+      marginTop: 9,
+
+      paddingTop: 9,
+
+      borderTopWidth: 1,
+
+      borderTopColor:
+        '#4A2A2A',
+    },
+
     sectionHeader: {
       marginBottom: 20,
+
       flexDirection: 'row',
+
       alignItems:
         'flex-end',
+
       justifyContent:
         'space-between',
+
       gap: 12,
     },
 
     sectionTitle: {
       color: '#FFFFFF',
+
       fontSize: 28,
+
       fontWeight: '900',
     },
 
     productCount: {
       color: '#8F8F8F',
+
       fontSize: 14,
     },
 
     grid: {
       width: '100%',
+
       flexDirection: 'row',
+
       flexWrap: 'wrap',
+
       gap: 16,
+
       alignItems:
         'stretch',
     },
 
     centerState: {
       minHeight: 280,
+
       alignItems: 'center',
+
       justifyContent:
         'center',
+
       paddingHorizontal: 24,
     },
 
     stateText: {
       color: '#AFAFAF',
+
       fontSize: 15,
+
       textAlign: 'center',
+
       marginTop: 14,
     },
 
     errorTitle: {
       color: '#FFFFFF',
+
       fontSize: 22,
+
       fontWeight: '800',
     },
   });

@@ -21,6 +21,12 @@ interface WebCartModalProps {
   weeklySauceDiscount: number;
   total: number;
 
+  canCheckout: boolean;
+
+  checkoutDisabledMessage:
+    | string
+    | null;
+
   onClose: () => void;
 
   onUpdateQuantity:
@@ -55,6 +61,8 @@ export default function WebCartModal({
   subtotal,
   weeklySauceDiscount,
   total,
+  canCheckout,
+  checkoutDisabledMessage,
   onClose,
   onUpdateQuantity,
   onRemoveItem,
@@ -459,22 +467,62 @@ export default function WebCartModal({
               </Text>
             </Pressable>
 
+            {!canCheckout &&
+              checkoutDisabledMessage && (
+                <View
+                  style={
+                    styles.closedNotice
+                  }
+                >
+                  <Text
+                    style={
+                      styles.closedNoticeTitle
+                    }
+                  >
+                    🔴 No estamos recibiendo pedidos
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.closedNoticeText
+                    }
+                  >
+                    {
+                      checkoutDisabledMessage
+                    }
+                  </Text>
+                </View>
+              )}
+
             <Pressable
+              disabled={
+                !canCheckout
+              }
               onPress={
                 onContinue
               }
               style={({ pressed }) => [
                 styles.checkoutButton,
+
+                !canCheckout &&
+                  styles.checkoutButtonDisabled,
+
                 pressed &&
+                  canCheckout &&
                   styles.checkoutButtonPressed,
               ]}
             >
               <Text
-                style={
-                  styles.checkoutButtonText
-                }
+                style={[
+                  styles.checkoutButtonText,
+
+                  !canCheckout &&
+                    styles.checkoutButtonTextDisabled,
+                ]}
               >
-                Continuar
+                {canCheckout
+                  ? 'Continuar'
+                  : 'Pedidos no disponibles'}
               </Text>
             </Pressable>
           </View>
