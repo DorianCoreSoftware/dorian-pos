@@ -90,8 +90,8 @@ import {
 } from '../utils/webOrderRequest';
 
 import {
-  getLastWebOrderTrackingCode,
-  saveLastWebOrderTrackingCode,
+  getRecentWebOrderTrackingCodes,
+  saveWebOrderTrackingCode,
 } from '../utils/webOrderHistory';
 
 import styles from './WebMenuScreen.styles';
@@ -280,6 +280,10 @@ function getBusinessAvailabilityText(
 
 export default function WebMenuScreen() {
   const [
+    showScrollTopButton,
+    setShowScrollTopButton,
+  ] = useState(false);
+  const [
     isFeedbackVisible,
     setIsFeedbackVisible,
   ] = useState(false);
@@ -380,11 +384,9 @@ export default function WebMenuScreen() {
   >(null);
 
   const [
-    lastTrackingCode,
-    setLastTrackingCode,
-  ] = useState<
-    string | null
-  >(null);
+    recentTrackingCodes,
+    setRecentTrackingCodes,
+  ] = useState<string[]>([]);
 
   const [
     isTrackingVisible,
@@ -416,6 +418,14 @@ export default function WebMenuScreen() {
   ] = useState<
     string | null
   >(null);
+
+  const menuScrollRef =
+    useRef<ScrollView | null>(
+      null,
+    );
+
+  const productSectionTopRef =
+    useRef(0);
 
   const pendingWebOrderRequest =
     useRef<{
@@ -677,8 +687,8 @@ export default function WebMenuScreen() {
   }, []);
 
   useEffect(() => {
-    setLastTrackingCode(
-      getLastWebOrderTrackingCode(),
+    setRecentTrackingCodes(
+      getRecentWebOrderTrackingCodes(),
     );
   }, []);
 
@@ -846,6 +856,26 @@ export default function WebMenuScreen() {
     getBusinessAvailabilityText(
       businessStatus,
     );
+
+  function handleCategorySelect(
+    categoryId: string,
+  ): void {
+    setSelectedCategoryId(
+      categoryId,
+    );
+
+    requestAnimationFrame(
+      () => {
+        menuScrollRef.current?.scrollTo({
+          y:
+            productSectionTopRef.current,
+
+          animated:
+            true,
+        });
+      },
+    );
+  }
 
   const handleProductPress = (
     product: Product,
@@ -1057,12 +1087,12 @@ export default function WebMenuScreen() {
           result.orderId,
         );
 
-      saveLastWebOrderTrackingCode(
+      saveWebOrderTrackingCode(
         trackingCode,
       );
 
-      setLastTrackingCode(
-        trackingCode,
+      setRecentTrackingCodes(
+        getRecentWebOrderTrackingCodes(),
       );
 
       setCart([]);
@@ -1096,19 +1126,15 @@ export default function WebMenuScreen() {
     }
   }
 
-  function handleOpenLastOrderTracking() {
-    if (
-      !lastTrackingCode
-    ) {
-      return;
-    }
-
+  function handleOpenOrderTracking(
+    trackingCode: string,
+  ): void {
     updateTrackingPath(
-      lastTrackingCode,
+      trackingCode,
     );
 
     setTrackingInitialCode(
-      lastTrackingCode,
+      trackingCode,
     );
 
     setIsTrackingVisible(
@@ -1177,209 +1203,34 @@ export default function WebMenuScreen() {
     <View style={styles.screen}>
       <WebHeader />
 
-      <View
-        style={{
-          width: '100%',
-          maxWidth: 1180,
-          alignSelf: 'center',
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: 10,
-          flexWrap: 'wrap',
-        }}
-      >
-        {lastTrackingCode ? (
-          <Pressable
-            onPress={
-              handleOpenLastOrderTracking
-            }
-            style={({ pressed }) => ({
-              borderWidth: 1,
-              borderColor: '#444',
-              borderRadius: 10,
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-              backgroundColor:
-                pressed
-                  ? '#242424'
-                  : '#151515',
-            })}
-          >
-            <Text
-              style={{
-                color: '#FFFFFF',
-                fontWeight: '800',
-                fontSize: 13,
-              }}
-            >
-              Último pedido #{lastTrackingCode}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        <Pressable
-          onPress={
-            handleOpenManualTracking
-          }
-          style={({ pressed }) => ({
-            borderWidth: 1,
-            borderColor: '#FFB000',
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 9,
-            backgroundColor:
-              pressed
-                ? '#2B250C'
-                : '#151515',
-          })}
-        >
-          <Text
-            style={{
-              color: '#FFB000',
-              fontWeight: '900',
-              fontSize: 13,
-            }}
-          >
-            Seguir pedido
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            setIsFeedbackVisible(
-              true,
-            )
-          }
-          style={({ pressed }) => ({
-            borderWidth: 1,
-            borderColor: '#444',
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 9,
-            backgroundColor:
-              pressed
-                ? '#242424'
-                : '#151515',
-          })}
-        >
-          <Text
-            style={{
-              color: '#FFFFFF',
-              fontWeight: '800',
-              fontSize: 13,
-            }}
-          >
-            💬 Sugerencias
-          </Text>
-        </Pressable>
-      </View>
-
-      <View
-        style={
-          styles.businessStatusOuter
-        }
-      >
-        <View
-          style={[
-            styles.businessStatusCard,
-
-            canCheckout
-              ? styles.businessStatusCardOpen
-              : styles.businessStatusCardClosed,
-          ]}
-        >
-          <View
-            style={
-              styles.businessStatusMain
-            }
-          >
-            <Text
-              style={
-                styles.businessStatusIcon
-              }
-            >
-              {isBusinessStatusLoading
-                ? '⏳'
-                : canCheckout
-                  ? '🟢'
-                  : '🔴'}
-            </Text>
-
-            <View
-              style={
-                styles.businessStatusTextBox
-              }
-            >
-              <Text
-                style={[
-                  styles.businessStatusTitle,
-
-                  canCheckout
-                    ? styles.businessStatusTitleOpen
-                    : styles.businessStatusTitleClosed,
-                ]}
-              >
-                {isBusinessStatusLoading
-                  ? 'Verificando horario'
-                  : canCheckout
-                    ? 'Abierto · Estamos recibiendo pedidos'
-                    : businessStatus?.webOrdersEnabled === false
-                      ? 'Pedidos web pausados'
-                      : 'Cerrado · Pedidos no disponibles'}
-              </Text>
-
-              <Text
-                style={
-                  styles.businessStatusSubtitle
-                }
-              >
-                {isBusinessStatusLoading
-                  ? 'Consultando el horario de atención...'
-                  : businessStatusError ??
-                  businessScheduleText}
-              </Text>
-            </View>
-          </View>
-
-          {!canCheckout &&
-            !isBusinessStatusLoading && (
-              <Text
-                style={
-                  styles.businessStatusNotice
-                }
-              >
-                Puedes consultar el menú y preparar tu carrito, pero el checkout
-                estará disponible cuando el negocio esté abierto.
-              </Text>
-            )}
-        </View>
-      </View>
-
-      {visibleCategories.length >
-        0 && (
-          <WebCategoryTabs
-            categories={
-              visibleCategories
-            }
-            selectedCategoryId={
-              selectedCategoryId
-            }
-            onSelectCategory={
-              setSelectedCategoryId
-            }
-          />
-        )}
-
       <ScrollView
-        style={styles.scroll}
+        ref={
+          menuScrollRef
+        }
+        style={
+          styles.scroll
+        }
         contentContainerStyle={[
           styles.scrollContent,
+
           cartSummary.totalItems >
           0 &&
           styles.scrollContentWithCart,
         ]}
+        stickyHeaderIndices={[
+          2,
+        ]}
+        onScroll={
+          event => {
+            setShowScrollTopButton(
+              event.nativeEvent.contentOffset.y >
+              280,
+            );
+          }
+        }
+        scrollEventThrottle={
+          16
+        }
         refreshControl={
           <RefreshControl
             refreshing={
@@ -1394,130 +1245,356 @@ export default function WebMenuScreen() {
           />
         }
       >
-        {loading ? (
-          <View
-            style={
-              styles.centerState
-            }
-          >
-            <ActivityIndicator
-              size="large"
-              color="#FFB000"
-            />
-
-            <Text
-              style={
-                styles.stateText
-              }
-            >
-              Cargando menú...
-            </Text>
-          </View>
-        ) : error ? (
-          <View
-            style={
-              styles.centerState
-            }
-          >
-            <Text
-              style={
-                styles.errorTitle
-              }
-            >
-              Algo salió mal
-            </Text>
-
-            <Text
-              style={
-                styles.stateText
-              }
-            >
-              {error}
-            </Text>
-          </View>
-        ) : (
-          <>
-            <View
-              style={
-                styles.sectionHeader
-              }
-            >
-              <Text
-                style={
-                  styles.sectionTitle
-                }
-              >
-                {
-                  visibleCategories.find(
-                    (category) =>
-                      category.id ===
-                      selectedCategoryId,
-                  )?.name ??
-                  'Menú'
-                }
-              </Text>
-
-              <Text
-                style={
-                  styles.productCount
-                }
-              >
-                {
-                  visibleProducts.length
-                }{' '}
-                producto
-                {
-                  visibleProducts.length ===
-                    1
-                    ? ''
-                    : 's'
-                }
-              </Text>
-            </View>
-
-            {visibleProducts.length ===
-              0 ? (
+        <View
+          style={
+            styles.topArea
+          }
+        >
+          {recentTrackingCodes.length >
+            0 && (
               <View
                 style={
-                  styles.centerState
+                  styles.recentOrdersBlock
                 }
               >
                 <Text
                   style={
-                    styles.stateText
+                    styles.recentOrdersLabel
                   }
                 >
-                  No hay productos disponibles en esta categoría.
+                  PEDIDOS RECIENTES
                 </Text>
-              </View>
-            ) : (
-              <View
-                style={
-                  styles.grid
-                }
-              >
-                {visibleProducts.map(
-                  (product) => (
-                    <WebProductCard
-                      key={
-                        product.id
-                      }
-                      product={
-                        product
-                      }
-                      width={
-                        cardWidth
-                      }
-                      onPress={
-                        handleProductPress
-                      }
-                    />
-                  ),
-                )}
+
+                <View
+                  style={
+                    styles.recentOrdersRow
+                  }
+                >
+                  {recentTrackingCodes.map(
+                    trackingCode => (
+                      <Pressable
+                        key={
+                          trackingCode
+                        }
+                        onPress={() =>
+                          handleOpenOrderTracking(
+                            trackingCode,
+                          )
+                        }
+                        style={({
+                          pressed,
+                        }) => [
+                            styles.recentOrderButton,
+
+                            pressed &&
+                            styles.recentOrderButtonPressed,
+                          ]}
+                      >
+                        <Text
+                          style={
+                            styles.recentOrderButtonText
+                          }
+                        >
+                          #{trackingCode}
+                        </Text>
+                      </Pressable>
+                    ),
+                  )}
+                </View>
               </View>
             )}
-          </>
-        )}
+
+          <View
+            style={
+              styles.topActionsRow
+            }
+          >
+            <Pressable
+              onPress={
+                handleOpenManualTracking
+              }
+              style={({
+                pressed,
+              }) => [
+                  styles.topActionPrimary,
+
+                  pressed &&
+                  styles.topActionPressed,
+                ]}
+            >
+              <Text
+                style={
+                  styles.topActionPrimaryText
+                }
+              >
+                Seguir pedido
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() =>
+                setIsFeedbackVisible(
+                  true,
+                )
+              }
+              style={({
+                pressed,
+              }) => [
+                  styles.topActionSecondary,
+
+                  pressed &&
+                  styles.topActionPressed,
+                ]}
+            >
+              <Text
+                style={
+                  styles.topActionSecondaryText
+                }
+              >
+                💬 Sugerencias
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View
+          style={
+            styles.businessStatusOuter
+          }
+        >
+          <View
+            style={[
+              styles.businessStatusCard,
+
+              canCheckout
+                ? styles.businessStatusCardOpen
+                : styles.businessStatusCardClosed,
+            ]}
+          >
+            <View
+              style={
+                styles.businessStatusMain
+              }
+            >
+              <Text
+                style={
+                  styles.businessStatusIcon
+                }
+              >
+                {isBusinessStatusLoading
+                  ? '⏳'
+                  : canCheckout
+                    ? '🟢'
+                    : '🔴'}
+              </Text>
+
+              <View
+                style={
+                  styles.businessStatusTextBox
+                }
+              >
+                <Text
+                  style={[
+                    styles.businessStatusTitle,
+
+                    canCheckout
+                      ? styles.businessStatusTitleOpen
+                      : styles.businessStatusTitleClosed,
+                  ]}
+                >
+                  {isBusinessStatusLoading
+                    ? 'Verificando horario'
+                    : canCheckout
+                      ? 'Abierto · Estamos recibiendo pedidos'
+                      : businessStatus?.webOrdersEnabled === false
+                        ? 'Pedidos web pausados'
+                        : 'Cerrado · Pedidos no disponibles'}
+                </Text>
+
+                <Text
+                  style={
+                    styles.businessStatusSubtitle
+                  }
+                >
+                  {isBusinessStatusLoading
+                    ? 'Consultando el horario de atención...'
+                    : businessStatusError ??
+                    businessScheduleText}
+                </Text>
+              </View>
+            </View>
+
+            {!canCheckout &&
+              !isBusinessStatusLoading && (
+                <Text
+                  style={
+                    styles.businessStatusNotice
+                  }
+                >
+                  Puedes consultar el menú y preparar tu carrito, pero el checkout
+                  estará disponible cuando el negocio esté abierto.
+                </Text>
+              )}
+          </View>
+        </View>
+
+        <View
+          style={
+            styles.categorySticky
+          }
+        >
+          {visibleCategories.length >
+            0 && (
+              <WebCategoryTabs
+                categories={
+                  visibleCategories
+                }
+                selectedCategoryId={
+                  selectedCategoryId
+                }
+                onSelectCategory={
+                  handleCategorySelect
+                }
+              />
+            )}
+        </View>
+
+        <View
+          onLayout={
+            event => {
+              productSectionTopRef.current =
+                event.nativeEvent.layout.y;
+            }
+          }
+          style={
+            styles.productSection
+          }
+        >
+          {loading ? (
+            <View
+              style={
+                styles.centerState
+              }
+            >
+              <ActivityIndicator
+                size="large"
+                color="#FFB000"
+              />
+
+              <Text
+                style={
+                  styles.stateText
+                }
+              >
+                Cargando menú...
+              </Text>
+            </View>
+          ) : error ? (
+            <View
+              style={
+                styles.centerState
+              }
+            >
+              <Text
+                style={
+                  styles.errorTitle
+                }
+              >
+                Algo salió mal
+              </Text>
+
+              <Text
+                style={
+                  styles.stateText
+                }
+              >
+                {error}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View
+                style={
+                  styles.sectionHeader
+                }
+              >
+                <Text
+                  style={
+                    styles.sectionTitle
+                  }
+                >
+                  {
+                    visibleCategories.find(
+                      (category) =>
+                        category.id ===
+                        selectedCategoryId,
+                    )?.name ??
+                    'Menú'
+                  }
+                </Text>
+
+                <Text
+                  style={
+                    styles.productCount
+                  }
+                >
+                  {
+                    visibleProducts.length
+                  }{' '}
+                  producto
+                  {
+                    visibleProducts.length ===
+                      1
+                      ? ''
+                      : 's'
+                  }
+                </Text>
+              </View>
+
+              {visibleProducts.length ===
+                0 ? (
+                <View
+                  style={
+                    styles.centerState
+                  }
+                >
+                  <Text
+                    style={
+                      styles.stateText
+                    }
+                  >
+                    No hay productos disponibles en esta categoría.
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={
+                    styles.grid
+                  }
+                >
+                  {visibleProducts.map(
+                    (product) => (
+                      <WebProductCard
+                        key={
+                          product.id
+                        }
+                        product={
+                          product
+                        }
+                        width={
+                          cardWidth
+                        }
+                        onPress={
+                          handleProductPress
+                        }
+                      />
+                    ),
+                  )}
+                </View>
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
 
       <WebCartButton
@@ -1740,6 +1817,30 @@ export default function WebMenuScreen() {
           )
         }
       />
+      {showScrollTopButton && (
+        <Pressable
+          onPress={() =>
+            menuScrollRef.current?.scrollTo({
+              y: 0,
+              animated: true,
+            })
+          }
+          style={({ pressed }) => [
+            styles.scrollTopButton,
+
+            pressed &&
+            styles.scrollTopButtonPressed,
+          ]}
+        >
+          <Text
+            style={
+              styles.scrollTopButtonText
+            }
+          >
+            ↑
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
