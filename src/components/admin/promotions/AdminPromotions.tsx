@@ -30,6 +30,10 @@ import {
 } from '../../../services/weeklySauceService';
 
 import {
+  DateCalendarSelect,
+} from '../business-hours/AdminBusinessHoursSelectors';
+
+import {
   styles,
 } from './AdminPromotions.styles';
 
@@ -1069,26 +1073,16 @@ export function AdminPromotions() {
                   Inicio
                 </Text>
 
-                <TextInput
+                <DateCalendarSelect
                   value={
                     weeklySauceStartsAt
                   }
-                  onChangeText={
+                  disabled={
+                    !weeklySauceEnabled
+                  }
+                  onChange={
                     setWeeklySauceStartsAt
                   }
-                  editable={
-                    weeklySauceEnabled
-                  }
-                  placeholder="AAAA-MM-DD"
-                  placeholderTextColor="#666666"
-                  autoCapitalize="none"
-                  style={[
-                    styles.input,
-                    styles.dateInput,
-
-                    !weeklySauceEnabled &&
-                    styles.inputDisabled,
-                  ]}
                 />
               </View>
 
@@ -1105,26 +1099,16 @@ export function AdminPromotions() {
                   Fin
                 </Text>
 
-                <TextInput
+                <DateCalendarSelect
                   value={
                     weeklySauceEndsAt
                   }
-                  onChangeText={
+                  disabled={
+                    !weeklySauceEnabled
+                  }
+                  onChange={
                     setWeeklySauceEndsAt
                   }
-                  editable={
-                    weeklySauceEnabled
-                  }
-                  placeholder="AAAA-MM-DD"
-                  placeholderTextColor="#666666"
-                  autoCapitalize="none"
-                  style={[
-                    styles.input,
-                    styles.dateInput,
-
-                    !weeklySauceEnabled &&
-                    styles.inputDisabled,
-                  ]}
                 />
               </View>
             </View>
