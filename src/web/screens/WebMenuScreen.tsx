@@ -230,7 +230,7 @@ function formatBusinessTime(
   return `${hour12}:${minuteText} ${suffix}`;
 }
 
-function getTodayScheduleText(
+function getBusinessAvailabilityText(
   status:
     | PublicBusinessStatus
     | null,
@@ -239,10 +239,23 @@ function getTodayScheduleText(
     return 'No pudimos confirmar el horario.';
   }
 
-  if (
-    !status.todayIsOpen
-  ) {
+  if (!status.webOrdersEnabled) {
+    return (
+      status.pauseMessage?.trim() ||
+      'Los pedidos web están pausados temporalmente.'
+    );
+  }
+
+  if (!status.todayIsOpen) {
     return 'Hoy no laboramos.';
+  }
+
+  if (!status.isWithinBusinessHours) {
+    return `Horario de hoy: ${formatBusinessTime(
+      status.todayOpenTime,
+    )} - ${formatBusinessTime(
+      status.todayCloseTime,
+    )}`;
   }
 
   return `Horario de hoy: ${formatBusinessTime(
@@ -251,7 +264,6 @@ function getTodayScheduleText(
     status.todayCloseTime,
   )}`;
 }
-
 
 export default function WebMenuScreen() {
   const {
@@ -814,7 +826,7 @@ export default function WebMenuScreen() {
     true;
 
   const businessScheduleText =
-    getTodayScheduleText(
+    getBusinessAvailabilityText(
       businessStatus,
     );
 
@@ -953,7 +965,7 @@ export default function WebMenuScreen() {
     ) {
       setSubmitError(
         latestBusinessStatus
-          ? `En este momento estamos cerrados. ${getTodayScheduleText(
+          ? `En este momento estamos cerrados. ${getBusinessAvailabilityText(
             latestBusinessStatus,
           )}`
           : 'No pudimos confirmar el horario de atención. Intenta nuevamente.',
@@ -1268,7 +1280,9 @@ export default function WebMenuScreen() {
                   ? 'Verificando horario'
                   : canCheckout
                     ? 'Abierto · Estamos recibiendo pedidos'
-                    : 'Cerrado · Pedidos pausados'}
+                    : businessStatus?.webOrdersEnabled === false
+                      ? 'Pedidos web pausados'
+                      : 'Cerrado · Pedidos no disponibles'}
               </Text>
 
               <Text

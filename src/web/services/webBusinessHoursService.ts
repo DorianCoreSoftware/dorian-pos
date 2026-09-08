@@ -14,6 +14,11 @@ export interface PublicBusinessStatus {
   todayCloseTime:
     | string
     | null;
+  webOrdersEnabled: boolean;
+  pauseMessage:
+    | string
+    | null;
+  isWithinBusinessHours: boolean;
 }
 
 interface PublicBusinessStatusRow {
@@ -28,6 +33,11 @@ interface PublicBusinessStatusRow {
   today_close_time:
     | string
     | null;
+  web_orders_enabled: boolean;
+  pause_message:
+    | string
+    | null;
+  is_within_business_hours: boolean;
 }
 
 export async function getPublicBusinessStatus():
@@ -35,10 +45,9 @@ export async function getPublicBusinessStatus():
   const {
     data,
     error,
-  } = await supabase
-    .rpc(
-      'get_public_business_status',
-    );
+  } = await supabase.rpc(
+    'get_public_business_status',
+  );
 
   if (error) {
     throw new Error(
@@ -80,5 +89,14 @@ export async function getPublicBusinessStatus():
 
     todayCloseTime:
       row.today_close_time,
+
+    webOrdersEnabled:
+      row.web_orders_enabled,
+
+    pauseMessage:
+      row.pause_message,
+
+    isWithinBusinessHours:
+      row.is_within_business_hours,
   };
 }
