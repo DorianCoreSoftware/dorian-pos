@@ -20,6 +20,7 @@ export interface UpdateProductInput {
   name: string;
   description: string;
   price: number;
+  allowZeroPrice?: boolean;
 }
 
 export interface AdminUpdateProductInput {
@@ -29,6 +30,7 @@ export interface AdminUpdateProductInput {
   categoryId: string;
   isAvailable: boolean;
   imageUrl?: string | null;
+  allowZeroPrice?: boolean;
 }
 
 export interface CreateProductInput {
@@ -36,6 +38,7 @@ export interface CreateProductInput {
   description: string;
   price: number;
   categoryId: string;
+  allowZeroPrice?: boolean;
 }
 
 function normalizeProduct(
@@ -57,6 +60,7 @@ function normalizeProduct(
 function validateProductData(
   name: string,
   price: number,
+  allowZeroPrice = false,
 ): void {
   if (!name.trim()) {
     throw new Error(
@@ -66,10 +70,16 @@ function validateProductData(
 
   if (
     !Number.isFinite(price) ||
-    price <= 0
+    price < 0 ||
+    (
+      !allowZeroPrice &&
+      price === 0
+    )
   ) {
     throw new Error(
-      'El precio debe ser mayor a 0.',
+      allowZeroPrice
+        ? 'El precio no puede ser negativo.'
+        : 'El precio debe ser mayor a 0.',
     );
   }
 }
@@ -158,6 +168,7 @@ export async function createProduct(
   validateProductData(
     cleanName,
     input.price,
+    input.allowZeroPrice === true,
   );
 
   validateCategoryId(
@@ -210,6 +221,7 @@ export async function updateProduct(
   validateProductData(
     cleanName,
     input.price,
+    input.allowZeroPrice === true,
   );
 
   try {
@@ -258,6 +270,7 @@ export async function adminUpdateProduct(
   validateProductData(
     cleanName,
     input.price,
+    input.allowZeroPrice === true,
   );
 
   validateCategoryId(
@@ -387,15 +400,22 @@ export async function deleteProduct(
 export async function updateProductPrice(
   productId: string,
   newPrice: number,
+  allowZeroPrice = false,
 ): Promise<Product> {
   if (
     !Number.isFinite(
       newPrice,
     ) ||
-    newPrice <= 0
+    newPrice < 0 ||
+    (
+      !allowZeroPrice &&
+      newPrice === 0
+    )
   ) {
     throw new Error(
-      'El precio debe ser mayor a 0.',
+      allowZeroPrice
+        ? 'El precio no puede ser negativo.'
+        : 'El precio debe ser mayor a 0.',
     );
   }
 

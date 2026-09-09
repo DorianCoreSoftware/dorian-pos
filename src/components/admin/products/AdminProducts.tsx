@@ -330,7 +330,7 @@ export function AdminProducts({
             if (
                 asset.fileSize &&
                 asset.fileSize >
-                    5 * 1024 * 1024
+                5 * 1024 * 1024
             ) {
                 Alert.alert(
                     'Imagen demasiado grande',
@@ -373,6 +373,19 @@ export function AdminProducts({
                     form.price,
                 );
 
+            const selectedCategory =
+                categories.find(
+                    (category) =>
+                        String(category.id) ===
+                        String(form.categoryId),
+                );
+
+            const isComboComplement =
+                normalizeText(
+                    selectedCategory?.name,
+                ) ===
+                'complementos de combo';
+
             if (!cleanName) {
                 Alert.alert(
                     'Campo requerido',
@@ -386,11 +399,17 @@ export function AdminProducts({
                 !Number.isFinite(
                     parsedPrice,
                 ) ||
-                parsedPrice <= 0
+                parsedPrice < 0 ||
+                (
+                    !isComboComplement &&
+                    parsedPrice === 0
+                )
             ) {
                 Alert.alert(
                     'Precio inválido',
-                    'Ingresa un precio mayor a 0.',
+                    isComboComplement
+                        ? 'El precio no puede ser negativo.'
+                        : 'Ingresa un precio mayor a 0.',
                 );
 
                 return;
@@ -423,7 +442,7 @@ export function AdminProducts({
                                 selectedProduct.id,
                                 pendingImage.uri,
                                 pendingImage.mimeType ??
-                                    'image/jpeg',
+                                'image/jpeg',
                             );
                     }
 
@@ -446,6 +465,9 @@ export function AdminProducts({
                                 form.isAvailable,
 
                             imageUrl,
+
+                            allowZeroPrice:
+                                isComboComplement,
                         },
                     );
 
@@ -467,6 +489,9 @@ export function AdminProducts({
 
                             categoryId:
                                 form.categoryId,
+
+                            allowZeroPrice:
+                                isComboComplement,
                         });
 
                     if (pendingImage) {
@@ -475,7 +500,7 @@ export function AdminProducts({
                                 createdProduct.id,
                                 pendingImage.uri,
                                 pendingImage.mimeType ??
-                                    'image/jpeg',
+                                'image/jpeg',
                             );
 
                         await setProductImage(
@@ -1214,8 +1239,8 @@ export function AdminProducts({
                                 }
                             >
                                 {pendingImage?.uri ||
-                                selectedProduct
-                                    ?.image_url ? (
+                                    selectedProduct
+                                        ?.image_url ? (
                                     <Image
                                         source={{
                                             uri:
@@ -1263,8 +1288,8 @@ export function AdminProducts({
                                         }
                                     >
                                         {pendingImage ||
-                                        selectedProduct
-                                            ?.image_url
+                                            selectedProduct
+                                                ?.image_url
                                             ? 'Cambiar imagen'
                                             : 'Seleccionar imagen'}
                                     </Text>
