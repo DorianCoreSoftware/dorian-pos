@@ -1,4 +1,5 @@
 import React, {
+  useEffect,
   useState,
 } from 'react';
 
@@ -63,12 +64,27 @@ import {
 import {
   AdminScreen,
 } from './src/screens/admin/AdminScreen';
+import { registerPosPushNotifications } from './src/services/pushNotificationService';
 
 function MainApp() {
   const {
     user,
     logout,
   } = useAuth();
+
+  useEffect(() => {
+    if (
+      !user?.id
+    ) {
+      return;
+    }
+
+    void registerPosPushNotifications(
+      user.id,
+    );
+  }, [
+    user?.id,
+  ]);
 
   const {
     registerActivity,

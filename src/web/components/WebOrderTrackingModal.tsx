@@ -20,6 +20,7 @@ import {
   normalizeTrackingCode,
   PublicOrderTracking,
   PublicOrderTrackingStatus,
+  subscribeToPublicOrderStatus,
 } from '../services/webOrderTrackingService';
 
 import {
@@ -34,7 +35,7 @@ interface WebOrderTrackingModalProps {
 
 interface TrackingStep {
   key:
-    PublicOrderTrackingStatus;
+  PublicOrderTrackingStatus;
   label: string;
 }
 
@@ -83,7 +84,7 @@ export function WebOrderTrackingModal({
       const code =
         normalizeTrackingCode(
           explicitCode ??
-            trackingCode,
+          trackingCode,
         );
 
       if (!code) {
@@ -183,7 +184,7 @@ export function WebOrderTrackingModal({
     const code =
       normalizeTrackingCode(
         initialTrackingCode ??
-          '',
+        '',
       );
 
     setTrackingCode(
@@ -213,9 +214,50 @@ export function WebOrderTrackingModal({
       !visible ||
       !order ||
       order.status ===
-        'delivered' ||
+      'delivered' ||
       order.status ===
-        'cancelled'
+      'cancelled'
+    ) {
+      return;
+    }
+
+    const unsubscribe =
+      subscribeToPublicOrderStatus(
+        order.trackingCode,
+        payload => {
+          setOrder(
+            currentOrder => {
+              if (!currentOrder) {
+                return currentOrder;
+              }
+
+              return {
+                ...currentOrder,
+                status:
+                  payload.status,
+                updatedAt:
+                  payload.updatedAt,
+              };
+            },
+          );
+        },
+      );
+
+    return unsubscribe;
+  }, [
+    visible,
+    order?.trackingCode,
+    order?.status,
+  ]);
+
+  useEffect(() => {
+    if (
+      !visible ||
+      !order ||
+      order.status ===
+      'delivered' ||
+      order.status ===
+      'cancelled'
     ) {
       return;
     }
@@ -228,7 +270,7 @@ export function WebOrderTrackingModal({
             true,
           );
         },
-        15000,
+        60000,
       );
 
     return () => {
@@ -409,7 +451,7 @@ export function WebOrderTrackingModal({
             ) : null}
 
             {errorMessage &&
-            !isLoading ? (
+              !isLoading ? (
               <View
                 style={
                   styles.errorBox
@@ -426,7 +468,7 @@ export function WebOrderTrackingModal({
             ) : null}
 
             {order &&
-            !isLoading ? (
+              !isLoading ? (
               <>
                 <View
                   style={
@@ -451,13 +493,31 @@ export function WebOrderTrackingModal({
                   >
                     {
                       order.fulfillmentType ===
-                      'delivery'
+                        'delivery'
                         ? 'Domicilio'
                         : 'Recoger'
                     }
-                    {' · '}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.orderMeta
+                    }
+                  >
+                    Pedido creado:{' '}
                     {formatOrderDate(
                       order.createdAt,
+                    )}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.orderMeta
+                    }
+                  >
+                    Última actualización:{' '}
+                    {formatOrderDate(
+                      order.updatedAt,
                     )}
                   </Text>
 
@@ -475,7 +535,7 @@ export function WebOrderTrackingModal({
                 </View>
 
                 {order.status ===
-                'cancelled' ? (
+                  'cancelled' ? (
                   <View
                     style={
                       styles.cancelledBox
@@ -525,7 +585,7 @@ export function WebOrderTrackingModal({
                           isLast={
                             index ===
                             steps.length -
-                              1
+                            1
                           }
                         />
                       ),
@@ -535,14 +595,14 @@ export function WebOrderTrackingModal({
 
                 {order.status !==
                   'delivered' &&
-                order.status !==
+                  order.status !==
                   'cancelled' ? (
                   <Text
                     style={
                       styles.loadingText
                     }
                   >
-                    El estado se actualiza automáticamente cada 15 segundos.
+                    El estado se actualiza automáticamente en tiempo real.
                   </Text>
                 ) : null}
 
@@ -581,9 +641,9 @@ function TrackingStepRow({
   label: string;
 
   state:
-    | 'complete'
-    | 'current'
-    | 'pending';
+  | 'complete'
+  | 'current'
+  | 'pending';
 
   isLast: boolean;
 }) {
@@ -603,12 +663,12 @@ function TrackingStepRow({
             styles.stepDot,
 
             state ===
-            'complete'
+              'complete'
               ? styles.stepDotComplete
               : null,
 
             state ===
-            'current'
+              'current'
               ? styles.stepDotCurrent
               : null,
           ]}
@@ -620,7 +680,7 @@ function TrackingStepRow({
               styles.stepLine,
 
               state ===
-              'complete'
+                'complete'
                 ? styles.stepLineComplete
                 : null,
             ]}
@@ -638,7 +698,7 @@ function TrackingStepRow({
             styles.stepLabel,
 
             state ===
-            'pending'
+              'pending'
               ? styles.stepLabelPending
               : null,
           ]}
@@ -647,7 +707,7 @@ function TrackingStepRow({
         </Text>
 
         {state ===
-        'current' ? (
+          'current' ? (
           <Text
             style={
               styles.currentLabel

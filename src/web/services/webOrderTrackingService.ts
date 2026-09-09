@@ -18,6 +18,7 @@ export interface PublicOrderTracking {
   status: PublicOrderTrackingStatus;
   fulfillmentType: PublicOrderFulfillmentType;
   createdAt: string;
+  updatedAt: string;
   customerName: string | null;
 }
 
@@ -27,7 +28,14 @@ interface PublicOrderTrackingRpcRow {
   status: PublicOrderTrackingStatus;
   fulfillment_type: PublicOrderFulfillmentType;
   created_at: string;
+  updated_at: string;
   customer_name: string | null;
+}
+
+export interface PublicOrderStatusRealtimePayload {
+  trackingCode: string;
+  status: PublicOrderTrackingStatus;
+  updatedAt: string;
 }
 
 export function normalizeTrackingCode(
@@ -94,22 +102,69 @@ export async function getPublicOrderTracking(
   }
 
   return {
-    orderId:
-      row.order_id,
+    orderId: row.order_id,
+    trackingCode: row.tracking_code,
+    status: row.status,
+    fulfillmentType: row.fulfillment_type,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    customerName: row.customer_name,
+  };
+}
 
-    trackingCode:
-      row.tracking_code,
+export function subscribeToPublicOrderStatus(
+  trackingCode: string,
+  onStatusChange: (
+    payload:
+      PublicOrderStatusRealtimePayload,
+  ) => void,
+): () => void {
+  const normalizedCode =
+    normalizeTrackingCode(
+      trackingCode,
+    );
 
-    status:
-      row.status,
+  const channel =
+    supabase.channel(
+      `web-order:${normalizedCode}`,
+    );
 
-    fulfillmentType:
-      row.fulfillment_type,
+  channel
+    .on(
+      'broadcast',
+      {
+        event:
+          'order_status_changed',
+      },
+      message => {
+        const payload =
+          message.payload as
+          PublicOrderStatusRealtimePayload;
 
-    createdAt:
-      row.created_at,
+        if (
+          normalizeTrackingCode(
+            payload.trackingCode ??
+            '',
+          ) !== normalizedCode
+        ) {
+          return;
+        }
 
-    customerName:
-      row.customer_name,
+        onStatusChange(
+          payload,
+        );
+      },
+    )
+    .subscribe(status => {
+      console.log(
+        `Realtime pedido ${normalizedCode}:`,
+        status,
+      );
+    });
+
+  return () => {
+    void supabase.removeChannel(
+      channel,
+    );
   };
 }
