@@ -266,3 +266,66 @@ export async function registerPosPushNotifications(
     return null;
   }
 }
+
+export interface WebOrderNotificationData {
+  type: 'new_web_order';
+  orderId?: string;
+  trackingCode?: string;
+}
+
+export function isWebOrderNotification(
+  data: unknown,
+): data is WebOrderNotificationData {
+  if (
+    !data ||
+    typeof data !== 'object'
+  ) {
+    return false;
+  }
+
+  const notificationData =
+    data as {
+      type?: unknown;
+      orderId?: unknown;
+      trackingCode?: unknown;
+    };
+
+  return (
+    notificationData.type ===
+    'new_web_order'
+  );
+}
+
+export function listenToPushNotificationResponses(
+  onWebOrderPressed: (
+    data: WebOrderNotificationData,
+  ) => void,
+): Notifications.EventSubscription {
+  return Notifications
+    .addNotificationResponseReceivedListener(
+      (response) => {
+        const data =
+          response.notification
+            .request.content
+            .data;
+
+        if (
+          isWebOrderNotification(
+            data,
+          )
+        ) {
+          onWebOrderPressed(
+            data,
+          );
+        }
+      },
+    );
+}
+
+export async function getLastPushNotificationResponse():
+  Promise<
+    Notifications.NotificationResponse | null
+  > {
+  return Notifications
+    .getLastNotificationResponseAsync();
+}

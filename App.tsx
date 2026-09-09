@@ -1,5 +1,6 @@
 import React, {
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -64,27 +65,19 @@ import {
 import {
   AdminScreen,
 } from './src/screens/admin/AdminScreen';
-import { registerPosPushNotifications } from './src/services/pushNotificationService';
+
+import {
+  getLastPushNotificationResponse,
+  isWebOrderNotification,
+  listenToPushNotificationResponses,
+  registerPosPushNotifications,
+} from './src/services/pushNotificationService';
 
 function MainApp() {
   const {
     user,
     logout,
   } = useAuth();
-
-  useEffect(() => {
-    if (
-      !user?.id
-    ) {
-      return;
-    }
-
-    void registerPosPushNotifications(
-      user.id,
-    );
-  }, [
-    user?.id,
-  ]);
 
   const {
     registerActivity,
@@ -132,6 +125,182 @@ function MainApp() {
     fetchKitchenOrders,
     fetchCashSession,
   } = useInitialData(user);
+
+  const handledNotificationId =
+    useRef<string | null>(
+      null,
+    );
+
+  /*
+   * ==========================================================
+   * REGISTRO PUSH
+   * ==========================================================
+   */
+  useEffect(() => {
+    if (
+      !user?.id
+    ) {
+      return;
+    }
+
+    void registerPosPushNotifications(
+      user.id,
+    );
+  }, [
+    user?.id,
+  ]);
+
+  /*
+   * ==========================================================
+   * TAP EN NOTIFICACIÓN
+   * ==========================================================
+   *
+   * Funciona cuando:
+   *
+   * - la app está abierta
+   * - está en segundo plano
+   * - se abre tocando la notificación
+   */
+  useEffect(() => {
+    if (
+      !user?.id
+    ) {
+      return;
+    }
+
+    const openKitchenFromNotification =
+      async (
+        notificationId:
+          string,
+      ): Promise<void> => {
+        /*
+         * Evitamos procesar dos veces
+         * la misma notificación.
+         */
+        if (
+          handledNotificationId
+            .current ===
+          notificationId
+        ) {
+          return;
+        }
+
+        handledNotificationId.current =
+          notificationId;
+
+        try {
+          /*
+           * Primero actualizamos la lista
+           * de comandas.
+           */
+          await fetchKitchenOrders();
+
+          /*
+           * Después abrimos Cocina.
+           */
+          setActiveTab(
+            'kitchen',
+          );
+        } catch (error) {
+          console.error(
+            '❌ Error abriendo pedido desde notificación:',
+            error,
+          );
+        }
+      };
+
+    /*
+     * --------------------------------------------------------
+     * APP ABIERTA / SEGUNDO PLANO
+     * --------------------------------------------------------
+     */
+    const subscription =
+      listenToPushNotificationResponses(
+        (data) => {
+          console.log(
+            '🍔 Pedido web abierto desde notificación:',
+            data,
+          );
+
+          const notificationKey =
+            data.orderId ??
+            data.trackingCode ??
+            'new_web_order';
+
+          void openKitchenFromNotification(
+            notificationKey,
+          );
+        },
+      );
+
+    /*
+     * --------------------------------------------------------
+     * APP CERRADA
+     * --------------------------------------------------------
+     *
+     * Si Android abrió la aplicación
+     * porque el usuario tocó la
+     * notificación.
+     */
+    void (
+      async () => {
+        try {
+          const response =
+            await getLastPushNotificationResponse();
+
+          if (
+            !response
+          ) {
+            return;
+          }
+
+          const data =
+            response
+              .notification
+              .request
+              .content
+              .data;
+
+          if (
+            !isWebOrderNotification(
+              data,
+            )
+          ) {
+            return;
+          }
+
+          console.log(
+            '🍔 POS iniciado desde notificación:',
+            data,
+          );
+
+          const notificationKey =
+            data.orderId ??
+            data.trackingCode ??
+            response
+              .notification
+              .request
+              .identifier;
+
+          await openKitchenFromNotification(
+            notificationKey,
+          );
+        } catch (error) {
+          console.error(
+            '❌ Error leyendo notificación inicial:',
+            error,
+          );
+        }
+      }
+    )();
+
+    return () => {
+      subscription.remove();
+    };
+  }, [
+    user?.id,
+    fetchKitchenOrders,
+  ]);
 
   const userCanManageCash =
     canManageCash(user);
