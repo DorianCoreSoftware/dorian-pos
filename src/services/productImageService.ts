@@ -46,32 +46,16 @@ export async function uploadProductImage(
     );
   }
 
+  const extension =
+    getFileExtension(
+      contentType,
+    );
+
+  const version =
+    Date.now();
+
   const storagePath =
-    `${cleanProductId}/main`;
-
-    const {
-  data: sessionData,
-  error: sessionError,
-} = await supabase.auth.getSession();
-
-console.log(
-  '🔐 STORAGE SESSION',
-  {
-    session:
-      sessionData.session,
-
-    userId:
-      sessionData.session?.user.id ??
-      null,
-
-    role:
-      sessionData.session?.user.role ??
-      null,
-
-    error:
-      sessionError,
-  },
-);
+    `${cleanProductId}/${version}.${extension}`;
 
   const {
     error,
@@ -87,11 +71,10 @@ console.log(
           contentType ||
           'image/jpeg',
 
-        upsert:
-          true,
+        upsert: false,
 
         cacheControl:
-          '3600',
+          '31536000',
       },
     );
 
@@ -112,4 +95,33 @@ console.log(
     );
 
   return data.publicUrl;
+}
+
+function getFileExtension(
+  contentType: string,
+): string {
+  const normalizedType =
+    contentType
+      .trim()
+      .toLowerCase();
+
+  switch (normalizedType) {
+    case 'image/png':
+      return 'png';
+
+    case 'image/webp':
+      return 'webp';
+
+    case 'image/gif':
+      return 'gif';
+
+    case 'image/heic':
+    case 'image/heif':
+      return 'heic';
+
+    case 'image/jpeg':
+    case 'image/jpg':
+    default:
+      return 'jpg';
+  }
 }

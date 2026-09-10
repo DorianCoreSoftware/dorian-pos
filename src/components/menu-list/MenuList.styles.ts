@@ -1,58 +1,239 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  // --- Estructura de la Lista y Grid ---
+  container: {
+    flex: 1,
+  },
+
+  viewToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 12,
+  },
+
+  viewToolbarLabel: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+
+  viewButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+
+  viewButton: {
+    minHeight: 36,
+    paddingHorizontal: 9,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: '#1E1E1E',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+
+  viewButtonSelected: {
+    backgroundColor: '#FFBF001A',
+    borderColor: '#FFBF00',
+  },
+
+  viewButtonIcon: {
+    color: '#A0A0A0',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  viewButtonIconSelected: {
+    color: '#FFBF00',
+  },
+
+  viewButtonText: {
+    color: '#A0A0A0',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  viewButtonTextSelected: {
+    color: '#FFBF00',
+  },
+
   menuList: {
     padding: 16,
     paddingBottom: 40,
   },
+
   gridRow: {
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: 16,
   },
 
-  // --- Tarjeta de Producto (Estilo Oscuro) ---
   productCard: {
     backgroundColor: '#1E1E1E',
-    width: '48%',
     borderRadius: 16,
-    padding: 20,
     borderWidth: 1,
     borderColor: '#2A2A2A',
     justifyContent: 'space-between',
-    minHeight: 150,
+    overflow: 'hidden',
   },
+
+  productCardLarge: {
+    width: '48%',
+    padding: 14,
+    minHeight: 150,
+    marginRight: '4%',
+  },
+
+  productCardMedium: {
+    width: '31.5%',
+    padding: 11,
+    minHeight: 135,
+    marginRight: '2.75%',
+  },
+
+  productCardCompact: {
+    width: '23.5%',
+    padding: 9,
+    minHeight: 120,
+    marginRight: '2%',
+  },
+
+  productCardList: {
+    width: '100%',
+    minHeight: 105,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  productImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 12,
+    marginBottom: 14,
+    backgroundColor: '#2A2A2A',
+  },
+
+  productImageMedium: {
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+
+  productImageCompact: {
+    borderRadius: 9,
+    marginBottom: 8,
+  },
+
+  productImageList: {
+    width: 118,
+    height: 82,
+    aspectRatio: undefined,
+    borderRadius: 10,
+    marginBottom: 0,
+    marginRight: 14,
+    flexShrink: 0,
+  },
+
+  productImagePlaceholder: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 12,
+    marginBottom: 14,
+    backgroundColor: '#151515',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  productImagePlaceholderText: {
+    fontSize: 42,
+  },
+
+  productImagePlaceholderTextCompact: {
+    fontSize: 28,
+  },
+
+  productImagePlaceholderTextList: {
+    fontSize: 34,
+  },
+
   cardInfo: {
     marginBottom: 12,
   },
+
+  cardInfoList: {
+    flex: 1,
+    alignSelf: 'stretch',
+    marginBottom: 0,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+
   productName: {
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 6,
   },
+
+  productNameMedium: {
+    fontSize: 15,
+  },
+
+  productNameCompact: {
+    fontSize: 13,
+    lineHeight: 16,
+    marginBottom: 5,
+  },
+
   productDescription: {
     color: '#888',
     fontSize: 13,
     lineHeight: 18,
   },
 
-  // --- Fila de Precio y Acciones de la Tarjeta ---
   cardPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 'auto',
   },
+
+  listPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+
   priceContainer: {
     flexDirection: 'column',
     alignItems: 'flex-start',
   },
+
   productPrice: {
-    color: '#FFBF00', // Tu color dorado/ámbar original
+    color: '#FFBF00',
     fontSize: 20,
     fontWeight: 'bold',
   },
+
+  productPriceCompact: {
+    fontSize: 15,
+  },
+
   editPriceBadge: {
     backgroundColor: '#FFBF0022',
     paddingVertical: 2,
@@ -62,11 +243,13 @@ export const styles = StyleSheet.create({
     borderColor: '#FFBF0088',
     marginTop: 4,
   },
+
   editPriceText: {
     color: '#FFBF00',
     fontSize: 10,
     fontWeight: 'bold',
   },
+
   addButton: {
     backgroundColor: '#2A2A2A',
     width: 36,
@@ -77,6 +260,13 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#444',
   },
+
+  addButtonCompact: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+
   addButtonText: {
     color: '#FFF',
     fontSize: 20,
@@ -84,15 +274,19 @@ export const styles = StyleSheet.create({
     marginTop: -2,
   },
 
-  // --- Estilos del Modal (Overlay y Contenedor) ---
+  addButtonTextCompact: {
+    fontSize: 17,
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   modalContent: {
-    width: 340, // Un poco más ancho para albergar cómodamente el formulario
+    width: 340,
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
     padding: 24,
@@ -100,6 +294,7 @@ export const styles = StyleSheet.create({
     borderColor: '#2A2A2A',
     alignItems: 'center',
   },
+
   modalTitle: {
     color: '#FFF',
     fontSize: 20,
@@ -108,7 +303,6 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // --- Formulario dentro del Modal ---
   inputLabel: {
     alignSelf: 'flex-start',
     fontSize: 11,
@@ -119,6 +313,7 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+
   modalInput: {
     backgroundColor: '#121212',
     width: '100%',
@@ -126,42 +321,56 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#333',
-    color: '#FFF', // Texto blanco para Name/Description para legibilidad
+    color: '#FFF',
     fontSize: 15,
     paddingHorizontal: 12,
   },
 
-  // --- Fila de Botones del Modal (3 Columnas) ---
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 24,
   },
+
   modalButton: {
     flex: 1,
     height: 48,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4, // Margen uniforme a los lados
+    marginHorizontal: 4,
   },
+
   cancelButton: {
     backgroundColor: '#2A2A2A',
     borderWidth: 1,
     borderColor: '#444',
   },
+
   deleteButton: {
-    backgroundColor: '#D9534F22', // Fondo rojo sutil translúcido
+    backgroundColor: '#D9534F22',
     borderWidth: 1,
-    borderColor: '#D9534F88', // Borde rojo de alerta
+    borderColor: '#D9534F88',
   },
+
   saveButton: {
-    backgroundColor: '#FFBF00', // El color principal para destacar el botón guardar
+    backgroundColor: '#FFBF00',
   },
+
   buttonText: {
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+
+  productDescriptionMedium: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
+  productDescriptionCompact: {
+    fontSize: 10,
+    lineHeight: 13,
   },
 });
