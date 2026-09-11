@@ -21,6 +21,11 @@ import {
 } from '../../types';
 
 import {
+  DeliveryQuote,
+  getDeliveryQuote,
+} from '../../services/deliveryService';
+
+import {
   WebFulfillmentType,
 } from '../services/webOrderService';
 
@@ -28,13 +33,13 @@ import styles from './WebCheckoutModal.styles';
 
 interface CheckoutData {
   fulfillmentType:
-  WebFulfillmentType;
+    WebFulfillmentType;
 
   customerName: string;
   customerPhone: string;
 
   deliveryDetails:
-  DeliveryDetails | null;
+    DeliveryDetails | null;
 }
 
 interface WebCheckoutModalProps {
@@ -43,21 +48,28 @@ interface WebCheckoutModalProps {
   subtotal: number;
   weeklySauceDiscount: number;
   pickupTotal: number;
+
+  /**
+   * Tarifa base configurada en el
+   * producto "Envío a domicilio".
+   */
   deliveryFee: number;
 
   submitting: boolean;
+
   submitError:
-  string | null;
+    string | null;
 
   onClose: () => void;
 
   onSubmit:
-  (data: CheckoutData) => void;
+    (data: CheckoutData) => void;
 }
 
 interface FormErrors {
   customerName?: string;
   customerPhone?: string;
+
   street?: string;
   exteriorNumber?: string;
   neighborhood?: string;
@@ -65,21 +77,21 @@ interface FormErrors {
 
 const EMPTY_DELIVERY:
   DeliveryDetails = {
-  customerName: '',
-  phone: '',
+    customerName: '',
+    phone: '',
 
-  street: '',
-  exteriorNumber: '',
-  interiorNumber: '',
+    street: '',
+    exteriorNumber: '',
+    interiorNumber: '',
 
-  neighborhood: '',
-  postalCode: '',
+    neighborhood: '',
+    postalCode: '',
 
-  deliveryReferences: '',
+    deliveryReferences: '',
 
-  latitude: null,
-  longitude: null,
-};
+    latitude: null,
+    longitude: null,
+  };
 
 function formatPrice(
   value: number,
@@ -128,11 +140,52 @@ export default function WebCheckoutModal({
     ...EMPTY_DELIVERY,
   });
 
+  /*
+   * Strings separados para permitir
+   * escribir correctamente coordenadas
+   * negativas, decimales, etc.
+   *
+   * Esto será temporal hasta conectar
+   * Google Maps.
+   */
+  const [
+    latitudeText,
+    setLatitudeText,
+  ] = useState('');
+
+  const [
+    longitudeText,
+    setLongitudeText,
+  ] = useState('');
+
+  const [
+    deliveryQuote,
+    setDeliveryQuote,
+  ] = useState<DeliveryQuote | null>(
+    null,
+  );
+
+  const [
+    isQuotingDelivery,
+    setIsQuotingDelivery,
+  ] = useState(false);
+
+  const [
+    deliveryQuoteError,
+    setDeliveryQuoteError,
+  ] = useState<string | null>(
+    null,
+  );
+
   const [
     errors,
     setErrors,
   ] = useState<FormErrors>({});
 
+  /*
+   * Limpia completamente el checkout
+   * cuando se cierra.
+   */
   useEffect(() => {
     if (visible) {
       return;
@@ -150,25 +203,81 @@ export default function WebCheckoutModal({
       ...EMPTY_DELIVERY,
     });
 
+    setLatitudeText('');
+
+    setLongitudeText('');
+
+    setDeliveryQuote(
+      null,
+    );
+
+    setDeliveryQuoteError(
+      null,
+    );
+
+    setIsQuotingDelivery(
+      false,
+    );
+
     setErrors({});
   }, [visible]);
+
+  /*
+   * Precio final del envío:
+   *
+   * tarifa base
+   * +
+   * cargo adicional de zona
+   */
+  const calculatedDeliveryFee =
+    useMemo(
+      () => {
+        if (
+          fulfillmentType !==
+          'delivery'
+        ) {
+          return 0;
+        }
+
+        const extraFee =
+          deliveryQuote
+            ?.available
+            ? deliveryQuote.extraFee
+            : 0;
+
+        return (
+          deliveryFee +
+          extraFee
+        );
+      },
+      [
+        fulfillmentType,
+        deliveryFee,
+        deliveryQuote,
+      ],
+    );
 
   const finalTotal =
     useMemo(
       () =>
         pickupTotal +
-        (
-          fulfillmentType ===
-            'delivery'
-            ? deliveryFee
-            : 0
-        ),
+        calculatedDeliveryFee,
       [
         pickupTotal,
-        fulfillmentType,
-        deliveryFee,
+        calculatedDeliveryFee,
       ],
     );
+
+  function invalidateDeliveryQuote():
+    void {
+    setDeliveryQuote(
+      null,
+    );
+
+    setDeliveryQuoteError(
+      null,
+    );
+  }
 
   function updateDeliveryField<
     Field extends keyof DeliveryDetails,
@@ -176,7 +285,7 @@ export default function WebCheckoutModal({
     field: Field,
     value:
       DeliveryDetails[Field],
-  ) {
+  ): void {
     setDelivery(
       (current) => ({
         ...current,
@@ -184,6 +293,25 @@ export default function WebCheckoutModal({
           value,
       }),
     );
+
+    /*
+     * Si cambia cualquier dato de la
+     * dirección, obligamos a cotizar
+     * nuevamente.
+     */
+    if (
+      field === 'street' ||
+      field ===
+        'exteriorNumber' ||
+      field ===
+        'interiorNumber' ||
+      field ===
+        'neighborhood' ||
+      field ===
+        'postalCode'
+    ) {
+      invalidateDeliveryQuote();
+    }
 
     if (
       typeof value ===
@@ -193,9 +321,163 @@ export default function WebCheckoutModal({
       setErrors(
         (current) => ({
           ...current,
+
           [field]:
             undefined,
         }),
+      );
+    }
+  }
+
+  function handleLatitudeChange(
+    value: string,
+  ): void {
+    const sanitized =
+      sanitizeCoordinate(
+        value,
+      );
+
+    setLatitudeText(
+      sanitized,
+    );
+
+    setDelivery(
+      (current) => ({
+        ...current,
+
+        latitude:
+          null,
+      }),
+    );
+
+    invalidateDeliveryQuote();
+  }
+
+  function handleLongitudeChange(
+    value: string,
+  ): void {
+    const sanitized =
+      sanitizeCoordinate(
+        value,
+      );
+
+    setLongitudeText(
+      sanitized,
+    );
+
+    setDelivery(
+      (current) => ({
+        ...current,
+
+        longitude:
+          null,
+      }),
+    );
+
+    invalidateDeliveryQuote();
+  }
+
+  async function quoteDelivery():
+    Promise<void> {
+    const latitude =
+      Number(
+        latitudeText,
+      );
+
+    const longitude =
+      Number(
+        longitudeText,
+      );
+
+    if (
+      !latitudeText.trim() ||
+      !Number.isFinite(
+        latitude,
+      ) ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      setDeliveryQuote(
+        null,
+      );
+
+      setDeliveryQuoteError(
+        'Ingresa una latitud válida.',
+      );
+
+      return;
+    }
+
+    if (
+      !longitudeText.trim() ||
+      !Number.isFinite(
+        longitude,
+      ) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      setDeliveryQuote(
+        null,
+      );
+
+      setDeliveryQuoteError(
+        'Ingresa una longitud válida.',
+      );
+
+      return;
+    }
+
+    try {
+      setIsQuotingDelivery(
+        true,
+      );
+
+      setDeliveryQuoteError(
+        null,
+      );
+
+      const quote =
+        await getDeliveryQuote(
+          latitude,
+          longitude,
+        );
+
+      /*
+       * Guardamos las coordenadas
+       * solamente después de haberlas
+       * validado.
+       */
+      setDelivery(
+        (current) => ({
+          ...current,
+
+          latitude,
+          longitude,
+        }),
+      );
+
+      setDeliveryQuote(
+        quote,
+      );
+
+      if (!quote.available) {
+        setDeliveryQuoteError(
+          'Esta ubicación está fuera de nuestra zona de reparto.',
+        );
+      }
+    } catch (error) {
+      setDeliveryQuote(
+        null,
+      );
+
+      setDeliveryQuoteError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo calcular el envío.',
+      );
+    } finally {
+      setIsQuotingDelivery(
+        false,
       );
     }
   }
@@ -258,7 +540,8 @@ export default function WebCheckoutModal({
     return next;
   }
 
-  function handleSubmit() {
+  function handleSubmit():
+    void {
     const nextErrors =
       validate();
 
@@ -272,6 +555,49 @@ export default function WebCheckoutModal({
       ).length > 0
     ) {
       return;
+    }
+
+    /*
+     * Para domicilio, no permitimos
+     * continuar sin una cotización
+     * válida.
+     */
+    if (
+      fulfillmentType ===
+      'delivery'
+    ) {
+      if (
+        !deliveryQuote
+      ) {
+        setDeliveryQuoteError(
+          'Calcula primero la zona de entrega.',
+        );
+
+        return;
+      }
+
+      if (
+        !deliveryQuote.available
+      ) {
+        setDeliveryQuoteError(
+          'Esta ubicación está fuera de nuestra zona de reparto.',
+        );
+
+        return;
+      }
+
+      if (
+        delivery.latitude ===
+          null ||
+        delivery.longitude ===
+          null
+      ) {
+        setDeliveryQuoteError(
+          'La ubicación de entrega no es válida.',
+        );
+
+        return;
+      }
     }
 
     const normalizedName =
@@ -296,45 +622,63 @@ export default function WebCheckoutModal({
         fulfillmentType ===
           'delivery'
           ? {
-            ...delivery,
+              ...delivery,
 
-            customerName:
-              normalizedName,
+              customerName:
+                normalizedName,
 
-            phone:
-              normalizedPhone,
+              phone:
+                normalizedPhone,
 
-            street:
-              delivery.street
-                .trim(),
+              street:
+                delivery.street
+                  .trim(),
 
-            exteriorNumber:
-              delivery
-                .exteriorNumber
-                .trim(),
+              exteriorNumber:
+                delivery
+                  .exteriorNumber
+                  .trim(),
 
-            interiorNumber:
-              delivery
-                .interiorNumber
-                .trim(),
+              interiorNumber:
+                delivery
+                  .interiorNumber
+                  .trim(),
 
-            neighborhood:
-              delivery
-                .neighborhood
-                .trim(),
+              neighborhood:
+                delivery
+                  .neighborhood
+                  .trim(),
 
-            postalCode:
-              delivery
-                .postalCode
-                .trim(),
+              postalCode:
+                delivery
+                  .postalCode
+                  .trim(),
 
-            deliveryReferences:
-              delivery
-                .deliveryReferences
-                .trim(),
-          }
+              deliveryReferences:
+                delivery
+                  .deliveryReferences
+                  .trim(),
+            }
           : null,
     });
+  }
+
+  function handlePickupPress():
+    void {
+    setFulfillmentType(
+      'pickup',
+    );
+
+    setDeliveryQuoteError(
+      null,
+    );
+  }
+
+  function handleDeliveryPress():
+    void {
+    setFulfillmentType(
+      'delivery',
+    );
   }
 
   return (
@@ -354,7 +698,7 @@ export default function WebCheckoutModal({
         }
         behavior={
           Platform.OS ===
-            'ios'
+          'ios'
             ? 'padding'
             : undefined
         }
@@ -443,10 +787,8 @@ export default function WebCheckoutModal({
                   fulfillmentType ===
                   'pickup'
                 }
-                onPress={() =>
-                  setFulfillmentType(
-                    'pickup',
-                  )
+                onPress={
+                  handlePickupPress
                 }
               />
 
@@ -454,19 +796,17 @@ export default function WebCheckoutModal({
                 title="Domicilio"
                 subtitle={
                   deliveryFee > 0
-                    ? `+ ${formatPrice(
-                      deliveryFee,
-                    )}`
+                    ? `Desde ${formatPrice(
+                        deliveryFee,
+                      )}`
                     : 'Entrega a domicilio'
                 }
                 selected={
                   fulfillmentType ===
                   'delivery'
                 }
-                onPress={() =>
-                  setFulfillmentType(
-                    'delivery',
-                  )
+                onPress={
+                  handleDeliveryPress
                 }
               />
             </View>
@@ -515,150 +855,436 @@ export default function WebCheckoutModal({
 
             {fulfillmentType ===
               'delivery' && (
-                <>
-                  <SectionTitle>
-                    Dirección
-                  </SectionTitle>
+              <>
+                <SectionTitle>
+                  Dirección
+                </SectionTitle>
 
-                  <FormInput
-                    label="Calle"
-                    value={
-                      delivery.street
+                <FormInput
+                  label="Calle"
+                  value={
+                    delivery.street
+                  }
+                  placeholder="Ej. Avenida Central"
+                  maxLength={100}
+                  autoCapitalize="words"
+                  error={
+                    errors.street
+                  }
+                  onChangeText={
+                    (value) =>
+                      updateDeliveryField(
+                        'street',
+                        value,
+                      )
+                  }
+                />
+
+                <View
+                  style={
+                    styles.row
+                  }
+                >
+                  <View
+                    style={
+                      styles.rowField
                     }
-                    placeholder="Ej. Avenida Central"
-                    maxLength={100}
-                    autoCapitalize="words"
-                    error={
-                      errors.street
-                    }
-                    onChangeText={
-                      (value) =>
-                        updateDeliveryField(
-                          'street',
-                          value,
-                        )
-                    }
-                  />
+                  >
+                    <FormInput
+                      label="Número exterior"
+                      value={
+                        delivery
+                          .exteriorNumber
+                      }
+                      placeholder="Ej. 120"
+                      maxLength={10}
+                      autoCapitalize="characters"
+                      error={
+                        errors
+                          .exteriorNumber
+                      }
+                      onChangeText={
+                        (value) =>
+                          updateDeliveryField(
+                            'exteriorNumber',
+                            value,
+                          )
+                      }
+                    />
+                  </View>
 
                   <View
                     style={
-                      styles.row
+                      styles.rowField
                     }
                   >
-                    <View
-                      style={
-                        styles.rowField
+                    <FormInput
+                      label="Número interior"
+                      value={
+                        delivery
+                          .interiorNumber
                       }
-                    >
-                      <FormInput
-                        label="Número exterior"
-                        value={
-                          delivery
-                            .exteriorNumber
-                        }
-                        placeholder="Ej. 120"
-                        maxLength={10}
-                        autoCapitalize="characters"
-                        error={
-                          errors
-                            .exteriorNumber
-                        }
-                        onChangeText={
-                          (value) =>
-                            updateDeliveryField(
-                              'exteriorNumber',
-                              value,
-                            )
-                        }
-                      />
-                    </View>
-
-                    <View
-                      style={
-                        styles.rowField
+                      placeholder="Opcional"
+                      maxLength={10}
+                      autoCapitalize="characters"
+                      onChangeText={
+                        (value) =>
+                          updateDeliveryField(
+                            'interiorNumber',
+                            value,
+                          )
                       }
-                    >
-                      <FormInput
-                        label="Número interior"
-                        value={
-                          delivery
-                            .interiorNumber
-                        }
-                        placeholder="Opcional"
-                        maxLength={10}
-                        autoCapitalize="characters"
-                        onChangeText={
-                          (value) =>
-                            updateDeliveryField(
-                              'interiorNumber',
-                              value,
-                            )
-                        }
-                      />
-                    </View>
+                    />
                   </View>
+                </View>
 
-                  <FormInput
-                    label="Colonia"
-                    value={
-                      delivery
-                        .neighborhood
-                    }
-                    placeholder="Ej. Centro"
-                    maxLength={100}
-                    autoCapitalize="words"
-                    error={
-                      errors.neighborhood
-                    }
-                    onChangeText={
-                      (value) =>
-                        updateDeliveryField(
-                          'neighborhood',
-                          value,
-                        )
-                    }
-                  />
+                <FormInput
+                  label="Colonia"
+                  value={
+                    delivery
+                      .neighborhood
+                  }
+                  placeholder="Ej. Centro"
+                  maxLength={100}
+                  autoCapitalize="words"
+                  error={
+                    errors.neighborhood
+                  }
+                  onChangeText={
+                    (value) =>
+                      updateDeliveryField(
+                        'neighborhood',
+                        value,
+                      )
+                  }
+                />
 
-                  <FormInput
-                    label="Código postal"
-                    value={
-                      delivery
-                        .postalCode
-                    }
-                    placeholder="Opcional"
-                    keyboardType="number-pad"
-                    maxLength={5}
-                    onChangeText={
-                      (value) =>
-                        updateDeliveryField(
-                          'postalCode',
-                          value.replace(
-                            /\D/g,
-                            '',
-                          ),
-                        )
-                    }
-                  />
+                <FormInput
+                  label="Código postal"
+                  value={
+                    delivery
+                      .postalCode
+                  }
+                  placeholder="Opcional"
+                  keyboardType="number-pad"
+                  maxLength={5}
+                  onChangeText={
+                    (value) =>
+                      updateDeliveryField(
+                        'postalCode',
+                        value.replace(
+                          /\D/g,
+                          '',
+                        ),
+                      )
+                  }
+                />
 
-                  <FormInput
-                    label="Referencias"
-                    value={
-                      delivery
-                        .deliveryReferences
-                    }
-                    placeholder="Ej. Portón negro, tocar el timbre"
-                    multiline
-                    maxLength={300}
-                    onChangeText={
-                      (value) =>
-                        updateDeliveryField(
-                          'deliveryReferences',
-                          value,
-                        )
-                    }
-                  />
-                </>
-              )}
+                {/*
+                  Temporal:
+                  después estos campos serán
+                  reemplazados por Google Maps.
+                */}
+
+                <SectionTitle>
+                  Ubicación para entrega
+                </SectionTitle>
+
+                <FormInput
+                  label="Latitud"
+                  value={
+                    latitudeText
+                  }
+                  placeholder="Ej. 20.034801"
+                  keyboardType="decimal-pad"
+                  autoCapitalize="none"
+                  onChangeText={
+                    handleLatitudeChange
+                  }
+                />
+
+                <FormInput
+                  label="Longitud"
+                  value={
+                    longitudeText
+                  }
+                  placeholder="Ej. -100.723608"
+                  keyboardType="decimal-pad"
+                  autoCapitalize="none"
+                  onChangeText={
+                    handleLongitudeChange
+                  }
+                />
+
+                <Pressable
+                  disabled={
+                    isQuotingDelivery ||
+                    submitting
+                  }
+                  onPress={() => {
+                    void quoteDelivery();
+                  }}
+                  style={({
+                    pressed,
+                  }) => ({
+                    minHeight: 48,
+                    borderRadius: 12,
+                    alignItems:
+                      'center',
+                    justifyContent:
+                      'center',
+
+                    backgroundColor:
+                      '#FFB000',
+
+                    opacity:
+                      isQuotingDelivery ||
+                      submitting
+                        ? 0.55
+                        : pressed
+                          ? 0.8
+                          : 1,
+
+                    marginBottom: 14,
+                  })}
+                >
+                  {isQuotingDelivery ? (
+                    <ActivityIndicator
+                      color="#111111"
+                    />
+                  ) : (
+                    <Text
+                      style={{
+                        color:
+                          '#111111',
+
+                        fontSize: 15,
+
+                        fontWeight:
+                          '800',
+                      }}
+                    >
+                      Calcular zona de entrega
+                    </Text>
+                  )}
+                </Pressable>
+
+                {deliveryQuote ? (
+                  <View
+                    style={{
+                      backgroundColor:
+                        deliveryQuote
+                          .available
+                          ? '#142218'
+                          : '#2A1717',
+
+                      borderWidth: 1,
+
+                      borderColor:
+                        deliveryQuote
+                          .available
+                          ? '#2E6B3A'
+                          : '#7D3030',
+
+                      borderRadius: 12,
+
+                      padding: 14,
+
+                      marginBottom: 14,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          deliveryQuote
+                            .available
+                            ? '#73D887'
+                            : '#FF8A8A',
+
+                        fontSize: 15,
+
+                        fontWeight:
+                          '800',
+
+                        marginBottom: 4,
+                      }}
+                    >
+                      {deliveryQuote
+                        .available
+                        ? '✓ Entrega disponible'
+                        : '✕ Fuera de cobertura'}
+                    </Text>
+
+                    {deliveryQuote
+                      .distanceKm !==
+                      null ? (
+                      <Text
+                        style={{
+                          color:
+                            '#D0D0D0',
+
+                          fontSize: 13,
+                        }}
+                      >
+                        Distancia aproximada:{' '}
+                        {deliveryQuote
+                          .distanceKm
+                          .toFixed(
+                            2,
+                          )}{' '}
+                        km
+                      </Text>
+                    ) : null}
+
+                    {deliveryQuote
+                      .available ? (
+                      <>
+                        <Text
+                          style={{
+                            color:
+                              '#D0D0D0',
+
+                            fontSize: 13,
+
+                            marginTop: 3,
+                          }}
+                        >
+                          Zona:{' '}
+                          {deliveryQuote
+                            .zoneName ??
+                            'Cobertura local'}
+                        </Text>
+
+                        <Text
+                          style={{
+                            color:
+                              '#D0D0D0',
+
+                            fontSize: 13,
+
+                            marginTop: 3,
+                          }}
+                        >
+                          Tarifa base:{' '}
+                          {formatPrice(
+                            deliveryFee,
+                          )}
+                        </Text>
+
+                        {deliveryQuote
+                          .extraFee >
+                          0 ? (
+                          <Text
+                            style={{
+                              color:
+                                '#FFB000',
+
+                              fontSize: 13,
+
+                              fontWeight:
+                                '700',
+
+                              marginTop: 3,
+                            }}
+                          >
+                            Cargo por zona: +
+                            {formatPrice(
+                              deliveryQuote
+                                .extraFee,
+                            )}
+                          </Text>
+                        ) : (
+                          <Text
+                            style={{
+                              color:
+                                '#73D887',
+
+                              fontSize: 13,
+
+                              marginTop: 3,
+                            }}
+                          >
+                            Sin cargo adicional por zona
+                          </Text>
+                        )}
+
+                        <Text
+                          style={{
+                            color:
+                              '#FFFFFF',
+
+                            fontSize: 15,
+
+                            fontWeight:
+                              '800',
+
+                            marginTop: 6,
+                          }}
+                        >
+                          Envío:{' '}
+                          {formatPrice(
+                            calculatedDeliveryFee,
+                          )}
+                        </Text>
+                      </>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {!!deliveryQuoteError && (
+                  <View
+                    style={{
+                      backgroundColor:
+                        '#2A1717',
+
+                      borderWidth: 1,
+
+                      borderColor:
+                        '#7D3030',
+
+                      borderRadius: 10,
+
+                      padding: 12,
+
+                      marginBottom: 14,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          '#FF8A8A',
+
+                        fontSize: 13,
+
+                        lineHeight: 18,
+                      }}
+                    >
+                      {
+                        deliveryQuoteError
+                      }
+                    </Text>
+                  </View>
+                )}
+
+                <FormInput
+                  label="Referencias"
+                  value={
+                    delivery
+                      .deliveryReferences
+                  }
+                  placeholder="Ej. Portón negro, tocar el timbre"
+                  multiline
+                  maxLength={300}
+                  onChangeText={
+                    (value) =>
+                      updateDeliveryField(
+                        'deliveryReferences',
+                        value,
+                      )
+                  }
+                />
+              </>
+            )}
 
             <SectionTitle>
               Resumen
@@ -680,26 +1306,51 @@ export default function WebCheckoutModal({
 
               {weeklySauceDiscount >
                 0 && (
-                  <SummaryRow
-                    label="Salsa de la Semana"
-                    value={`-${formatPrice(
-                      weeklySauceDiscount,
-                    )}`}
-                    discount
-                  />
-                )}
+                <SummaryRow
+                  label="Salsa de la Semana"
+                  value={`-${formatPrice(
+                    weeklySauceDiscount,
+                  )}`}
+                  discount
+                />
+              )}
 
               {fulfillmentType ===
                 'delivery' && (
+                <>
                   <SummaryRow
-                    label="Envío a domicilio"
+                    label="Envío base"
                     value={
                       formatPrice(
                         deliveryFee,
                       )
                     }
                   />
-                )}
+
+                  {deliveryQuote
+                    ?.available &&
+                    deliveryQuote
+                      .extraFee >
+                      0 && (
+                      <SummaryRow
+                        label="Cargo por zona"
+                        value={`+${formatPrice(
+                          deliveryQuote
+                            .extraFee,
+                        )}`}
+                      />
+                    )}
+
+                  <SummaryRow
+                    label="Envío a domicilio"
+                    value={
+                      formatPrice(
+                        calculatedDeliveryFee,
+                      )
+                    }
+                  />
+                </>
+              )}
 
               <View
                 style={
@@ -750,17 +1401,26 @@ export default function WebCheckoutModal({
           >
             <Pressable
               disabled={
-                submitting
+                submitting ||
+                isQuotingDelivery
               }
               onPress={
                 handleSubmit
               }
-              style={({ pressed }) => [
+              style={({
+                pressed,
+              }) => [
                 styles.confirmButton,
+
                 pressed &&
                 !submitting &&
+                !isQuotingDelivery &&
                 styles.confirmButtonPressed,
-                submitting &&
+
+                (
+                  submitting ||
+                  isQuotingDelivery
+                ) &&
                 styles.confirmButtonDisabled,
               ]}
             >
@@ -804,10 +1464,14 @@ function ChoiceButton({
       onPress={
         onPress
       }
-      style={({ pressed }) => [
+      style={({
+        pressed,
+      }) => [
         styles.choiceButton,
+
         selected &&
         styles.choiceButtonSelected,
+
         pressed &&
         styles.choiceButtonPressed,
       ]}
@@ -815,6 +1479,7 @@ function ChoiceButton({
       <Text
         style={[
           styles.choiceTitle,
+
           selected &&
           styles.choiceTitleSelected,
         ]}
@@ -825,6 +1490,7 @@ function ChoiceButton({
       <Text
         style={[
           styles.choiceSubtitle,
+
           selected &&
           styles.choiceSubtitleSelected,
         ]}
@@ -839,7 +1505,7 @@ function SectionTitle({
   children,
 }: {
   children:
-  React.ReactNode;
+    React.ReactNode;
 }) {
   return (
     <Text
@@ -885,8 +1551,10 @@ function FormInput({
         placeholderTextColor="#6F6F6F"
         style={[
           styles.input,
+
           multiline &&
           styles.inputMultiline,
+
           !!error &&
           styles.inputError,
         ]}
@@ -925,8 +1593,10 @@ function SummaryRow({
       <Text
         style={[
           styles.summaryLabel,
+
           discount &&
           styles.discountText,
+
           total &&
           styles.totalText,
         ]}
@@ -937,8 +1607,10 @@ function SummaryRow({
       <Text
         style={[
           styles.summaryValue,
+
           discount &&
           styles.discountText,
+
           total &&
           styles.totalValue,
         ]}
@@ -947,4 +1619,65 @@ function SummaryRow({
       </Text>
     </View>
   );
+}
+
+function sanitizeCoordinate(
+  value: string,
+): string {
+  let result =
+    value
+      .replace(
+        ',',
+        '.',
+      )
+      .replace(
+        /[^0-9.-]/g,
+        '',
+      );
+
+  /*
+   * Solo permite un signo negativo,
+   * y únicamente al principio.
+   */
+  const isNegative =
+    result.startsWith(
+      '-',
+    );
+
+  result =
+    result.replace(
+      /-/g,
+      '',
+    );
+
+  if (isNegative) {
+    result =
+      `-${result}`;
+  }
+
+  /*
+   * Solo permite un punto decimal.
+   */
+  const firstDot =
+    result.indexOf(
+      '.',
+    );
+
+  if (firstDot >= 0) {
+    result =
+      result.slice(
+        0,
+        firstDot + 1,
+      ) +
+      result
+        .slice(
+          firstDot + 1,
+        )
+        .replace(
+          /\./g,
+          '',
+        );
+  }
+
+  return result;
 }
