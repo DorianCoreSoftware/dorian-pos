@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 const INACTIVITY_LIMIT_MS =
-  30 * 60 * 1000;
+  2 * 60 * 60 * 1000;
 
 const CHECK_INTERVAL_MS =
   60 * 1000;
