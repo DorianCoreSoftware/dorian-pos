@@ -309,6 +309,19 @@ export default function WebCheckoutModal({
       ],
     );
 
+  const isConfirmDisabled =
+    submitting ||
+    isQuotingDelivery ||
+    (
+      fulfillmentType ===
+      'delivery' &&
+      (
+        !hasSelectedGooglePlace ||
+        !deliveryQuote ||
+        !deliveryQuote.available
+      )
+    );
+
   function updateDeliveryField<
     Field extends keyof DeliveryDetails,
   >(
@@ -1241,8 +1254,7 @@ export default function WebCheckoutModal({
           >
             <Pressable
               disabled={
-                submitting ||
-                isQuotingDelivery
+                isConfirmDisabled
               }
               onPress={
                 handleSubmit
@@ -1253,14 +1265,10 @@ export default function WebCheckoutModal({
                   styles.confirmButton,
 
                   pressed &&
-                  !submitting &&
-                  !isQuotingDelivery &&
+                  !isConfirmDisabled &&
                   styles.confirmButtonPressed,
 
-                  (
-                    submitting ||
-                    isQuotingDelivery
-                  ) &&
+                  isConfirmDisabled &&
                   styles.confirmButtonDisabled,
                 ]}
             >
@@ -1274,10 +1282,20 @@ export default function WebCheckoutModal({
                     styles.confirmButtonText
                   }
                 >
-                  Confirmar pedido ·{' '}
-                  {formatPrice(
-                    finalTotal,
-                  )}
+                  {fulfillmentType ===
+                    'delivery' &&
+                    deliveryQuote &&
+                    !deliveryQuote.available
+                    ? 'Fuera de cobertura'
+                    : fulfillmentType ===
+                      'delivery' &&
+                      !hasSelectedGooglePlace
+                      ? 'Selecciona una dirección'
+                      : isQuotingDelivery
+                        ? 'Calculando cobertura...'
+                        : `Confirmar pedido · ${formatPrice(
+                          finalTotal,
+                        )}`}
                 </Text>
               )}
             </Pressable>
