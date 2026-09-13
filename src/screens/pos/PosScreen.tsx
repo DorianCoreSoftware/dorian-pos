@@ -557,10 +557,33 @@ export function POSScreen({
   const handleConfirmDelivery = (
     deliveryDetails:
       DeliveryDetails,
+
+    deliveryFee:
+      number,
   ): void => {
     if (
       !selectedDeliveryProduct
     ) {
+      return;
+    }
+
+    const normalizedDeliveryFee =
+      Number(
+        deliveryFee,
+      );
+
+    if (
+      !Number.isFinite(
+        normalizedDeliveryFee,
+      ) ||
+      normalizedDeliveryFee <
+      0
+    ) {
+      Alert.alert(
+        'Tarifa inválida',
+        'No se pudo determinar correctamente el costo del envío.',
+      );
+
       return;
     }
 
@@ -569,17 +592,30 @@ export function POSScreen({
 
     const deliveryItem:
       CartItem = {
-      id: deliveryItemId,
+      id:
+        deliveryItemId,
 
       product: {
         ...selectedDeliveryProduct,
+
+        /*
+         * El producto de domicilio dentro
+         * del carrito lleva el costo completo:
+         *
+         * tarifa base + cargo por zona.
+         */
+        price:
+          normalizedDeliveryFee,
       },
 
-      quantity: 1,
+      quantity:
+        1,
 
-      notes: '',
+      notes:
+        '',
 
-      selectedModifiers: [],
+      selectedModifiers:
+        [],
 
       deliveryDetails: {
         ...deliveryDetails,
@@ -592,7 +628,9 @@ export function POSScreen({
       ) => {
         const existingDeliveryIndex =
           currentCart.findIndex(
-            (item) =>
+            (
+              item,
+            ) =>
               isDeliveryProduct(
                 item.product,
               ),

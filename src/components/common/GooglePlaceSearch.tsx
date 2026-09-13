@@ -6,13 +6,19 @@ import React, {
 
 import {
   ActivityIndicator,
+  Keyboard,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getGooglePlaceDetails, GooglePlaceSelection, GooglePlaceSuggestion, searchGooglePlaces } from '../../services/googlePlacesService';
 
+import {
+  getGooglePlaceDetails,
+  GooglePlaceSelection,
+  GooglePlaceSuggestion,
+  searchGooglePlaces,
+} from '../../services/googlePlacesService';
 
 interface GooglePlaceSearchProps {
   disabled?: boolean;
@@ -20,6 +26,10 @@ interface GooglePlaceSearchProps {
   initialValue?: string;
 
   placeholder?: string;
+
+  dropdownDirection?:
+  | 'up'
+  | 'down';
 
   onPlaceSelected:
   (
@@ -33,6 +43,8 @@ export function GooglePlaceSearch({
   initialValue = '',
   placeholder =
   'Buscar dirección o negocio...',
+  dropdownDirection =
+  'down',
   onPlaceSelected,
 }: GooglePlaceSearchProps) {
   const [
@@ -102,6 +114,11 @@ export function GooglePlaceSearch({
   const skipNextSearchRef =
     useRef(
       false,
+    );
+
+  const inputRef =
+    useRef<TextInput | null>(
+      null,
     );
 
   useEffect(
@@ -215,10 +232,17 @@ export function GooglePlaceSearch({
         return;
       }
 
+      /*
+       * En móvil no queremos una lista enorme
+       * ocupando toda la pantalla.
+       */
       setSuggestions(
         result.slice(
           0,
-          6,
+          dropdownDirection ===
+            'up'
+            ? 4
+            : 6,
         ),
       );
     } catch (
@@ -284,6 +308,19 @@ export function GooglePlaceSearch({
           sessionToken,
         );
 
+      /*
+       * Primero quitamos el foco.
+       *
+       * En Android es importante hacerlo
+       * ANTES de modificar el layout del modal.
+       */
+      inputRef.current?.blur();
+
+      Keyboard.dismiss();
+
+      /*
+       * Limpiamos el autocomplete.
+       */
       skipNextSearchRef.current =
         true;
 
@@ -293,6 +330,24 @@ export function GooglePlaceSearch({
 
       setSuggestions(
         [],
+      );
+
+      /*
+       * Esperamos un instante a que Android
+       * termine de cerrar/reacomodar el teclado.
+       *
+       * Esto evita el parpadeo al montar todos
+       * los campos de domicilio.
+       */
+      await new Promise<void>(
+        (
+          resolve,
+        ) => {
+          setTimeout(
+            resolve,
+            120,
+          );
+        },
       );
 
       onPlaceSelected(
@@ -327,16 +382,134 @@ export function GooglePlaceSearch({
     isSearching ||
     isSelecting;
 
-  return (
-    <View
-      style={{
-        position:
-          'relative',
+  const suggestionsList =
+    suggestions.length >
+      0 ? (
+      <View
+        style={{
+          borderRadius:
+            9,
 
-        zIndex:
-          1000,
-      }}
-    >
+          borderWidth:
+            1,
+
+          borderColor:
+            '#444444',
+
+          overflow:
+            'hidden',
+
+          backgroundColor:
+            '#222222',
+
+          marginTop:
+            dropdownDirection ===
+              'down'
+              ? 5
+              : 0,
+
+          marginBottom:
+            dropdownDirection ===
+              'up'
+              ? 7
+              : 0,
+
+          elevation:
+            4,
+        }}
+      >
+        {suggestions.map(
+          (
+            suggestion,
+            index,
+          ) => (
+            <TouchableOpacity
+              key={
+                suggestion.placeId
+              }
+              activeOpacity={
+                0.7
+              }
+              disabled={
+                disabled ||
+                isSelecting
+              }
+              onPress={
+                () => {
+                  void handleSuggestionPress(
+                    suggestion,
+                  );
+                }
+              }
+              style={{
+                paddingHorizontal:
+                  13,
+
+                paddingVertical:
+                  11,
+
+                borderBottomWidth:
+                  index ===
+                    suggestions.length -
+                    1
+                    ? 0
+                    : 1,
+
+                borderBottomColor:
+                  '#333333',
+
+                backgroundColor:
+                  '#222222',
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    '#FFFFFF',
+
+                  fontSize:
+                    13,
+
+                  fontWeight:
+                    '700',
+                }}
+              >
+                {
+                  suggestion.mainText ||
+                  suggestion.text
+                }
+              </Text>
+
+              {!!suggestion
+                .secondaryText && (
+                  <Text
+                    numberOfLines={
+                      2
+                    }
+                    style={{
+                      color:
+                        '#888888',
+
+                      fontSize:
+                        11,
+
+                      marginTop:
+                        3,
+                    }}
+                  >
+                    {
+                      suggestion.secondaryText
+                    }
+                  </Text>
+                )}
+            </TouchableOpacity>
+          ),
+        )}
+      </View>
+    ) : null;
+
+  return (
+    <View>
       <Text
         style={{
           color:
@@ -354,6 +527,10 @@ export function GooglePlaceSearch({
       >
         Buscar ubicación
       </Text>
+
+      {dropdownDirection ===
+        'up' &&
+        suggestionsList}
 
       <View
         style={{
@@ -395,6 +572,9 @@ export function GooglePlaceSearch({
         </Text>
 
         <TextInput
+          ref={
+            inputRef
+          }
           value={
             searchText
           }
@@ -418,6 +598,7 @@ export function GooglePlaceSearch({
           autoCorrect={
             false
           }
+          autoCapitalize="none"
           placeholder={
             placeholder
           }
@@ -445,121 +626,9 @@ export function GooglePlaceSearch({
         )}
       </View>
 
-      {suggestions.length >
-        0 && (
-          <View
-            style={{
-              marginTop:
-                4,
-
-              borderRadius:
-                9,
-
-              borderWidth:
-                1,
-
-              borderColor:
-                '#444444',
-
-              overflow:
-                'hidden',
-
-              backgroundColor:
-                '#222222',
-
-              elevation:
-                12,
-
-              zIndex:
-                9999,
-            }}
-          >
-            {suggestions.map(
-              (
-                suggestion,
-                index,
-              ) => (
-                <TouchableOpacity
-                  key={
-                    suggestion.placeId
-                  }
-                  disabled={
-                    disabled ||
-                    isSelecting
-                  }
-                  onPress={
-                    () => {
-                      void handleSuggestionPress(
-                        suggestion,
-                      );
-                    }
-                  }
-                  style={{
-                    paddingHorizontal:
-                      13,
-
-                    paddingVertical:
-                      11,
-
-                    borderBottomWidth:
-                      index ===
-                        suggestions.length -
-                        1
-                        ? 0
-                        : 1,
-
-                    borderBottomColor:
-                      '#333333',
-
-                    backgroundColor:
-                      '#222222',
-                  }}
-                >
-                  <Text
-                    style={{
-                      color:
-                        '#FFFFFF',
-
-                      fontSize:
-                        13,
-
-                      fontWeight:
-                        '700',
-                    }}
-                  >
-                    {
-                      suggestion.mainText ||
-                      suggestion.text
-                    }
-                  </Text>
-
-                  {!!suggestion
-                    .secondaryText && (
-                      <Text
-                        numberOfLines={
-                          2
-                        }
-                        style={{
-                          color:
-                            '#888888',
-
-                          fontSize:
-                            11,
-
-                          marginTop:
-                            3,
-                        }}
-                      >
-                        {
-                          suggestion.secondaryText
-                        }
-                      </Text>
-                    )}
-                </TouchableOpacity>
-              ),
-            )}
-          </View>
-        )}
+      {dropdownDirection ===
+        'down' &&
+        suggestionsList}
 
       {!!errorMessage && (
         <Text

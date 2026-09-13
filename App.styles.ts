@@ -477,21 +477,44 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  editingOrderBanner: {
-    width: '100%',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    backgroundColor: '#3A2F00',
-    borderWidth: 1,
-    borderColor: '#6D5900',
+  editingOrderBadge: {
+    alignSelf:
+      'flex-start',
+
+    marginTop:
+      8,
+
+    marginHorizontal:
+      16,
+
+    paddingHorizontal:
+      12,
+
+    paddingVertical:
+      6,
+
+    borderRadius:
+      8,
+
+    borderWidth:
+      1,
+
+    borderColor:
+      '#FFBF00',
+
+    backgroundColor:
+      '#2B250C',
   },
 
-  editingOrderBannerText: {
-    color: '#FFBF00',
-    fontSize: 11,
-    fontWeight: '800',
-    textAlign: 'center',
+  editingOrderBadgeText: {
+    color:
+      '#FFBF00',
+
+    fontSize:
+      12,
+
+    fontWeight:
+      '800',
   },
 });
 

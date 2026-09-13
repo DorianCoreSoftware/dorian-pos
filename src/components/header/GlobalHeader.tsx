@@ -365,15 +365,18 @@ export function GlobalHeader({
       {editingOrderId ? (
         <View
           style={
-            styles.editingOrderBanner
+            styles.editingOrderBadge
           }
         >
           <Text
             style={
-              styles.editingOrderBannerText
+              styles.editingOrderBadgeText
+            }
+            numberOfLines={
+              1
             }
           >
-            ⚠️ Modificando pedido
+            ⚠️ Editando pedido
           </Text>
         </View>
       ) : null}
