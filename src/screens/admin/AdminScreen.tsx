@@ -44,6 +44,7 @@ import {
 import {
   styles,
 } from './AdminScreen.styles';
+import { AdminDeliverySettings } from '../../components/admin/delivery/AdminDeliverySettings';
 
 type AdminSection =
   | 'products'
@@ -53,17 +54,18 @@ type AdminSection =
   | 'printer'
   | 'promotions'
   | 'hours'
+  | 'delivery'
   | 'feedback';
 
 interface AdminScreenProps {
   onProductsChanged:
-    () => Promise<void>;
+  () => Promise<void>;
 
   onCategoriesChanged:
-    () => Promise<void>;
+  () => Promise<void>;
 
   onModifiersChanged:
-    () => Promise<void>;
+  () => Promise<void>;
 }
 
 export function AdminScreen({
@@ -153,6 +155,15 @@ export function AdminScreen({
       ) {
         return (
           <AdminBusinessHours />
+        );
+      }
+
+      if (
+        activeSection ===
+        'delivery'
+      ) {
+        return (
+          <AdminDeliverySettings />
         );
       }
 
@@ -290,6 +301,11 @@ export function AdminScreen({
         {renderTab(
           'hours',
           'HORARIOS',
+        )}
+
+        {renderTab(
+          'delivery',
+          'ENTREGAS',
         )}
 
         {renderTab(
