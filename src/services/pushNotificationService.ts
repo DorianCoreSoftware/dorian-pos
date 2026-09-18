@@ -12,15 +12,20 @@ import {
   supabase,
 } from './supabase';
 
-
 const WEB_ORDERS_CHANNEL_ID =
   'web-orders';
 
+const DELIVERY_ORDERS_CHANNEL_ID =
+  'delivery-orders';
+
+type PushDeviceType =
+  | 'pos'
+  | 'driver';
 
 /*
- * Esto controla qué pasa cuando llega
- * una notificación mientras Burger Kong
- * está ABIERTO.
+ * ============================================================
+ * NOTIFICACIONES EN FOREGROUND
+ * ============================================================
  */
 Notifications.setNotificationHandler({
   handleNotification:
@@ -39,8 +44,12 @@ Notifications.setNotificationHandler({
     }),
 });
 
-
-async function configureAndroidNotificationChannel():
+/*
+ * ============================================================
+ * CANALES ANDROID
+ * ============================================================
+ */
+async function configureAndroidNotificationChannels():
   Promise<void> {
   if (
     Platform.OS !==
@@ -49,6 +58,9 @@ async function configureAndroidNotificationChannel():
     return;
   }
 
+  /*
+   * Pedidos web para POS.
+   */
   await Notifications
     .setNotificationChannelAsync(
       WEB_ORDERS_CHANNEL_ID,
@@ -86,9 +98,54 @@ async function configureAndroidNotificationChannel():
             .PUBLIC,
       },
     );
+
+  /*
+   * Pedidos listos para reparto.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      DELIVERY_ORDERS_CHANNEL_ID,
+      {
+        name:
+          'Entregas',
+
+        description:
+          'Pedidos listos para salir a reparto.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          300,
+          200,
+          300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
 }
 
-
+/*
+ * ============================================================
+ * PERMISOS
+ * ============================================================
+ */
 async function requestNotificationPermission():
   Promise<boolean> {
   const current =
@@ -112,7 +169,11 @@ async function requestNotificationPermission():
   );
 }
 
-
+/*
+ * ============================================================
+ * EAS PROJECT ID
+ * ============================================================
+ */
 function getExpoProjectId():
   string {
   const projectId =
@@ -136,7 +197,11 @@ function getExpoProjectId():
   return projectId;
 }
 
-
+/*
+ * ============================================================
+ * EXPO PUSH TOKEN
+ * ============================================================
+ */
 async function getExpoPushToken():
   Promise<string> {
   const projectId =
@@ -151,12 +216,21 @@ async function getExpoPushToken():
   return result.data;
 }
 
-
+/*
+ * ============================================================
+ * GUARDAR DISPOSITIVO
+ * ============================================================
+ */
 async function savePushDevice(
-  expoPushToken: string,
+  expoPushToken:
+    string,
+
   userId:
     | string
     | null,
+
+  deviceType:
+    PushDeviceType,
 ): Promise<void> {
   const {
     error,
@@ -172,6 +246,9 @@ async function savePushDevice(
         expo_push_token:
           expoPushToken,
 
+        device_type:
+          deviceType,
+
         platform:
           Platform.OS ===
           'ios'
@@ -179,7 +256,10 @@ async function savePushDevice(
             : 'android',
 
         device_name:
-          'Burger Kong POS',
+          deviceType ===
+          'driver'
+            ? 'Burger Kong Repartidor'
+            : 'Burger Kong POS',
 
         app_version:
           Constants
@@ -200,27 +280,32 @@ async function savePushDevice(
       },
     );
 
-  if (error) {
+  if (
+    error
+  ) {
     throw new Error(
-      `No se pudo registrar la tablet para notificaciones: ${error.message}`,
+      `No se pudo registrar el dispositivo para notificaciones: ${error.message}`,
     );
   }
 }
 
-
-export async function registerPosPushNotifications(
+/*
+ * ============================================================
+ * REGISTRO GENÉRICO
+ * ============================================================
+ */
+async function registerPushNotifications(
   userId:
     | string
     | null,
+
+  deviceType:
+    PushDeviceType,
 ): Promise<
   | string
   | null
 > {
   try {
-    /*
-     * En este proyecto las notificaciones
-     * push son principalmente para Android.
-     */
     if (
       Platform.OS ===
       'web'
@@ -228,7 +313,7 @@ export async function registerPosPushNotifications(
       return null;
     }
 
-    await configureAndroidNotificationChannel();
+    await configureAndroidNotificationChannels();
 
     const hasPermission =
       await requestNotificationPermission();
@@ -249,10 +334,11 @@ export async function registerPosPushNotifications(
     await savePushDevice(
       expoPushToken,
       userId,
+      deviceType,
     );
 
     console.log(
-      '✅ Tablet registrada para Push Notifications:',
+      `✅ Dispositivo ${deviceType} registrado para Push Notifications:`,
       expoPushToken,
     );
 
@@ -267,27 +353,82 @@ export async function registerPosPushNotifications(
   }
 }
 
+/*
+ * ============================================================
+ * POS
+ * ============================================================
+ */
+export async function registerPosPushNotifications(
+  userId:
+    | string
+    | null,
+): Promise<
+  | string
+  | null
+> {
+  return registerPushNotifications(
+    userId,
+    'pos',
+  );
+}
+
+/*
+ * ============================================================
+ * DRIVER
+ * ============================================================
+ */
+export async function registerDriverPushNotifications(
+  userId:
+    | string
+    | null,
+): Promise<
+  | string
+  | null
+> {
+  return registerPushNotifications(
+    userId,
+    'driver',
+  );
+}
+
+/*
+ * ============================================================
+ * NOTIFICACIÓN DE NUEVO PEDIDO WEB
+ * ============================================================
+ */
 export interface WebOrderNotificationData {
-  type: 'new_web_order';
-  orderId?: string;
-  trackingCode?: string;
+  type:
+    'new_web_order';
+
+  orderId?:
+    string;
+
+  trackingCode?:
+    string;
 }
 
 export function isWebOrderNotification(
-  data: unknown,
+  data:
+    unknown,
 ): data is WebOrderNotificationData {
   if (
     !data ||
-    typeof data !== 'object'
+    typeof data !==
+      'object'
   ) {
     return false;
   }
 
   const notificationData =
     data as {
-      type?: unknown;
-      orderId?: unknown;
-      trackingCode?: unknown;
+      type?:
+        unknown;
+
+      orderId?:
+        unknown;
+
+      trackingCode?:
+        unknown;
     };
 
   return (
@@ -296,17 +437,74 @@ export function isWebOrderNotification(
   );
 }
 
+/*
+ * ============================================================
+ * NOTIFICACIÓN DE ENTREGA LISTA
+ * ============================================================
+ */
+export interface DeliveryReadyNotificationData {
+  type:
+    'delivery_ready';
+
+  orderId?:
+    string;
+
+  trackingCode?:
+    string;
+}
+
+export function isDeliveryReadyNotification(
+  data:
+    unknown,
+): data is DeliveryReadyNotificationData {
+  if (
+    !data ||
+    typeof data !==
+      'object'
+  ) {
+    return false;
+  }
+
+  const notificationData =
+    data as {
+      type?:
+        unknown;
+
+      orderId?:
+        unknown;
+
+      trackingCode?:
+        unknown;
+    };
+
+  return (
+    notificationData.type ===
+    'delivery_ready'
+  );
+}
+
+/*
+ * ============================================================
+ * LISTENER POS
+ * ============================================================
+ */
 export function listenToPushNotificationResponses(
-  onWebOrderPressed: (
-    data: WebOrderNotificationData,
-  ) => void,
+  onWebOrderPressed:
+    (
+      data:
+        WebOrderNotificationData,
+    ) => void,
 ): Notifications.EventSubscription {
   return Notifications
     .addNotificationResponseReceivedListener(
-      (response) => {
+      (
+        response,
+      ) => {
         const data =
-          response.notification
-            .request.content
+          response
+            .notification
+            .request
+            .content
             .data;
 
         if (
@@ -322,6 +520,48 @@ export function listenToPushNotificationResponses(
     );
 }
 
+/*
+ * ============================================================
+ * LISTENER DRIVER
+ * ============================================================
+ */
+export function listenToDriverNotificationResponses(
+  onDeliveryPressed:
+    (
+      data:
+        DeliveryReadyNotificationData,
+    ) => void,
+): Notifications.EventSubscription {
+  return Notifications
+    .addNotificationResponseReceivedListener(
+      (
+        response,
+      ) => {
+        const data =
+          response
+            .notification
+            .request
+            .content
+            .data;
+
+        if (
+          isDeliveryReadyNotification(
+            data,
+          )
+        ) {
+          onDeliveryPressed(
+            data,
+          );
+        }
+      },
+    );
+}
+
+/*
+ * ============================================================
+ * NOTIFICACIÓN INICIAL
+ * ============================================================
+ */
 export async function getLastPushNotificationResponse():
   Promise<
     Notifications.NotificationResponse | null

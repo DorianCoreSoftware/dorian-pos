@@ -17,3 +17,19 @@ export function canManageCatalog(
     user?.role === 'admin'
   );
 }
+
+export function isDriver(
+  user: UserSession | null,
+): boolean {
+  return (
+    user?.role === 'driver'
+  );
+}
+
+export function canAccessDriverOrders(
+  user: UserSession | null,
+): boolean {
+  return (
+    user?.role === 'driver'
+  );
+}

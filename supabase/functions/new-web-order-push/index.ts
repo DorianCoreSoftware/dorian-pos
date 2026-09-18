@@ -9,20 +9,20 @@ type OrderWebhookPayload = {
   record: {
     id: string;
     order_source:
-      | 'web'
-      | 'pos'
-      | string;
+    | 'web'
+    | 'pos'
+    | string;
     fulfillment_type:
-      | 'pickup'
-      | 'delivery'
-      | string;
+    | 'pickup'
+    | 'delivery'
+    | string;
     total:
-      | number
-      | string
-      | null;
+    | number
+    | string
+    | null;
     status:
-      | string
-      | null;
+    | string
+    | null;
   };
 };
 
@@ -102,7 +102,7 @@ Deno.serve(
     try {
       const payload =
         (await request.json()) as
-          OrderWebhookPayload;
+        OrderWebhookPayload;
 
       const order =
         payload.record;
@@ -110,7 +110,7 @@ Deno.serve(
       if (
         !order ||
         payload.type !==
-          'INSERT'
+        'INSERT'
       ) {
         return new Response(
           JSON.stringify({
@@ -201,6 +201,10 @@ Deno.serve(
           .eq(
             'is_active',
             true,
+          )
+          .eq(
+            'device_type',
+            'pos',
           );
 
       if (devicesError) {

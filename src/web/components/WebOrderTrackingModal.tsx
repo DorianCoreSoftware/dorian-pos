@@ -744,6 +744,12 @@ function buildTrackingSteps(
       },
       {
         key:
+          'ready',
+        label:
+          'Listo para reparto',
+      },
+      {
+        key:
           'on_the_way',
         label:
           'En camino',

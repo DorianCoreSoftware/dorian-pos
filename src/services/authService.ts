@@ -8,6 +8,7 @@ import {
   signOutCurrentUser,
   subscribeToAuthChanges,
 } from '../repositories/AuthRepository';
+import { UserRole } from '../types/auth';
 
 export interface AuthenticatedUser {
   id: string;
@@ -15,7 +16,7 @@ export interface AuthenticatedUser {
 }
 
 export interface UserProfile {
-  role: 'admin' | 'seller';
+  role: UserRole;
   fullName: string;
 }
 
@@ -134,7 +135,9 @@ export async function getUserProfile(
       .trim();
 
     return {
-      role: profile.role,
+      role:
+        profile.role,
+
       fullName,
     };
   } catch (error) {

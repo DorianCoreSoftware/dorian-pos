@@ -64,31 +64,31 @@ import {
 
 interface KitchenProps {
   pendingOrders:
-    KitchenOrder[];
+  KitchenOrder[];
 
   setPendingOrders:
-    React.Dispatch<
-      React.SetStateAction<
-        KitchenOrder[]
-      >
-    >;
+  React.Dispatch<
+    React.SetStateAction<
+      KitchenOrder[]
+    >
+  >;
 
   editingOrderId:
-    string | null;
+  string | null;
 
   setEditingOrderId:
-    React.Dispatch<
-      React.SetStateAction<
-        string | null
-      >
-    >;
+  React.Dispatch<
+    React.SetStateAction<
+      string | null
+    >
+  >;
 
   setCart:
-    React.Dispatch<
-      React.SetStateAction<
-        Cart
-      >
-    >;
+  React.Dispatch<
+    React.SetStateAction<
+      Cart
+    >
+  >;
 
   setActiveTab: (
     tab:
@@ -169,20 +169,20 @@ export function KitchenScreen({
 
             existingPayment
               .paymentMethod ===
-                'cash'
+              'cash'
               ? `Esta orden ya fue pagada en efectivo.\n\nRecibido: $${(
-                  existingPayment
-                    .amountReceived ??
-                  0
-                ).toFixed(
-                  2,
-                )}\nCambio: $${(
-                  existingPayment
-                    .changeAmount ??
-                  0
-                ).toFixed(
-                  2,
-                )}`
+                existingPayment
+                  .amountReceived ??
+                0
+              ).toFixed(
+                2,
+              )}\nCambio: $${(
+                existingPayment
+                  .changeAmount ??
+                0
+              ).toFixed(
+                2,
+              )}`
               : 'Esta orden ya fue pagada con tarjeta.',
 
             [
@@ -399,11 +399,11 @@ export function KitchenScreen({
               order,
             ) =>
               order.id ===
-              orderId
+                orderId
                 ? {
-                    ...order,
-                    status,
-                  }
+                  ...order,
+                  status,
+                }
                 : order,
           ),
       );
@@ -434,22 +434,6 @@ export function KitchenScreen({
           order.status ===
           'preparing'
         ) {
-          if (
-            order.fulfillmentType ===
-            'delivery'
-          ) {
-            await markOrderOnTheWay(
-              order.id,
-            );
-
-            updateOrderInPendingList(
-              order.id,
-              'on_the_way',
-            );
-
-            return;
-          }
-
           await markOrderReady(
             order.id,
           );
@@ -458,6 +442,8 @@ export function KitchenScreen({
             order.id,
             'ready',
           );
+
+          return;
         }
       } catch (error) {
         console.error(
@@ -479,7 +465,7 @@ export function KitchenScreen({
       order: KitchenOrder,
     ): string => {
       switch (
-        order.status
+      order.status
       ) {
         case 'pending':
           return 'PEDIDO RECIBIDO';
@@ -488,7 +474,10 @@ export function KitchenScreen({
           return 'EN PREPARACIÓN';
 
         case 'ready':
-          return 'LISTO PARA RECOGER';
+          return order.fulfillmentType ===
+            'delivery'
+            ? 'LISTO PARA REPARTO'
+            : 'LISTO PARA RECOGER';
 
         case 'on_the_way':
           return 'EN CAMINO';
@@ -523,7 +512,7 @@ export function KitchenScreen({
       ) {
         return order.fulfillmentType ===
           'delivery'
-          ? 'En camino'
+          ? 'Listo para reparto'
           : 'Listo para recoger';
       }
 
@@ -697,17 +686,17 @@ export function KitchenScreen({
           isDeliveryItem
             ? `${product.id}-delivery`
             : [
-                line.product_id,
-                cleanNotes,
-                modifierIdentifier,
-                componentIdentifier,
-              ].join(
-                '-',
-              );
+              line.product_id,
+              cleanNotes,
+              modifierIdentifier,
+              componentIdentifier,
+            ].join(
+              '-',
+            );
 
         const existingItem =
           groupedItems[
-            uniqueItemId
+          uniqueItemId
           ];
 
         if (
@@ -749,111 +738,111 @@ export function KitchenScreen({
             components.length >
               0
               ? components.map(
-                  (
-                    component,
-                  ) => ({
-                    slotId:
-                      component
-                        .slot_id ??
-                      component.id,
+                (
+                  component,
+                ) => ({
+                  slotId:
+                    component
+                      .slot_id ??
+                    component.id,
 
-                    type:
-                      component
-                        .component_type as
-                      | 'burger'
-                      | 'hotdog'
-                      | 'side'
-                      | 'drink',
+                  type:
+                    component
+                      .component_type as
+                    | 'burger'
+                    | 'hotdog'
+                    | 'side'
+                    | 'drink',
 
-                    label:
-                      component.label,
+                  label:
+                    component.label,
 
-                    product:
-                      createProductFromComponent(
-                        component,
-                      ),
+                  product:
+                    createProductFromComponent(
+                      component,
+                    ),
 
-                    quantity:
-                      component.quantity,
+                  quantity:
+                    component.quantity,
 
-                    notes:
+                  notes:
+                    (
+                      component.notes ??
+                      ''
+                    ).trim(),
+
+                  selectedModifiers:
+                    (
+                      component.modifiers ??
+                      []
+                    ).map(
                       (
-                        component.notes ??
-                        ''
-                      ).trim(),
-
-                    selectedModifiers:
-                      (
-                        component.modifiers ??
-                        []
-                      ).map(
-                        (
-                          modifier,
-                        ) => ({
-                          ...modifier,
-                        }),
-                      ),
-                  }),
-                )
+                        modifier,
+                      ) => ({
+                        ...modifier,
+                      }),
+                    ),
+                }),
+              )
               : undefined,
 
           deliveryDetails:
             isDeliveryItem &&
-            order.deliveryDetails
+              order.deliveryDetails
               ? {
-                  customerName:
-                    order
-                      .deliveryDetails
-                      .customerName,
+                customerName:
+                  order
+                    .deliveryDetails
+                    .customerName,
 
-                  phone:
-                    order
-                      .deliveryDetails
-                      .phone,
+                phone:
+                  order
+                    .deliveryDetails
+                    .phone,
 
-                  street:
-                    order
-                      .deliveryDetails
-                      .street,
+                street:
+                  order
+                    .deliveryDetails
+                    .street,
 
-                  exteriorNumber:
-                    order
-                      .deliveryDetails
-                      .exteriorNumber,
+                exteriorNumber:
+                  order
+                    .deliveryDetails
+                    .exteriorNumber,
 
-                  interiorNumber:
-                    order
-                      .deliveryDetails
-                      .interiorNumber ??
-                    '',
+                interiorNumber:
+                  order
+                    .deliveryDetails
+                    .interiorNumber ??
+                  '',
 
-                  neighborhood:
-                    order
-                      .deliveryDetails
-                      .neighborhood,
+                neighborhood:
+                  order
+                    .deliveryDetails
+                    .neighborhood,
 
-                  postalCode:
-                    order
-                      .deliveryDetails
-                      .postalCode ??
-                    '',
+                postalCode:
+                  order
+                    .deliveryDetails
+                    .postalCode ??
+                  '',
 
-                  deliveryReferences:
-                    order
-                      .deliveryDetails
-                      .deliveryReferences ??
-                    '',
+                deliveryReferences:
+                  order
+                    .deliveryDetails
+                    .deliveryReferences ??
+                  '',
 
-                  latitude:
-                    order
-                      .deliveryDetails
-                      .latitude,
+                latitude:
+                  order
+                    .deliveryDetails
+                    .latitude,
 
-                  longitude:
-                    order
-                      .deliveryDetails
-                      .longitude,
-                }
+                longitude:
+                  order
+                    .deliveryDetails
+                    .longitude,
+              }
               : undefined,
         };
       },
@@ -1029,83 +1018,83 @@ export function KitchenScreen({
 
         {modifiers.length >
           0 && (
-          <View
-            style={{
-              paddingLeft:
-                12,
-
-              marginVertical:
-                4,
-            }}
-          >
-            {modifiers.map(
-              (
-                modifier,
-              ) => (
-                <Text
-                  key={
-                    modifier.id
-                  }
-                  style={{
-                    color:
-                      '#FFBF00',
-
-                    fontSize:
-                      13,
-
-                    fontWeight:
-                      '600',
-                  }}
-                >
-                  •{' '}
-                  {modifier.name}
-
-                  {modifier.group_name
-                    ? ` (${modifier.group_name})`
-                    : ''}
-                </Text>
-              ),
-            )}
-          </View>
-        )}
-
-        {components.length >
-          0 && (
-          <View
-            style={{
-              marginTop:
-                5,
-
-              marginBottom:
-                4,
-            }}
-          >
-            <Text
+            <View
               style={{
-                color:
-                  '#AFAFAF',
-
-                fontSize:
-                  12,
-
-                fontWeight:
-                  '700',
-
                 paddingLeft:
                   12,
 
-                textTransform:
-                  'uppercase',
+                marginVertical:
+                  4,
               }}
             >
-              Detalle del combo
-            </Text>
+              {modifiers.map(
+                (
+                  modifier,
+                ) => (
+                  <Text
+                    key={
+                      modifier.id
+                    }
+                    style={{
+                      color:
+                        '#FFBF00',
 
-            {components.map(
-              renderComboComponent,
-            )}
-          </View>
-        )}
+                      fontSize:
+                        13,
+
+                      fontWeight:
+                        '600',
+                    }}
+                  >
+                    •{' '}
+                    {modifier.name}
+
+                    {modifier.group_name
+                      ? ` (${modifier.group_name})`
+                      : ''}
+                  </Text>
+                ),
+              )}
+            </View>
+          )}
+
+        {components.length >
+          0 && (
+            <View
+              style={{
+                marginTop:
+                  5,
+
+                marginBottom:
+                  4,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    '#AFAFAF',
+
+                  fontSize:
+                    12,
+
+                  fontWeight:
+                    '700',
+
+                  paddingLeft:
+                    12,
+
+                  textTransform:
+                    'uppercase',
+                }}
+              >
+                Detalle del combo
+              </Text>
+
+              {components.map(
+                renderComboComponent,
+              )}
+            </View>
+          )}
 
         {line.notes ? (
           <Text
@@ -1127,9 +1116,9 @@ export function KitchenScreen({
   ) => {
     if (
       order.orderSource !==
-        'web' ||
+      'web' ||
       order.fulfillmentType ===
-        'delivery'
+      'delivery'
     ) {
       return null;
     }
@@ -1364,7 +1353,7 @@ export function KitchenScreen({
 
           backgroundColor:
             item.orderSource ===
-            'web'
+              'web'
               ? '#2B250C'
               : '#262626',
 
@@ -1372,7 +1361,7 @@ export function KitchenScreen({
 
           borderColor:
             item.orderSource ===
-            'web'
+              'web'
               ? '#FFB000'
               : '#454545',
 
@@ -1389,7 +1378,7 @@ export function KitchenScreen({
           style={{
             color:
               item.orderSource ===
-              'web'
+                'web'
                 ? '#FFB000'
                 : '#D0D0D0',
 
@@ -1514,9 +1503,9 @@ export function KitchenScreen({
             onPress={() => {
               if (
                 item.status ===
-                  'ready' ||
+                'ready' ||
                 item.status ===
-                  'on_the_way'
+                'on_the_way'
               ) {
                 void handleOpenPayment(
                   item,
@@ -1623,8 +1612,8 @@ export function KitchenScreen({
         totalAmount={
           paymentOrder
             ? Number(
-                paymentOrder.total,
-              )
+              paymentOrder.total,
+            )
             : 0
         }
         isProcessing={

@@ -3,10 +3,13 @@ import {
   Session,
 } from '@supabase/supabase-js';
 
-import { supabase } from '../services/supabase';
+import {
+  supabase,
+} from '../services/supabase';
+import { UserRole } from '../types/auth';
 
 export interface UserProfileRecord {
-  role: 'admin' | 'seller';
+  role: UserRole;
   first_name: string | null;
   last_name: string | null;
 }
@@ -53,7 +56,10 @@ export async function signInWithPassword(
   email: string,
   password: string,
 ): Promise<Session> {
-  const { data, error } =
+  const {
+    data,
+    error,
+  } =
     await supabase.auth.signInWithPassword({
       email,
       password,
@@ -75,16 +81,20 @@ export async function signInWithPassword(
 export async function fetchUserProfileById(
   userId: string,
 ): Promise<UserProfileRecord> {
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from('profiles')
-    .select(
-      `
-        role,
-        first_name,
-        last_name
-      `,
+    .select(`
+      role,
+      first_name,
+      last_name
+    `)
+    .eq(
+      'id',
+      userId,
     )
-    .eq('id', userId)
     .single();
 
   if (error) {
@@ -95,7 +105,9 @@ export async function fetchUserProfileById(
 }
 
 export async function signOutCurrentUser(): Promise<void> {
-  const { error } =
+  const {
+    error,
+  } =
     await supabase.auth.signOut();
 
   if (error) {

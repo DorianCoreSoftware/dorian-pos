@@ -72,6 +72,7 @@ import {
   listenToPushNotificationResponses,
   registerPosPushNotifications,
 } from './src/services/pushNotificationService';
+import { DriverScreen } from './src/screens/driver/DriverScreen';
 
 function MainApp() {
   const {
@@ -741,10 +742,22 @@ function NavigationGateway() {
     );
   }
 
-  return user ? (
+  if (!user) {
+    return (
+      <LoginScreen />
+    );
+  }
+
+  if (
+    user.role === 'driver'
+  ) {
+    return (
+      <DriverScreen />
+    );
+  }
+
+  return (
     <MainApp />
-  ) : (
-    <LoginScreen />
   );
 }
 
