@@ -211,21 +211,27 @@ export class SupabaseComboRepository implements ComboRepository {
 
         const components =
             componentRows.map(
-                component =>
-                    this.mapComponent({
+                component => {
+                    const componentRules =
+                        rulesByComponentId.get(
+                            component.id,
+                        ) ?? [];
+
+                    const categoryProducts =
+                        component.product_category_id
+                            ? productsByCategoryId.get(
+                                component.product_category_id,
+                            ) ?? []
+                            : [];
+
+                    return this.mapComponent({
                         component,
                         productsById,
                         rules:
-                            rulesByComponentId.get(
-                                component.id,
-                            ) ?? [],
-                        categoryProducts:
-                            component.product_category_id
-                                ? productsByCategoryId.get(
-                                    component.product_category_id,
-                                ) ?? []
-                                : [],
-                    }),
+                            componentRules,
+                        categoryProducts,
+                    });
+                },
             );
 
         return {
@@ -498,9 +504,10 @@ export class SupabaseComboRepository implements ComboRepository {
 
         const options =
             component.selection_mode === 'selectable'
-                ? this.applyProductRules(
+                ? this.resolveSelectableOptions(
                     categoryProducts,
-                    mappedRules
+                    productsById,
+                    mappedRules,
                 )
                 : [];
 
@@ -545,6 +552,68 @@ export class SupabaseComboRepository implements ComboRepository {
             rules: mappedRules,
         };
     }
+
+    private resolveSelectableOptions(
+    categoryProducts:
+        ComboProductOption[],
+
+    productsById:
+        Map<
+            string,
+            ComboProductOption
+        >,
+
+    rules:
+        ComboComponentProductRule[],
+): ComboProductOption[] {
+    const allowedRules =
+        rules.filter(
+            rule =>
+                rule.ruleType ===
+                'allowed',
+        );
+
+    /*
+     * Si hay reglas explícitas "allowed",
+     * esas reglas son la fuente de verdad.
+     *
+     * Esto permite usar productos dentro
+     * de un combo aunque is_combo_option
+     * sea false.
+     */
+    if (
+        allowedRules.length > 0
+    ) {
+        return allowedRules
+            .map(
+                rule =>
+                    productsById.get(
+                        rule.productId,
+                    ),
+            )
+            .filter(
+                (
+                    product,
+                ): product is ComboProductOption =>
+                    Boolean(
+                        product,
+                    ) &&
+                    product!.isActive &&
+                    product!.isAvailable,
+            );
+    }
+
+    /*
+     * Si no existen reglas allowed,
+     * seguimos usando los productos
+     * habilitados para combos de la
+     * categoría y aplicamos exclusiones.
+     */
+    return this.applyProductRules(
+        categoryProducts,
+        rules,
+    );
+}
 
     private applyProductRules(
         products: ComboProductOption[],

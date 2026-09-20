@@ -294,6 +294,7 @@ export const COMBO_RECIPES: ComboRecipe[] = [
         'Hamburguesa',
         {
           excludedProductNames: [
+            'Western',
             'Hamburguesa doble',
             'Hamburguesa Kong',
           ],
