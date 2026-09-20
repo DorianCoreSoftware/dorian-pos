@@ -19,10 +19,13 @@ import {
 
 import {
     createModifier,
+    createModifierGroup,
     getAllModifiers,
     getModifierGroups,
     setModifierAvailable,
+    setModifierGroupActive,
     updateModifier,
+    updateModifierGroup,
 } from '../../../services/modifierService';
 
 import {
@@ -51,6 +54,21 @@ const INITIAL_FORM:
     extraPrice: '0',
     groupId: '',
     isAvailable: true,
+};
+
+interface ModifierGroupFormState {
+    name: string;
+    code: string;
+    position: string;
+    isActive: boolean;
+}
+
+const INITIAL_GROUP_FORM:
+    ModifierGroupFormState = {
+    name: '',
+    code: '',
+    position: '1',
+    isActive: true,
 };
 
 interface AdminModifiersProps {
@@ -106,6 +124,30 @@ export function AdminModifiers({
         isModalVisible,
         setIsModalVisible,
     ] = useState(false);
+
+    const [
+        isGroupsModalVisible,
+        setIsGroupsModalVisible,
+    ] = useState(false);
+
+    const [
+        isGroupFormVisible,
+        setIsGroupFormVisible,
+    ] = useState(false);
+
+    const [
+        selectedGroup,
+        setSelectedGroup,
+    ] = useState<ModifierGroupEntity | null>(
+        null,
+    );
+
+    const [
+        groupForm,
+        setGroupForm,
+    ] = useState<ModifierGroupFormState>(
+        INITIAL_GROUP_FORM,
+    );
 
     const [
         isLoading,
@@ -258,6 +300,316 @@ export function AdminModifiers({
             searchText,
             showUnavailable,
         ]);
+
+    const openGroupsModal =
+        (): void => {
+            setSelectedGroup(
+                null,
+            );
+
+            setGroupForm(
+                INITIAL_GROUP_FORM,
+            );
+
+            setIsGroupFormVisible(
+                false,
+            );
+
+            setIsGroupsModalVisible(
+                true,
+            );
+        };
+
+    const closeGroupsModal =
+        (): void => {
+            if (isProcessing) {
+                return;
+            }
+
+            setIsGroupsModalVisible(
+                false,
+            );
+
+            setIsGroupFormVisible(
+                false,
+            );
+
+            setSelectedGroup(
+                null,
+            );
+
+            setGroupForm(
+                INITIAL_GROUP_FORM,
+            );
+        };
+
+    const openCreateGroupForm =
+        (): void => {
+            const nextPosition =
+                groups.length > 0
+                    ? Math.max(
+                        ...groups.map(
+                            group =>
+                                group.position,
+                        ),
+                    ) + 1
+                    : 1;
+
+            setSelectedGroup(
+                null,
+            );
+
+            setGroupForm({
+                ...INITIAL_GROUP_FORM,
+                position:
+                    String(
+                        nextPosition,
+                    ),
+            });
+
+            setIsGroupFormVisible(
+                true,
+            );
+        };
+
+    const openEditGroupForm = (
+        group: ModifierGroupEntity,
+    ): void => {
+            setSelectedGroup(
+                group,
+            );
+
+            setGroupForm({
+                name:
+                    group.name,
+
+                code:
+                    group.code,
+
+                position:
+                    String(
+                        group.position,
+                    ),
+
+                isActive:
+                    group.is_active,
+            });
+
+            setIsGroupFormVisible(
+                true,
+            );
+        };
+
+    const closeGroupForm =
+        (): void => {
+            if (isProcessing) {
+                return;
+            }
+
+            setIsGroupFormVisible(
+                false,
+            );
+
+            setSelectedGroup(
+                null,
+            );
+
+            setGroupForm(
+                INITIAL_GROUP_FORM,
+            );
+        };
+
+    const handleSaveGroup =
+        async (): Promise<void> => {
+            if (isProcessing) {
+                return;
+            }
+
+            const cleanName =
+                groupForm.name.trim();
+
+            const parsedPosition =
+                Number(
+                    groupForm.position,
+                );
+
+            if (!cleanName) {
+                Alert.alert(
+                    'Campo requerido',
+                    'Ingresa el nombre del grupo.',
+                );
+
+                return;
+            }
+
+            if (
+                !Number.isInteger(
+                    parsedPosition,
+                ) ||
+                parsedPosition < 0
+            ) {
+                Alert.alert(
+                    'Posición inválida',
+                    'La posición debe ser un número entero igual o mayor a 0.',
+                );
+
+                return;
+            }
+
+            try {
+                setIsProcessing(
+                    true,
+                );
+
+                if (
+                    selectedGroup
+                ) {
+                    await updateModifierGroup(
+                        selectedGroup.id,
+                        {
+                            name:
+                                cleanName,
+
+                            position:
+                                parsedPosition,
+
+                            isActive:
+                                groupForm.isActive,
+                        },
+                    );
+
+                    Alert.alert(
+                        'Grupo actualizado',
+                        `${cleanName} fue actualizado correctamente.`,
+                    );
+                } else {
+                    const generatedCode =
+                        createGroupCode(
+                            cleanName,
+                        );
+
+                    await createModifierGroup({
+                        name:
+                            cleanName,
+
+                        code:
+                            generatedCode,
+
+                        position:
+                            parsedPosition,
+                    });
+
+                    Alert.alert(
+                        'Grupo creado',
+                        `${cleanName} fue agregado correctamente.`,
+                    );
+                }
+
+                setIsGroupFormVisible(
+                    false,
+                );
+
+                setSelectedGroup(
+                    null,
+                );
+
+                setGroupForm(
+                    INITIAL_GROUP_FORM,
+                );
+
+                await Promise.all([
+                    loadData(),
+                    onModifiersChanged(),
+                ]);
+            } catch (error) {
+                Alert.alert(
+                    'Error',
+                    error instanceof Error
+                        ? error.message
+                        : 'No se pudo guardar el grupo.',
+                );
+            } finally {
+                setIsProcessing(
+                    false,
+                );
+            }
+        };
+
+    const handleToggleGroupActive = (
+        group: ModifierGroupEntity,
+    ): void => {
+            const willActivate =
+                !group.is_active;
+
+            Alert.alert(
+                willActivate
+                    ? 'Activar grupo'
+                    : 'Desactivar grupo',
+
+                willActivate
+                    ? `¿Deseas activar "${group.name}"?`
+                    : `¿Deseas desactivar "${group.name}"? Los modificadores existentes conservarán el grupo, pero ya no podrá seleccionarse al crear o editar modificadores.`,
+
+                [
+                    {
+                        text:
+                            'Cancelar',
+                        style:
+                            'cancel',
+                    },
+                    {
+                        text:
+                            willActivate
+                                ? 'Activar'
+                                : 'Desactivar',
+                        style:
+                            willActivate
+                                ? 'default'
+                                : 'destructive',
+                        onPress:
+                            () => {
+                                void executeToggleGroupActive(
+                                    group,
+                                    willActivate,
+                                );
+                            },
+                    },
+                ],
+            );
+        };
+
+    const executeToggleGroupActive =
+        async (
+            group: ModifierGroupEntity,
+            isActive: boolean,
+        ): Promise<void> => {
+            try {
+                setIsProcessing(
+                    true,
+                );
+
+                await setModifierGroupActive(
+                    group.id,
+                    isActive,
+                );
+
+                await Promise.all([
+                    loadData(),
+                    onModifiersChanged(),
+                ]);
+            } catch (error) {
+                Alert.alert(
+                    'Error',
+                    error instanceof Error
+                        ? error.message
+                        : 'No se pudo cambiar el estado del grupo.',
+                );
+            } finally {
+                setIsProcessing(
+                    false,
+                );
+            }
+        };
 
     const openCreateModal =
         (): void => {
@@ -836,6 +1188,23 @@ export function AdminModifiers({
 
                 <TouchableOpacity
                     style={
+                        styles.manageGroupsButton
+                    }
+                    onPress={
+                        openGroupsModal
+                    }
+                >
+                    <Text
+                        style={
+                            styles.manageGroupsButtonText
+                        }
+                    >
+                        ⚙ Grupos
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={
                         styles.createButton
                     }
                     onPress={
@@ -991,6 +1360,468 @@ export function AdminModifiers({
                     }
                 />
             )}
+
+            <Modal
+                visible={
+                    isGroupsModalVisible
+                }
+                transparent
+                animationType="fade"
+                onRequestClose={
+                    closeGroupsModal
+                }
+            >
+                <View
+                    style={
+                        styles.modalOverlay
+                    }
+                >
+                    <View
+                        style={[
+                            styles.modalContent,
+                            styles.groupsManagerModal,
+                        ]}
+                    >
+                        <View
+                            style={
+                                styles.groupsManagerHeader
+                            }
+                        >
+                            <View
+                                style={
+                                    styles.groupsManagerHeaderText
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.modalTitle
+                                    }
+                                >
+                                    Grupos de modificadores
+                                </Text>
+
+                                <Text
+                                    style={
+                                        styles.groupsManagerSubtitle
+                                    }
+                                >
+                                    Crea, renombra, ordena y activa o desactiva grupos.
+                                </Text>
+                            </View>
+
+                            <TouchableOpacity
+                                style={
+                                    styles.closeIconButton
+                                }
+                                onPress={
+                                    closeGroupsModal
+                                }
+                                disabled={
+                                    isProcessing
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.closeIconText
+                                    }
+                                >
+                                    ✕
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {isGroupFormVisible ? (
+                            <View
+                                style={
+                                    styles.groupEditor
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.groupEditorTitle
+                                    }
+                                >
+                                    {selectedGroup
+                                        ? 'Editar grupo'
+                                        : 'Nuevo grupo'}
+                                </Text>
+
+                                <Text
+                                    style={
+                                        styles.inputLabel
+                                    }
+                                >
+                                    Nombre
+                                </Text>
+
+                                <TextInput
+                                    value={
+                                        groupForm.name
+                                    }
+                                    onChangeText={(
+                                        value,
+                                    ) =>
+                                        setGroupForm(
+                                            current => ({
+                                                ...current,
+                                                name:
+                                                    value,
+                                            }),
+                                        )
+                                    }
+                                    style={
+                                        styles.input
+                                    }
+                                    placeholder="Ej. Toppings"
+                                    placeholderTextColor="#777777"
+                                    editable={
+                                        !isProcessing
+                                    }
+                                />
+
+                                {selectedGroup ? (
+                                    <>
+                                        <Text
+                                            style={
+                                                styles.inputLabel
+                                            }
+                                        >
+                                            Código interno
+                                        </Text>
+
+                                        <TextInput
+                                            value={
+                                                groupForm.code
+                                            }
+                                            style={[
+                                                styles.input,
+                                                styles.readOnlyInput,
+                                            ]}
+                                            editable={
+                                                false
+                                            }
+                                        />
+
+                                        <Text
+                                            style={
+                                                styles.helperText
+                                            }
+                                        >
+                                            El código no se modifica para evitar romper la lógica del sistema.
+                                        </Text>
+                                    </>
+                                ) : null}
+
+                                <Text
+                                    style={
+                                        styles.inputLabel
+                                    }
+                                >
+                                    Posición
+                                </Text>
+
+                                <TextInput
+                                    value={
+                                        groupForm.position
+                                    }
+                                    onChangeText={(
+                                        value,
+                                    ) =>
+                                        setGroupForm(
+                                            current => ({
+                                                ...current,
+                                                position:
+                                                    sanitizeInteger(
+                                                        value,
+                                                    ),
+                                            }),
+                                        )
+                                    }
+                                    style={
+                                        styles.input
+                                    }
+                                    keyboardType="number-pad"
+                                    placeholder="1"
+                                    placeholderTextColor="#777777"
+                                    editable={
+                                        !isProcessing
+                                    }
+                                />
+
+                                {selectedGroup ? (
+                                    <View
+                                        style={
+                                            styles.availableRow
+                                        }
+                                    >
+                                        <View
+                                            style={
+                                                styles.groupStatusTextContainer
+                                            }
+                                        >
+                                            <Text
+                                                style={
+                                                    styles.availableTitle
+                                                }
+                                            >
+                                                Grupo activo
+                                            </Text>
+
+                                            <Text
+                                                style={
+                                                    styles.availableSubtitle
+                                                }
+                                            >
+                                                Los grupos inactivos no aparecen al crear o editar modificadores.
+                                            </Text>
+                                        </View>
+
+                                        <Switch
+                                            value={
+                                                groupForm.isActive
+                                            }
+                                            onValueChange={(
+                                                value,
+                                            ) =>
+                                                setGroupForm(
+                                                    current => ({
+                                                        ...current,
+                                                        isActive:
+                                                            value,
+                                                    }),
+                                                )
+                                            }
+                                        />
+                                    </View>
+                                ) : null}
+
+                                <View
+                                    style={
+                                        styles.modalActions
+                                    }
+                                >
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.modalButton,
+                                            styles.cancelButton,
+                                        ]}
+                                        disabled={
+                                            isProcessing
+                                        }
+                                        onPress={
+                                            closeGroupForm
+                                        }
+                                    >
+                                        <Text
+                                            style={
+                                                styles.cancelButtonText
+                                            }
+                                        >
+                                            Cancelar
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.modalButton,
+                                            styles.saveButton,
+
+                                            isProcessing &&
+                                            styles.buttonDisabled,
+                                        ]}
+                                        disabled={
+                                            isProcessing
+                                        }
+                                        onPress={() => {
+                                            void handleSaveGroup();
+                                        }}
+                                    >
+                                        {isProcessing ? (
+                                            <ActivityIndicator
+                                                size="small"
+                                                color="#171717"
+                                            />
+                                        ) : (
+                                            <Text
+                                                style={
+                                                    styles.saveButtonText
+                                                }
+                                            >
+                                                {selectedGroup
+                                                    ? 'Guardar cambios'
+                                                    : 'Crear grupo'}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ) : (
+                            <>
+                                <TouchableOpacity
+                                    style={
+                                        styles.createGroupButton
+                                    }
+                                    onPress={
+                                        openCreateGroupForm
+                                    }
+                                    disabled={
+                                        isProcessing
+                                    }
+                                >
+                                    <Text
+                                        style={
+                                            styles.createGroupButtonText
+                                        }
+                                    >
+                                        + Nuevo grupo
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <View
+                                    style={
+                                        styles.groupsList
+                                    }
+                                >
+                                    {groups.map(
+                                        group => (
+                                            <View
+                                                key={
+                                                    group.id
+                                                }
+                                                style={[
+                                                    styles.groupManagerCard,
+
+                                                    !group.is_active &&
+                                                    styles.groupManagerCardInactive,
+                                                ]}
+                                            >
+                                                <View
+                                                    style={
+                                                        styles.groupManagerInfo
+                                                    }
+                                                >
+                                                    <View
+                                                        style={
+                                                            styles.groupManagerTitleRow
+                                                        }
+                                                    >
+                                                        <Text
+                                                            style={
+                                                                styles.groupManagerName
+                                                            }
+                                                        >
+                                                            {group.name}
+                                                        </Text>
+
+                                                        <View
+                                                            style={[
+                                                                styles.statusBadge,
+
+                                                                group.is_active
+                                                                    ? styles.statusBadgeActive
+                                                                    : styles.statusBadgeInactive,
+                                                            ]}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.statusText,
+
+                                                                    group.is_active
+                                                                        ? styles.statusTextActive
+                                                                        : styles.statusTextInactive,
+                                                                ]}
+                                                            >
+                                                                {group.is_active
+                                                                    ? 'ACTIVO'
+                                                                    : 'INACTIVO'}
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+
+                                                    <Text
+                                                        style={
+                                                            styles.groupManagerMeta
+                                                        }
+                                                    >
+                                                        Código: {group.code} · Posición: {group.position}
+                                                    </Text>
+                                                </View>
+
+                                                <View
+                                                    style={
+                                                        styles.groupManagerActions
+                                                    }
+                                                >
+                                                    <TouchableOpacity
+                                                        style={
+                                                            styles.editButton
+                                                        }
+                                                        onPress={() =>
+                                                            openEditGroupForm(
+                                                                group,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            isProcessing
+                                                        }
+                                                    >
+                                                        <Text
+                                                            style={
+                                                                styles.editButtonText
+                                                            }
+                                                        >
+                                                            Editar
+                                                        </Text>
+                                                    </TouchableOpacity>
+
+                                                    <TouchableOpacity
+                                                        style={[
+                                                            styles.stateButton,
+
+                                                            group.is_active
+                                                                ? styles.deactivateButton
+                                                                : styles.activateButton,
+                                                        ]}
+                                                        onPress={() =>
+                                                            handleToggleGroupActive(
+                                                                group,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            isProcessing
+                                                        }
+                                                    >
+                                                        <Text
+                                                            style={
+                                                                styles.stateButtonText
+                                                            }
+                                                        >
+                                                            {group.is_active
+                                                                ? 'Desactivar'
+                                                                : 'Activar'}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        ),
+                                    )}
+
+                                    {groups.length ===
+                                    0 ? (
+                                        <Text
+                                            style={
+                                                styles.groupsEmptyText
+                                            }
+                                        >
+                                            No hay grupos registrados.
+                                        </Text>
+                                    ) : null}
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
 
             <Modal
                 visible={
@@ -1285,6 +2116,31 @@ function normalizeText(
         .toLocaleLowerCase(
             'es',
         );
+}
+
+function createGroupCode(
+    value: string,
+): string {
+    return normalizeText(
+        value,
+    )
+        .replace(
+            /[^a-z0-9]+/g,
+            '_',
+        )
+        .replace(
+            /^_+|_+$/g,
+            '',
+        );
+}
+
+function sanitizeInteger(
+    value: string,
+): string {
+    return value.replace(
+        /[^0-9]/g,
+        '',
+    );
 }
 
 function sanitizeMoney(
