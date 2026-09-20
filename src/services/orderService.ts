@@ -238,6 +238,25 @@ function mapOrderToKitchenOrder(
     order.order_delivery_details ??
     null;
 
+  const driverName =
+    [
+      order.profiles?.first_name,
+      order.profiles?.last_name,
+    ]
+      .filter(
+        (
+          value,
+        ): value is string =>
+          Boolean(
+            value?.trim(),
+          ),
+      )
+      .map(
+        value =>
+          value.trim(),
+      )
+      .join(' ');
+
   return {
     id:
       order.id,
@@ -254,73 +273,80 @@ function mapOrderToKitchenOrder(
     fulfillmentType:
       order.fulfillment_type,
 
-    created_at:
-      order.created_at,
-
     customerName:
       order.customer_name,
 
     customerPhone:
       order.customer_phone,
 
+    driverId:
+      order.driver_id,
+
+    driverName:
+      driverName ||
+      null,
+
+    created_at:
+      order.created_at,
+
     deliveryDetails:
       rawDeliveryDetails
         ? {
-          id:
-            rawDeliveryDetails.id,
+            id:
+              rawDeliveryDetails.id,
 
-          orderId:
-            rawDeliveryDetails
-              .order_id,
+            orderId:
+              rawDeliveryDetails
+                .order_id,
 
-          customerName:
-            rawDeliveryDetails
-              .customer_name,
+            customerName:
+              rawDeliveryDetails
+                .customer_name,
 
-          phone:
-            rawDeliveryDetails
-              .phone,
+            phone:
+              rawDeliveryDetails
+                .phone,
 
-          street:
-            rawDeliveryDetails
-              .street,
+            street:
+              rawDeliveryDetails
+                .street,
 
-          exteriorNumber:
-            rawDeliveryDetails
-              .exterior_number,
+            exteriorNumber:
+              rawDeliveryDetails
+                .exterior_number,
 
-          interiorNumber:
-            rawDeliveryDetails
-              .interior_number,
+            interiorNumber:
+              rawDeliveryDetails
+                .interior_number,
 
-          neighborhood:
-            rawDeliveryDetails
-              .neighborhood,
+            neighborhood:
+              rawDeliveryDetails
+                .neighborhood,
 
-          postalCode:
-            rawDeliveryDetails
-              .postal_code,
+            postalCode:
+              rawDeliveryDetails
+                .postal_code,
 
-          deliveryReferences:
-            rawDeliveryDetails
-              .delivery_references,
+            deliveryReferences:
+              rawDeliveryDetails
+                .delivery_references,
 
-          latitude:
-            rawDeliveryDetails
-              .latitude,
+            latitude:
+              rawDeliveryDetails
+                .latitude,
 
-          longitude:
-            rawDeliveryDetails
-              .longitude,
+            longitude:
+              rawDeliveryDetails
+                .longitude,
 
-          createdAt:
-            rawDeliveryDetails
-              .created_at,
+            createdAt:
+              rawDeliveryDetails
+                .created_at,
 
-          updatedAt:
-            rawDeliveryDetails
-              .updated_at,
-        }
+            updatedAt:
+              rawDeliveryDetails
+                .updated_at,
+          }
         : null,
 
     order_items: (
@@ -351,14 +377,14 @@ function mapOrderToKitchenOrder(
         products:
           item.products
             ? {
-              ...item.products,
+                ...item.products,
 
-              price:
-                Number(
-                  item.products
-                    .price,
-                ),
-            }
+                price:
+                  Number(
+                    item.products
+                      .price,
+                  ),
+              }
             : null,
 
         modifiers: (
@@ -366,7 +392,7 @@ function mapOrderToKitchenOrder(
           []
         )
           .map(
-            (relation) =>
+            relation =>
               relation.modifiers,
           )
           .filter(
@@ -418,15 +444,15 @@ function mapOrderToKitchenOrder(
               products:
                 component.products
                   ? {
-                    ...component.products,
+                      ...component.products,
 
-                    price:
-                      Number(
-                        component
-                          .products
-                          .price,
-                      ),
-                  }
+                      price:
+                        Number(
+                          component
+                            .products
+                            .price,
+                        ),
+                    }
                   : null,
 
               modifiers: (
@@ -435,7 +461,7 @@ function mapOrderToKitchenOrder(
                 []
               )
                 .map(
-                  (relation) =>
+                  relation =>
                     relation.modifiers,
                 )
                 .filter(

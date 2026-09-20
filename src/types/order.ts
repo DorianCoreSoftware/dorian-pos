@@ -68,4 +68,12 @@ export interface KitchenOrder {
 
   customerPhone:
   string | null;
+
+  driverId:
+  | string
+  | null;
+
+driverName:
+  | string
+  | null;
 }

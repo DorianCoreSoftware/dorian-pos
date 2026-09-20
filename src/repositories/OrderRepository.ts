@@ -54,6 +54,17 @@ export interface OrderRecord {
   customer_phone:
     string | null;
 
+  driver_id:
+    string | null;
+
+  profiles:
+    | {
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+      }
+    | null;
+
   created_at:
     string;
 }
@@ -289,6 +300,11 @@ export async function fetchPendingOrders(): Promise<
     .from('orders')
     .select(`
       *,
+      profiles:driver_id(
+        id,
+        first_name,
+        last_name
+      ),
       order_delivery_details(
         *
       ),
@@ -341,6 +357,10 @@ export async function fetchOrderById(
       )
       .select(`
         *,
+        profiles:driver_id(
+          id,
+          name
+        ),
         order_delivery_details(
           *
         ),

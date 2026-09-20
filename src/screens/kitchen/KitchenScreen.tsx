@@ -22,7 +22,6 @@ import {
 import {
   cancelOrder,
   deliverOrder,
-  markOrderOnTheWay,
   markOrderReady,
   startPreparingOrder,
 } from '../../services/orderService';
@@ -1325,6 +1324,88 @@ export function KitchenScreen({
       );
     };
 
+  const renderDriverDetails =
+    (
+      order:
+        KitchenOrder,
+    ) => {
+      if (
+        order.fulfillmentType !==
+          'delivery' ||
+        order.status !==
+          'on_the_way' ||
+        !order.driverName
+      ) {
+        return null;
+      }
+
+      return (
+        <View
+          style={{
+            alignSelf:
+              'flex-start',
+
+            backgroundColor:
+              '#182C20',
+
+            borderWidth:
+              1,
+
+            borderColor:
+              '#4CAF50',
+
+            borderRadius:
+              8,
+
+            paddingHorizontal:
+              10,
+
+            paddingVertical:
+              7,
+
+            marginTop:
+              4,
+
+            marginBottom:
+              8,
+          }}
+        >
+          <Text
+            style={{
+              color:
+                '#81C784',
+
+              fontSize:
+                11,
+
+              fontWeight:
+                '800',
+            }}
+          >
+            🛵 REPARTIDOR
+          </Text>
+
+          <Text
+            style={{
+              color:
+                '#FFFFFF',
+
+              fontSize:
+                13,
+
+              fontWeight:
+                '700',
+
+              marginTop:
+                2,
+            }}
+          >
+            {order.driverName}
+          </Text>
+        </View>
+      );
+    };
+
   const renderOrder = ({
     item,
   }: {
@@ -1424,6 +1505,10 @@ export function KitchenScreen({
           )}
         </Text>
       </View>
+
+      {renderDriverDetails(
+        item,
+      )}
 
       <Text style={styles.timeText}>
         Ingresó:{' '}
