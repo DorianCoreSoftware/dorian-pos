@@ -11,6 +11,7 @@ import {
     FlatList,
     Image,
     Modal,
+    ScrollView,
     Switch,
     Text,
     TextInput,
@@ -39,12 +40,30 @@ import {
 } from './AdminProducts.styles';
 import { uploadProductImage } from '../../../services/productImageService';
 
+import {
+    getModifierGroups,
+    ModifierGroupEntity,
+} from '../../../services/modifierService';
+
+import {
+    getProductModifierGroups,
+    saveProductModifierGroups,
+} from '../../../services/productModifierGroupService';
+
 interface ProductFormState {
     name: string;
     description: string;
     price: string;
     categoryId: string;
     isAvailable: boolean;
+}
+
+interface ProductModifierGroupForm {
+    modifierGroupId: string;
+    isRequired: boolean;
+    minSelections: string;
+    maxSelections: string;
+    position: number;
 }
 
 interface AdminProductsProps {
@@ -72,6 +91,21 @@ export function AdminProducts({
         categories,
         setCategories,
     ] = useState<Category[]>([]);
+
+    const [
+        modifierGroups,
+        setModifierGroups,
+    ] = useState<ModifierGroupEntity[]>([]);
+
+    const [
+        productModifierGroups,
+        setProductModifierGroups,
+    ] = useState<ProductModifierGroupForm[]>([]);
+
+    const [
+        isLoadingProductGroups,
+        setIsLoadingProductGroups,
+    ] = useState(false);
 
     const [
         selectedProduct,
@@ -136,9 +170,11 @@ export function AdminProducts({
                     const [
                         loadedProducts,
                         loadedCategories,
+                        loadedModifierGroups,
                     ] = await Promise.all([
                         getAllProducts(),
                         getCategories(),
+                        getModifierGroups(),
                     ]);
 
                     setProducts(
@@ -147,6 +183,10 @@ export function AdminProducts({
 
                     setCategories(
                         loadedCategories,
+                    );
+
+                    setModifierGroups(
+                        loadedModifierGroups,
                     );
                 } catch (error) {
                     console.error(
@@ -216,11 +256,42 @@ export function AdminProducts({
             showInactive,
         ]);
 
+    const visibleModifierGroups =
+        useMemo(
+            () =>
+                modifierGroups
+                    .filter(
+                        group =>
+                            group.is_active ||
+                            productModifierGroups.some(
+                                config =>
+                                    config.modifierGroupId ===
+                                    group.id,
+                            ),
+                    )
+                    .sort(
+                        (
+                            first,
+                            second,
+                        ) =>
+                            first.position -
+                            second.position,
+                    ),
+            [
+                modifierGroups,
+                productModifierGroups,
+            ],
+        );
+
     const openCreateModal =
         (): void => {
             setSelectedProduct(null);
 
             setPendingImage(null);
+
+            setProductModifierGroups(
+                [],
+            );
 
             setForm({
                 ...INITIAL_FORM,
@@ -233,38 +304,94 @@ export function AdminProducts({
             setIsModalVisible(true);
         };
 
-    const openEditModal = (
-        product: Product,
-    ): void => {
-        setSelectedProduct(
-            product,
-        );
+    const openEditModal =
+        async (
+            product: Product,
+        ): Promise<void> => {
+            setSelectedProduct(
+                product,
+            );
 
-        setPendingImage(null);
+            setPendingImage(
+                null,
+            );
 
-        setForm({
-            name:
-                product.name,
+            setForm({
+                name:
+                    product.name,
 
-            description:
-                product.description ??
-                '',
+                description:
+                    product.description ??
+                    '',
 
-            price:
-                String(
-                    product.price,
-                ),
+                price:
+                    String(
+                        product.price,
+                    ),
 
-            categoryId:
-                product.category_id,
+                categoryId:
+                    product.category_id,
 
-            isAvailable:
-                product.is_available !==
-                false,
-        });
+                isAvailable:
+                    product.is_available !==
+                    false,
+            });
 
-        setIsModalVisible(true);
-    };
+            setProductModifierGroups(
+                [],
+            );
+
+            setIsModalVisible(
+                true,
+            );
+
+            try {
+                setIsLoadingProductGroups(
+                    true,
+                );
+
+                const associations =
+                    await getProductModifierGroups(
+                        product.id,
+                    );
+
+                setProductModifierGroups(
+                    associations.map(
+                        association => ({
+                            modifierGroupId:
+                                association.modifierGroupId,
+
+                            isRequired:
+                                association.isRequired,
+
+                            minSelections:
+                                String(
+                                    association.minSelections,
+                                ),
+
+                            maxSelections:
+                                String(
+                                    association.maxSelections,
+                                ),
+
+                            position:
+                                association.position,
+                        }),
+                    ),
+                );
+            } catch (error) {
+                Alert.alert(
+                    'Error',
+                    error instanceof Error
+                        ? error.message
+                        : 'No se pudieron cargar los grupos del producto.',
+                );
+            } finally {
+                setIsLoadingProductGroups(
+                    false,
+                );
+            }
+        };
 
     const closeModal =
         (): void => {
@@ -277,6 +404,10 @@ export function AdminProducts({
             setSelectedProduct(null);
 
             setPendingImage(null);
+
+            setProductModifierGroups(
+                [],
+            );
 
             setForm(
                 INITIAL_FORM,
@@ -359,6 +490,191 @@ export function AdminProducts({
             );
         };
 
+    const toggleModifierGroup = (
+        group:
+            ModifierGroupEntity,
+    ): void => {
+        setProductModifierGroups(
+            current => {
+                const exists =
+                    current.some(
+                        config =>
+                            config.modifierGroupId ===
+                            group.id,
+                    );
+
+                if (exists) {
+                    return current.filter(
+                        config =>
+                            config.modifierGroupId !==
+                            group.id,
+                    );
+                }
+
+                return [
+                    ...current,
+                    {
+                        modifierGroupId:
+                            group.id,
+
+                        isRequired:
+                            false,
+
+                        minSelections:
+                            '0',
+
+                        maxSelections:
+                            '1',
+
+                        position:
+                            group.position,
+                    },
+                ];
+            },
+        );
+    };
+
+    const updateModifierGroupConfig = (
+        modifierGroupId: string,
+        changes:
+            Partial<
+                ProductModifierGroupForm
+            >,
+    ): void => {
+        setProductModifierGroups(
+            current =>
+                current.map(
+                    config =>
+                        config.modifierGroupId ===
+                        modifierGroupId
+                            ? {
+                                ...config,
+                                ...changes,
+                            }
+                            : config,
+                ),
+        );
+    };
+
+    const getValidatedModifierGroups =
+        (): Array<{
+            productId: string;
+            modifierGroupId: string;
+            isRequired: boolean;
+            minSelections: number;
+            maxSelections: number;
+            position: number;
+            isActive: boolean;
+        }> | null => {
+            const result:
+                Array<{
+                    productId: string;
+                    modifierGroupId: string;
+                    isRequired: boolean;
+                    minSelections: number;
+                    maxSelections: number;
+                    position: number;
+                    isActive: boolean;
+                }> = [];
+
+            for (
+                const config of
+                productModifierGroups
+            ) {
+                const minSelections =
+                    Number(
+                        config.minSelections,
+                    );
+
+                const maxSelections =
+                    Number(
+                        config.maxSelections,
+                    );
+
+                const group =
+                    modifierGroups.find(
+                        item =>
+                            item.id ===
+                            config.modifierGroupId,
+                    );
+
+                if (
+                    !Number.isInteger(
+                        minSelections,
+                    ) ||
+                    minSelections < 0
+                ) {
+                    Alert.alert(
+                        'Mínimo inválido',
+                        `Revisa el mínimo de selecciones de "${group?.name ?? 'Grupo'}".`,
+                    );
+
+                    return null;
+                }
+
+                if (
+                    !Number.isInteger(
+                        maxSelections,
+                    ) ||
+                    maxSelections < 1
+                ) {
+                    Alert.alert(
+                        'Máximo inválido',
+                        `Revisa el máximo de selecciones de "${group?.name ?? 'Grupo'}".`,
+                    );
+
+                    return null;
+                }
+
+                if (
+                    maxSelections <
+                    minSelections
+                ) {
+                    Alert.alert(
+                        'Rango inválido',
+                        `El máximo no puede ser menor que el mínimo en "${group?.name ?? 'Grupo'}".`,
+                    );
+
+                    return null;
+                }
+
+                if (
+                    config.isRequired &&
+                    minSelections === 0
+                ) {
+                    Alert.alert(
+                        'Mínimo requerido',
+                        `El grupo "${group?.name ?? 'Grupo'}" está marcado como obligatorio. Usa un mínimo de al menos 1.`,
+                    );
+
+                    return null;
+                }
+
+                result.push({
+                    productId:
+                        '',
+
+                    modifierGroupId:
+                        config.modifierGroupId,
+
+                    isRequired:
+                        config.isRequired,
+
+                    minSelections,
+
+                    maxSelections,
+
+                    position:
+                        config.position,
+
+                    isActive:
+                        true,
+                });
+            }
+
+            return result;
+        };
+
     const handleSave =
         async (): Promise<void> => {
             if (isProcessing) {
@@ -426,6 +742,13 @@ export function AdminProducts({
                 return;
             }
 
+            const validatedGroups =
+                getValidatedModifierGroups();
+
+            if (!validatedGroups) {
+                return;
+            }
+
             try {
                 setIsProcessing(true);
 
@@ -471,6 +794,17 @@ export function AdminProducts({
                         },
                     );
 
+                    await saveProductModifierGroups(
+                        selectedProduct.id,
+                        validatedGroups.map(
+                            group => ({
+                                ...group,
+                                productId:
+                                    selectedProduct.id,
+                            }),
+                        ),
+                    );
+
                     Alert.alert(
                         'Producto actualizado',
                         `${cleanName} fue actualizado correctamente.`,
@@ -509,6 +843,17 @@ export function AdminProducts({
                         );
                     }
 
+                    await saveProductModifierGroups(
+                        createdProduct.id,
+                        validatedGroups.map(
+                            group => ({
+                                ...group,
+                                productId:
+                                    createdProduct.id,
+                            }),
+                        ),
+                    );
+
                     Alert.alert(
                         'Producto creado',
                         `${cleanName} fue agregado al catálogo.`,
@@ -525,6 +870,10 @@ export function AdminProducts({
 
                 setPendingImage(
                     null,
+                );
+
+                setProductModifierGroups(
+                    [],
                 );
 
                 setForm(
@@ -790,11 +1139,11 @@ export function AdminProducts({
                         style={
                             styles.editButton
                         }
-                        onPress={() =>
-                            openEditModal(
+                        onPress={() => {
+                            void openEditModal(
                                 item,
-                            )
-                        }
+                            );
+                        }}
                     >
                         <Text
                             style={
@@ -1097,10 +1446,20 @@ export function AdminProducts({
                     }
                 >
                     <View
-                        style={
-                            styles.modalContent
-                        }
+                        style={[
+                            styles.modalContent,
+                            {
+                                maxHeight:
+                                    '92%',
+                            },
+                        ]}
                     >
+                        <ScrollView
+                            showsVerticalScrollIndicator={
+                                false
+                            }
+                            keyboardShouldPersistTaps="handled"
+                        >
                         <Text
                             style={
                                 styles.modalTitle
@@ -1370,6 +1729,412 @@ export function AdminProducts({
                             )}
                         </View>
 
+                        <View
+                            style={{
+                                marginTop:
+                                    16,
+
+                                padding:
+                                    12,
+
+                                borderRadius:
+                                    10,
+
+                                borderWidth:
+                                    1,
+
+                                borderColor:
+                                    '#3A3A3A',
+
+                                backgroundColor:
+                                    '#202020',
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        '#FFFFFF',
+
+                                    fontSize:
+                                        14,
+
+                                    fontWeight:
+                                        '900',
+
+                                    marginBottom:
+                                        4,
+                                }}
+                            >
+                                Grupos de modificadores
+                            </Text>
+
+                            <Text
+                                style={{
+                                    color:
+                                        '#888888',
+
+                                    fontSize:
+                                        10,
+
+                                    marginBottom:
+                                        10,
+                                }}
+                            >
+                                Selecciona los grupos que este producto utilizará y define sus límites.
+                            </Text>
+
+                            {isLoadingProductGroups ? (
+                                <View
+                                    style={{
+                                        paddingVertical:
+                                            12,
+
+                                        alignItems:
+                                            'center',
+                                    }}
+                                >
+                                    <ActivityIndicator
+                                        size="small"
+                                        color="#FFBF00"
+                                    />
+                                </View>
+                            ) : (
+                                visibleModifierGroups.map(
+                                    group => {
+                                        const config =
+                                            productModifierGroups.find(
+                                                item =>
+                                                    item.modifierGroupId ===
+                                                    group.id,
+                                            );
+
+                                        const selected =
+                                            Boolean(
+                                                config,
+                                            );
+
+                                        return (
+                                            <View
+                                                key={
+                                                    group.id
+                                                }
+                                                style={{
+                                                    marginTop:
+                                                        8,
+
+                                                    padding:
+                                                        10,
+
+                                                    borderRadius:
+                                                        8,
+
+                                                    borderWidth:
+                                                        1,
+
+                                                    borderColor:
+                                                        selected
+                                                            ? '#FFBF00'
+                                                            : '#444444',
+
+                                                    backgroundColor:
+                                                        selected
+                                                            ? '#302800'
+                                                            : '#252525',
+                                                }}
+                                            >
+                                                <TouchableOpacity
+                                                    disabled={
+                                                        isProcessing ||
+                                                        !group.is_active
+                                                    }
+                                                    onPress={() =>
+                                                        toggleModifierGroup(
+                                                            group,
+                                                        )
+                                                    }
+                                                >
+                                                    <View
+                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+
+                                                            alignItems:
+                                                                'center',
+
+                                                            justifyContent:
+                                                                'space-between',
+
+                                                            gap:
+                                                                8,
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{
+                                                                flex:
+                                                                    1,
+                                                            }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    color:
+                                                                        selected
+                                                                            ? '#FFBF00'
+                                                                            : '#FFFFFF',
+
+                                                                    fontSize:
+                                                                        12,
+
+                                                                    fontWeight:
+                                                                        '900',
+                                                                }}
+                                                            >
+                                                                {selected
+                                                                    ? '✓ '
+                                                                    : ''}
+                                                                {group.name}
+                                                            </Text>
+
+                                                            {!group.is_active ? (
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#888888',
+
+                                                                        fontSize:
+                                                                            9,
+
+                                                                        marginTop:
+                                                                            2,
+                                                                    }}
+                                                                >
+                                                                    Grupo inactivo
+                                                                </Text>
+                                                            ) : null}
+                                                        </View>
+                                                    </View>
+                                                </TouchableOpacity>
+
+                                                {config ? (
+                                                    <View
+                                                        style={{
+                                                            marginTop:
+                                                                10,
+
+                                                            gap:
+                                                                8,
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+
+                                                                gap:
+                                                                    8,
+                                                            }}
+                                                        >
+                                                            <View
+                                                                style={{
+                                                                    flex:
+                                                                        1,
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#AAAAAA',
+
+                                                                        fontSize:
+                                                                            10,
+
+                                                                        marginBottom:
+                                                                            4,
+                                                                    }}
+                                                                >
+                                                                    Mínimo
+                                                                </Text>
+
+                                                                <TextInput
+                                                                    value={
+                                                                        config.minSelections
+                                                                    }
+                                                                    onChangeText={(
+                                                                        value,
+                                                                    ) =>
+                                                                        updateModifierGroupConfig(
+                                                                            group.id,
+                                                                            {
+                                                                                minSelections:
+                                                                                    sanitizeInteger(
+                                                                                        value,
+                                                                                    ),
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    style={
+                                                                        styles.input
+                                                                    }
+                                                                    keyboardType="number-pad"
+                                                                    editable={
+                                                                        !isProcessing
+                                                                    }
+                                                                />
+                                                            </View>
+
+                                                            <View
+                                                                style={{
+                                                                    flex:
+                                                                        1,
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#AAAAAA',
+
+                                                                        fontSize:
+                                                                            10,
+
+                                                                        marginBottom:
+                                                                            4,
+                                                                    }}
+                                                                >
+                                                                    Máximo
+                                                                </Text>
+
+                                                                <TextInput
+                                                                    value={
+                                                                        config.maxSelections
+                                                                    }
+                                                                    onChangeText={(
+                                                                        value,
+                                                                    ) =>
+                                                                        updateModifierGroupConfig(
+                                                                            group.id,
+                                                                            {
+                                                                                maxSelections:
+                                                                                    sanitizeInteger(
+                                                                                        value,
+                                                                                    ),
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    style={
+                                                                        styles.input
+                                                                    }
+                                                                    keyboardType="number-pad"
+                                                                    editable={
+                                                                        !isProcessing
+                                                                    }
+                                                                />
+                                                            </View>
+                                                        </View>
+
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+
+                                                                alignItems:
+                                                                    'center',
+
+                                                                justifyContent:
+                                                                    'space-between',
+                                                            }}
+                                                        >
+                                                            <View
+                                                                style={{
+                                                                    flex:
+                                                                        1,
+
+                                                                    paddingRight:
+                                                                        12,
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#FFFFFF',
+
+                                                                        fontSize:
+                                                                            11,
+
+                                                                        fontWeight:
+                                                                            '800',
+                                                                    }}
+                                                                >
+                                                                    Obligatorio
+                                                                </Text>
+
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#777777',
+
+                                                                        fontSize:
+                                                                            9,
+
+                                                                        marginTop:
+                                                                            2,
+                                                                    }}
+                                                                >
+                                                                    El cliente deberá cumplir el mínimo antes de agregarlo.
+                                                                </Text>
+                                                            </View>
+
+                                                            <Switch
+                                                                value={
+                                                                    config.isRequired
+                                                                }
+                                                                onValueChange={(
+                                                                    value,
+                                                                ) => {
+                                                                    updateModifierGroupConfig(
+                                                                        group.id,
+                                                                        {
+                                                                            isRequired:
+                                                                                value,
+
+                                                                            minSelections:
+                                                                                value &&
+                                                                                Number(
+                                                                                    config.minSelections,
+                                                                                ) ===
+                                                                                0
+                                                                                    ? '1'
+                                                                                    : config.minSelections,
+                                                                        },
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </View>
+                                                    </View>
+                                                ) : null}
+                                            </View>
+                                        );
+                                    },
+                                )
+                            )}
+
+                            {visibleModifierGroups.length ===
+                            0 ? (
+                                <Text
+                                    style={{
+                                        color:
+                                            '#777777',
+
+                                        fontSize:
+                                            10,
+
+                                        marginTop:
+                                            6,
+                                    }}
+                                >
+                                    No hay grupos de modificadores disponibles.
+                                </Text>
+                            ) : null}
+                        </View>
+
                         {selectedProduct ? (
                             <View
                                 style={
@@ -1478,6 +2243,7 @@ export function AdminProducts({
                                 )}
                             </TouchableOpacity>
                         </View>
+                        </ScrollView>
                     </View>
                 </View>
             </Modal>
@@ -1503,6 +2269,15 @@ function normalizeText(
         .toLocaleLowerCase(
             'es',
         );
+}
+
+function sanitizeInteger(
+    value: string,
+): string {
+    return value.replace(
+        /[^0-9]/g,
+        '',
+    );
 }
 
 function sanitizeMoney(

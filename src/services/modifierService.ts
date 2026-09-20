@@ -103,6 +103,95 @@ export async function getAvailableModifiers(): Promise<
 }
 
 /**
+ * Obtiene los modificadores disponibles
+ * pertenecientes a un grupo por su ID.
+ *
+ * Esta será la forma principal utilizada
+ * por los grupos asociados a productos.
+ */
+export async function getAvailableModifiersByGroupId(
+  groupId: string,
+): Promise<
+  ModifierWithGroup[]
+> {
+  const cleanGroupId =
+    groupId.trim();
+
+  if (!cleanGroupId) {
+    throw new Error(
+      'El identificador del grupo es obligatorio.',
+    );
+  }
+
+  try {
+    const modifiers =
+      await fetchAvailableModifiers();
+
+    return modifiers.filter(
+      modifier =>
+        modifier.group_id ===
+        cleanGroupId,
+    );
+  } catch (error) {
+    console.error(
+      'Error al obtener modificadores del grupo:',
+      error,
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'No se pudieron obtener los modificadores del grupo.',
+    );
+  }
+}
+
+/**
+ * Obtiene los modificadores disponibles
+ * pertenecientes a un grupo por su código.
+ *
+ * Útil para reglas internas como:
+ * meat, sauce, drink_flavor, ice_cream_flavor.
+ */
+export async function getAvailableModifiersByGroupCode(
+  groupCode: string,
+): Promise<
+  ModifierWithGroup[]
+> {
+  const cleanGroupCode =
+    groupCode.trim();
+
+  if (!cleanGroupCode) {
+    throw new Error(
+      'El código del grupo es obligatorio.',
+    );
+  }
+
+  try {
+    const modifiers =
+      await fetchAvailableModifiers();
+
+    return modifiers.filter(
+      modifier =>
+        modifier.group
+          ?.code ===
+        cleanGroupCode,
+    );
+  } catch (error) {
+    console.error(
+      'Error al obtener modificadores por código de grupo:',
+      error,
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'No se pudieron obtener los modificadores del grupo.',
+    );
+  }
+}
+
+/**
  * Todos los modificadores para administración.
  */
 export async function getAllModifiers(): Promise<
@@ -775,3 +864,5 @@ function normalizeText(
     ''
   );
 }
+
+export { ModifierGroupEntity, ModifierWithGroup };
