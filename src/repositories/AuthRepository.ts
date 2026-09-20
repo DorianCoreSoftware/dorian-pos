@@ -17,6 +17,8 @@ export interface UserProfileRecord {
     string | null;
   last_name:
     string | null;
+  is_active:
+    boolean;
 }
 
 export interface AuthSubscription {
@@ -208,7 +210,8 @@ export async function fetchUserProfileById(
       .select(`
         role,
         first_name,
-        last_name
+        last_name,
+        is_active
       `)
       .eq(
         'id',

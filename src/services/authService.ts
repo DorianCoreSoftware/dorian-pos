@@ -23,6 +23,7 @@ export interface AuthenticatedUser {
 export interface UserProfile {
   role: UserRole;
   fullName: string;
+  isActive: boolean;
 }
 
 export interface AuthState {
@@ -194,6 +195,10 @@ export async function getUserProfile(
         profile.role,
 
       fullName,
+
+      isActive:
+        profile.is_active !==
+        false,
     };
   } catch (error) {
     console.error(

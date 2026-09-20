@@ -14,7 +14,10 @@ import {
   listenToAuthChanges,
   signOut,
 } from '../services/authService';
-import { UserRole } from '../types/auth';
+
+import {
+  UserRole,
+} from '../types/auth';
 
 export interface UserSession {
   id: string;
@@ -24,9 +27,14 @@ export interface UserSession {
 }
 
 interface AuthContextType {
-  user: UserSession | null;
-  loading: boolean;
-  logout: () => Promise<void>;
+  user:
+    UserSession | null;
+
+  loading:
+    boolean;
+
+  logout:
+    () => Promise<void>;
 }
 
 const AuthContext =
@@ -37,7 +45,8 @@ const AuthContext =
   );
 
 interface AuthProviderProps {
-  children: React.ReactNode;
+  children:
+    React.ReactNode;
 }
 
 export const AuthProvider:
@@ -61,15 +70,6 @@ export const AuthProvider:
     const isMountedRef =
       useRef(true);
 
-    /*
-     * Cada sincronización recibe un
-     * identificador.
-     *
-     * Si una operación más nueva comienza
-     * antes de que termine la anterior,
-     * la anterior ya no puede modificar
-     * el estado.
-     */
     const syncIdRef =
       useRef(0);
 
@@ -90,7 +90,9 @@ export const AuthProvider:
               syncId ===
                 syncIdRef.current
             ) {
-              setUser(null);
+              setUser(
+                null,
+              );
             }
 
             return;
@@ -107,6 +109,24 @@ export const AuthProvider:
               syncId !==
                 syncIdRef.current
             ) {
+              return;
+            }
+
+            if (
+              !profile.isActive
+            ) {
+              await signOut();
+
+              if (
+                isMountedRef.current &&
+                syncId ===
+                  syncIdRef.current
+              ) {
+                setUser(
+                  null,
+                );
+              }
+
               return;
             }
 
@@ -134,7 +154,9 @@ export const AuthProvider:
               syncId ===
                 syncIdRef.current
             ) {
-              setUser(null);
+              setUser(
+                null,
+              );
             }
           }
         },
@@ -145,39 +167,39 @@ export const AuthProvider:
       isMountedRef.current =
         true;
 
-      /*
-       * El listener se registra primero
-       * para no perder ningún cambio de
-       * sesión que ocurra durante la
-       * inicialización.
-       */
       const subscription =
         listenToAuthChanges(
           ({
             user:
               authenticatedUser,
           }) => {
-            void (async () => {
-              if (
-                !isMountedRef.current
-              ) {
-                return;
-              }
-
-              setLoading(true);
-
-              try {
-                await syncAuthenticatedUser(
-                  authenticatedUser,
-                );
-              } finally {
+            void (
+              async () => {
                 if (
-                  isMountedRef.current
+                  !isMountedRef.current
                 ) {
-                  setLoading(false);
+                  return;
+                }
+
+                setLoading(
+                  true,
+                );
+
+                try {
+                  await syncAuthenticatedUser(
+                    authenticatedUser,
+                  );
+                } finally {
+                  if (
+                    isMountedRef.current
+                  ) {
+                    setLoading(
+                      false,
+                    );
+                  }
                 }
               }
-            })();
+            )();
           },
         );
 
@@ -205,13 +227,17 @@ export const AuthProvider:
             if (
               isMountedRef.current
             ) {
-              setUser(null);
+              setUser(
+                null,
+              );
             }
           } finally {
             if (
               isMountedRef.current
             ) {
-              setLoading(false);
+              setLoading(
+                false,
+              );
             }
           }
         };
@@ -222,11 +248,8 @@ export const AuthProvider:
         isMountedRef.current =
           false;
 
-        /*
-         * Invalida cualquier operación
-         * async pendiente.
-         */
-        syncIdRef.current += 1;
+        syncIdRef.current +=
+          1;
 
         subscription.unsubscribe();
       };
@@ -237,21 +260,21 @@ export const AuthProvider:
     const logout =
       async (): Promise<void> => {
         try {
-          setLoading(true);
+          setLoading(
+            true,
+          );
 
-          /*
-           * Invalida cualquier carga de
-           * perfil que pudiera seguir
-           * pendiente.
-           */
-          syncIdRef.current += 1;
+          syncIdRef.current +=
+            1;
 
           await signOut();
 
           if (
             isMountedRef.current
           ) {
-            setUser(null);
+            setUser(
+              null,
+            );
           }
         } catch (error) {
           console.error(
@@ -264,7 +287,9 @@ export const AuthProvider:
           if (
             isMountedRef.current
           ) {
-            setLoading(false);
+            setLoading(
+              false,
+            );
           }
         }
       };
@@ -285,9 +310,13 @@ export const AuthProvider:
 export function useAuth():
   AuthContextType {
   const context =
-    useContext(AuthContext);
+    useContext(
+      AuthContext,
+    );
 
-  if (!context) {
+  if (
+    !context
+  ) {
     throw new Error(
       'useAuth debe usarse dentro de un AuthProvider',
     );

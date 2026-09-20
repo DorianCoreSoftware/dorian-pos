@@ -1,3 +1,5 @@
+import 'expo-sqlite/localStorage/install';
+
 import {
   useCallback,
   useEffect,
@@ -23,7 +25,6 @@ const ACTIVE_USER_KEY =
 
 interface UseSessionInactivityParams {
   userId: string | null;
-
   logout: () => Promise<void>;
 }
 
@@ -43,24 +44,26 @@ export function useSessionInactivity({
       const now =
         Date.now().toString();
 
-      localStorage.setItem(
+      globalThis.localStorage.setItem(
         LAST_ACTIVITY_KEY,
         now,
       );
 
-      localStorage.setItem(
+      globalThis.localStorage.setItem(
         ACTIVE_USER_KEY,
         userId,
       );
-    }, [userId]);
+    }, [
+      userId,
+    ]);
 
   const clearActivity =
     useCallback((): void => {
-      localStorage.removeItem(
+      globalThis.localStorage.removeItem(
         LAST_ACTIVITY_KEY,
       );
 
-      localStorage.removeItem(
+      globalThis.localStorage.removeItem(
         ACTIVE_USER_KEY,
       );
     }, []);
@@ -76,26 +79,21 @@ export function useSessionInactivity({
         }
 
         const storedUserId =
-          localStorage.getItem(
+          globalThis.localStorage.getItem(
             ACTIVE_USER_KEY,
           );
 
         const lastActivityValue =
-          localStorage.getItem(
+          globalThis.localStorage.getItem(
             LAST_ACTIVITY_KEY,
           );
 
-        /*
-         * Si es otro usuario o no existe
-         * actividad previa, iniciamos una
-         * nueva sesión de actividad.
-         */
         if (
-          storedUserId !== userId ||
+          storedUserId !==
+            userId ||
           !lastActivityValue
         ) {
           registerActivity();
-
           return;
         }
 
@@ -110,7 +108,6 @@ export function useSessionInactivity({
           )
         ) {
           registerActivity();
-
           return;
         }
 
@@ -138,11 +135,6 @@ export function useSessionInactivity({
             error,
           );
 
-          /*
-           * Permitimos otro intento si
-           * Supabase no pudo cerrar
-           * correctamente la sesión.
-           */
           isLoggingOutRef.current =
             false;
         }
@@ -160,16 +152,19 @@ export function useSessionInactivity({
       isLoggingOutRef.current =
         false;
 
+      clearActivity();
+
       return;
     }
 
     const storedUserId =
-      localStorage.getItem(
+      globalThis.localStorage.getItem(
         ACTIVE_USER_KEY,
       );
 
     if (
-      storedUserId !== userId
+      storedUserId !==
+      userId
     ) {
       registerActivity();
     }
@@ -188,13 +183,9 @@ export function useSessionInactivity({
           nextState:
             AppStateStatus,
         ) => {
-          /*
-           * Al volver del background,
-           * comprobamos cuánto tiempo
-           * pasó realmente.
-           */
           if (
-            nextState === 'active'
+            nextState ===
+            'active'
           ) {
             void checkInactivity();
           }
@@ -212,6 +203,7 @@ export function useSessionInactivity({
     userId,
     checkInactivity,
     registerActivity,
+    clearActivity,
   ]);
 
   return {

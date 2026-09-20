@@ -63,6 +63,10 @@ import {
 } from './src/hooks/useSessionInactivity';
 
 import {
+  useAccountStatus,
+} from './src/hooks/useAccountStatus';
+
+import {
   AdminScreen,
 } from './src/screens/admin/AdminScreen';
 
@@ -79,15 +83,6 @@ function MainApp() {
     user,
     logout,
   } = useAuth();
-
-  const {
-    registerActivity,
-  } = useSessionInactivity({
-    userId:
-      user?.id ?? null,
-
-    logout,
-  });
 
   const [
     activeTab,
@@ -686,9 +681,6 @@ function MainApp() {
       style={
         styles.mainContainer
       }
-      onTouchStart={
-        registerActivity
-      }
     >
       <GlobalHeader
         activeTab={
@@ -716,7 +708,24 @@ function NavigationGateway() {
   const {
     user,
     loading,
+    logout,
   } = useAuth();
+
+  const {
+    registerActivity,
+  } = useSessionInactivity({
+    userId:
+      user?.id ?? null,
+
+    logout,
+  });
+
+  useAccountStatus({
+    userId:
+      user?.id ?? null,
+
+    logout,
+  });
 
   if (loading) {
     return (
@@ -748,16 +757,22 @@ function NavigationGateway() {
     );
   }
 
-  if (
-    user.role === 'driver'
-  ) {
-    return (
-      <DriverScreen />
-    );
-  }
-
   return (
-    <MainApp />
+    <View
+      style={{
+        flex: 1,
+      }}
+      onTouchStart={
+        registerActivity
+      }
+    >
+      {user.role ===
+      'driver' ? (
+        <DriverScreen />
+      ) : (
+        <MainApp />
+      )}
+    </View>
   );
 }
 
