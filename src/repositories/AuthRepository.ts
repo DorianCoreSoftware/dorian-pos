@@ -6,27 +6,44 @@ import {
 import {
   supabase,
 } from '../services/supabase';
-import { UserRole } from '../types/auth';
+
+import {
+  UserRole,
+} from '../types/auth';
 
 export interface UserProfileRecord {
   role: UserRole;
-  first_name: string | null;
-  last_name: string | null;
+  first_name:
+    string | null;
+  last_name:
+    string | null;
 }
 
 export interface AuthSubscription {
-  unsubscribe: () => void;
+  unsubscribe:
+    () => void;
+}
+
+interface LoginByIdentifierResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  error?: string;
 }
 
 export async function getCurrentSession(): Promise<
   Session | null
 > {
   const {
-    data: { session },
+    data: {
+      session,
+    },
     error,
-  } = await supabase.auth.getSession();
+  } =
+    await supabase.auth.getSession();
 
-  if (error) {
+  if (
+    error
+  ) {
     throw error;
   }
 
@@ -35,15 +52,21 @@ export async function getCurrentSession(): Promise<
 
 export function subscribeToAuthChanges(
   callback: (
-    event: AuthChangeEvent,
-    session: Session | null,
+    event:
+      AuthChangeEvent,
+
+    session:
+      Session | null,
   ) => void,
 ): AuthSubscription {
   const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange(
-    callback,
-  );
+    data: {
+      subscription,
+    },
+  } =
+    supabase.auth.onAuthStateChange(
+      callback,
+    );
 
   return {
     unsubscribe: () => {
@@ -52,9 +75,97 @@ export function subscribeToAuthChanges(
   };
 }
 
+export async function signInWithIdentifierCredentials(
+  identifier:
+    string,
+
+  password:
+    string,
+): Promise<Session> {
+  const {
+    data,
+    error,
+  } =
+    await supabase.functions.invoke(
+      'login-by-identifier',
+      {
+        body: {
+          identifier,
+          password,
+        },
+      },
+    );
+
+  if (
+    error
+  ) {
+    throw new Error(
+      error.message,
+    );
+  }
+
+  const response =
+    data as
+      LoginByIdentifierResponse;
+
+  if (
+    response.error
+  ) {
+    throw new Error(
+      response.error,
+    );
+  }
+
+  if (
+    !response.accessToken ||
+    !response.refreshToken
+  ) {
+    throw new Error(
+      'No se recibió una sesión válida.',
+    );
+  }
+
+  const {
+    data:
+      sessionData,
+    error:
+      setSessionError,
+  } =
+    await supabase.auth.setSession({
+      access_token:
+        response.accessToken,
+
+      refresh_token:
+        response.refreshToken,
+    });
+
+  if (
+    setSessionError
+  ) {
+    throw setSessionError;
+  }
+
+  if (
+    !sessionData.session
+  ) {
+    throw new Error(
+      'No se pudo crear la sesión.',
+    );
+  }
+
+  return sessionData.session;
+}
+
+/**
+ * Se conserva para cualquier flujo que todavía
+ * necesite autenticación directa por correo.
+ */
 export async function signInWithPassword(
-  email: string,
-  password: string,
+  email:
+    string,
+
+  password:
+    string,
 ): Promise<Session> {
   const {
     data,
@@ -65,11 +176,15 @@ export async function signInWithPassword(
       password,
     });
 
-  if (error) {
+  if (
+    error
+  ) {
     throw error;
   }
 
-  if (!data.session) {
+  if (
+    !data.session
+  ) {
     throw new Error(
       'No se pudo crear la sesión.',
     );
@@ -79,29 +194,36 @@ export async function signInWithPassword(
 }
 
 export async function fetchUserProfileById(
-  userId: string,
+  userId:
+    string,
 ): Promise<UserProfileRecord> {
   const {
     data,
     error,
-  } = await supabase
-    .from('profiles')
-    .select(`
-      role,
-      first_name,
-      last_name
-    `)
-    .eq(
-      'id',
-      userId,
-    )
-    .single();
+  } =
+    await supabase
+      .from(
+        'profiles',
+      )
+      .select(`
+        role,
+        first_name,
+        last_name
+      `)
+      .eq(
+        'id',
+        userId,
+      )
+      .single();
 
-  if (error) {
+  if (
+    error
+  ) {
     throw error;
   }
 
-  return data as UserProfileRecord;
+  return data as
+    UserProfileRecord;
 }
 
 export async function signOutCurrentUser(): Promise<void> {
@@ -110,7 +232,9 @@ export async function signOutCurrentUser(): Promise<void> {
   } =
     await supabase.auth.signOut();
 
-  if (error) {
+  if (
+    error
+  ) {
     throw error;
   }
 }

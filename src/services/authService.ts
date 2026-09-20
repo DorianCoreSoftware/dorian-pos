@@ -1,14 +1,19 @@
-import { Session } from '@supabase/supabase-js';
+import {
+  Session,
+} from '@supabase/supabase-js';
 
 import {
   AuthSubscription,
   fetchUserProfileById,
   getCurrentSession,
-  signInWithPassword,
+  signInWithIdentifierCredentials,
   signOutCurrentUser,
   subscribeToAuthChanges,
 } from '../repositories/AuthRepository';
-import { UserRole } from '../types/auth';
+
+import {
+  UserRole,
+} from '../types/auth';
 
 export interface AuthenticatedUser {
   id: string;
@@ -21,19 +26,27 @@ export interface UserProfile {
 }
 
 export interface AuthState {
-  user: AuthenticatedUser | null;
+  user:
+    AuthenticatedUser | null;
 }
 
 function mapSessionUser(
-  session: Session | null,
+  session:
+    Session | null,
 ): AuthenticatedUser | null {
-  if (!session?.user) {
+  if (
+    !session?.user
+  ) {
     return null;
   }
 
   return {
-    id: session.user.id,
-    email: session.user.email ?? '',
+    id:
+      session.user.id,
+
+    email:
+      session.user.email ??
+      '',
   };
 }
 
@@ -44,7 +57,9 @@ export async function getActiveUser(): Promise<
     const session =
       await getCurrentSession();
 
-    return mapSessionUser(session);
+    return mapSessionUser(
+      session,
+    );
   } catch (error) {
     console.error(
       'Error al recuperar la sesión activa:',
@@ -59,32 +74,48 @@ export async function getActiveUser(): Promise<
 
 export function listenToAuthChanges(
   callback: (
-    authState: AuthState,
+    authState:
+      AuthState,
   ) => void,
 ): AuthSubscription {
   return subscribeToAuthChanges(
-    (_event, session) => {
+    (
+      _event,
+      session,
+    ) => {
       callback({
-        user: mapSessionUser(session),
+        user:
+          mapSessionUser(
+            session,
+          ),
       });
     },
   );
 }
 
-export async function signInWithEmail(
-  email: string,
-  password: string,
-): Promise<AuthenticatedUser> {
-  const cleanEmail =
-    email.trim().toLowerCase();
+export async function signInWithIdentifier(
+  identifier:
+    string,
 
-  if (!cleanEmail) {
+  password:
+    string,
+): Promise<AuthenticatedUser> {
+  const cleanIdentifier =
+    identifier
+      .trim()
+      .toLowerCase();
+
+  if (
+    !cleanIdentifier
+  ) {
     throw new Error(
-      'El correo electrónico es obligatorio.',
+      'El correo o usuario es obligatorio.',
     );
   }
 
-  if (!password) {
+  if (
+    !password
+  ) {
     throw new Error(
       'La contraseña es obligatoria.',
     );
@@ -92,15 +123,19 @@ export async function signInWithEmail(
 
   try {
     const session =
-      await signInWithPassword(
-        cleanEmail,
+      await signInWithIdentifierCredentials(
+        cleanIdentifier,
         password,
       );
 
     const user =
-      mapSessionUser(session);
+      mapSessionUser(
+        session,
+      );
 
-    if (!user) {
+    if (
+      !user
+    ) {
       throw new Error(
         'No se pudo obtener el usuario autenticado.',
       );
@@ -117,8 +152,26 @@ export async function signInWithEmail(
   }
 }
 
+/**
+ * Alias temporal para no romper otros imports
+ * existentes mientras migramos el login.
+ */
+export async function signInWithEmail(
+  email:
+    string,
+
+  password:
+    string,
+): Promise<AuthenticatedUser> {
+  return signInWithIdentifier(
+    email,
+    password,
+  );
+}
+
 export async function getUserProfile(
-  userId: string,
+  userId:
+    string,
 ): Promise<UserProfile> {
   try {
     const profile =
@@ -130,7 +183,9 @@ export async function getUserProfile(
       profile.first_name,
       profile.last_name,
     ]
-      .filter(Boolean)
+      .filter(
+        Boolean,
+      )
       .join(' ')
       .trim();
 

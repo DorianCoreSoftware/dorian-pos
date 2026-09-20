@@ -42,14 +42,22 @@ import {
 } from '../../components/admin/feedback/AdminFeedback';
 
 import {
+  AdminDeliverySettings,
+} from '../../components/admin/delivery/AdminDeliverySettings';
+
+import {
+  AdminUsers,
+} from '../../components/admin/users/AdminUsers';
+
+import {
   styles,
 } from './AdminScreen.styles';
-import { AdminDeliverySettings } from '../../components/admin/delivery/AdminDeliverySettings';
 
 type AdminSection =
   | 'products'
   | 'categories'
   | 'modifiers'
+  | 'users'
   | 'reports'
   | 'printer'
   | 'promotions'
@@ -128,6 +136,15 @@ export function AdminScreen({
               onModifiersChanged
             }
           />
+        );
+      }
+
+      if (
+        activeSection ===
+        'users'
+      ) {
+        return (
+          <AdminUsers />
         );
       }
 
@@ -281,6 +298,11 @@ export function AdminScreen({
         {renderTab(
           'modifiers',
           'MODIFICADORES',
+        )}
+
+        {renderTab(
+          'users',
+          'USUARIOS',
         )}
 
         {renderTab(

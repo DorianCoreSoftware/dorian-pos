@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-
 import {
   ActivityIndicator,
   Alert,
@@ -11,47 +9,73 @@ import {
   View,
 } from 'react-native';
 
-import { signInWithEmail } from '../../services/authService';
-import { styles } from './Login.styles';
+import {
+  signInWithIdentifier,
+} from '../../services/authService';
+
+import {
+  styles,
+} from './Login.styles';
+import { useState } from 'react';
 
 export const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [
+    identifier,
+    setIdentifier,
+  ] = useState('');
 
-  const handleLogin = async (): Promise<void> => {
-    const cleanEmail = email.trim();
+  const [
+    password,
+    setPassword,
+  ] = useState('');
 
-    if (!cleanEmail || !password.trim()) {
-      Alert.alert(
-        'Campos incompletos',
-        'Por favor ingresa tu correo y contraseña.',
-      );
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
 
-      return;
-    }
+  const handleLogin =
+    async (): Promise<void> => {
+      const cleanIdentifier =
+        identifier.trim();
 
-    try {
-      setIsLoading(true);
+      if (
+        !cleanIdentifier ||
+        !password.trim()
+      ) {
+        Alert.alert(
+          'Campos incompletos',
+          'Por favor ingresa tu correo o usuario y contraseña.',
+        );
 
-      await signInWithEmail(
-        cleanEmail,
-        password,
-      );
-    } catch (error) {
-      console.error(
-        'Error en Login:',
-        error,
-      );
+        return;
+      }
 
-      Alert.alert(
-        'Error de acceso',
-        'El correo o contraseña son incorrectos.',
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      try {
+        setIsLoading(
+          true,
+        );
+
+        await signInWithIdentifier(
+          cleanIdentifier,
+          password,
+        );
+      } catch (error) {
+        console.error(
+          'Error en Login:',
+          error,
+        );
+
+        Alert.alert(
+          'Error de acceso',
+          'El usuario, correo o contraseña son incorrectos.',
+        );
+      } finally {
+        setIsLoading(
+          false,
+        );
+      }
+    };
 
   return (
     <KeyboardAvoidingView
@@ -60,54 +84,98 @@ export const LoginScreen = () => {
           ? 'padding'
           : 'height'
       }
-      style={styles.container}
+      style={
+        styles.container
+      }
     >
-      <View style={styles.card}>
-        <Text style={styles.logo}>
+      <View
+        style={
+          styles.card
+        }
+      >
+        <Text
+          style={
+            styles.logo
+          }
+        >
           Burger Kong
         </Text>
 
-        <Text style={styles.subtitle}>
+        <Text
+          style={
+            styles.subtitle
+          }
+        >
           Panel de Control & Comandas
         </Text>
 
         <TextInput
-          style={styles.input}
-          placeholder="Correo Electrónico"
+          style={
+            styles.input
+          }
+          placeholder="Correo o usuario"
           placeholderTextColor="#888"
-          value={email}
-          onChangeText={setEmail}
+          value={
+            identifier
+          }
+          onChangeText={
+            setIdentifier
+          }
           autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          editable={!isLoading}
+          autoCorrect={
+            false
+          }
+          editable={
+            !isLoading
+          }
+          returnKeyType="next"
         />
 
         <TextInput
-          style={styles.input}
+          style={
+            styles.input
+          }
           placeholder="Contraseña"
           placeholderTextColor="#888"
-          value={password}
-          onChangeText={setPassword}
+          value={
+            password
+          }
+          onChangeText={
+            setPassword
+          }
           secureTextEntry
           autoCapitalize="none"
-          autoCorrect={false}
-          editable={!isLoading}
+          autoCorrect={
+            false
+          }
+          editable={
+            !isLoading
+          }
+          returnKeyType="done"
           onSubmitEditing={() => {
             void handleLogin();
           }}
         />
 
         <TouchableOpacity
-          style={styles.button}
+          style={[
+            styles.button,
+
+            isLoading && {
+              opacity:
+                0.65,
+            },
+          ]}
           onPress={() => {
             void handleLogin();
           }}
-          disabled={isLoading}
+          disabled={
+            isLoading
+          }
         >
           {isLoading ? (
             <ActivityIndicator
-              color="#fff"
+              color="#121212"
             />
           ) : (
             <Text
