@@ -20,16 +20,14 @@ import {
 import {
     createModifier,
     getAllModifiers,
+    getModifierGroups,
     setModifierAvailable,
     updateModifier,
 } from '../../../services/modifierService';
 
 import {
-    Modifier,
-} from '../../../types';
-
-import {
-    ModifierGroup,
+    ModifierGroupEntity,
+    ModifierWithGroup,
 } from '../../../repositories/ModifierRepository';
 
 import {
@@ -38,14 +36,12 @@ import {
 
 type ModifierFilter =
     | 'all'
-    | 'Carne'
-    | 'Salsa'
-    | 'Sabor';
+    | string;
 
 interface ModifierFormState {
     name: string;
     extraPrice: string;
-    groupName: ModifierGroup;
+    groupId: string;
     isAvailable: boolean;
 }
 
@@ -53,7 +49,7 @@ const INITIAL_FORM:
     ModifierFormState = {
     name: '',
     extraPrice: '0',
-    groupName: 'Carne',
+    groupId: '',
     isAvailable: true,
 };
 
@@ -68,12 +64,17 @@ export function AdminModifiers({
     const [
         modifiers,
         setModifiers,
-    ] = useState<Modifier[]>([]);
+    ] = useState<ModifierWithGroup[]>([]);
+
+    const [
+        groups,
+        setGroups,
+    ] = useState<ModifierGroupEntity[]>([]);
 
     const [
         selectedModifier,
         setSelectedModifier,
-    ] = useState<Modifier | null>(
+    ] = useState<ModifierWithGroup | null>(
         null,
     );
 
@@ -130,11 +131,21 @@ export function AdminModifiers({
                     setIsLoading(true);
                     setErrorMessage(null);
 
-                    const data =
-                        await getAllModifiers();
+                    const [
+                        modifierData,
+                        groupData,
+                    ] =
+                        await Promise.all([
+                            getAllModifiers(),
+                            getModifierGroups(),
+                        ]);
 
                     setModifiers(
-                        data,
+                        modifierData,
+                    );
+
+                    setGroups(
+                        groupData,
                     );
                 } catch (error) {
                     console.error(
@@ -158,6 +169,16 @@ export function AdminModifiers({
         void loadData();
     }, [loadData]);
 
+    const activeGroups =
+        useMemo(
+            () =>
+                groups.filter(
+                    group =>
+                        group.is_active,
+                ),
+            [groups],
+        );
+
     const visibleModifiers =
         useMemo(() => {
             const normalizedSearch =
@@ -179,7 +200,7 @@ export function AdminModifiers({
                         if (
                             activeFilter !==
                             'all' &&
-                            modifier.group_name !==
+                            modifier.group_id !==
                             activeFilter
                         ) {
                             return false;
@@ -201,27 +222,24 @@ export function AdminModifiers({
                         modifierA,
                         modifierB,
                     ) => {
-                        const groupComparison =
-                            String(
-                                modifierA.group_name ??
-                                '',
-                            ).localeCompare(
-                                String(
-                                    modifierB.group_name ??
-                                    '',
-                                ),
-                                'es',
-                                {
-                                    sensitivity:
-                                        'base',
-                                },
-                            );
+                        const groupPositionA =
+                            modifierA.group
+                                ?.position ??
+                            Number.MAX_SAFE_INTEGER;
+
+                        const groupPositionB =
+                            modifierB.group
+                                ?.position ??
+                            Number.MAX_SAFE_INTEGER;
 
                         if (
-                            groupComparison !==
-                            0
+                            groupPositionA !==
+                            groupPositionB
                         ) {
-                            return groupComparison;
+                            return (
+                                groupPositionA -
+                                groupPositionB
+                            );
                         }
 
                         return modifierA.name.localeCompare(
@@ -247,9 +265,24 @@ export function AdminModifiers({
                 null,
             );
 
-            setForm(
-                INITIAL_FORM,
-            );
+            const defaultGroup =
+                activeGroups[0] ??
+                null;
+
+            if (!defaultGroup) {
+                Alert.alert(
+                    'Sin grupos disponibles',
+                    'Activa o crea un grupo de modificadores antes de agregar un modificador.',
+                );
+
+                return;
+            }
+
+            setForm({
+                ...INITIAL_FORM,
+                groupId:
+                    defaultGroup.id,
+            });
 
             setIsModalVisible(
                 true,
@@ -257,7 +290,7 @@ export function AdminModifiers({
         };
 
     const openEditModal = (
-        modifier: Modifier,
+        modifier: ModifierWithGroup,
     ): void => {
         setSelectedModifier(
             modifier,
@@ -272,8 +305,9 @@ export function AdminModifiers({
                     modifier.extra_price,
                 ),
 
-            groupName:
-                modifier.group_name,
+            groupId:
+                modifier.group_id ??
+                '',
 
             isAvailable:
                 modifier.is_available !==
@@ -341,6 +375,17 @@ export function AdminModifiers({
                 return;
             }
 
+            if (
+                !form.groupId
+            ) {
+                Alert.alert(
+                    'Grupo requerido',
+                    'Selecciona un grupo para el modificador.',
+                );
+
+                return;
+            }
+
             try {
                 setIsProcessing(true);
 
@@ -356,8 +401,8 @@ export function AdminModifiers({
                             extraPrice:
                                 parsedExtraPrice,
 
-                            groupName:
-                                form.groupName,
+                            groupId:
+                                form.groupId,
 
                             isAvailable:
                                 form.isAvailable,
@@ -376,8 +421,8 @@ export function AdminModifiers({
                         extraPrice:
                             parsedExtraPrice,
 
-                        groupName:
-                            form.groupName,
+                        groupId:
+                            form.groupId,
                     });
 
                     Alert.alert(
@@ -415,7 +460,7 @@ export function AdminModifiers({
         };
 
     const handleToggleAvailable = (
-        modifier: Modifier,
+        modifier: ModifierWithGroup,
     ): void => {
         const willActivate =
             modifier.is_available ===
@@ -460,7 +505,7 @@ export function AdminModifiers({
 
     const executeToggleAvailable =
         async (
-            modifier: Modifier,
+            modifier: ModifierWithGroup,
             isAvailable: boolean,
         ): Promise<void> => {
             try {
@@ -490,7 +535,7 @@ export function AdminModifiers({
     const renderModifier = ({
         item,
     }: {
-        item: Modifier;
+        item: ModifierWithGroup;
     }) => {
         const isAvailable =
             item.is_available !==
@@ -527,14 +572,16 @@ export function AdminModifiers({
                             style={[
                                 styles.groupBadge,
 
-                                item.group_name ===
-                                    'Carne'
+                                item.group?.code ===
+                                    'meat'
                                     ? styles.groupBadgeMeat
-                                    : item.group_name ===
-                                        'Salsa'
+                                    : item.group?.code ===
+                                        'sauce'
                                         ? styles.groupBadgeSauce
-                                        : item.group_name ===
-                                            'Sabor'
+                                        : item.group?.code ===
+                                            'drink_flavor' ||
+                                            item.group?.code ===
+                                                'ice_cream_flavor'
                                             ? styles.groupBadgeFlavor
                                             : styles.groupBadgeOther,
                             ]}
@@ -544,8 +591,8 @@ export function AdminModifiers({
                                     styles.groupBadgeText
                                 }
                             >
-                                {item.group_name ??
-                                    'Otro'}
+                                {item.group?.name ??
+                                    'Sin grupo'}
                             </Text>
                         </View>
 
@@ -810,30 +857,32 @@ export function AdminModifiers({
                     styles.filterTabs
                 }
             >
-                {(
-                    [
-                        ['all', 'TODOS'],
-                        ['Carne', 'CARNES'],
-                        ['Salsa', 'SALSAS'],
-                        ['Sabor', 'SABORES'],
-                    ] as Array<
-                        [
-                            ModifierFilter,
-                            string,
-                        ]
-                    >
-                ).map(
-                    ([
-                        value,
-                        label,
-                    ]) => {
+                {[
+                    {
+                        id:
+                            'all',
+                        name:
+                            'TODOS',
+                    },
+                    ...groups.map(
+                        group => ({
+                            id:
+                                group.id,
+                            name:
+                                group.name.toUpperCase(),
+                        }),
+                    ),
+                ].map(
+                    group => {
                         const selected =
                             activeFilter ===
-                            value;
+                            group.id;
 
                         return (
                             <TouchableOpacity
-                                key={value}
+                                key={
+                                    group.id
+                                }
                                 style={[
                                     styles.filterButton,
 
@@ -842,7 +891,7 @@ export function AdminModifiers({
                                 ]}
                                 onPress={() =>
                                     setActiveFilter(
-                                        value,
+                                        group.id,
                                     )
                                 }
                             >
@@ -854,7 +903,7 @@ export function AdminModifiers({
                                         styles.filterButtonTextActive,
                                     ]}
                                 >
-                                    {label}
+                                    {group.name}
                                 </Text>
                             </TouchableOpacity>
                         );
@@ -1059,23 +1108,16 @@ export function AdminModifiers({
                                 styles.groupsContainer
                             }
                         >
-                            {(
-                                [
-                                    'Carne',
-                                    'Salsa',
-                                    'Sabor',
-                                ] as ModifierGroup[]
-                            ).map(
-                                (group) => {
+                            {activeGroups.map(
+                                group => {
                                     const selected =
-                                        form.groupName ===
-                                        group;
+                                        form.groupId ===
+                                        group.id;
 
                                     return (
                                         <TouchableOpacity
                                             key={
-                                                group ??
-                                                'other'
+                                                group.id
                                             }
                                             style={[
                                                 styles.groupButton,
@@ -1090,8 +1132,8 @@ export function AdminModifiers({
                                                     ) => ({
                                                         ...current,
 
-                                                        groupName:
-                                                            group,
+                                                        groupId:
+                                                            group.id,
                                                     }),
                                                 )
                                             }
@@ -1104,7 +1146,7 @@ export function AdminModifiers({
                                                     styles.groupButtonTextSelected,
                                                 ]}
                                             >
-                                                {group}
+                                                {group.name}
                                             </Text>
                                         </TouchableOpacity>
                                     );

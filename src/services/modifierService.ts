@@ -1,11 +1,20 @@
 import {
   CreateModifierData,
+  CreateModifierGroupData,
+  fetchActiveModifierGroups,
   fetchAllModifiers,
   fetchAvailableModifiers,
+  fetchModifierGroupByCode,
+  fetchModifierGroups,
   insertModifier,
+  insertModifierGroup,
   ModifierGroup,
+  ModifierGroupEntity,
+  ModifierWithGroup,
   setModifierAvailableById,
+  setModifierGroupActiveById,
   updateModifierById,
+  updateModifierGroupById,
 } from '../repositories/ModifierRepository';
 
 import {
@@ -21,23 +30,53 @@ export type ProductModifierMode =
   | 'none';
 
 export interface GroupedModifiers {
-  meats: Modifier[];
-  sauces: Modifier[];
+  meats: ModifierWithGroup[];
+  sauces: ModifierWithGroup[];
 }
 
 export interface CreateModifierInput {
   name: string;
   extraPrice: number;
-  groupName: ModifierGroup;
+
+  /**
+   * Compatibilidad temporal con AdminModifiers actual.
+   */
+  groupName?: ModifierGroup;
+
+  /**
+   * Nuevo modelo.
+   */
+  groupId?: string | null;
 }
 
 export interface UpdateModifierInput {
   name: string;
   extraPrice: number;
-  groupName: ModifierGroup;
+
+  groupName?: ModifierGroup;
+  groupId?: string | null;
+
   isAvailable: boolean;
 }
 
+export interface CreateModifierGroupInput {
+  code: string;
+  name: string;
+  position: number;
+}
+
+export interface UpdateModifierGroupInput {
+  name: string;
+  position: number;
+  isActive: boolean;
+}
+
+/**
+ * Modificadores utilizados actualmente
+ * por los configuradores de productos.
+ *
+ * Ya no depende de group_name.
+ */
 export async function getAvailableModifiers(): Promise<
   GroupedModifiers
 > {
@@ -47,22 +86,27 @@ export async function getAvailableModifiers(): Promise<
   return {
     meats:
       modifiers.filter(
-        (modifier) =>
-          modifier.group_name ===
-          'Carne',
+        modifier =>
+          modifier.group
+            ?.code ===
+          'meat',
       ),
 
     sauces:
       modifiers.filter(
-        (modifier) =>
-          modifier.group_name ===
-          'Salsa',
+        modifier =>
+          modifier.group
+            ?.code ===
+          'sauce',
       ),
   };
 }
 
+/**
+ * Todos los modificadores para administración.
+ */
 export async function getAllModifiers(): Promise<
-  Modifier[]
+  ModifierWithGroup[]
 > {
   try {
     return await fetchAllModifiers();
@@ -78,6 +122,49 @@ export async function getAllModifiers(): Promise<
   }
 }
 
+/**
+ * Todos los grupos, activos e inactivos.
+ */
+export async function getModifierGroups(): Promise<
+  ModifierGroupEntity[]
+> {
+  try {
+    return await fetchModifierGroups();
+  } catch (error) {
+    console.error(
+      'Error al obtener grupos de modificadores:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudieron obtener los grupos de modificadores.',
+    );
+  }
+}
+
+/**
+ * Solamente grupos activos.
+ */
+export async function getActiveModifierGroups(): Promise<
+  ModifierGroupEntity[]
+> {
+  try {
+    return await fetchActiveModifierGroups();
+  } catch (error) {
+    console.error(
+      'Error al obtener grupos activos:',
+      error,
+    );
+
+    throw new Error(
+      'No se pudieron obtener los grupos activos.',
+    );
+  }
+}
+
+/**
+ * Crea un modificador.
+ */
 export async function createModifier(
   input:
     CreateModifierInput,
@@ -91,6 +178,12 @@ export async function createModifier(
   );
 
   try {
+    const resolvedGroup =
+      await resolveModifierGroup(
+        input.groupId,
+        input.groupName,
+      );
+
     const data:
       CreateModifierData = {
       name:
@@ -99,8 +192,19 @@ export async function createModifier(
       extraPrice:
         input.extraPrice,
 
+      groupId:
+        resolvedGroup.id,
+
+      /**
+       * Campo legacy.
+       *
+       * Lo mantenemos sincronizado
+       * mientras terminamos la migración.
+       */
       groupName:
-        input.groupName,
+        getLegacyGroupName(
+          resolvedGroup.code,
+        ),
     };
 
     return await insertModifier(
@@ -113,11 +217,16 @@ export async function createModifier(
     );
 
     throw new Error(
-      'No se pudo crear el modificador.',
+      error instanceof Error
+        ? error.message
+        : 'No se pudo crear el modificador.',
     );
   }
 }
 
+/**
+ * Actualiza un modificador.
+ */
 export async function updateModifier(
   modifierId: string,
   input:
@@ -136,6 +245,12 @@ export async function updateModifier(
   );
 
   try {
+    const resolvedGroup =
+      await resolveModifierGroup(
+        input.groupId,
+        input.groupName,
+      );
+
     return await updateModifierById(
       modifierId,
       {
@@ -145,8 +260,13 @@ export async function updateModifier(
         extraPrice:
           input.extraPrice,
 
+        groupId:
+          resolvedGroup.id,
+
         groupName:
-          input.groupName,
+          getLegacyGroupName(
+            resolvedGroup.code,
+          ),
 
         isAvailable:
           input.isAvailable,
@@ -159,11 +279,16 @@ export async function updateModifier(
     );
 
     throw new Error(
-      'No se pudo actualizar el modificador.',
+      error instanceof Error
+        ? error.message
+        : 'No se pudo actualizar el modificador.',
     );
   }
 }
 
+/**
+ * Activa o desactiva un modificador.
+ */
 export async function setModifierAvailable(
   modifierId: string,
   isAvailable: boolean,
@@ -191,6 +316,153 @@ export async function setModifierAvailable(
   }
 }
 
+/**
+ * Crea un nuevo grupo.
+ */
+export async function createModifierGroup(
+  input:
+    CreateModifierGroupInput,
+): Promise<ModifierGroupEntity> {
+  const cleanName =
+    input.name.trim();
+
+  const cleanCode =
+    normalizeCode(
+      input.code,
+    );
+
+  validateModifierGroup(
+    cleanName,
+    cleanCode,
+    input.position,
+  );
+
+  try {
+    const data:
+      CreateModifierGroupData = {
+      code:
+        cleanCode,
+
+      name:
+        cleanName,
+
+      position:
+        input.position,
+    };
+
+    return await insertModifierGroup(
+      data,
+    );
+  } catch (error) {
+    console.error(
+      'Error al crear grupo de modificadores:',
+      error,
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'No se pudo crear el grupo.',
+    );
+  }
+}
+
+/**
+ * Actualiza un grupo existente.
+ *
+ * El código queda fijo.
+ */
+export async function updateModifierGroup(
+  groupId: string,
+  input:
+    UpdateModifierGroupInput,
+): Promise<ModifierGroupEntity> {
+  validateModifierId(
+    groupId,
+  );
+
+  const cleanName =
+    input.name.trim();
+
+  if (!cleanName) {
+    throw new Error(
+      'El nombre del grupo es obligatorio.',
+    );
+  }
+
+  if (
+    !Number.isInteger(
+      input.position,
+    ) ||
+    input.position < 0
+  ) {
+    throw new Error(
+      'La posición del grupo no es válida.',
+    );
+  }
+
+  try {
+    return await updateModifierGroupById(
+      groupId,
+      {
+        name:
+          cleanName,
+
+        position:
+          input.position,
+
+        isActive:
+          input.isActive,
+      },
+    );
+  } catch (error) {
+    console.error(
+      'Error al actualizar grupo:',
+      error,
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'No se pudo actualizar el grupo.',
+    );
+  }
+}
+
+/**
+ * Activa o desactiva un grupo.
+ */
+export async function setModifierGroupActive(
+  groupId: string,
+  isActive: boolean,
+): Promise<ModifierGroupEntity> {
+  validateModifierId(
+    groupId,
+  );
+
+  try {
+    return await setModifierGroupActiveById(
+      groupId,
+      isActive,
+    );
+  } catch (error) {
+    console.error(
+      'Error al cambiar estado del grupo:',
+      error,
+    );
+
+    throw new Error(
+      isActive
+        ? 'No se pudo activar el grupo.'
+        : 'No se pudo desactivar el grupo.',
+    );
+  }
+}
+
+/**
+ * Determina el configurador requerido
+ * por un producto.
+ */
 export function getProductModifierMode(
   product: Product | null,
   categoryName?: string,
@@ -273,15 +545,146 @@ export function isKongBurger(
 ): boolean {
   return normalizeText(
     product?.name,
-  ).includes('kong');
+  ).includes(
+    'kong',
+  );
+}
+
+/**
+ * Obtiene el grupo nuevo usando:
+ *
+ * 1. groupId, si ya viene de la nueva UI.
+ * 2. groupName legacy, mientras AdminModifiers
+ *    todavía use Carne/Salsa/Sabor.
+ */
+async function resolveModifierGroup(
+  groupId?:
+    | string
+    | null,
+
+  legacyGroupName?:
+    ModifierGroup,
+): Promise<ModifierGroupEntity> {
+  if (
+    groupId?.trim()
+  ) {
+    const groups =
+      await fetchModifierGroups();
+
+    const group =
+      groups.find(
+        item =>
+          item.id ===
+          groupId,
+      );
+
+    if (!group) {
+      throw new Error(
+        'El grupo de modificadores seleccionado no existe.',
+      );
+    }
+
+    if (
+      !group.is_active
+    ) {
+      throw new Error(
+        'El grupo de modificadores seleccionado está inactivo.',
+      );
+    }
+
+    return group;
+  }
+
+  const code =
+    getCodeFromLegacyGroupName(
+      legacyGroupName,
+    );
+
+  if (!code) {
+    throw new Error(
+      'Debes seleccionar un grupo de modificadores.',
+    );
+  }
+
+  const group =
+    await fetchModifierGroupByCode(
+      code,
+    );
+
+  if (!group) {
+    throw new Error(
+      `No existe el grupo de modificadores "${code}".`,
+    );
+  }
+
+  if (
+    !group.is_active
+  ) {
+    throw new Error(
+      `El grupo "${group.name}" está inactivo.`,
+    );
+  }
+
+  return group;
+}
+
+/**
+ * Traducción temporal de la UI antigua
+ * hacia los códigos nuevos.
+ */
+function getCodeFromLegacyGroupName(
+  groupName?:
+    ModifierGroup,
+): string | null {
+  switch (
+    groupName
+  ) {
+    case 'Carne':
+      return 'meat';
+
+    case 'Salsa':
+      return 'sauce';
+
+    case 'Sabor':
+      return 'drink_flavor';
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Traducción temporal desde grupos nuevos
+ * hacia group_name legacy.
+ */
+function getLegacyGroupName(
+  code: string,
+): ModifierGroup {
+  switch (
+    code
+  ) {
+    case 'meat':
+      return 'Carne';
+
+    case 'sauce':
+      return 'Salsa';
+
+    case 'drink_flavor':
+      return 'Sabor';
+
+    default:
+      return null;
+  }
 }
 
 function validateModifierId(
   modifierId: string,
 ): void {
-  if (!modifierId?.trim()) {
+  if (
+    !modifierId?.trim()
+  ) {
     throw new Error(
-      'El modificador no es válido.',
+      'El identificador no es válido.',
     );
   }
 }
@@ -308,12 +711,59 @@ function validateModifier(
   }
 }
 
+function validateModifierGroup(
+  name: string,
+  code: string,
+  position: number,
+): void {
+  if (!name) {
+    throw new Error(
+      'El nombre del grupo es obligatorio.',
+    );
+  }
+
+  if (!code) {
+    throw new Error(
+      'El código del grupo es obligatorio.',
+    );
+  }
+
+  if (
+    !Number.isInteger(
+      position,
+    ) ||
+    position < 0
+  ) {
+    throw new Error(
+      'La posición del grupo no es válida.',
+    );
+  }
+}
+
+function normalizeCode(
+  value: string,
+): string {
+  return normalizeText(
+    value,
+  )
+    .replace(
+      /[^a-z0-9]+/g,
+      '_',
+    )
+    .replace(
+      /^_+|_+$/g,
+      '',
+    );
+}
+
 function normalizeText(
   value?: string | null,
 ): string {
   return (
     value
-      ?.normalize('NFD')
+      ?.normalize(
+        'NFD',
+      )
       .replace(
         /[\u0300-\u036f]/g,
         '',
@@ -321,6 +771,7 @@ function normalizeText(
       .trim()
       .toLocaleLowerCase(
         'es',
-      ) ?? ''
+      ) ??
+    ''
   );
 }
