@@ -48,6 +48,7 @@ node_modules/
 
 #Firebase
 firebase-service-account.json
+firebase-service-account-prod.json
 burger-kong-dev-firebase-adminsdk-fbsvc-3d056ea96d.json
 
 *.jks
