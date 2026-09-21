@@ -23,6 +23,7 @@ export type MainTab =
   | 'pos'
   | 'kitchen'
   | 'sales'
+  | 'loyalty'
   | 'cash'
   | 'admin';
 
@@ -284,6 +285,39 @@ export function GlobalHeader({
             ]}
           >
             VENTAS
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+
+            isPhone &&
+            styles.tabButtonPhone,
+
+            activeTab ===
+            'loyalty' &&
+            styles.tabActiveButton,
+          ]}
+          onPress={() =>
+            setActiveTab(
+              'loyalty',
+            )
+          }
+        >
+          <Text
+            style={[
+              styles.tabText,
+
+              isPhone &&
+              styles.tabTextPhone,
+
+              activeTab ===
+              'loyalty' &&
+              styles.tabActiveText,
+            ]}
+          >
+            RECOMPENSAS
           </Text>
         </TouchableOpacity>
 

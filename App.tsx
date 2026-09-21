@@ -77,6 +77,7 @@ import {
   registerPosPushNotifications,
 } from './src/services/pushNotificationService';
 import { DriverScreen } from './src/screens/driver/DriverScreen';
+import { LoyaltyScreen } from './src/screens/loyalty/LoyaltyScreen';
 
 function MainApp() {
   const {
@@ -548,6 +549,15 @@ function MainApp() {
 
       if (
         activeTab ===
+        'loyalty'
+      ) {
+        return (
+          <LoyaltyScreen />
+        );
+      }
+
+      if (
+        activeTab ===
         'cash'
       ) {
         if (!userCanManageCash) {
@@ -767,7 +777,7 @@ function NavigationGateway() {
       }
     >
       {user.role ===
-      'driver' ? (
+        'driver' ? (
         <DriverScreen />
       ) : (
         <MainApp />
