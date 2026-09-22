@@ -154,6 +154,24 @@ async function getBundledAssetDataUrl(
     );
 }
 
+function getLoyaltyTokenFromPath():
+    string | null {
+    if (
+        typeof window ===
+        'undefined'
+    ) {
+        return null;
+    }
+
+    const match =
+        window.location.pathname.match(
+            /^\/recompensas\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/?$/i,
+        );
+
+    return match?.[1] ??
+        null;
+}
+
 export default function WebLoyaltyScreen({
     onBack,
 }: Props) {
@@ -277,15 +295,22 @@ export default function WebLoyaltyScreen({
             const bootstrap =
                 async (): Promise<void> => {
                     try {
+                        const routeToken =
+                            getLoyaltyTokenFromPath();
+
                         const savedToken =
                             getSavedWebLoyaltyToken();
 
-                        if (!savedToken) {
+                        const token =
+                            routeToken ??
+                            savedToken;
+
+                        if (!token) {
                             return;
                         }
 
                         await loadStatus(
-                            savedToken,
+                            token,
                         );
                     } catch (error) {
                         console.error(
@@ -293,9 +318,11 @@ export default function WebLoyaltyScreen({
                             error,
                         );
 
-                        clearSavedWebLoyaltyToken();
-
                         setStatus(
+                            null,
+                        );
+
+                        setQrDataUrl(
                             null,
                         );
                     } finally {
@@ -308,6 +335,95 @@ export default function WebLoyaltyScreen({
             void bootstrap();
         },
         [],
+    );
+
+    useEffect(
+        () => {
+            const token =
+                status
+                    ?.customer
+                    .qrToken;
+
+            if (!token) {
+                return;
+            }
+
+            let refreshing =
+                false;
+
+            const refreshStatus =
+                async (): Promise<void> => {
+                    if (
+                        refreshing
+                    ) {
+                        return;
+                    }
+
+                    try {
+                        refreshing =
+                            true;
+
+                        const refreshed =
+                            await getWebLoyaltyStatus(
+                                token,
+                            );
+
+                        setStatus(
+                            refreshed,
+                        );
+                    } catch (error) {
+                        console.error(
+                            'Error actualizando Rewards:',
+                            error,
+                        );
+                    } finally {
+                        refreshing =
+                            false;
+                    }
+                };
+
+            const handleFocus =
+                (): void => {
+                    void refreshStatus();
+                };
+
+            const handleVisibilityChange =
+                (): void => {
+                    if (
+                        document.visibilityState ===
+                        'visible'
+                    ) {
+                        void refreshStatus();
+                    }
+                };
+
+            window.addEventListener(
+                'focus',
+                handleFocus,
+            );
+
+            document.addEventListener(
+                'visibilitychange',
+                handleVisibilityChange,
+            );
+
+            return () => {
+                window.removeEventListener(
+                    'focus',
+                    handleFocus,
+                );
+
+                document.removeEventListener(
+                    'visibilitychange',
+                    handleVisibilityChange,
+                );
+            };
+        },
+        [
+            status
+                ?.customer
+                .qrToken,
+        ],
     );
 
     const nextReward =
@@ -395,6 +511,17 @@ export default function WebLoyaltyScreen({
                 saveWebLoyaltyToken(
                     result.qrToken,
                 );
+
+                if (
+                    typeof window !==
+                    'undefined'
+                ) {
+                    window.history.replaceState(
+                        {},
+                        '',
+                        '/recompensas',
+                    );
+                }
 
                 await loadStatus(
                     result.qrToken,
@@ -653,10 +780,10 @@ export default function WebLoyaltyScreen({
                     const logoRatio =
                         Math.min(
                             maxLogoWidth /
-                                logo.naturalWidth,
+                            logo.naturalWidth,
 
                             maxLogoHeight /
-                                logo.naturalHeight,
+                            logo.naturalHeight,
                         );
 
                     const logoWidth =
@@ -747,11 +874,11 @@ export default function WebLoyaltyScreen({
 
                 const customerName =
                     status.customer.name.length >
-                    28
+                        28
                         ? `${status.customer.name.slice(
-                              0,
-                              28,
-                          )}...`
+                            0,
+                            28,
+                        )}...`
                         : status.customer.name;
 
                 ctx.fillText(
@@ -825,16 +952,16 @@ export default function WebLoyaltyScreen({
 
                 ctx.roundRect(
                     qrX -
-                        qrPadding,
+                    qrPadding,
 
                     qrY -
-                        qrPadding,
+                    qrPadding,
 
                     qrSize +
-                        qrPadding * 2,
+                    qrPadding * 2,
 
                     qrSize +
-                        qrPadding * 2,
+                    qrPadding * 2,
 
                     28,
                 );
@@ -963,6 +1090,17 @@ export default function WebLoyaltyScreen({
         (): void => {
             clearSavedWebLoyaltyToken();
 
+            if (
+                typeof window !==
+                'undefined'
+            ) {
+                window.history.replaceState(
+                    {},
+                    '',
+                    '/recompensas',
+                );
+            }
+
             setStatus(
                 null,
             );
@@ -977,29 +1115,6 @@ export default function WebLoyaltyScreen({
                 'login',
             );
         };
-
-    if (loading) {
-        return (
-            <View
-                style={
-                    styles.loadingContainer
-                }
-            >
-                <ActivityIndicator
-                    size="large"
-                    color="#FFB000"
-                />
-
-                <Text
-                    style={
-                        styles.loadingText
-                    }
-                >
-                    Cargando Rewards...
-                </Text>
-            </View>
-        );
-    }
 
     return (
         <ScrollView
@@ -1093,7 +1208,7 @@ export default function WebLoyaltyScreen({
 
                                 backgroundColor:
                                     authMode ===
-                                    'login'
+                                        'login'
                                         ? '#FFB000'
                                         : '#151515',
                             }}
@@ -1107,7 +1222,7 @@ export default function WebLoyaltyScreen({
                                 style={{
                                     color:
                                         authMode ===
-                                        'login'
+                                            'login'
                                             ? '#111111'
                                             : '#BBBBBB',
 
@@ -1132,7 +1247,7 @@ export default function WebLoyaltyScreen({
 
                                 backgroundColor:
                                     authMode ===
-                                    'register'
+                                        'register'
                                         ? '#FFB000'
                                         : '#151515',
                             }}
@@ -1146,7 +1261,7 @@ export default function WebLoyaltyScreen({
                                 style={{
                                     color:
                                         authMode ===
-                                        'register'
+                                            'register'
                                             ? '#111111'
                                             : '#BBBBBB',
 
@@ -1160,7 +1275,7 @@ export default function WebLoyaltyScreen({
                     </View>
 
                     {authMode ===
-                    'login'
+                        'login'
                         ? (
                             <>
                                 <Text
@@ -1510,13 +1625,13 @@ export default function WebLoyaltyScreen({
                             }
                         >
                             {status.customer.totalVisits ===
-                            1
+                                1
                                 ? 'visita acumulada'
                                 : 'visitas acumuladas'}
                         </Text>
 
                         {availableRewards.length >
-                        0
+                            0
                             ? (
                                 <View
                                     style={
@@ -1537,7 +1652,7 @@ export default function WebLoyaltyScreen({
                                         }
                                     >
                                         {availableRewards.length ===
-                                        1
+                                            1
                                             ? 'Tienes 1 premio disponible para canjear.'
                                             : `Tienes ${availableRewards.length} premios disponibles para canjear.`}
                                     </Text>
@@ -1578,7 +1693,7 @@ export default function WebLoyaltyScreen({
                                             nextReward.visitsRemaining
                                         }{' '}
                                         {nextReward.visitsRemaining ===
-                                        1
+                                            1
                                             ? 'visita'
                                             : 'visitas'}
                                     </Text>
@@ -1777,7 +1892,7 @@ export default function WebLoyaltyScreen({
                                                     reward.requiredVisits
                                                 }{' '}
                                                 {reward.requiredVisits ===
-                                                1
+                                                    1
                                                     ? 'visita'
                                                     : 'visitas'}
                                             </Text>
@@ -1800,10 +1915,10 @@ export default function WebLoyaltyScreen({
                                                 ]}
                                             >
                                                 {reward.status ===
-                                                'available'
+                                                    'available'
                                                     ? '🎁 Disponible'
                                                     : reward.status ===
-                                                      'redeemed'
+                                                        'redeemed'
                                                         ? '✓ Canjeada'
                                                         : `🔒 Faltan ${reward.visitsRemaining}`}
                                             </Text>
