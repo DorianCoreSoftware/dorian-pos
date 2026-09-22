@@ -162,3 +162,26 @@ export async function redeemReward(
     throw error;
   }
 }
+
+export function extractLoyaltyQrToken(
+  value: string,
+): string {
+  const cleanValue =
+    value.trim();
+
+  const uuidRegex =
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+
+  const match =
+    cleanValue.match(
+      uuidRegex,
+    );
+
+  if (!match) {
+    throw new Error(
+      'Este QR no pertenece al programa de recompensas.',
+    );
+  }
+
+  return match[0];
+}

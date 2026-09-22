@@ -14,6 +14,7 @@ import {
 
 import {
   addLoyaltyVisit,
+  extractLoyaltyQrToken,
   getLoyaltyStatus,
   redeemReward,
 } from '../../services/loyaltyService';
@@ -25,14 +26,13 @@ import {
 import {
   styles,
 } from './LoyaltyScreen.styles';
+import { LoyaltyQrScannerModal } from '../../components/loyalty/LoyaltyQrScannerModal';
 
 export function LoyaltyScreen() {
   const [
     qrToken,
     setQrToken,
-  ] = useState(
-    '45eb07d6-d822-4476-8e62-47722d7609bf',
-  );
+  ] = useState('');
 
   const [
     status,
@@ -223,6 +223,57 @@ export function LoyaltyScreen() {
       }
     };
 
+  const [
+    scannerVisible,
+    setScannerVisible,
+  ] = useState(false);
+
+  const handleQrScanned =
+    async (
+      rawValue: string,
+    ): Promise<void> => {
+      try {
+        setScannerVisible(false);
+        setErrorMessage(null);
+        setSuccessMessage(null);
+
+        const token =
+          extractLoyaltyQrToken(
+            rawValue,
+          );
+
+        setQrToken(
+          token,
+        );
+
+        setLoading(true);
+
+        const result =
+          await getLoyaltyStatus(
+            token,
+          );
+
+        setStatus(
+          result,
+        );
+      } catch (error) {
+        console.error(
+          'QR Rewards inválido:',
+          error,
+        );
+
+        setStatus(null);
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'No se pudo leer el QR.',
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
   return (
     <ScrollView
       style={
@@ -261,6 +312,44 @@ export function LoyaltyScreen() {
           }
         >
           Token QR
+        </Text>
+
+        <TouchableOpacity
+          style={
+            styles.scanButton
+          }
+          disabled={
+            loading
+          }
+          onPress={() =>
+            setScannerVisible(
+              true,
+            )
+          }
+        >
+          <Text
+            style={
+              styles.scanButtonIcon
+            }
+          >
+            ▣
+          </Text>
+
+          <Text
+            style={
+              styles.scanButtonText
+            }
+          >
+            Escanear QR del cliente
+          </Text>
+        </TouchableOpacity>
+
+        <Text
+          style={
+            styles.manualLabel
+          }
+        >
+          O ingresar manualmente
         </Text>
 
         <TextInput
@@ -363,7 +452,7 @@ export function LoyaltyScreen() {
                 status
                   .customer
                   .totalVisits ===
-                1
+                  1
                   ? ''
                   : 's'
               }
@@ -486,7 +575,7 @@ export function LoyaltyScreen() {
                           >
                             {
                               reward.status ===
-                              'locked'
+                                'locked'
                                 ? `🔒 Faltan ${reward.visitsRemaining} visita${reward.visitsRemaining === 1 ? '' : 's'}`
                                 : reward.status ===
                                   'available'
@@ -527,6 +616,21 @@ export function LoyaltyScreen() {
           </View>
         </>
       ) : null}
+      <LoyaltyQrScannerModal
+        visible={
+          scannerVisible
+        }
+        onClose={() =>
+          setScannerVisible(
+            false,
+          )
+        }
+        onScanned={value => {
+          void handleQrScanned(
+            value,
+          );
+        }}
+      />
     </ScrollView>
   );
 }
