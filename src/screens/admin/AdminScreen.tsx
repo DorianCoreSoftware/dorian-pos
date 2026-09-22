@@ -52,6 +52,7 @@ import {
 import {
   styles,
 } from './AdminScreen.styles';
+import { AdminLoyalty } from '../../components/admin/loyalty/AdminLoyalty';
 
 type AdminSection =
   | 'products'
@@ -61,6 +62,7 @@ type AdminSection =
   | 'reports'
   | 'printer'
   | 'promotions'
+  | 'loyalty'
   | 'hours'
   | 'delivery'
   | 'feedback';
@@ -110,6 +112,15 @@ export function AdminScreen({
               onProductsChanged
             }
           />
+        );
+      }
+
+      if (
+        activeSection ===
+        'loyalty'
+      ) {
+        return (
+          <AdminLoyalty />
         );
       }
 
@@ -318,6 +329,11 @@ export function AdminScreen({
         {renderTab(
           'promotions',
           'PROMOCIONES',
+        )}
+
+        {renderTab(
+          'loyalty',
+          'RECOMPENSAS',
         )}
 
         {renderTab(
