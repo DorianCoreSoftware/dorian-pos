@@ -7,23 +7,19 @@
     "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "dark",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/app-icon.png",
         "backgroundColor": "#000000"
       },
-
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
@@ -32,19 +28,14 @@
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_ADVERTISE"
       ],
-
       "package": "com.burgerkong.pos"
     },
-
     "web": {
       "favicon": "./assets/app-icon.png"
     },
-
     "plugins": [
       "expo-sqlite",
-
       "@react-native-community/datetimepicker",
-
       [
         "expo-notifications",
         {
@@ -52,16 +43,15 @@
           "defaultChannel": "web-orders"
         }
       ],
-
       [
         "with-rn-bluetooth-classic",
         {
           "peripheralUsageDescription": "Burger Kong necesita Bluetooth para conectarse a la impresora de tickets.",
           "alwaysUsageDescription": "Burger Kong necesita Bluetooth para imprimir tickets."
         }
-      ]
+      ],
+      "expo-asset"
     ],
-
     "extra": {
       "eas": {
         "projectId": "14f8bcc3-9327-4987-b505-899cc734c274"

@@ -97,6 +97,11 @@ import {
 import styles from './WebMenuScreen.styles';
 import { WebFeedbackModal } from '../components/WebFeedbackModal';
 
+interface Props {
+  onRewardsPress?:
+  () => void;
+}
+
 function getColumns(
   width: number,
 ): number {
@@ -278,7 +283,9 @@ function getBusinessAvailabilityText(
   return schedule;
 }
 
-export default function WebMenuScreen() {
+export default function WebMenuScreen({
+  onRewardsPress,
+}: Props) {
   const [
     showScrollTopButton,
     setShowScrollTopButton,
@@ -1201,7 +1208,11 @@ export default function WebMenuScreen() {
 
   return (
     <View style={styles.screen}>
-      <WebHeader />
+      <WebHeader
+        onRewardsPress={
+          onRewardsPress
+        }
+      />
 
       <ScrollView
         ref={

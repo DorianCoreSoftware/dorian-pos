@@ -44,6 +44,23 @@ const styles =
       fontSize: 15,
       marginTop: 3,
     },
+
+    rewardsButton: {
+      minHeight: 42,
+      paddingHorizontal: 15,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#FFB000',
+      backgroundColor: '#241E00',
+    },
+
+    rewardsButtonText: {
+      color: '#FFB000',
+      fontSize: 13,
+      fontWeight: '900',
+    },
   });
 
 export default styles;

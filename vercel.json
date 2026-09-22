@@ -5,6 +5,10 @@
     {
       "source": "/pedido/:path*",
       "destination": "/index.html"
+    },
+    {
+      "source": "/recompensas/:path*",
+      "destination": "/index.html"
     }
   ]
 }
