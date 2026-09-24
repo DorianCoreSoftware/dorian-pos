@@ -12,6 +12,7 @@ import WebMenuScreen from './screens/WebMenuScreen';
 import WebLoyaltyScreen from './screens/WebLoyaltyScreen';
 
 import styles from './WebApp.styles';
+import { useBusiness } from '../context/BusinessContext';
 
 type WebRoute =
   | 'menu'
@@ -38,6 +39,9 @@ function getCurrentRoute():
 }
 
 export default function WebApp() {
+  const {
+    theme,
+  } = useBusiness();
   const [
     route,
     setRoute,
@@ -115,19 +119,29 @@ export default function WebApp() {
 
   return (
     <View
-      style={
-        styles.safeArea
-      }
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor:
+            theme.background,
+        },
+      ]}
     >
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#0F0F0F"
+        backgroundColor={
+          theme.background
+        }
       />
 
       <View
-        style={
-          styles.container
-        }
+        style={[
+          styles.container,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
       >
         {
           route ===

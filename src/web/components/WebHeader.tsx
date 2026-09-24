@@ -7,6 +7,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
 import styles from './WebHeader.styles';
 
 interface Props {
@@ -17,28 +21,48 @@ interface Props {
 export default function WebHeader({
   onRewardsPress,
 }: Props) {
+  const {
+    business,
+    theme,
+  } = useBusiness();
+
+  const businessName =
+    business?.identity.businessName ??
+    'Dorian POS';
+
+  const logoUrl =
+    business?.identity.logoUrl;
+
   return (
     <View
-      style={
-        styles.header
-      }
+      style={[
+        styles.header,
+        {
+          backgroundColor:
+            theme.surface,
+
+          borderBottomColor:
+            theme.border,
+        },
+      ]}
     >
       <View
         style={
           styles.inner
         }
       >
-        <Image
-          source={
-            require(
-              '../../../assets/BurgerKongWOFondo.png',
-            )
-          }
-          style={
-            styles.logo
-          }
-          resizeMode="contain"
-        />
+        {logoUrl ? (
+          <Image
+            source={{
+              uri:
+                logoUrl,
+            }}
+            style={
+              styles.logo
+            }
+            resizeMode="contain"
+          />
+        ) : null}
 
         <View
           style={
@@ -46,44 +70,57 @@ export default function WebHeader({
           }
         >
           <Text
-            style={
-              styles.title
-            }
+            style={[
+              styles.title,
+              {
+                color:
+                  theme.primary,
+              },
+            ]}
           >
-            Burger Kong
+            {businessName}
           </Text>
 
           <Text
-            style={
-              styles.subtitle
-            }
+            style={[
+              styles.subtitle,
+              {
+                color:
+                  theme.text,
+              },
+            ]}
           >
             Ordena en línea
           </Text>
         </View>
 
-        {
-          onRewardsPress
-            ? (
-              <Pressable
-                style={
-                  styles.rewardsButton
-                }
-                onPress={
-                  onRewardsPress
-                }
-              >
-                <Text
-                  style={
-                    styles.rewardsButtonText
-                  }
-                >
-                  🎁 Rewards
-                </Text>
-              </Pressable>
-            )
-            : null
-        }
+        {onRewardsPress &&
+        business?.features.loyaltyEnabled ? (
+          <Pressable
+            style={[
+              styles.rewardsButton,
+              {
+                borderColor:
+                  theme.primary,
+              },
+            ]}
+            onPress={
+              onRewardsPress
+            }
+          >
+            <Text
+              style={[
+                styles.rewardsButtonText,
+                {
+                  color:
+                    theme.primary,
+                },
+              ]}
+            >
+              🎁 Rewards
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

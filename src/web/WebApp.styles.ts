@@ -5,15 +5,13 @@ import {
 const styles =
   StyleSheet.create({
     safeArea: {
-      flex: 1,
-      backgroundColor:
-        '#0F0F0F',
+      flex:
+        1,
     },
 
     container: {
-      flex: 1,
-      backgroundColor:
-        '#0F0F0F',
+      flex:
+        1,
     },
   });
 
