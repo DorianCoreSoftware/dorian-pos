@@ -65,42 +65,42 @@ export function GlobalHeader({
     isPhone,
   } = useResponsiveLayout();
 
-const {
-  business,
-  theme,
-  isLoading,
-  error,
-} = useBusiness();
+  const {
+    business,
+    theme,
+    isLoading,
+    error,
+  } = useBusiness();
 
   console.log(
-  'GLOBAL HEADER BUSINESS:',
-  business,
-);
+    'GLOBAL HEADER BUSINESS:',
+    business,
+  );
 
-console.log(
-  'GLOBAL HEADER LOGO:',
-  business?.identity.logoUrl,
-);
+  console.log(
+    'GLOBAL HEADER LOGO:',
+    business?.identity.logoUrl,
+  );
 
-console.log(
-  'GLOBAL HEADER NAME:',
-  business?.identity.businessName,
-);
+  console.log(
+    'GLOBAL HEADER NAME:',
+    business?.identity.businessName,
+  );
 
-console.log(
-  'GLOBAL HEADER BUSINESS:',
-  business,
-);
+  console.log(
+    'GLOBAL HEADER BUSINESS:',
+    business,
+  );
 
-console.log(
-  'GLOBAL HEADER LOADING:',
-  isLoading,
-);
+  console.log(
+    'GLOBAL HEADER LOADING:',
+    isLoading,
+  );
 
-console.log(
-  'GLOBAL HEADER ERROR:',
-  error,
-);
+  console.log(
+    'GLOBAL HEADER ERROR:',
+    error,
+  );
 
   const logoUrl =
     business?.identity.logoUrl;
@@ -137,36 +137,36 @@ console.log(
   const getTabButtonStyle = (
     tab: MainTab,
   ) => [
-    styles.tabButton,
+      styles.tabButton,
 
-    isPhone &&
+      isPhone &&
       styles.tabButtonPhone,
 
-    activeTab === tab &&
+      activeTab === tab &&
       styles.tabActiveButton,
 
-    activeTab === tab && {
-      backgroundColor:
-        theme.primary,
-    },
-  ];
+      activeTab === tab && {
+        backgroundColor:
+          theme.primary,
+      },
+    ];
 
   const getTabTextStyle = (
     tab: MainTab,
   ) => [
-    styles.tabText,
+      styles.tabText,
 
-    isPhone &&
+      isPhone &&
       styles.tabTextPhone,
 
-    activeTab === tab &&
+      activeTab === tab &&
       styles.tabActiveText,
 
-    activeTab === tab && {
-      color:
-        theme.onPrimary,
-    },
-  ];
+      activeTab === tab && {
+        color:
+          theme.onPrimary,
+      },
+    ];
 
   return (
     <View
@@ -179,7 +179,7 @@ console.log(
         },
 
         isPhone &&
-          styles.headerPhone,
+        styles.headerPhone,
       ]}
     >
       <View
@@ -187,7 +187,7 @@ console.log(
           styles.headerTopRow,
 
           isPhone &&
-            styles.headerTopRowPhone,
+          styles.headerTopRowPhone,
         ]}
       >
         <View
@@ -195,35 +195,35 @@ console.log(
             styles.headerBrandContainer
           }
         >
-         {logoUrl ? (
-  <Image
-    source={{
-      uri: logoUrl,
-    }}
-    style={[
-      styles.headerLogoLetters,
-      isPhone &&
-        styles.headerLogoLettersPhone,
-    ]}
-    resizeMode="contain"
-  />
-) : (
-  <Text
-    style={{
-      color:
-        theme.primary,
-      fontSize:
-        22,
-      fontWeight:
-        '900',
-    }}
-  >
-    {businessName}
-  </Text>
-)}
+          {logoUrl ? (
+            <Image
+              source={{
+                uri: logoUrl,
+              }}
+              style={[
+                styles.headerLogoLetters,
+                isPhone &&
+                styles.headerLogoLettersPhone,
+              ]}
+              resizeMode="contain"
+            />
+          ) : (
+            <Text
+              style={{
+                color:
+                  theme.primary,
+                fontSize:
+                  22,
+                fontWeight:
+                  '900',
+              }}
+            >
+              {businessName}
+            </Text>
+          )}
 
           {!logoUrl &&
-          !businessName ? (
+            !businessName ? (
             <Text
               style={{
                 color:
@@ -246,7 +246,7 @@ console.log(
             styles.userContainer,
 
             isPhone &&
-              styles.userContainerPhone,
+            styles.userContainerPhone,
           ]}
         >
           {!isPhone ? (
@@ -263,7 +263,7 @@ console.log(
               {user?.fullName}{' '}
               (
               {user?.role ===
-              'admin'
+                'admin'
                 ? 'Admin'
                 : 'Caja'}
               )
@@ -318,7 +318,7 @@ console.log(
           styles.tabContainer,
 
           isPhone &&
-            styles.tabContainerPhone,
+          styles.tabContainerPhone,
         ]}
       >
         <TouchableOpacity
@@ -344,29 +344,31 @@ console.log(
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={
-            getTabButtonStyle(
-              'kitchen',
-            )
-          }
-          onPress={() =>
-            setActiveTab(
-              'kitchen',
-            )
-          }
-        >
-          <Text
+        {business?.features.kitchenEnabled ? (
+          <TouchableOpacity
             style={
-              getTabTextStyle(
+              getTabButtonStyle(
+                'kitchen',
+              )
+            }
+            onPress={() =>
+              setActiveTab(
                 'kitchen',
               )
             }
           >
-            PEDIDOS (
-            {pendingOrdersCount})
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={
+                getTabTextStyle(
+                  'kitchen',
+                )
+              }
+            >
+              PEDIDOS (
+              {pendingOrdersCount})
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         <TouchableOpacity
           style={
@@ -391,28 +393,30 @@ console.log(
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={
-            getTabButtonStyle(
-              'loyalty',
-            )
-          }
-          onPress={() =>
-            setActiveTab(
-              'loyalty',
-            )
-          }
-        >
-          <Text
+        {business?.features.loyaltyEnabled ? (
+          <TouchableOpacity
             style={
-              getTabTextStyle(
+              getTabButtonStyle(
+                'loyalty',
+              )
+            }
+            onPress={() =>
+              setActiveTab(
                 'loyalty',
               )
             }
           >
-            RECOMPENSAS
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={
+                getTabTextStyle(
+                  'loyalty',
+                )
+              }
+            >
+              RECOMPENSAS
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         {canManageCash(
           user,

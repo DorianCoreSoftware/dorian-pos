@@ -17,6 +17,11 @@ import {
 } from './src/context/AuthContext';
 
 import {
+  BusinessProvider,
+  useBusiness,
+} from './src/context/BusinessContext';
+
+import {
   LoginScreen,
 } from './src/screens/login/LoginScreen';
 
@@ -37,6 +42,18 @@ import {
 } from './src/screens/cash-closing/CashClosingScreen';
 
 import {
+  DriverScreen,
+} from './src/screens/driver/DriverScreen';
+
+import {
+  LoyaltyScreen,
+} from './src/screens/loyalty/LoyaltyScreen';
+
+import {
+  AdminScreen,
+} from './src/screens/admin/AdminScreen';
+
+import {
   GlobalHeader,
   MainTab,
 } from './src/components/header/GlobalHeader';
@@ -44,6 +61,14 @@ import {
 import {
   useInitialData,
 } from './src/hooks/useInitialData';
+
+import {
+  useSessionInactivity,
+} from './src/hooks/useSessionInactivity';
+
+import {
+  useAccountStatus,
+} from './src/hooks/useAccountStatus';
 
 import {
   Cart,
@@ -59,31 +84,18 @@ import {
 } from './src/Utils/permissions';
 
 import {
-  useSessionInactivity,
-} from './src/hooks/useSessionInactivity';
-
-import {
-  useAccountStatus,
-} from './src/hooks/useAccountStatus';
-
-import {
-  AdminScreen,
-} from './src/screens/admin/AdminScreen';
-
-import {
   getLastPushNotificationResponse,
   isWebOrderNotification,
   listenToPushNotificationResponses,
   registerPosPushNotifications,
 } from './src/services/pushNotificationService';
-import { DriverScreen } from './src/screens/driver/DriverScreen';
-import { LoyaltyScreen } from './src/screens/loyalty/LoyaltyScreen';
-import { BusinessProvider, useBusiness } from './src/context/BusinessContext';
 
 function MainApp() {
   const {
-  business,
-} = useBusiness();
+    business,
+    theme,
+  } = useBusiness();
+
   const {
     user,
     logout,
@@ -174,6 +186,17 @@ function MainApp() {
         notificationId:
           string,
       ): Promise<void> => {
+        /*
+         * Si el negocio no usa Cocina,
+         * una notificación no debe abrir
+         * un módulo deshabilitado.
+         */
+        if (
+          !business?.features.kitchenEnabled
+        ) {
+          return;
+        }
+
         /*
          * Evitamos procesar dos veces
          * la misma notificación.
@@ -301,6 +324,44 @@ function MainApp() {
   }, [
     user?.id,
     fetchKitchenOrders,
+    business?.features.kitchenEnabled,
+  ]);
+
+  /*
+   * ==========================================================
+   * PROTECCIÓN DE TABS POR FEATURE FLAGS
+   * ==========================================================
+   *
+   * Si una configuración cambia mientras
+   * el usuario está dentro de un módulo,
+   * regresamos de forma segura al POS.
+   */
+  useEffect(() => {
+    if (
+      activeTab ===
+        'kitchen' &&
+      !business?.features.kitchenEnabled
+    ) {
+      setActiveTab(
+        'pos',
+      );
+
+      return;
+    }
+
+    if (
+      activeTab ===
+        'loyalty' &&
+      !business?.features.loyaltyEnabled
+    ) {
+      setActiveTab(
+        'pos',
+      );
+    }
+  }, [
+    activeTab,
+    business?.features.kitchenEnabled,
+    business?.features.loyaltyEnabled,
   ]);
 
   const userCanManageCash =
@@ -327,19 +388,29 @@ function MainApp() {
   if (isLoading) {
     return (
       <View
-        style={
-          styles.containerLoading
-        }
+        style={[
+          styles.containerLoading,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={
+            theme.primary
+          }
         />
 
         <Text
-          style={
-            styles.loadingText
-          }
+          style={[
+            styles.loadingText,
+            {
+              color:
+                theme.text,
+            },
+          ]}
         >
           Conectando a{' '}
           {business?.identity.businessName ??
@@ -363,9 +434,14 @@ function MainApp() {
       >
         <Text
           style={{
-            color: '#FF5252',
-            fontSize: 24,
-            fontWeight: 'bold',
+            color:
+              theme.danger,
+
+            fontSize:
+              24,
+
+            fontWeight:
+              'bold',
           }}
         >
           ⚠️ Error de conexión nube
@@ -373,10 +449,17 @@ function MainApp() {
 
         <Text
           style={{
-            color: '#FFF',
-            marginTop: 8,
-            textAlign: 'center',
-            paddingHorizontal: 20,
+            color:
+              theme.text,
+
+            marginTop:
+              8,
+
+            textAlign:
+              'center',
+
+            paddingHorizontal:
+              20,
           }}
         >
           {errorMessage}
@@ -389,14 +472,21 @@ function MainApp() {
     () => {
       return (
         <View
-          style={
-            styles.containerLoading
-          }
+          style={[
+            styles.containerLoading,
+            {
+              backgroundColor:
+                theme.background,
+            },
+          ]}
         >
           <Text
             style={{
-              fontSize: 48,
-              marginBottom: 14,
+              fontSize:
+                48,
+
+              marginBottom:
+                14,
             }}
           >
             🔒
@@ -404,10 +494,17 @@ function MainApp() {
 
           <Text
             style={{
-              color: '#FFFFFF',
-              fontSize: 24,
-              fontWeight: '900',
-              textAlign: 'center',
+              color:
+                theme.text,
+
+              fontSize:
+                24,
+
+              fontWeight:
+                '900',
+
+              textAlign:
+                'center',
             }}
           >
             Caja cerrada
@@ -415,12 +512,23 @@ function MainApp() {
 
           <Text
             style={{
-              color: '#AAAAAA',
-              fontSize: 14,
-              marginTop: 8,
-              textAlign: 'center',
-              maxWidth: 420,
-              lineHeight: 21,
+              color:
+                theme.textMuted,
+
+              fontSize:
+                14,
+
+              marginTop:
+                8,
+
+              textAlign:
+                'center',
+
+              maxWidth:
+                420,
+
+              lineHeight:
+                21,
             }}
           >
             Debe existir una caja
@@ -431,15 +539,26 @@ function MainApp() {
           {userCanManageCash ? (
             <TouchableOpacity
               style={{
-                marginTop: 20,
-                minHeight: 46,
-                paddingHorizontal: 22,
-                borderRadius: 8,
-                alignItems: 'center',
+                marginTop:
+                  20,
+
+                minHeight:
+                  46,
+
+                paddingHorizontal:
+                  22,
+
+                borderRadius:
+                  8,
+
+                alignItems:
+                  'center',
+
                 justifyContent:
                   'center',
+
                 backgroundColor:
-                  '#FFBF00',
+                  theme.primary,
               }}
               onPress={() =>
                 setActiveTab(
@@ -449,9 +568,14 @@ function MainApp() {
             >
               <Text
                 style={{
-                  color: '#171717',
-                  fontSize: 14,
-                  fontWeight: '900',
+                  color:
+                    theme.onPrimary,
+
+                  fontSize:
+                    14,
+
+                  fontWeight:
+                    '900',
                 }}
               >
                 Abrir caja
@@ -460,11 +584,20 @@ function MainApp() {
           ) : (
             <Text
               style={{
-                color: '#FFBF00',
-                fontSize: 13,
-                fontWeight: '700',
-                marginTop: 18,
-                textAlign: 'center',
+                color:
+                  theme.primary,
+
+                fontSize:
+                  13,
+
+                fontWeight:
+                  '700',
+
+                marginTop:
+                  18,
+
+                textAlign:
+                  'center',
               }}
             >
               Solicita a un
@@ -476,10 +609,73 @@ function MainApp() {
       );
     };
 
+  const renderRestricted =
+    (
+      message: string,
+    ) => {
+      return (
+        <View
+          style={[
+            styles.containerLoading,
+            {
+              backgroundColor:
+                theme.background,
+            },
+          ]}
+        >
+          <Text
+            style={{
+              fontSize:
+                48,
+
+              marginBottom:
+                14,
+            }}
+          >
+            🔐
+          </Text>
+
+          <Text
+            style={{
+              color:
+                theme.text,
+
+              fontSize:
+                24,
+
+              fontWeight:
+                '900',
+            }}
+          >
+            Acceso restringido
+          </Text>
+
+          <Text
+            style={{
+              color:
+                theme.textMuted,
+
+              fontSize:
+                14,
+
+              marginTop:
+                8,
+
+              textAlign:
+                'center',
+            }}
+          >
+            {message}
+          </Text>
+        </View>
+      );
+    };
+
   const renderActiveScreen =
     () => {
       if (
-        activeTab === 'pos'
+        activeTab ===
+        'pos'
       ) {
         if (!cashSession) {
           return renderCashRequired();
@@ -496,7 +692,9 @@ function MainApp() {
             fetchProducts={
               fetchProducts
             }
-            cart={cart}
+            cart={
+              cart
+            }
             setCart={
               setCart
             }
@@ -520,6 +718,12 @@ function MainApp() {
         activeTab ===
         'kitchen'
       ) {
+        if (
+          !business?.features.kitchenEnabled
+        ) {
+          return null;
+        }
+
         return (
           <KitchenScreen
             pendingOrders={
@@ -557,6 +761,12 @@ function MainApp() {
         activeTab ===
         'loyalty'
       ) {
+        if (
+          !business?.features.loyaltyEnabled
+        ) {
+          return null;
+        }
+
         return (
           <LoyaltyScreen />
         );
@@ -566,45 +776,11 @@ function MainApp() {
         activeTab ===
         'cash'
       ) {
-        if (!userCanManageCash) {
-          return (
-            <View
-              style={
-                styles.containerLoading
-              }
-            >
-              <Text
-                style={{
-                  fontSize: 48,
-                  marginBottom: 14,
-                }}
-              >
-                🔐
-              </Text>
-
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 24,
-                  fontWeight: '900',
-                }}
-              >
-                Acceso restringido
-              </Text>
-
-              <Text
-                style={{
-                  color: '#AAAAAA',
-                  fontSize: 14,
-                  marginTop: 8,
-                  textAlign: 'center',
-                }}
-              >
-                Solo un administrador
-                puede administrar la
-                caja.
-              </Text>
-            </View>
+        if (
+          !userCanManageCash
+        ) {
+          return renderRestricted(
+            'Solo un administrador puede administrar la caja.',
           );
         }
 
@@ -633,44 +809,8 @@ function MainApp() {
         if (
           !userCanManageCatalog
         ) {
-          return (
-            <View
-              style={
-                styles.containerLoading
-              }
-            >
-              <Text
-                style={{
-                  fontSize: 48,
-                  marginBottom: 14,
-                }}
-              >
-                🔐
-              </Text>
-
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 24,
-                  fontWeight: '900',
-                }}
-              >
-                Acceso restringido
-              </Text>
-
-              <Text
-                style={{
-                  color: '#AAAAAA',
-                  fontSize: 14,
-                  marginTop: 8,
-                  textAlign: 'center',
-                }}
-              >
-                Solo un administrador
-                puede modificar el
-                catálogo.
-              </Text>
-            </View>
+          return renderRestricted(
+            'Solo un administrador puede modificar el catálogo.',
           );
         }
 
@@ -694,9 +834,13 @@ function MainApp() {
 
   return (
     <View
-      style={
-        styles.mainContainer
-      }
+      style={[
+        styles.mainContainer,
+        {
+          backgroundColor:
+            theme.background,
+        },
+      ]}
     >
       <GlobalHeader
         activeTab={
@@ -711,8 +855,12 @@ function MainApp() {
         pendingOrdersCount={
           pendingOrders.length
         }
-        user={user}
-        logout={logout}
+        user={
+          user
+        }
+        logout={
+          logout
+        }
       />
 
       {renderActiveScreen()}
@@ -726,6 +874,13 @@ function NavigationGateway() {
     loading,
     logout,
   } = useAuth();
+
+  const {
+    business,
+    theme,
+    isLoading:
+      businessLoading,
+  } = useBusiness();
 
   const {
     registerActivity,
@@ -743,22 +898,35 @@ function NavigationGateway() {
     logout,
   });
 
-  if (loading) {
+  if (
+    loading ||
+    businessLoading
+  ) {
     return (
       <View
-        style={
-          styles.containerLoading
-        }
+        style={[
+          styles.containerLoading,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={
+            theme.primary
+          }
         />
 
         <Text
-          style={
-            styles.loadingText
-          }
+          style={[
+            styles.loadingText,
+            {
+              color:
+                theme.text,
+            },
+          ]}
         >
           Verificando
           credenciales...
@@ -773,17 +941,134 @@ function NavigationGateway() {
     );
   }
 
+  if (
+    user.role ===
+      'driver' &&
+    !business?.features.deliveryEnabled
+  ) {
+    return (
+      <View
+        style={[
+          styles.containerLoading,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
+      >
+        <Text
+          style={{
+            fontSize:
+              48,
+
+            marginBottom:
+              14,
+          }}
+        >
+          🚚
+        </Text>
+
+        <Text
+          style={{
+            color:
+              theme.text,
+
+            fontSize:
+              24,
+
+            fontWeight:
+              '900',
+
+            textAlign:
+              'center',
+          }}
+        >
+          Reparto deshabilitado
+        </Text>
+
+        <Text
+          style={{
+            color:
+              theme.textMuted,
+
+            fontSize:
+              14,
+
+            marginTop:
+              8,
+
+            textAlign:
+              'center',
+
+            maxWidth:
+              420,
+
+            lineHeight:
+              21,
+          }}
+        >
+          El módulo de reparto no está
+          habilitado para este negocio.
+        </Text>
+
+        <TouchableOpacity
+          style={{
+            marginTop:
+              20,
+
+            minHeight:
+              46,
+
+            paddingHorizontal:
+              22,
+
+            borderRadius:
+              8,
+
+            alignItems:
+              'center',
+
+            justifyContent:
+              'center',
+
+            backgroundColor:
+              theme.primary,
+          }}
+          onPress={
+            logout
+          }
+        >
+          <Text
+            style={{
+              color:
+                theme.onPrimary,
+
+              fontSize:
+                14,
+
+              fontWeight:
+                '900',
+            }}
+          >
+            Cerrar sesión
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
-        flex: 1,
+        flex:
+          1,
       }}
       onTouchStart={
         registerActivity
       }
     >
       {user.role ===
-        'driver' ? (
+      'driver' ? (
         <DriverScreen />
       ) : (
         <MainApp />
