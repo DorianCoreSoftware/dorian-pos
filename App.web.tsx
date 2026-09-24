@@ -1,3 +1,13 @@
-import WebApp from "./src/web/WebApp";
+import WebApp from './src/web/WebApp';
 
-export default WebApp;
+import {
+  BusinessProvider,
+} from './src/context/BusinessContext';
+
+export default function AppWeb() {
+  return (
+    <BusinessProvider>
+      <WebApp />
+    </BusinessProvider>
+  );
+}

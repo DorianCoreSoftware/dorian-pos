@@ -8,9 +8,33 @@ export interface BusinessHour {
   closeTime: string;
 }
 
+export interface BusinessIdentity {
+  businessName: string;
+  shortName: string;
+  currencyCode: string;
+  phone: string;
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+}
+
+export interface BusinessFeatures {
+  loyaltyEnabled: boolean;
+  deliveryEnabled: boolean;
+  promotionsEnabled: boolean;
+  kitchenEnabled: boolean;
+}
+
 export interface WebOrderSettings {
   webOrdersEnabled: boolean;
   webOrdersPauseMessage: string;
+}
+
+export interface BusinessSettings {
+  identity: BusinessIdentity;
+  features: BusinessFeatures;
+  timezone: string;
+  webOrderSettings: WebOrderSettings;
 }
 
 export interface BusinessHourException {
@@ -40,6 +64,17 @@ interface BusinessHourRow {
 }
 
 interface BusinessSettingsRow {
+  business_name: string | null;
+  short_name: string | null;
+  currency_code: string | null;
+  phone: string | null;
+  logo_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  loyalty_enabled: boolean | null;
+  delivery_enabled: boolean | null;
+  promotions_enabled: boolean | null;
+  kitchen_enabled: boolean | null;
   timezone: string;
   web_orders_enabled: boolean;
   web_orders_pause_message: string | null;
@@ -54,63 +89,147 @@ interface BusinessHourExceptionRow {
   reason: string | null;
 }
 
-export async function getBusinessHours(): Promise<BusinessHour[]> {
-  const { data, error } = await supabase
-    .from('business_hours')
-    .select('id, day_of_week, is_open, open_time, close_time')
-    .order('day_of_week', { ascending: true });
+const DEFAULT_TIMEZONE =
+  'America/Mexico_City';
+
+const DEFAULT_BUSINESS_NAME =
+  'Dorian POS';
+
+const DEFAULT_CURRENCY_CODE =
+  'MXN';
+
+const DEFAULT_PRIMARY_COLOR =
+  '#FFBF00';
+
+const DEFAULT_SECONDARY_COLOR =
+  '#000000';
+
+export async function getBusinessHours(): Promise<
+  BusinessHour[]
+> {
+  const { data, error } =
+    await supabase
+      .from('business_hours')
+      .select(
+        'id, day_of_week, is_open, open_time, close_time',
+      )
+      .order(
+        'day_of_week',
+        {
+          ascending: true,
+        },
+      );
 
   if (error) {
-    throw new Error(`No se pudieron obtener los horarios: ${error.message}`);
+    throw new Error(
+      `No se pudieron obtener los horarios: ${error.message}`,
+    );
   }
 
-  return ((data ?? []) as BusinessHourRow[]).map((row) => ({
-    id: row.id,
-    dayOfWeek: row.day_of_week,
-    isOpen: row.is_open,
-    openTime: row.open_time.slice(0, 5),
-    closeTime: row.close_time.slice(0, 5),
-  }));
+  return (
+    (data ?? []) as BusinessHourRow[]
+  ).map(
+    (row) => ({
+      id:
+        row.id,
+
+      dayOfWeek:
+        row.day_of_week,
+
+      isOpen:
+        row.is_open,
+
+      openTime:
+        row.open_time.slice(
+          0,
+          5,
+        ),
+
+      closeTime:
+        row.close_time.slice(
+          0,
+          5,
+        ),
+    }),
+  );
 }
 
 export async function saveBusinessHours(
   hours: BusinessHour[],
 ): Promise<void> {
-  if (hours.length !== 7) {
-    throw new Error('Deben existir horarios para los 7 días.');
+  if (
+    hours.length !==
+    7
+  ) {
+    throw new Error(
+      'Deben existir horarios para los 7 días.',
+    );
   }
 
-  const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const timeRegex =
+    /^([01]\d|2[0-3]):[0-5]\d$/;
 
-  hours.forEach((hour) => {
-    if (!hour.isOpen) return;
+  hours.forEach(
+    (hour) => {
+      if (
+        !hour.isOpen
+      ) {
+        return;
+      }
 
-    if (
-      !timeRegex.test(hour.openTime) ||
-      !timeRegex.test(hour.closeTime)
-    ) {
-      throw new Error('Los horarios deben usar el formato HH:MM.');
-    }
+      if (
+        !timeRegex.test(
+          hour.openTime,
+        ) ||
+        !timeRegex.test(
+          hour.closeTime,
+        )
+      ) {
+        throw new Error(
+          'Los horarios deben usar el formato HH:MM.',
+        );
+      }
 
-    if (hour.openTime === hour.closeTime) {
-      throw new Error(
-        'La hora de apertura y cierre no pueden ser iguales.',
+      if (
+        hour.openTime ===
+        hour.closeTime
+      ) {
+        throw new Error(
+          'La hora de apertura y cierre no pueden ser iguales.',
+        );
+      }
+    },
+  );
+
+  const { error } =
+    await supabase
+      .from(
+        'business_hours',
+      )
+      .upsert(
+        hours.map(
+          (hour) => ({
+            id:
+              hour.id,
+
+            day_of_week:
+              hour.dayOfWeek,
+
+            is_open:
+              hour.isOpen,
+
+            open_time:
+              hour.openTime,
+
+            close_time:
+              hour.closeTime,
+          }),
+        ),
+        {
+          onConflict:
+            'day_of_week',
+        },
       );
-    }
-  });
-
-  const { error } = await supabase
-    .from('business_hours')
-    .upsert(
-      hours.map((hour) => ({
-        id: hour.id,
-        day_of_week: hour.dayOfWeek,
-        is_open: hour.isOpen,
-        open_time: hour.openTime,
-        close_time: hour.closeTime,
-      })),
-      { onConflict: 'day_of_week' },
-    );
 
   if (error) {
     throw new Error(
@@ -119,17 +238,40 @@ export async function saveBusinessHours(
   }
 }
 
-export async function getBusinessSettings(): Promise<{
-  timezone: string;
-  webOrderSettings: WebOrderSettings;
-}> {
-  const { data, error } = await supabase
-    .from('business_settings')
-    .select(
-      'timezone, web_orders_enabled, web_orders_pause_message',
-    )
-    .eq('id', 1)
-    .single();
+export async function getBusinessSettings(): Promise<
+  BusinessSettings
+> {
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from(
+        'business_settings',
+      )
+      .select(
+        `
+          business_name,
+          short_name,
+          currency_code,
+          phone,
+          logo_url,
+          primary_color,
+          secondary_color,
+          loyalty_enabled,
+          delivery_enabled,
+          promotions_enabled,
+          kitchen_enabled,
+          timezone,
+          web_orders_enabled,
+          web_orders_pause_message
+        `,
+      )
+      .eq(
+        'id',
+        1,
+      )
+      .single();
 
   if (error) {
     throw new Error(
@@ -140,10 +282,67 @@ export async function getBusinessSettings(): Promise<{
   const row =
     data as BusinessSettingsRow;
 
+  const businessName =
+    row.business_name
+      ?.trim() ||
+    DEFAULT_BUSINESS_NAME;
+
   return {
+    identity: {
+      businessName,
+
+      shortName:
+        row.short_name
+          ?.trim() ||
+        businessName,
+
+      currencyCode:
+        row.currency_code
+          ?.trim() ||
+        DEFAULT_CURRENCY_CODE,
+
+      phone:
+        row.phone
+          ?.trim() ??
+        '',
+
+      logoUrl:
+        row.logo_url
+          ?.trim() ??
+        '',
+
+      primaryColor:
+        row.primary_color
+          ?.trim() ||
+        DEFAULT_PRIMARY_COLOR,
+
+      secondaryColor:
+        row.secondary_color
+          ?.trim() ||
+        DEFAULT_SECONDARY_COLOR,
+    },
+
+    features: {
+      loyaltyEnabled:
+        row.loyalty_enabled ??
+        true,
+
+      deliveryEnabled:
+        row.delivery_enabled ??
+        true,
+
+      promotionsEnabled:
+        row.promotions_enabled ??
+        true,
+
+      kitchenEnabled:
+        row.kitchen_enabled ??
+        true,
+    },
+
     timezone:
       row.timezone ??
-      'America/Mexico_City',
+      DEFAULT_TIMEZONE,
 
     webOrderSettings: {
       webOrdersEnabled:
@@ -157,14 +356,36 @@ export async function getBusinessSettings(): Promise<{
   };
 }
 
-export async function getBusinessTimezone(): Promise<string> {
+export async function getBusinessIdentity(): Promise<
+  BusinessIdentity
+> {
+  const settings =
+    await getBusinessSettings();
+
+  return settings.identity;
+}
+
+export async function getBusinessFeatures(): Promise<
+  BusinessFeatures
+> {
+  const settings =
+    await getBusinessSettings();
+
+  return settings.features;
+}
+
+export async function getBusinessTimezone(): Promise<
+  string
+> {
   const settings =
     await getBusinessSettings();
 
   return settings.timezone;
 }
 
-export async function getWebOrderSettings(): Promise<WebOrderSettings> {
+export async function getWebOrderSettings(): Promise<
+  WebOrderSettings
+> {
   const settings =
     await getBusinessSettings();
 
@@ -175,23 +396,35 @@ export async function saveWebOrderSettings(
   settings: WebOrderSettings,
 ): Promise<void> {
   const pauseMessage =
-    settings.webOrdersPauseMessage
+    settings
+      .webOrdersPauseMessage
       .trim()
-      .slice(0, 250);
+      .slice(
+        0,
+        250,
+      );
 
-  const { error } = await supabase
-    .from('business_settings')
-    .update({
-      web_orders_enabled:
-        settings.webOrdersEnabled,
+  const { error } =
+    await supabase
+      .from(
+        'business_settings',
+      )
+      .update({
+        web_orders_enabled:
+          settings.webOrdersEnabled,
 
-      web_orders_pause_message:
-        pauseMessage || null,
+        web_orders_pause_message:
+          pauseMessage ||
+          null,
 
-      updated_at:
-        new Date().toISOString(),
-    })
-    .eq('id', 1);
+        updated_at:
+          new Date()
+            .toISOString(),
+      })
+      .eq(
+        'id',
+        1,
+      );
 
   if (error) {
     throw new Error(
@@ -201,17 +434,27 @@ export async function saveWebOrderSettings(
 }
 
 export async function getBusinessHourExceptions():
-  Promise<BusinessHourException[]> {
-  const { data, error } = await supabase
-    .from('business_hour_exceptions')
-    .select(
-      'id, exception_date, is_open, open_time, close_time, reason',
-    )
-    .order(
-      'exception_date',
-      { ascending: true },
-    )
-    .limit(100);
+Promise<BusinessHourException[]> {
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from(
+        'business_hour_exceptions',
+      )
+      .select(
+        'id, exception_date, is_open, open_time, close_time, reason',
+      )
+      .order(
+        'exception_date',
+        {
+          ascending: true,
+        },
+      )
+      .limit(
+        100,
+      );
 
   if (error) {
     throw new Error(
@@ -220,7 +463,10 @@ export async function getBusinessHourExceptions():
   }
 
   return (
-    (data ?? []) as BusinessHourExceptionRow[]
+    (
+      data ??
+      []
+    ) as BusinessHourExceptionRow[]
   ).map(
     (row) => ({
       id:
@@ -233,11 +479,19 @@ export async function getBusinessHourExceptions():
         row.is_open,
 
       openTime:
-        row.open_time?.slice(0, 5) ??
+        row.open_time
+          ?.slice(
+            0,
+            5,
+          ) ??
         '17:00',
 
       closeTime:
-        row.close_time?.slice(0, 5) ??
+        row.close_time
+          ?.slice(
+            0,
+            5,
+          ) ??
         '23:00',
 
       reason:
@@ -254,7 +508,9 @@ export async function saveBusinessHourException(
     input.exceptionDate,
   );
 
-  if (input.isOpen) {
+  if (
+    input.isOpen
+  ) {
     validateTime(
       input.openTime,
     );
@@ -276,7 +532,10 @@ export async function saveBusinessHourException(
   const reason =
     input.reason
       .trim()
-      .slice(0, 120);
+      .slice(
+        0,
+        120,
+      );
 
   const row = {
     exception_date:
@@ -296,13 +555,17 @@ export async function saveBusinessHourException(
         : null,
 
     reason:
-      reason || null,
+      reason ||
+      null,
 
     updated_at:
-      new Date().toISOString(),
+      new Date()
+        .toISOString(),
   };
 
-  if (input.id) {
+  if (
+    input.id
+  ) {
     const { error } =
       await supabase
         .from(
@@ -393,8 +656,12 @@ function validateExceptionDate(
     Number.isNaN(
       date.getTime(),
     ) ||
-    date.toISOString()
-      .slice(0, 10) !==
+    date
+      .toISOString()
+      .slice(
+        0,
+        10,
+      ) !==
       value
   ) {
     throw new Error(

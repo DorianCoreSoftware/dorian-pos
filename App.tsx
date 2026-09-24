@@ -78,8 +78,12 @@ import {
 } from './src/services/pushNotificationService';
 import { DriverScreen } from './src/screens/driver/DriverScreen';
 import { LoyaltyScreen } from './src/screens/loyalty/LoyaltyScreen';
+import { BusinessProvider, useBusiness } from './src/context/BusinessContext';
 
 function MainApp() {
+  const {
+  business,
+} = useBusiness();
   const {
     user,
     logout,
@@ -337,7 +341,9 @@ function MainApp() {
             styles.loadingText
           }
         >
-          Conectando a Burger Kong
+          Conectando a{' '}
+          {business?.identity.businessName ??
+            'Dorian POS'}{' '}
           Cloud...
         </Text>
       </View>
@@ -788,8 +794,10 @@ function NavigationGateway() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationGateway />
-    </AuthProvider>
+    <BusinessProvider>
+      <AuthProvider>
+        <NavigationGateway />
+      </AuthProvider>
+    </BusinessProvider>
   );
 }
