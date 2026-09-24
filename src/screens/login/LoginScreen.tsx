@@ -9,14 +9,19 @@ import {
   View,
 } from 'react-native';
 
+import { useState } from 'react';
+
 import {
   signInWithIdentifier,
 } from '../../services/authService';
 
 import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
   styles,
 } from './Login.styles';
-import { useState } from 'react';
 
 export const LoginScreen = () => {
   const [
@@ -33,6 +38,15 @@ export const LoginScreen = () => {
     isLoading,
     setIsLoading,
   ] = useState(false);
+
+  const {
+    business,
+    theme,
+  } = useBusiness();
+
+  const businessName =
+    business?.identity.businessName ??
+    'Dorian POS';
 
   const handleLogin =
     async (): Promise<void> => {
@@ -84,37 +98,68 @@ export const LoginScreen = () => {
           ? 'padding'
           : 'height'
       }
-      style={
-        styles.container
-      }
+      style={[
+        styles.container,
+        {
+          backgroundColor:
+            theme.background,
+        },
+      ]}
     >
       <View
-        style={
-          styles.card
-        }
+        style={[
+          styles.card,
+          {
+            backgroundColor:
+              theme.surface,
+
+            shadowColor:
+              theme.secondary,
+          },
+        ]}
       >
         <Text
-          style={
-            styles.logo
-          }
+          style={[
+            styles.logo,
+            {
+              color:
+                theme.primary,
+            },
+          ]}
         >
-          Burger Kong
+          {businessName}
         </Text>
 
         <Text
-          style={
-            styles.subtitle
-          }
+          style={[
+            styles.subtitle,
+            {
+              color:
+                theme.textMuted,
+            },
+          ]}
         >
           Panel de Control & Comandas
         </Text>
 
         <TextInput
-          style={
-            styles.input
-          }
+          style={[
+            styles.input,
+            {
+              backgroundColor:
+                theme.surfaceAlt,
+
+              color:
+                theme.text,
+
+              borderColor:
+                theme.border,
+            },
+          ]}
           placeholder="Correo o usuario"
-          placeholderTextColor="#888"
+          placeholderTextColor={
+            theme.textMuted
+          }
           value={
             identifier
           }
@@ -132,11 +177,23 @@ export const LoginScreen = () => {
         />
 
         <TextInput
-          style={
-            styles.input
-          }
+          style={[
+            styles.input,
+            {
+              backgroundColor:
+                theme.surfaceAlt,
+
+              color:
+                theme.text,
+
+              borderColor:
+                theme.border,
+            },
+          ]}
           placeholder="Contraseña"
-          placeholderTextColor="#888"
+          placeholderTextColor={
+            theme.textMuted
+          }
           value={
             password
           }
@@ -160,7 +217,10 @@ export const LoginScreen = () => {
         <TouchableOpacity
           style={[
             styles.button,
-
+            {
+              backgroundColor:
+                theme.primary,
+            },
             isLoading && {
               opacity:
                 0.65,
@@ -175,13 +235,19 @@ export const LoginScreen = () => {
         >
           {isLoading ? (
             <ActivityIndicator
-              color="#121212"
+              color={
+                theme.onPrimary
+              }
             />
           ) : (
             <Text
-              style={
-                styles.buttonText
-              }
+              style={[
+                styles.buttonText,
+                {
+                  color:
+                    theme.onPrimary,
+                },
+              ]}
             >
               Iniciar Sesión
             </Text>

@@ -12,8 +12,10 @@ import {
   BusinessSettings,
   getBusinessSettings,
 } from '../services/businessHoursService';
+import { BusinessTheme, createBusinessTheme } from '../theme/businessTheme';
 
 interface BusinessContextValue {
+  theme: BusinessTheme;
   business: BusinessSettings | null;
   isLoading: boolean;
   error: string | null;
@@ -32,6 +34,7 @@ const BusinessContext =
 export function BusinessProvider({
   children,
 }: BusinessProviderProps) {
+
   const [
     business,
     setBusiness,
@@ -103,16 +106,29 @@ export function BusinessProvider({
     ],
   );
 
+  const theme =
+    useMemo(
+      () =>
+        createBusinessTheme(
+          business?.identity,
+        ),
+      [
+        business?.identity,
+      ],
+    );
+
   const value =
     useMemo<BusinessContextValue>(
       () => ({
         business,
+        theme,
         isLoading,
         error,
         refreshBusiness,
       }),
       [
         business,
+        theme,
         isLoading,
         error,
         refreshBusiness,
@@ -129,7 +145,7 @@ export function BusinessProvider({
 }
 
 export function useBusiness():
-BusinessContextValue {
+  BusinessContextValue {
   const context =
     useContext(
       BusinessContext,

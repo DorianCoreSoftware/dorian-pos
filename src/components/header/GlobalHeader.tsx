@@ -16,8 +16,18 @@ import {
   canManageCash,
   canManageCatalog,
 } from '../../Utils/permissions';
-import { printTestTicket } from '../../services/printerService';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+
+import {
+  printTestTicket,
+} from '../../services/printerService';
+
+import {
+  useResponsiveLayout,
+} from '../../hooks/useResponsiveLayout';
+
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
 
 export type MainTab =
   | 'pos'
@@ -51,10 +61,54 @@ export function GlobalHeader({
   user,
   logout,
 }: HeaderProps) {
-
   const {
     isPhone,
   } = useResponsiveLayout();
+
+const {
+  business,
+  theme,
+  isLoading,
+  error,
+} = useBusiness();
+
+  console.log(
+  'GLOBAL HEADER BUSINESS:',
+  business,
+);
+
+console.log(
+  'GLOBAL HEADER LOGO:',
+  business?.identity.logoUrl,
+);
+
+console.log(
+  'GLOBAL HEADER NAME:',
+  business?.identity.businessName,
+);
+
+console.log(
+  'GLOBAL HEADER BUSINESS:',
+  business,
+);
+
+console.log(
+  'GLOBAL HEADER LOADING:',
+  isLoading,
+);
+
+console.log(
+  'GLOBAL HEADER ERROR:',
+  error,
+);
+
+  const logoUrl =
+    business?.identity.logoUrl;
+
+  const businessName =
+    business?.identity.shortName ??
+    business?.identity.businessName ??
+    'Dorian POS';
 
   const handlePrinterTest =
     async (): Promise<void> => {
@@ -79,13 +133,53 @@ export function GlobalHeader({
         );
       }
     };
+
+  const getTabButtonStyle = (
+    tab: MainTab,
+  ) => [
+    styles.tabButton,
+
+    isPhone &&
+      styles.tabButtonPhone,
+
+    activeTab === tab &&
+      styles.tabActiveButton,
+
+    activeTab === tab && {
+      backgroundColor:
+        theme.primary,
+    },
+  ];
+
+  const getTabTextStyle = (
+    tab: MainTab,
+  ) => [
+    styles.tabText,
+
+    isPhone &&
+      styles.tabTextPhone,
+
+    activeTab === tab &&
+      styles.tabActiveText,
+
+    activeTab === tab && {
+      color:
+        theme.onPrimary,
+    },
+  ];
+
   return (
     <View
       style={[
         styles.header,
 
+        {
+          backgroundColor:
+            theme.surface,
+        },
+
         isPhone &&
-        styles.headerPhone,
+          styles.headerPhone,
       ]}
     >
       <View
@@ -93,7 +187,7 @@ export function GlobalHeader({
           styles.headerTopRow,
 
           isPhone &&
-          styles.headerTopRowPhone,
+            styles.headerTopRowPhone,
         ]}
       >
         <View
@@ -101,31 +195,50 @@ export function GlobalHeader({
             styles.headerBrandContainer
           }
         >
-          <Image
-            source={require(
-              '../../../assets/OnlyBurgerKong.png'
-            )}
-            style={[
-              styles.headerLogo,
+         {logoUrl ? (
+  <Image
+    source={{
+      uri: logoUrl,
+    }}
+    style={[
+      styles.headerLogoLetters,
+      isPhone &&
+        styles.headerLogoLettersPhone,
+    ]}
+    resizeMode="contain"
+  />
+) : (
+  <Text
+    style={{
+      color:
+        theme.primary,
+      fontSize:
+        22,
+      fontWeight:
+        '900',
+    }}
+  >
+    {businessName}
+  </Text>
+)}
 
-              isPhone &&
-              styles.headerLogoPhone,
-            ]}
-            resizeMode="contain"
-          />
+          {!logoUrl &&
+          !businessName ? (
+            <Text
+              style={{
+                color:
+                  theme.primary,
 
-          <Image
-            source={require(
-              '../../../assets/logo.png'
-            )}
-            style={[
-              styles.headerLogoLetters,
+                fontSize:
+                  22,
 
-              isPhone &&
-              styles.headerLogoLettersPhone,
-            ]}
-            resizeMode="contain"
-          />
+                fontWeight:
+                  '900',
+              }}
+            >
+              Dorian POS
+            </Text>
+          ) : null}
         </View>
 
         <View
@@ -133,19 +246,24 @@ export function GlobalHeader({
             styles.userContainer,
 
             isPhone &&
-            styles.userContainerPhone,
+              styles.userContainerPhone,
           ]}
         >
           {!isPhone ? (
             <Text
-              style={
-                styles.userName
-              }
+              style={[
+                styles.userName,
+
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               {user?.fullName}{' '}
               (
               {user?.role ===
-                'admin'
+              'admin'
                 ? 'Admin'
                 : 'Caja'}
               )
@@ -153,9 +271,14 @@ export function GlobalHeader({
           ) : (
             <Text
               numberOfLines={1}
-              style={
-                styles.userNamePhone
-              }
+              style={[
+                styles.userNamePhone,
+
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               {user?.fullName}
             </Text>
@@ -165,14 +288,24 @@ export function GlobalHeader({
             onPress={
               logout
             }
-            style={
-              styles.logoutButton
-            }
+            style={[
+              styles.logoutButton,
+
+              {
+                borderColor:
+                  theme.primary,
+              },
+            ]}
           >
             <Text
-              style={
-                styles.logoutText
-              }
+              style={[
+                styles.logoutText,
+
+                {
+                  color:
+                    theme.primary,
+                },
+              ]}
             >
               Salir
             </Text>
@@ -185,20 +318,15 @@ export function GlobalHeader({
           styles.tabContainer,
 
           isPhone &&
-          styles.tabContainerPhone,
+            styles.tabContainerPhone,
         ]}
       >
         <TouchableOpacity
-          style={[
-            styles.tabButton,
-
-            isPhone &&
-            styles.tabButtonPhone,
-
-            activeTab ===
-            'pos' &&
-            styles.tabActiveButton,
-          ]}
+          style={
+            getTabButtonStyle(
+              'pos',
+            )
+          }
           onPress={() =>
             setActiveTab(
               'pos',
@@ -206,32 +334,22 @@ export function GlobalHeader({
           }
         >
           <Text
-            style={[
-              styles.tabText,
-
-              isPhone &&
-              styles.tabTextPhone,
-
-              activeTab ===
-              'pos' &&
-              styles.tabActiveText,
-            ]}
+            style={
+              getTabTextStyle(
+                'pos',
+              )
+            }
           >
             MENÚ
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.tabButton,
-
-            isPhone &&
-            styles.tabButtonPhone,
-
-            activeTab ===
-            'kitchen' &&
-            styles.tabActiveButton,
-          ]}
+          style={
+            getTabButtonStyle(
+              'kitchen',
+            )
+          }
           onPress={() =>
             setActiveTab(
               'kitchen',
@@ -239,16 +357,11 @@ export function GlobalHeader({
           }
         >
           <Text
-            style={[
-              styles.tabText,
-
-              isPhone &&
-              styles.tabTextPhone,
-
-              activeTab ===
-              'kitchen' &&
-              styles.tabActiveText,
-            ]}
+            style={
+              getTabTextStyle(
+                'kitchen',
+              )
+            }
           >
             PEDIDOS (
             {pendingOrdersCount})
@@ -256,16 +369,11 @@ export function GlobalHeader({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.tabButton,
-
-            isPhone &&
-            styles.tabButtonPhone,
-
-            activeTab ===
-            'sales' &&
-            styles.tabActiveButton,
-          ]}
+          style={
+            getTabButtonStyle(
+              'sales',
+            )
+          }
           onPress={() =>
             setActiveTab(
               'sales',
@@ -273,32 +381,22 @@ export function GlobalHeader({
           }
         >
           <Text
-            style={[
-              styles.tabText,
-
-              isPhone &&
-              styles.tabTextPhone,
-
-              activeTab ===
-              'sales' &&
-              styles.tabActiveText,
-            ]}
+            style={
+              getTabTextStyle(
+                'sales',
+              )
+            }
           >
             VENTAS
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.tabButton,
-
-            isPhone &&
-            styles.tabButtonPhone,
-
-            activeTab ===
-            'loyalty' &&
-            styles.tabActiveButton,
-          ]}
+          style={
+            getTabButtonStyle(
+              'loyalty',
+            )
+          }
           onPress={() =>
             setActiveTab(
               'loyalty',
@@ -306,16 +404,11 @@ export function GlobalHeader({
           }
         >
           <Text
-            style={[
-              styles.tabText,
-
-              isPhone &&
-              styles.tabTextPhone,
-
-              activeTab ===
-              'loyalty' &&
-              styles.tabActiveText,
-            ]}
+            style={
+              getTabTextStyle(
+                'loyalty',
+              )
+            }
           >
             RECOMPENSAS
           </Text>
@@ -325,16 +418,11 @@ export function GlobalHeader({
           user,
         ) ? (
           <TouchableOpacity
-            style={[
-              styles.tabButton,
-
-              isPhone &&
-              styles.tabButtonPhone,
-
-              activeTab ===
-              'cash' &&
-              styles.tabActiveButton,
-            ]}
+            style={
+              getTabButtonStyle(
+                'cash',
+              )
+            }
             onPress={() =>
               setActiveTab(
                 'cash',
@@ -342,16 +430,11 @@ export function GlobalHeader({
             }
           >
             <Text
-              style={[
-                styles.tabText,
-
-                isPhone &&
-                styles.tabTextPhone,
-
-                activeTab ===
-                'cash' &&
-                styles.tabActiveText,
-              ]}
+              style={
+                getTabTextStyle(
+                  'cash',
+                )
+              }
             >
               CAJA
             </Text>
@@ -362,16 +445,11 @@ export function GlobalHeader({
           user,
         ) ? (
           <TouchableOpacity
-            style={[
-              styles.tabButton,
-
-              isPhone &&
-              styles.tabButtonPhone,
-
-              activeTab ===
-              'admin' &&
-              styles.tabActiveButton,
-            ]}
+            style={
+              getTabButtonStyle(
+                'admin',
+              )
+            }
             onPress={() =>
               setActiveTab(
                 'admin',
@@ -379,16 +457,11 @@ export function GlobalHeader({
             }
           >
             <Text
-              style={[
-                styles.tabText,
-
-                isPhone &&
-                styles.tabTextPhone,
-
-                activeTab ===
-                'admin' &&
-                styles.tabActiveText,
-              ]}
+              style={
+                getTabTextStyle(
+                  'admin',
+                )
+              }
             >
               ADMIN
             </Text>
