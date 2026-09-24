@@ -1,8 +1,12 @@
 import React, {
+  useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 import {
+  Modal,
+  ScrollView,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -50,9 +54,16 @@ import {
 } from '../../components/admin/users/AdminUsers';
 
 import {
+  AdminLoyalty,
+} from '../../components/admin/loyalty/AdminLoyalty';
+
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
   styles,
 } from './AdminScreen.styles';
-import { AdminLoyalty } from '../../components/admin/loyalty/AdminLoyalty';
 
 type AdminSection =
   | 'products'
@@ -67,15 +78,21 @@ type AdminSection =
   | 'delivery'
   | 'feedback';
 
+interface AdminSectionOption {
+  key: AdminSection;
+  label: string;
+  icon: string;
+}
+
 interface AdminScreenProps {
   onProductsChanged:
-  () => Promise<void>;
+    () => Promise<void>;
 
   onCategoriesChanged:
-  () => Promise<void>;
+    () => Promise<void>;
 
   onModifiersChanged:
-  () => Promise<void>;
+    () => Promise<void>;
 }
 
 export function AdminScreen({
@@ -87,18 +104,212 @@ export function AdminScreen({
     width,
   } = useWindowDimensions();
 
+  const {
+    business,
+    theme,
+  } = useBusiness();
+
   const isPhone =
     width < 700;
-
-  const isSmallPhone =
-    width < 430;
 
   const [
     activeSection,
     setActiveSection,
-  ] = useState<AdminSection>(
-    'products',
-  );
+  ] =
+    useState<AdminSection>(
+      'products',
+    );
+
+  const [
+    sectionSelectorVisible,
+    setSectionSelectorVisible,
+  ] =
+    useState(false);
+
+  const businessName =
+    business?.identity
+      .businessName ??
+    'Dorian POS';
+
+  const availableSections =
+    useMemo<
+      AdminSectionOption[]
+    >(
+      () => {
+        const sections:
+          AdminSectionOption[] = [
+            {
+              key:
+                'products',
+              label:
+                'PRODUCTOS',
+              icon:
+                '📦',
+            },
+            {
+              key:
+                'categories',
+              label:
+                'CATEGORÍAS',
+              icon:
+                '🗂️',
+            },
+            {
+              key:
+                'modifiers',
+              label:
+                'MODIFICADORES',
+              icon:
+                '⚙️',
+            },
+            {
+              key:
+                'users',
+              label:
+                'USUARIOS',
+              icon:
+                '👥',
+            },
+            {
+              key:
+                'reports',
+              label:
+                'REPORTES',
+              icon:
+                '📊',
+            },
+            {
+              key:
+                'printer',
+              label:
+                'IMPRESORA',
+              icon:
+                '🖨️',
+            },
+          ];
+
+        if (
+          business?.features
+            .promotionsEnabled
+        ) {
+          sections.push({
+            key:
+              'promotions',
+            label:
+              'PROMOCIONES',
+            icon:
+              '🎟️',
+          });
+        }
+
+        if (
+          business?.features
+            .loyaltyEnabled
+        ) {
+          sections.push({
+            key:
+              'loyalty',
+            label:
+              'RECOMPENSAS',
+            icon:
+              '🎁',
+          });
+        }
+
+        sections.push({
+          key:
+            'hours',
+          label:
+            'HORARIOS',
+          icon:
+            '🕐',
+        });
+
+        if (
+          business?.features
+            .deliveryEnabled
+        ) {
+          sections.push({
+            key:
+              'delivery',
+            label:
+              'ENTREGAS',
+            icon:
+              '🚚',
+          });
+        }
+
+        sections.push({
+          key:
+            'feedback',
+          label:
+            'BUZÓN',
+          icon:
+            '💬',
+        });
+
+        return sections;
+      },
+      [
+        business?.features
+          .deliveryEnabled,
+        business?.features
+          .loyaltyEnabled,
+        business?.features
+          .promotionsEnabled,
+      ],
+    );
+
+  const activeSectionOption =
+    useMemo(
+      () =>
+        availableSections.find(
+          section =>
+            section.key ===
+            activeSection,
+        ) ??
+        availableSections[0],
+      [
+        activeSection,
+        availableSections,
+      ],
+    );
+
+  useEffect(() => {
+    const activeSectionExists =
+      availableSections.some(
+        section =>
+          section.key ===
+          activeSection,
+      );
+
+    if (
+      !activeSectionExists &&
+      availableSections.length >
+        0
+    ) {
+      setActiveSection(
+        availableSections[0].key,
+      );
+    }
+  }, [
+    activeSection,
+    availableSections,
+  ]);
+
+  const handleSelectSection =
+    (
+      section:
+        AdminSection,
+    ): void => {
+      setActiveSection(
+        section,
+      );
+
+      setSectionSelectorVisible(
+        false,
+      );
+    };
 
   const renderContent =
     () => {
@@ -112,15 +323,6 @@ export function AdminScreen({
               onProductsChanged
             }
           />
-        );
-      }
-
-      if (
-        activeSection ===
-        'loyalty'
-      ) {
-        return (
-          <AdminLoyalty />
         );
       }
 
@@ -170,10 +372,42 @@ export function AdminScreen({
 
       if (
         activeSection ===
-        'promotions'
+        'printer'
       ) {
         return (
+          <AdminPrinter />
+        );
+      }
+
+      if (
+        activeSection ===
+        'promotions'
+      ) {
+        if (
+          !business?.features
+            .promotionsEnabled
+        ) {
+          return null;
+        }
+
+        return (
           <AdminPromotions />
+        );
+      }
+
+      if (
+        activeSection ===
+        'loyalty'
+      ) {
+        if (
+          !business?.features
+            .loyaltyEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <AdminLoyalty />
         );
       }
 
@@ -190,6 +424,13 @@ export function AdminScreen({
         activeSection ===
         'delivery'
       ) {
+        if (
+          !business?.features
+            .deliveryEnabled
+        ) {
+          return null;
+        }
+
         return (
           <AdminDeliverySettings />
         );
@@ -204,52 +445,55 @@ export function AdminScreen({
         );
       }
 
-      return (
-        <AdminPrinter />
-      );
+      return null;
     };
 
-  const renderTab =
+  const renderDesktopTab =
     (
-      section:
-        AdminSection,
-
-      label:
-        string,
+      option:
+        AdminSectionOption,
     ) => {
       const isActive =
         activeSection ===
-        section;
+        option.key;
 
       return (
         <TouchableOpacity
+          key={
+            option.key
+          }
           style={[
             styles.sectionTab,
+            {
+              borderColor:
+                isActive
+                  ? theme.primary
+                  : theme.border,
 
-            isPhone &&
-            styles.sectionTabPhone,
-
-            isActive &&
-            styles.sectionTabActive,
+              backgroundColor:
+                isActive
+                  ? theme.surfaceAlt
+                  : theme.surface,
+            },
           ]}
           onPress={() =>
-            setActiveSection(
-              section,
+            handleSelectSection(
+              option.key,
             )
           }
         >
           <Text
             style={[
               styles.sectionTabText,
-
-              isSmallPhone &&
-              styles.sectionTabTextSmall,
-
-              isActive &&
-              styles.sectionTabTextActive,
+              {
+                color:
+                  isActive
+                    ? theme.primary
+                    : theme.textMuted,
+              },
             ]}
           >
-            {label}
+            {option.label}
           </Text>
         </TouchableOpacity>
       );
@@ -259,98 +503,140 @@ export function AdminScreen({
     <View
       style={[
         styles.container,
-
         isPhone &&
-        styles.containerPhone,
+          styles.containerPhone,
+        {
+          backgroundColor:
+            theme.background,
+        },
       ]}
     >
       <View
-        style={
-          styles.header
-        }
-      >
-        <View>
-          <Text
-            style={
-              styles.title
-            }
-          >
-            Administración
-          </Text>
-
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            Configuración del punto de venta Burger Kong
-          </Text>
-        </View>
-      </View>
-
-      <View
         style={[
-          styles.tabsContainer,
-
+          styles.header,
           isPhone &&
-          styles.tabsContainerPhone,
+            styles.headerPhone,
         ]}
       >
-        {renderTab(
-          'products',
-          'PRODUCTOS',
-        )}
+        <Text
+          style={[
+            styles.title,
+            isPhone &&
+              styles.titlePhone,
+            {
+              color:
+                theme.text,
+            },
+          ]}
+        >
+          Administración
+        </Text>
 
-        {renderTab(
-          'categories',
-          'CATEGORÍAS',
-        )}
-
-        {renderTab(
-          'modifiers',
-          'MODIFICADORES',
-        )}
-
-        {renderTab(
-          'users',
-          'USUARIOS',
-        )}
-
-        {renderTab(
-          'reports',
-          'REPORTES',
-        )}
-
-        {renderTab(
-          'printer',
-          'IMPRESORA',
-        )}
-
-        {renderTab(
-          'promotions',
-          'PROMOCIONES',
-        )}
-
-        {renderTab(
-          'loyalty',
-          'RECOMPENSAS',
-        )}
-
-        {renderTab(
-          'hours',
-          'HORARIOS',
-        )}
-
-        {renderTab(
-          'delivery',
-          'ENTREGAS',
-        )}
-
-        {renderTab(
-          'feedback',
-          'BUZÓN',
-        )}
+        <Text
+          style={[
+            styles.subtitle,
+            isPhone &&
+              styles.subtitlePhone,
+            {
+              color:
+                theme.textMuted,
+            },
+          ]}
+        >
+          Configuración del punto de venta{' '}
+          {businessName}
+        </Text>
       </View>
+
+      {isPhone ? (
+        <TouchableOpacity
+          style={[
+            styles.mobileSectionSelector,
+            {
+              borderColor:
+                theme.border,
+
+              backgroundColor:
+                theme.surface,
+            },
+          ]}
+          onPress={() =>
+            setSectionSelectorVisible(
+              true,
+            )
+          }
+        >
+          <View
+            style={
+              styles.mobileSectionSelectorLeft
+            }
+          >
+            <Text
+              style={
+                styles.mobileSectionIcon
+              }
+            >
+              {activeSectionOption
+                ?.icon ??
+                '⚙️'}
+            </Text>
+
+            <View
+              style={
+                styles.mobileSectionTextContainer
+              }
+            >
+              <Text
+                style={[
+                  styles.mobileSectionLabel,
+                  {
+                    color:
+                      theme.textMuted,
+                  },
+                ]}
+              >
+                SECCIÓN
+              </Text>
+
+              <Text
+                style={[
+                  styles.mobileSectionValue,
+                  {
+                    color:
+                      theme.text,
+                  },
+                ]}
+              >
+                {activeSectionOption
+                  ?.label ??
+                  'PRODUCTOS'}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={[
+              styles.mobileSectionChevron,
+              {
+                color:
+                  theme.primary,
+              },
+            ]}
+          >
+            ▼
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View
+          style={
+            styles.tabsContainer
+          }
+        >
+          {availableSections.map(
+            renderDesktopTab,
+          )}
+        </View>
+      )}
 
       <View
         style={
@@ -359,6 +645,202 @@ export function AdminScreen({
       >
         {renderContent()}
       </View>
+
+      <Modal
+        visible={
+          sectionSelectorVisible
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setSectionSelectorVisible(
+            false,
+          )
+        }
+      >
+        <View
+          style={
+            styles.modalBackdrop
+          }
+        >
+          <TouchableOpacity
+            style={
+              styles.modalDismissArea
+            }
+            activeOpacity={
+              1
+            }
+            onPress={() =>
+              setSectionSelectorVisible(
+                false,
+              )
+            }
+          />
+
+          <View
+            style={[
+              styles.mobileMenuCard,
+              {
+                backgroundColor:
+                  theme.surface,
+
+                borderColor:
+                  theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.mobileMenuHeader,
+                {
+                  borderBottomColor:
+                    theme.border,
+                },
+              ]}
+            >
+              <View
+                style={
+                  styles.mobileMenuHeaderText
+                }
+              >
+                <Text
+                  style={[
+                    styles.mobileMenuTitle,
+                    {
+                      color:
+                        theme.text,
+                    },
+                  ]}
+                >
+                  Administración
+                </Text>
+
+                <Text
+                  style={[
+                    styles.mobileMenuSubtitle,
+                    {
+                      color:
+                        theme.textMuted,
+                    },
+                  ]}
+                >
+                  Selecciona una sección
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.mobileMenuClose,
+                  {
+                    backgroundColor:
+                      theme.surfaceAlt,
+                  },
+                ]}
+                onPress={() =>
+                  setSectionSelectorVisible(
+                    false,
+                  )
+                }
+              >
+                <Text
+                  style={[
+                    styles.mobileMenuCloseText,
+                    {
+                      color:
+                        theme.text,
+                    },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={
+                styles.mobileMenuList
+              }
+              contentContainerStyle={
+                styles.mobileMenuListContent
+              }
+              showsVerticalScrollIndicator={
+                false
+              }
+            >
+              {availableSections.map(
+                option => {
+                  const isActive =
+                    activeSection ===
+                    option.key;
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        option.key
+                      }
+                      style={[
+                        styles.mobileMenuOption,
+                        {
+                          borderColor:
+                            isActive
+                              ? theme.primary
+                              : theme.border,
+
+                          backgroundColor:
+                            isActive
+                              ? theme.surfaceAlt
+                              : theme.surface,
+                        },
+                      ]}
+                      onPress={() =>
+                        handleSelectSection(
+                          option.key,
+                        )
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.mobileMenuOptionIcon
+                        }
+                      >
+                        {option.icon}
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.mobileMenuOptionText,
+                          {
+                            color:
+                              isActive
+                                ? theme.primary
+                                : theme.text,
+                          },
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+
+                      {isActive ? (
+                        <Text
+                          style={[
+                            styles.mobileMenuCheck,
+                            {
+                              color:
+                                theme.primary,
+                            },
+                          ]}
+                        >
+                          ✓
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                },
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

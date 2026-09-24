@@ -6,7 +6,6 @@ export const styles =
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#151515',
     },
 
     header: {
@@ -14,13 +13,11 @@ export const styles =
     },
 
     title: {
-      color: '#FFFFFF',
       fontSize: 22,
       fontWeight: '900',
     },
 
     subtitle: {
-      color: '#888888',
       fontSize: 12,
       marginTop: 4,
     },
@@ -29,11 +26,9 @@ export const styles =
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#151515',
     },
 
     loadingText: {
-      color: '#AAAAAA',
       fontSize: 13,
       marginTop: 10,
     },
@@ -43,18 +38,16 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,
-      backgroundColor: '#151515',
     },
 
     errorTitle: {
-      color: '#FF5252',
       fontSize: 17,
       fontWeight: '900',
       marginBottom: 8,
+      textAlign: 'center',
     },
 
     errorText: {
-      color: '#AAAAAA',
       textAlign: 'center',
       fontSize: 12,
     },
@@ -64,8 +57,6 @@ export const styles =
       marginBottom: 14,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#303030',
-      backgroundColor: '#1D1D1D',
     },
 
     cardHeader: {
@@ -80,13 +71,11 @@ export const styles =
     },
 
     cardTitle: {
-      color: '#FFFFFF',
       fontSize: 17,
       fontWeight: '900',
     },
 
     cardDescription: {
-      color: '#888888',
       fontSize: 11,
       marginTop: 4,
       lineHeight: 16,
@@ -96,11 +85,9 @@ export const styles =
       marginTop: 18,
       paddingTop: 16,
       borderTopWidth: 1,
-      borderTopColor: '#303030',
     },
 
     fieldLabel: {
-      color: '#CCCCCC',
       fontSize: 12,
       fontWeight: '800',
       marginBottom: 7,
@@ -112,9 +99,6 @@ export const styles =
       paddingHorizontal: 12,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#444444',
-      backgroundColor: '#242424',
-      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '800',
     },
@@ -124,7 +108,6 @@ export const styles =
     },
 
     fieldHelp: {
-      color: '#777777',
       fontSize: 10,
       marginTop: 7,
       lineHeight: 15,
@@ -142,13 +125,11 @@ export const styles =
     },
 
     inlineSuffix: {
-      color: '#FFBF00',
       fontSize: 13,
       fontWeight: '900',
     },
 
     currencySymbol: {
-      color: '#FFBF00',
       fontSize: 18,
       fontWeight: '900',
     },
@@ -166,13 +147,10 @@ export const styles =
       paddingHorizontal: 12,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#444444',
-      backgroundColor: '#242424',
     },
 
     selectorText: {
       flex: 1,
-      color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '800',
     },
@@ -183,7 +161,6 @@ export const styles =
     },
 
     selectorArrow: {
-      color: '#FFBF00',
       fontSize: 12,
       marginLeft: 12,
     },
@@ -201,7 +178,6 @@ export const styles =
     },
 
     dateLabel: {
-      color: '#888888',
       fontSize: 10,
       fontWeight: '800',
       marginBottom: 6,
@@ -217,18 +193,14 @@ export const styles =
       padding: 14,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#5A4A00',
-      backgroundColor: '#302800',
     },
 
     weeklySaucePreviewTitle: {
-      color: '#FFBF00',
       fontSize: 14,
       fontWeight: '900',
     },
 
     weeklySaucePreviewText: {
-      color: '#D6C98A',
       fontSize: 11,
       lineHeight: 16,
       marginTop: 5,
@@ -240,7 +212,6 @@ export const styles =
       justifyContent: 'center',
       marginTop: 4,
       borderRadius: 10,
-      backgroundColor: '#FFBF00',
     },
 
     saveButtonDisabled: {
@@ -248,7 +219,6 @@ export const styles =
     },
 
     saveButtonText: {
-      color: '#111111',
       fontSize: 13,
       fontWeight: '900',
     },
@@ -262,7 +232,8 @@ export const styles =
       flex: 1,
       justifyContent: 'center',
       padding: 18,
-      backgroundColor: 'rgba(0, 0, 0, 0.76)',
+      backgroundColor:
+        'rgba(0, 0, 0, 0.76)',
     },
 
     modalCard: {
@@ -273,8 +244,6 @@ export const styles =
       overflow: 'hidden',
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: '#3A3A3A',
-      backgroundColor: '#1D1D1D',
     },
 
     modalHeader: {
@@ -283,7 +252,6 @@ export const styles =
       justifyContent: 'space-between',
       padding: 16,
       borderBottomWidth: 1,
-      borderBottomColor: '#303030',
     },
 
     modalHeaderText: {
@@ -292,13 +260,11 @@ export const styles =
     },
 
     modalTitle: {
-      color: '#FFFFFF',
       fontSize: 17,
       fontWeight: '900',
     },
 
     modalSubtitle: {
-      color: '#888888',
       fontSize: 11,
       marginTop: 4,
       lineHeight: 16,
@@ -310,11 +276,9 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 17,
-      backgroundColor: '#2A2A2A',
     },
 
     modalCloseText: {
-      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '900',
     },
@@ -336,28 +300,23 @@ export const styles =
       marginBottom: 8,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#303030',
-      backgroundColor: '#242424',
     },
 
     sauceOptionSelected: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderWidth: 1,
     },
 
     sauceOptionText: {
       flex: 1,
-      color: '#DDDDDD',
       fontSize: 13,
       fontWeight: '800',
     },
 
     sauceOptionTextSelected: {
-      color: '#FFBF00',
+      fontWeight: '900',
     },
 
     sauceOptionCheck: {
-      color: '#FFBF00',
       fontSize: 15,
       fontWeight: '900',
       marginLeft: 12,

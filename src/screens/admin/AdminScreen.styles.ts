@@ -9,23 +9,39 @@ export const styles =
       paddingHorizontal: 20,
       paddingTop: 18,
       paddingBottom: 14,
-      backgroundColor: '#121212',
+    },
+
+    containerPhone: {
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      paddingBottom: 8,
     },
 
     header: {
       marginBottom: 18,
     },
 
+    headerPhone: {
+      marginBottom: 10,
+    },
+
     title: {
-      color: '#FFFFFF',
       fontSize: 26,
       fontWeight: '900',
     },
 
+    titlePhone: {
+      fontSize: 22,
+    },
+
     subtitle: {
-      color: '#999999',
       fontSize: 13,
       marginTop: 4,
+    },
+
+    subtitlePhone: {
+      fontSize: 11,
+      lineHeight: 16,
     },
 
     tabsContainer: {
@@ -42,79 +58,158 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-      borderColor: '#444444',
-      backgroundColor: '#1D1D1D',
-    },
-
-    sectionTabActive: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
     },
 
     sectionTabText: {
-      color: '#AAAAAA',
       fontSize: 12,
       fontWeight: '800',
     },
 
-    sectionTabTextActive: {
-      color: '#FFBF00',
+    mobileSectionSelector: {
+      minHeight: 58,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      marginBottom: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+
+    mobileSectionSelectorLeft: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+
+    mobileSectionIcon: {
+      width: 34,
+      fontSize: 21,
+      textAlign: 'center',
+      marginRight: 10,
+    },
+
+    mobileSectionTextContainer: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    mobileSectionLabel: {
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+
+    mobileSectionValue: {
+      fontSize: 14,
+      fontWeight: '900',
+      marginTop: 2,
+    },
+
+    mobileSectionChevron: {
+      fontSize: 12,
+      marginLeft: 12,
     },
 
     content: {
       flex: 1,
+      minHeight: 0,
     },
 
-    placeholderCard: {
+    modalBackdrop: {
       flex: 1,
-      minHeight: 250,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 14,
+      justifyContent: 'flex-end',
+      backgroundColor:
+        'rgba(0, 0, 0, 0.72)',
+    },
+
+    modalDismissArea: {
+      flex: 1,
+    },
+
+    mobileMenuCard: {
+      width: '100%',
+      maxHeight: '82%',
+      borderTopLeftRadius: 22,
+      borderTopRightRadius: 22,
       borderWidth: 1,
-      borderColor: '#353535',
-      backgroundColor: '#1D1D1D',
-      padding: 24,
+      overflow: 'hidden',
     },
 
-    placeholderIcon: {
-      fontSize: 46,
-      marginBottom: 12,
+    mobileMenuHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
     },
 
-    placeholderTitle: {
-      color: '#FFFFFF',
-      fontSize: 22,
+    mobileMenuHeaderText: {
+      flex: 1,
+      minWidth: 0,
+      paddingRight: 12,
+    },
+
+    mobileMenuTitle: {
+      fontSize: 18,
       fontWeight: '900',
     },
 
-    placeholderText: {
-      color: '#999999',
-      fontSize: 13,
+    mobileMenuSubtitle: {
+      fontSize: 11,
+      marginTop: 3,
+    },
+
+    mobileMenuClose: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    mobileMenuCloseText: {
+      fontSize: 15,
+      fontWeight: '900',
+    },
+
+    mobileMenuList: {
+      flexGrow: 0,
+    },
+
+    mobileMenuListContent: {
+      padding: 12,
+      paddingBottom: 18,
+    },
+
+    mobileMenuOption: {
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      marginBottom: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+
+    mobileMenuOptionIcon: {
+      width: 32,
+      fontSize: 19,
       textAlign: 'center',
-      marginTop: 7,
-      maxWidth: 420,
-      lineHeight: 20,
+      marginRight: 10,
     },
 
-    tabsContainerPhone: {
-      flexWrap: 'wrap',
-      gap: 8,
+    mobileMenuOptionText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '800',
     },
 
-    sectionTabPhone: {
-      width: '48%',
-      minWidth: 0,
-      paddingHorizontal: 8,
-    },
-
-    sectionTabTextSmall: {
-      fontSize: 10,
-    },
-
-    containerPhone: {
-      paddingHorizontal: 12,
-      paddingTop: 12,
-      paddingBottom: 10,
+    mobileMenuCheck: {
+      fontSize: 16,
+      fontWeight: '900',
+      marginLeft: 10,
     },
   });

@@ -30,6 +30,10 @@ import {
 } from '../../../services/weeklySauceService';
 
 import {
+  useBusiness,
+} from '../../../context/BusinessContext';
+
+import {
   DateCalendarSelect,
 } from '../business-hours/AdminBusinessHoursSelectors';
 
@@ -40,28 +44,34 @@ import {
 function formatLocalDate(
   date: Date,
 ): string {
-  const year = date.getFullYear();
+  const year =
+    date.getFullYear();
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(
-    2,
-    '0',
-  );
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    );
 
-  const day = String(
-    date.getDate(),
-  ).padStart(
-    2,
-    '0',
-  );
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    );
 
   return `${year}-${month}-${day}`;
 }
 
 function getDefaultWeeklySauceDates() {
-  const start = new Date();
-  const end = new Date(start);
+  const start =
+    new Date();
+
+  const end =
+    new Date(start);
 
   end.setDate(
     end.getDate() + 6,
@@ -95,9 +105,10 @@ function isValidDateInput(
     year,
     month,
     day,
-  ] = value
-    .split('-')
-    .map(Number);
+  ] =
+    value
+      .split('-')
+      .map(Number);
 
   const date =
     new Date(
@@ -107,13 +118,32 @@ function isValidDateInput(
     );
 
   return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
+    date.getFullYear() ===
+      year &&
+    date.getMonth() ===
+      month - 1 &&
+    date.getDate() ===
+      day
   );
 }
 
 export function AdminPromotions() {
+  const {
+    business,
+    theme,
+  } =
+    useBusiness();
+
+  const promotionsEnabled =
+    business?.features
+      .promotionsEnabled ??
+    false;
+
+  const currencyCode =
+    business?.identity
+      .currencyCode ??
+    'MXN';
+
   const defaultDates =
     useMemo(
       () =>
@@ -124,96 +154,112 @@ export function AdminPromotions() {
   const [
     settings,
     setSettings,
-  ] = useState<
-    PromotionSettings | null
-  >(null);
+  ] =
+    useState<
+      PromotionSettings | null
+    >(null);
 
   const [
     kongEnabled,
     setKongEnabled,
-  ] = useState(true);
+  ] =
+    useState(true);
 
   const [
     requiredKongs,
     setRequiredKongs,
-  ] = useState('5');
+  ] =
+    useState('5');
 
   const [
     luckyDorianEnabled,
     setLuckyDorianEnabled,
-  ] = useState(true);
+  ] =
+    useState(true);
 
   const [
     luckyDorianChance,
     setLuckyDorianChance,
-  ] = useState('100');
+  ] =
+    useState('100');
 
   const [
     weeklySauceSettingsId,
     setWeeklySauceSettingsId,
-  ] = useState<
-    string | null
-  >(null);
+  ] =
+    useState<
+      string | null
+    >(null);
 
   const [
     weeklySauceEnabled,
     setWeeklySauceEnabled,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     weeklySauceModifierId,
     setWeeklySauceModifierId,
-  ] = useState<
-    string | null
-  >(null);
+  ] =
+    useState<
+      string | null
+    >(null);
 
   const [
     weeklySauceDiscount,
     setWeeklySauceDiscount,
-  ] = useState('5.00');
+  ] =
+    useState('5.00');
 
   const [
     weeklySauceStartsAt,
     setWeeklySauceStartsAt,
-  ] = useState(
-    defaultDates.startsAt,
-  );
+  ] =
+    useState(
+      defaultDates.startsAt,
+    );
 
   const [
     weeklySauceEndsAt,
     setWeeklySauceEndsAt,
-  ] = useState(
-    defaultDates.endsAt,
-  );
+  ] =
+    useState(
+      defaultDates.endsAt,
+    );
 
   const [
     sauces,
     setSauces,
-  ] = useState<
-    SauceOption[]
-  >([]);
+  ] =
+    useState<
+      SauceOption[]
+    >([]);
 
   const [
     sauceSelectorVisible,
     setSauceSelectorVisible,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     isLoading,
     setIsLoading,
-  ] = useState(true);
+  ] =
+    useState(true);
 
   const [
     isSaving,
     setIsSaving,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState<
-    string | null
-  >(null);
+  ] =
+    useState<
+      string | null
+    >(null);
 
   const selectedSauce =
     useMemo(
@@ -230,11 +276,34 @@ export function AdminPromotions() {
     );
 
   useEffect(() => {
+    if (
+      !promotionsEnabled
+    ) {
+      setIsLoading(
+        false,
+      );
+
+      setErrorMessage(
+        null,
+      );
+
+      setSauceSelectorVisible(
+        false,
+      );
+
+      return;
+    }
+
     const loadSettings =
-      async () => {
+      async (): Promise<void> => {
         try {
-          setIsLoading(true);
-          setErrorMessage(null);
+          setIsLoading(
+            true,
+          );
+
+          setErrorMessage(
+            null,
+          );
 
           const [
             promotionData,
@@ -332,7 +401,9 @@ export function AdminPromotions() {
               : 'No se pudo cargar la configuración de promociones.',
           );
         } finally {
-          setIsLoading(false);
+          setIsLoading(
+            false,
+          );
         }
       };
 
@@ -340,11 +411,15 @@ export function AdminPromotions() {
   }, [
     defaultDates.endsAt,
     defaultDates.startsAt,
+    promotionsEnabled,
   ]);
 
   const handleSave =
-    async () => {
-      if (!settings) {
+    async (): Promise<void> => {
+      if (
+        !promotionsEnabled ||
+        !settings
+      ) {
         return;
       }
 
@@ -467,7 +542,9 @@ export function AdminPromotions() {
       }
 
       try {
-        setIsSaving(true);
+        setIsSaving(
+          true,
+        );
 
         await updatePromotionSettings(
           settings.id,
@@ -546,25 +623,103 @@ export function AdminPromotions() {
             : 'No se pudo guardar la configuración de promociones.',
         );
       } finally {
-        setIsSaving(false);
+        setIsSaving(
+          false,
+        );
       }
     };
 
-  if (isLoading) {
+  if (
+    !promotionsEnabled
+  ) {
     return (
       <View
-        style={
-          styles.loadingContainer
-        }
+        style={[
+          styles.errorContainer,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
+      >
+        <Text
+          style={{
+            fontSize:
+              46,
+
+            marginBottom:
+              12,
+          }}
+        >
+          🎟️
+        </Text>
+
+        <Text
+          style={[
+            styles.title,
+            {
+              color:
+                theme.text,
+
+              textAlign:
+                'center',
+            },
+          ]}
+        >
+          Promociones deshabilitadas
+        </Text>
+
+        <Text
+          style={[
+            styles.errorText,
+            {
+              color:
+                theme.textMuted,
+
+              marginTop:
+                8,
+
+              maxWidth:
+                420,
+            },
+          ]}
+        >
+          Este negocio no tiene
+          habilitado el módulo de
+          promociones.
+        </Text>
+      </View>
+    );
+  }
+
+  if (
+    isLoading
+  ) {
+    return (
+      <View
+        style={[
+          styles.loadingContainer,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
       >
         <ActivityIndicator
           size="large"
+          color={
+            theme.primary
+          }
         />
 
         <Text
-          style={
-            styles.loadingText
-          }
+          style={[
+            styles.loadingText,
+            {
+              color:
+                theme.textMuted,
+            },
+          ]}
         >
           Cargando promociones...
         </Text>
@@ -578,23 +733,35 @@ export function AdminPromotions() {
   ) {
     return (
       <View
-        style={
-          styles.errorContainer
-        }
+        style={[
+          styles.errorContainer,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
       >
         <Text
-          style={
-            styles.errorTitle
-          }
+          style={[
+            styles.errorTitle,
+            {
+              color:
+                theme.danger,
+            },
+          ]}
         >
           No se pudieron cargar
           las promociones
         </Text>
 
         <Text
-          style={
-            styles.errorText
-          }
+          style={[
+            styles.errorText,
+            {
+              color:
+                theme.textMuted,
+            },
+          ]}
         >
           {errorMessage ??
             'No existe una configuración activa.'}
@@ -606,9 +773,13 @@ export function AdminPromotions() {
   return (
     <>
       <ScrollView
-        style={
-          styles.container
-        }
+        style={[
+          styles.container,
+          {
+            backgroundColor:
+              theme.background,
+          },
+        ]}
         contentContainerStyle={
           styles.scrollContent
         }
@@ -621,17 +792,25 @@ export function AdminPromotions() {
           }
         >
           <Text
-            style={
-              styles.title
-            }
+            style={[
+              styles.title,
+              {
+                color:
+                  theme.text,
+              },
+            ]}
           >
             Promociones
           </Text>
 
           <Text
-            style={
-              styles.subtitle
-            }
+            style={[
+              styles.subtitle,
+              {
+                color:
+                  theme.textMuted,
+              },
+            ]}
           >
             Activa, desactiva y configura
             las promociones del punto de venta.
@@ -640,9 +819,16 @@ export function AdminPromotions() {
 
         {/* KONGS */}
         <View
-          style={
-            styles.card
-          }
+          style={[
+            styles.card,
+            {
+              backgroundColor:
+                theme.surface,
+
+              borderColor:
+                theme.border,
+            },
+          ]}
         >
           <View
             style={
@@ -655,17 +841,25 @@ export function AdminPromotions() {
               }
             >
               <Text
-                style={
-                  styles.cardTitle
-                }
+                style={[
+                  styles.cardTitle,
+                  {
+                    color:
+                      theme.text,
+                  },
+                ]}
               >
                 Kongs
               </Text>
 
               <Text
-                style={
-                  styles.cardDescription
-                }
+                style={[
+                  styles.cardDescription,
+                  {
+                    color:
+                      theme.textMuted,
+                  },
+                ]}
               >
                 Controla la acumulación y canje
                 de cupones Kong.
@@ -681,28 +875,36 @@ export function AdminPromotions() {
               }
               trackColor={{
                 false:
-                  '#444444',
+                  theme.border,
 
                 true:
-                  '#8A6A00',
+                  theme.primary,
               }}
               thumbColor={
                 kongEnabled
-                  ? '#FFBF00'
-                  : '#888888'
+                  ? theme.onPrimary
+                  : theme.textMuted
               }
             />
           </View>
 
           <View
-            style={
-              styles.fieldContainer
-            }
+            style={[
+              styles.fieldContainer,
+              {
+                borderTopColor:
+                  theme.border,
+              },
+            ]}
           >
             <Text
-              style={
-                styles.fieldLabel
-              }
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               Kongs necesarios para premio
             </Text>
@@ -721,6 +923,16 @@ export function AdminPromotions() {
               maxLength={2}
               style={[
                 styles.input,
+                {
+                  borderColor:
+                    theme.border,
+
+                  backgroundColor:
+                    theme.surfaceAlt,
+
+                  color:
+                    theme.text,
+                },
 
                 !kongEnabled &&
                 styles.inputDisabled,
@@ -728,9 +940,13 @@ export function AdminPromotions() {
             />
 
             <Text
-              style={
-                styles.fieldHelp
-              }
+              style={[
+                styles.fieldHelp,
+                {
+                  color:
+                    theme.textMuted,
+                },
+              ]}
             >
               Actualmente el cliente necesita
               {` ${requiredKongs || '0'} `}
@@ -741,9 +957,16 @@ export function AdminPromotions() {
 
         {/* DORIAN */}
         <View
-          style={
-            styles.card
-          }
+          style={[
+            styles.card,
+            {
+              backgroundColor:
+                theme.surface,
+
+              borderColor:
+                theme.border,
+            },
+          ]}
         >
           <View
             style={
@@ -756,17 +979,25 @@ export function AdminPromotions() {
               }
             >
               <Text
-                style={
-                  styles.cardTitle
-                }
+                style={[
+                  styles.cardTitle,
+                  {
+                    color:
+                      theme.text,
+                  },
+                ]}
               >
                 Dorian de la Suerte
               </Text>
 
               <Text
-                style={
-                  styles.cardDescription
-                }
+                style={[
+                  styles.cardDescription,
+                  {
+                    color:
+                      theme.textMuted,
+                  },
+                ]}
               >
                 Controla si las ventas pueden
                 generar un Dorian de la Suerte.
@@ -782,28 +1013,36 @@ export function AdminPromotions() {
               }
               trackColor={{
                 false:
-                  '#444444',
+                  theme.border,
 
                 true:
-                  '#8A6A00',
+                  theme.primary,
               }}
               thumbColor={
                 luckyDorianEnabled
-                  ? '#FFBF00'
-                  : '#888888'
+                  ? theme.onPrimary
+                  : theme.textMuted
               }
             />
           </View>
 
           <View
-            style={
-              styles.fieldContainer
-            }
+            style={[
+              styles.fieldContainer,
+              {
+                borderTopColor:
+                  theme.border,
+              },
+            ]}
           >
             <Text
-              style={
-                styles.fieldLabel
-              }
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               1 oportunidad entre
             </Text>
@@ -828,6 +1067,16 @@ export function AdminPromotions() {
                 style={[
                   styles.input,
                   styles.compactInput,
+                  {
+                    borderColor:
+                      theme.border,
+
+                    backgroundColor:
+                      theme.surfaceAlt,
+
+                    color:
+                      theme.text,
+                  },
 
                   !luckyDorianEnabled &&
                   styles.inputDisabled,
@@ -835,18 +1084,26 @@ export function AdminPromotions() {
               />
 
               <Text
-                style={
-                  styles.inlineSuffix
-                }
+                style={[
+                  styles.inlineSuffix,
+                  {
+                    color:
+                      theme.primary,
+                  },
+                ]}
               >
                 ventas
               </Text>
             </View>
 
             <Text
-              style={
-                styles.fieldHelp
-              }
+              style={[
+                styles.fieldHelp,
+                {
+                  color:
+                    theme.textMuted,
+                },
+              ]}
             >
               1 = 100%, 2 = 50%, 10 = 10% y
               100 = 1% de probabilidad.
@@ -856,9 +1113,16 @@ export function AdminPromotions() {
 
         {/* SALSA DE LA SEMANA */}
         <View
-          style={
-            styles.card
-          }
+          style={[
+            styles.card,
+            {
+              backgroundColor:
+                theme.surface,
+
+              borderColor:
+                theme.border,
+            },
+          ]}
         >
           <View
             style={
@@ -871,17 +1135,25 @@ export function AdminPromotions() {
               }
             >
               <Text
-                style={
-                  styles.cardTitle
-                }
+                style={[
+                  styles.cardTitle,
+                  {
+                    color:
+                      theme.text,
+                  },
+                ]}
               >
                 🌶️ Salsa de la Semana
               </Text>
 
               <Text
-                style={
-                  styles.cardDescription
-                }
+                style={[
+                  styles.cardDescription,
+                  {
+                    color:
+                      theme.textMuted,
+                  },
+                ]}
               >
                 Destaca una salsa de baja rotación
                 y ofrece un descuento cuando el
@@ -898,28 +1170,36 @@ export function AdminPromotions() {
               }
               trackColor={{
                 false:
-                  '#444444',
+                  theme.border,
 
                 true:
-                  '#8A6A00',
+                  theme.primary,
               }}
               thumbColor={
                 weeklySauceEnabled
-                  ? '#FFBF00'
-                  : '#888888'
+                  ? theme.onPrimary
+                  : theme.textMuted
               }
             />
           </View>
 
           <View
-            style={
-              styles.fieldContainer
-            }
+            style={[
+              styles.fieldContainer,
+              {
+                borderTopColor:
+                  theme.border,
+              },
+            ]}
           >
             <Text
-              style={
-                styles.fieldLabel
-              }
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               Salsa
             </Text>
@@ -927,6 +1207,13 @@ export function AdminPromotions() {
             <TouchableOpacity
               style={[
                 styles.selector,
+                {
+                  borderColor:
+                    theme.border,
+
+                  backgroundColor:
+                    theme.surfaceAlt,
+                },
 
                 !weeklySauceEnabled &&
                 styles.inputDisabled,
@@ -943,6 +1230,10 @@ export function AdminPromotions() {
               <Text
                 style={[
                   styles.selectorText,
+                  {
+                    color:
+                      theme.text,
+                  },
 
                   !selectedSauce &&
                   styles.selectorPlaceholder,
@@ -953,18 +1244,26 @@ export function AdminPromotions() {
               </Text>
 
               <Text
-                style={
-                  styles.selectorArrow
-                }
+                style={[
+                  styles.selectorArrow,
+                  {
+                    color:
+                      theme.primary,
+                  },
+                ]}
               >
                 ▼
               </Text>
             </TouchableOpacity>
 
             <Text
-              style={
-                styles.fieldHelp
-              }
+              style={[
+                styles.fieldHelp,
+                {
+                  color:
+                    theme.textMuted,
+                },
+              ]}
             >
               Solo se muestran salsas disponibles
               del catálogo.
@@ -972,14 +1271,22 @@ export function AdminPromotions() {
           </View>
 
           <View
-            style={
-              styles.fieldContainer
-            }
+            style={[
+              styles.fieldContainer,
+              {
+                borderTopColor:
+                  theme.border,
+              },
+            ]}
           >
             <Text
-              style={
-                styles.fieldLabel
-              }
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               Descuento
             </Text>
@@ -990,9 +1297,13 @@ export function AdminPromotions() {
               }
             >
               <Text
-                style={
-                  styles.currencySymbol
-                }
+                style={[
+                  styles.currencySymbol,
+                  {
+                    color:
+                      theme.primary,
+                  },
+                ]}
               >
                 $
               </Text>
@@ -1017,6 +1328,16 @@ export function AdminPromotions() {
                 style={[
                   styles.input,
                   styles.discountInput,
+                  {
+                    borderColor:
+                      theme.border,
+
+                    backgroundColor:
+                      theme.surfaceAlt,
+
+                    color:
+                      theme.text,
+                  },
 
                   !weeklySauceEnabled &&
                   styles.inputDisabled,
@@ -1024,18 +1345,26 @@ export function AdminPromotions() {
               />
 
               <Text
-                style={
-                  styles.inlineSuffix
-                }
+                style={[
+                  styles.inlineSuffix,
+                  {
+                    color:
+                      theme.primary,
+                  },
+                ]}
               >
-                MXN
+                {currencyCode}
               </Text>
             </View>
 
             <Text
-              style={
-                styles.fieldHelp
-              }
+              style={[
+                styles.fieldHelp,
+                {
+                  color:
+                    theme.textMuted,
+                },
+              ]}
             >
               Este descuento se aplicará una sola
               vez por producto elegible.
@@ -1043,14 +1372,22 @@ export function AdminPromotions() {
           </View>
 
           <View
-            style={
-              styles.fieldContainer
-            }
+            style={[
+              styles.fieldContainer,
+              {
+                borderTopColor:
+                  theme.border,
+              },
+            ]}
           >
             <Text
-              style={
-                styles.fieldLabel
-              }
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
             >
               Vigencia
             </Text>
@@ -1066,9 +1403,13 @@ export function AdminPromotions() {
                 }
               >
                 <Text
-                  style={
-                    styles.dateLabel
-                  }
+                  style={[
+                    styles.dateLabel,
+                    {
+                      color:
+                        theme.textMuted,
+                    },
+                  ]}
                 >
                   Inicio
                 </Text>
@@ -1092,9 +1433,13 @@ export function AdminPromotions() {
                 }
               >
                 <Text
-                  style={
-                    styles.dateLabel
-                  }
+                  style={[
+                    styles.dateLabel,
+                    {
+                      color:
+                        theme.textMuted,
+                    },
+                  ]}
                 >
                   Fin
                 </Text>
@@ -1117,22 +1462,37 @@ export function AdminPromotions() {
           {weeklySauceEnabled &&
             selectedSauce && (
               <View
-                style={
-                  styles.weeklySaucePreview
-                }
+                style={[
+                  styles.weeklySaucePreview,
+                  {
+                    borderColor:
+                      theme.primary,
+
+                    backgroundColor:
+                      theme.surfaceAlt,
+                  },
+                ]}
               >
                 <Text
-                  style={
-                    styles.weeklySaucePreviewTitle
-                  }
+                  style={[
+                    styles.weeklySaucePreviewTitle,
+                    {
+                      color:
+                        theme.primary,
+                    },
+                  ]}
                 >
                   🌶️ {selectedSauce.name}
                 </Text>
 
                 <Text
-                  style={
-                    styles.weeklySaucePreviewText
-                  }
+                  style={[
+                    styles.weeklySaucePreviewText,
+                    {
+                      color:
+                        theme.textMuted,
+                    },
+                  ]}
                 >
                   El cliente recibe $
                   {Number(
@@ -1150,6 +1510,10 @@ export function AdminPromotions() {
         <TouchableOpacity
           style={[
             styles.saveButton,
+            {
+              backgroundColor:
+                theme.primary,
+            },
 
             isSaving &&
             styles.saveButtonDisabled,
@@ -1162,9 +1526,13 @@ export function AdminPromotions() {
           }
         >
           <Text
-            style={
-              styles.saveButtonText
-            }
+            style={[
+              styles.saveButtonText,
+              {
+                color:
+                  theme.onPrimary,
+              },
+            ]}
           >
             {isSaving
               ? 'GUARDANDO...'
@@ -1191,14 +1559,25 @@ export function AdminPromotions() {
           }
         >
           <View
-            style={
-              styles.modalCard
-            }
+            style={[
+              styles.modalCard,
+              {
+                borderColor:
+                  theme.border,
+
+                backgroundColor:
+                  theme.surface,
+              },
+            ]}
           >
             <View
-              style={
-                styles.modalHeader
-              }
+              style={[
+                styles.modalHeader,
+                {
+                  borderBottomColor:
+                    theme.border,
+                },
+              ]}
             >
               <View
                 style={
@@ -1206,17 +1585,25 @@ export function AdminPromotions() {
                 }
               >
                 <Text
-                  style={
-                    styles.modalTitle
-                  }
+                  style={[
+                    styles.modalTitle,
+                    {
+                      color:
+                        theme.text,
+                    },
+                  ]}
                 >
                   Seleccionar salsa
                 </Text>
 
                 <Text
-                  style={
-                    styles.modalSubtitle
-                  }
+                  style={[
+                    styles.modalSubtitle,
+                    {
+                      color:
+                        theme.textMuted,
+                    },
+                  ]}
                 >
                   Elige la salsa que tendrá
                   descuento esta semana.
@@ -1224,9 +1611,13 @@ export function AdminPromotions() {
               </View>
 
               <TouchableOpacity
-                style={
-                  styles.modalCloseButton
-                }
+                style={[
+                  styles.modalCloseButton,
+                  {
+                    backgroundColor:
+                      theme.surfaceAlt,
+                  },
+                ]}
                 onPress={() =>
                   setSauceSelectorVisible(
                     false,
@@ -1234,9 +1625,13 @@ export function AdminPromotions() {
                 }
               >
                 <Text
-                  style={
-                    styles.modalCloseText
-                  }
+                  style={[
+                    styles.modalCloseText,
+                    {
+                      color:
+                        theme.text,
+                    },
+                  ]}
                 >
                   ✕
                 </Text>
@@ -1265,9 +1660,17 @@ export function AdminPromotions() {
                       }
                       style={[
                         styles.sauceOption,
+                        {
+                          borderColor:
+                            selected
+                              ? theme.primary
+                              : theme.border,
 
-                        selected &&
-                        styles.sauceOptionSelected,
+                          backgroundColor:
+                            selected
+                              ? theme.surfaceAlt
+                              : theme.surfaceAlt,
+                        },
                       ]}
                       onPress={() => {
                         setWeeklySauceModifierId(
@@ -1282,9 +1685,12 @@ export function AdminPromotions() {
                       <Text
                         style={[
                           styles.sauceOptionText,
-
-                          selected &&
-                          styles.sauceOptionTextSelected,
+                          {
+                            color:
+                              selected
+                                ? theme.primary
+                                : theme.text,
+                          },
                         ]}
                       >
                         {sauce.name}
@@ -1292,9 +1698,13 @@ export function AdminPromotions() {
 
                       {selected && (
                         <Text
-                          style={
-                            styles.sauceOptionCheck
-                          }
+                          style={[
+                            styles.sauceOptionCheck,
+                            {
+                              color:
+                                theme.primary,
+                            },
+                          ]}
                         >
                           ✓
                         </Text>
