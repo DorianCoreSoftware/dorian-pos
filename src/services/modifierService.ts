@@ -16,61 +16,49 @@ import {
   updateModifierById,
   updateModifierGroupById,
 } from '../repositories/ModifierRepository';
-
 import {
   Modifier,
   Product,
 } from '../types';
-
 export type ProductModifierMode =
   | 'burger'
   | 'wings'
   | 'boneless'
   | 'combo'
   | 'none';
-
 export interface GroupedModifiers {
   meats: ModifierWithGroup[];
   sauces: ModifierWithGroup[];
 }
-
 export interface CreateModifierInput {
   name: string;
   extraPrice: number;
-
   /**
    * Compatibilidad temporal con AdminModifiers actual.
    */
   groupName?: ModifierGroup;
-
   /**
    * Nuevo modelo.
    */
   groupId?: string | null;
 }
-
 export interface UpdateModifierInput {
   name: string;
   extraPrice: number;
-
   groupName?: ModifierGroup;
   groupId?: string | null;
-
   isAvailable: boolean;
 }
-
 export interface CreateModifierGroupInput {
   code: string;
   name: string;
   position: number;
 }
-
 export interface UpdateModifierGroupInput {
   name: string;
   position: number;
   isActive: boolean;
 }
-
 /**
  * Modificadores utilizados actualmente
  * por los configuradores de productos.
@@ -82,7 +70,6 @@ export async function getAvailableModifiers(): Promise<
 > {
   const modifiers =
     await fetchAvailableModifiers();
-
   return {
     meats:
       modifiers.filter(
@@ -91,7 +78,6 @@ export async function getAvailableModifiers(): Promise<
             ?.code ===
           'meat',
       ),
-
     sauces:
       modifiers.filter(
         modifier =>
@@ -101,7 +87,6 @@ export async function getAvailableModifiers(): Promise<
       ),
   };
 }
-
 /**
  * Obtiene los modificadores disponibles
  * pertenecientes a un grupo por su ID.
@@ -116,17 +101,14 @@ export async function getAvailableModifiersByGroupId(
 > {
   const cleanGroupId =
     groupId.trim();
-
   if (!cleanGroupId) {
     throw new Error(
       'El identificador del grupo es obligatorio.',
     );
   }
-
   try {
     const modifiers =
       await fetchAvailableModifiers();
-
     return modifiers.filter(
       modifier =>
         modifier.group_id ===
@@ -137,7 +119,6 @@ export async function getAvailableModifiersByGroupId(
       'Error al obtener modificadores del grupo:',
       error,
     );
-
     throw new Error(
       error instanceof Error
         ? error.message
@@ -145,7 +126,6 @@ export async function getAvailableModifiersByGroupId(
     );
   }
 }
-
 /**
  * Obtiene los modificadores disponibles
  * pertenecientes a un grupo por su código.
@@ -160,17 +140,14 @@ export async function getAvailableModifiersByGroupCode(
 > {
   const cleanGroupCode =
     groupCode.trim();
-
   if (!cleanGroupCode) {
     throw new Error(
       'El código del grupo es obligatorio.',
     );
   }
-
   try {
     const modifiers =
       await fetchAvailableModifiers();
-
     return modifiers.filter(
       modifier =>
         modifier.group
@@ -182,7 +159,6 @@ export async function getAvailableModifiersByGroupCode(
       'Error al obtener modificadores por código de grupo:',
       error,
     );
-
     throw new Error(
       error instanceof Error
         ? error.message
@@ -190,7 +166,6 @@ export async function getAvailableModifiersByGroupCode(
     );
   }
 }
-
 /**
  * Todos los modificadores para administración.
  */
@@ -204,13 +179,11 @@ export async function getAllModifiers(): Promise<
       'Error al obtener todos los modificadores:',
       error,
     );
-
     throw new Error(
       'No se pudieron obtener los modificadores.',
     );
   }
 }
-
 /**
  * Todos los grupos, activos e inactivos.
  */
@@ -224,13 +197,11 @@ export async function getModifierGroups(): Promise<
       'Error al obtener grupos de modificadores:',
       error,
     );
-
     throw new Error(
       'No se pudieron obtener los grupos de modificadores.',
     );
   }
 }
-
 /**
  * Solamente grupos activos.
  */
@@ -244,13 +215,11 @@ export async function getActiveModifierGroups(): Promise<
       'Error al obtener grupos activos:',
       error,
     );
-
     throw new Error(
       'No se pudieron obtener los grupos activos.',
     );
   }
 }
-
 /**
  * Crea un modificador.
  */
@@ -260,30 +229,24 @@ export async function createModifier(
 ): Promise<Modifier> {
   const cleanName =
     input.name.trim();
-
   validateModifier(
     cleanName,
     input.extraPrice,
   );
-
   try {
     const resolvedGroup =
       await resolveModifierGroup(
         input.groupId,
         input.groupName,
       );
-
     const data:
       CreateModifierData = {
       name:
         cleanName,
-
       extraPrice:
         input.extraPrice,
-
       groupId:
         resolvedGroup.id,
-
       /**
        * Campo legacy.
        *
@@ -295,7 +258,6 @@ export async function createModifier(
           resolvedGroup.code,
         ),
     };
-
     return await insertModifier(
       data,
     );
@@ -304,7 +266,6 @@ export async function createModifier(
       'Error al crear modificador:',
       error,
     );
-
     throw new Error(
       error instanceof Error
         ? error.message
@@ -312,7 +273,6 @@ export async function createModifier(
     );
   }
 }
-
 /**
  * Actualiza un modificador.
  */
@@ -324,39 +284,31 @@ export async function updateModifier(
   validateModifierId(
     modifierId,
   );
-
   const cleanName =
     input.name.trim();
-
   validateModifier(
     cleanName,
     input.extraPrice,
   );
-
   try {
     const resolvedGroup =
       await resolveModifierGroup(
         input.groupId,
         input.groupName,
       );
-
     return await updateModifierById(
       modifierId,
       {
         name:
           cleanName,
-
         extraPrice:
           input.extraPrice,
-
         groupId:
           resolvedGroup.id,
-
         groupName:
           getLegacyGroupName(
             resolvedGroup.code,
           ),
-
         isAvailable:
           input.isAvailable,
       },
@@ -366,7 +318,6 @@ export async function updateModifier(
       'Error al actualizar modificador:',
       error,
     );
-
     throw new Error(
       error instanceof Error
         ? error.message
@@ -374,7 +325,6 @@ export async function updateModifier(
     );
   }
 }
-
 /**
  * Activa o desactiva un modificador.
  */
@@ -385,7 +335,6 @@ export async function setModifierAvailable(
   validateModifierId(
     modifierId,
   );
-
   try {
     return await setModifierAvailableById(
       modifierId,
@@ -396,7 +345,6 @@ export async function setModifierAvailable(
       'Error al cambiar disponibilidad del modificador:',
       error,
     );
-
     throw new Error(
       isAvailable
         ? 'No se pudo activar el modificador.'
@@ -404,7 +352,6 @@ export async function setModifierAvailable(
     );
   }
 }
-
 /**
  * Crea un nuevo grupo.
  */
@@ -414,31 +361,25 @@ export async function createModifierGroup(
 ): Promise<ModifierGroupEntity> {
   const cleanName =
     input.name.trim();
-
   const cleanCode =
     normalizeCode(
       input.code,
     );
-
   validateModifierGroup(
     cleanName,
     cleanCode,
     input.position,
   );
-
   try {
     const data:
       CreateModifierGroupData = {
       code:
         cleanCode,
-
       name:
         cleanName,
-
       position:
         input.position,
     };
-
     return await insertModifierGroup(
       data,
     );
@@ -447,7 +388,6 @@ export async function createModifierGroup(
       'Error al crear grupo de modificadores:',
       error,
     );
-
     throw new Error(
       error instanceof Error
         ? error.message
@@ -455,7 +395,6 @@ export async function createModifierGroup(
     );
   }
 }
-
 /**
  * Actualiza un grupo existente.
  *
@@ -469,16 +408,13 @@ export async function updateModifierGroup(
   validateModifierId(
     groupId,
   );
-
   const cleanName =
     input.name.trim();
-
   if (!cleanName) {
     throw new Error(
       'El nombre del grupo es obligatorio.',
     );
   }
-
   if (
     !Number.isInteger(
       input.position,
@@ -489,17 +425,14 @@ export async function updateModifierGroup(
       'La posición del grupo no es válida.',
     );
   }
-
   try {
     return await updateModifierGroupById(
       groupId,
       {
         name:
           cleanName,
-
         position:
           input.position,
-
         isActive:
           input.isActive,
       },
@@ -509,7 +442,6 @@ export async function updateModifierGroup(
       'Error al actualizar grupo:',
       error,
     );
-
     throw new Error(
       error instanceof Error
         ? error.message
@@ -517,7 +449,6 @@ export async function updateModifierGroup(
     );
   }
 }
-
 /**
  * Activa o desactiva un grupo.
  */
@@ -528,7 +459,6 @@ export async function setModifierGroupActive(
   validateModifierId(
     groupId,
   );
-
   try {
     return await setModifierGroupActiveById(
       groupId,
@@ -539,7 +469,6 @@ export async function setModifierGroupActive(
       'Error al cambiar estado del grupo:',
       error,
     );
-
     throw new Error(
       isActive
         ? 'No se pudo activar el grupo.'
@@ -547,7 +476,6 @@ export async function setModifierGroupActive(
     );
   }
 }
-
 /**
  * Determina el configurador requerido
  * por un producto.
@@ -559,17 +487,14 @@ export function getProductModifierMode(
   if (!product) {
     return 'none';
   }
-
   const normalizedName =
     normalizeText(
       product.name,
     );
-
   const normalizedCategory =
     normalizeText(
       categoryName,
     );
-
   if (
     normalizedName.includes(
       'combo',
@@ -580,7 +505,6 @@ export function getProductModifierMode(
   ) {
     return 'combo';
   }
-
   if (
     normalizedName.includes(
       'boneless',
@@ -591,7 +515,6 @@ export function getProductModifierMode(
   ) {
     return 'boneless';
   }
-
   if (
     normalizedName.includes(
       'alita',
@@ -608,7 +531,6 @@ export function getProductModifierMode(
   ) {
     return 'wings';
   }
-
   if (
     normalizedName.includes(
       'hamburguesa',
@@ -625,20 +547,8 @@ export function getProductModifierMode(
   ) {
     return 'burger';
   }
-
   return 'none';
 }
-
-export function isKongBurger(
-  product: Product | null,
-): boolean {
-  return normalizeText(
-    product?.name,
-  ).includes(
-    'kong',
-  );
-}
-
 /**
  * Obtiene el grupo nuevo usando:
  *
@@ -650,7 +560,6 @@ async function resolveModifierGroup(
   groupId?:
     | string
     | null,
-
   legacyGroupName?:
     ModifierGroup,
 ): Promise<ModifierGroupEntity> {
@@ -659,20 +568,17 @@ async function resolveModifierGroup(
   ) {
     const groups =
       await fetchModifierGroups();
-
     const group =
       groups.find(
         item =>
           item.id ===
           groupId,
       );
-
     if (!group) {
       throw new Error(
         'El grupo de modificadores seleccionado no existe.',
       );
     }
-
     if (
       !group.is_active
     ) {
@@ -680,32 +586,26 @@ async function resolveModifierGroup(
         'El grupo de modificadores seleccionado está inactivo.',
       );
     }
-
     return group;
   }
-
   const code =
     getCodeFromLegacyGroupName(
       legacyGroupName,
     );
-
   if (!code) {
     throw new Error(
       'Debes seleccionar un grupo de modificadores.',
     );
   }
-
   const group =
     await fetchModifierGroupByCode(
       code,
     );
-
   if (!group) {
     throw new Error(
       `No existe el grupo de modificadores "${code}".`,
     );
   }
-
   if (
     !group.is_active
   ) {
@@ -713,10 +613,8 @@ async function resolveModifierGroup(
       `El grupo "${group.name}" está inactivo.`,
     );
   }
-
   return group;
 }
-
 /**
  * Traducción temporal de la UI antigua
  * hacia los códigos nuevos.
@@ -730,18 +628,14 @@ function getCodeFromLegacyGroupName(
   ) {
     case 'Carne':
       return 'meat';
-
     case 'Salsa':
       return 'sauce';
-
     case 'Sabor':
       return 'drink_flavor';
-
     default:
       return null;
   }
 }
-
 /**
  * Traducción temporal desde grupos nuevos
  * hacia group_name legacy.
@@ -754,18 +648,14 @@ function getLegacyGroupName(
   ) {
     case 'meat':
       return 'Carne';
-
     case 'sauce':
       return 'Salsa';
-
     case 'drink_flavor':
       return 'Sabor';
-
     default:
       return null;
   }
 }
-
 function validateModifierId(
   modifierId: string,
 ): void {
@@ -777,7 +667,6 @@ function validateModifierId(
     );
   }
 }
-
 function validateModifier(
   name: string,
   extraPrice: number,
@@ -787,7 +676,6 @@ function validateModifier(
       'El nombre del modificador es obligatorio.',
     );
   }
-
   if (
     !Number.isFinite(
       extraPrice,
@@ -799,7 +687,6 @@ function validateModifier(
     );
   }
 }
-
 function validateModifierGroup(
   name: string,
   code: string,
@@ -810,13 +697,11 @@ function validateModifierGroup(
       'El nombre del grupo es obligatorio.',
     );
   }
-
   if (!code) {
     throw new Error(
       'El código del grupo es obligatorio.',
     );
   }
-
   if (
     !Number.isInteger(
       position,
@@ -828,7 +713,6 @@ function validateModifierGroup(
     );
   }
 }
-
 function normalizeCode(
   value: string,
 ): string {
@@ -844,7 +728,6 @@ function normalizeCode(
       '',
     );
 }
-
 function normalizeText(
   value?: string | null,
 ): string {
@@ -864,5 +747,4 @@ function normalizeText(
     ''
   );
 }
-
 export { ModifierGroupEntity, ModifierWithGroup };

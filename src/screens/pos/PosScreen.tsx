@@ -4,7 +4,6 @@ import React, {
   useState,
   useRef,
 } from 'react';
-
 import {
   Alert,
   Modal,
@@ -13,38 +12,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
 import {
   CategoryTabs,
 } from '../../components/category-tabs/CategoryTabs';
-
 import {
   MenuList,
 } from '../../components/menu-list/MenuList';
-
 import {
   Cart as CartComponent,
 } from '../../components/cart/Cart';
-
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
-
 import {
   useModifiers,
 } from '../../hooks/useModifiers';
-
 import {
   createKitchenOrder,
   updateKitchenOrder,
 } from '../../services/orders';
-
 import {
   getProductModifierMode,
-  isKongBurger,
 } from '../../services/modifierService';
-
 import {
   Cart,
   CartItem,
@@ -53,49 +43,37 @@ import {
   DeliveryDetails,
   Product,
 } from '../../types';
-
 import {
   styles,
 } from '../../../App.styles';
-
 import {
   DeliveryConfiguratorModal,
 } from '../../components/delivery-configurator';
-
 import {
   isDeliveryProduct,
 } from '../../Utils/delivery';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-
 interface POSScreenProps {
   categories: Category[];
   products: Product[];
-
   fetchProducts:
   () => Promise<void>;
-
   cart: Cart;
-
   setCart: React.Dispatch<
     React.SetStateAction<Cart>
   >;
-
   editingOrderId:
   string | null;
-
   setEditingOrderId:
   React.Dispatch<
     React.SetStateAction<
       string | null
     >
   >;
-
   fetchKitchenOrders:
   () => Promise<void>;
-
   modifiersVersion: number;
 }
-
 export function POSScreen({
   categories,
   products,
@@ -117,7 +95,6 @@ export function POSScreen({
           ].map(
             normalizeText,
           );
-
         return categories
           .filter(
             (category) =>
@@ -144,7 +121,6 @@ export function POSScreen({
       },
       [categories],
     );
-
   const [
     selectedCategoryId,
     setSelectedCategoryId,
@@ -152,48 +128,39 @@ export function POSScreen({
     visibleCategories[0]?.id ??
     '',
   );
-
   const [
     searchText,
     setSearchText,
   ] = useState('');
-
   const [
     isModifierModalVisible,
     setIsModifierModalVisible,
   ] = useState(false);
-
   const [
     selectedProduct,
     setSelectedProduct,
   ] = useState<Product | null>(
     null,
   );
-
   const [
     productNotes,
     setProductNotes,
   ] = useState('');
-
   const [
     isProcessingOrder,
     setIsProcessingOrder,
   ] = useState(false);
-
   const {
     isPhone,
   } = useResponsiveLayout();
-
   const [
     isMobileCartVisible,
     setIsMobileCartVisible,
   ] = useState(false);
-
   const [
     isMobileCartReady,
     setIsMobileCartReady,
   ] = useState(false);
-
   const mobileCartSummary =
     useMemo(() => {
       const totalItems =
@@ -210,7 +177,6 @@ export function POSScreen({
               item.quantity,
           0,
         );
-
       const totalAmount =
         cart.reduce(
           (
@@ -224,19 +190,16 @@ export function POSScreen({
             item.quantity,
           0,
         );
-
       return {
         totalItems,
         totalAmount,
       };
     }, [cart]);
-
   const pendingOrderRequest =
     useRef<{
       id: string;
       fingerprint: string;
     } | null>(null);
-
   const {
     meats,
     sauces,
@@ -246,32 +209,27 @@ export function POSScreen({
     modifiersError,
     fetchModifiers,
   } = useModifiers();
-
   useEffect(() => {
     if (
       modifiersVersion <= 0
     ) {
       return;
     }
-
     void fetchModifiers();
   }, [
     modifiersVersion,
     fetchModifiers,
   ]);
-
   const [
     isDeliveryModalVisible,
     setIsDeliveryModalVisible,
   ] = useState(false);
-
   const [
     selectedDeliveryProduct,
     setSelectedDeliveryProduct,
   ] = useState<Product | null>(
     null,
   );
-
   useEffect(() => {
     if (
       visibleCategories.length ===
@@ -280,10 +238,8 @@ export function POSScreen({
       setSelectedCategoryId(
         '',
       );
-
       return;
     }
-
     const categoryStillExists =
       visibleCategories.some(
         (category) =>
@@ -294,7 +250,6 @@ export function POSScreen({
             selectedCategoryId,
           ),
       );
-
     if (!categoryStillExists) {
       setSelectedCategoryId(
         visibleCategories[0].id,
@@ -304,14 +259,12 @@ export function POSScreen({
     visibleCategories,
     selectedCategoryId,
   ]);
-
   const filteredProducts =
     useMemo(() => {
       const normalizedSearch =
         normalizeText(
           searchText,
         );
-
       return products
         .filter(
           (product) => {
@@ -329,7 +282,6 @@ export function POSScreen({
                 normalizedSearch,
               );
             }
-
             /*
              * Sin búsqueda:
              * comportamiento normal
@@ -357,14 +309,12 @@ export function POSScreen({
               Number(
                 productB.price,
               );
-
             if (
               priceDifference !==
               0
             ) {
               return priceDifference;
             }
-
             return productA.name.localeCompare(
               productB.name,
               'es',
@@ -380,7 +330,6 @@ export function POSScreen({
       selectedCategoryId,
       searchText,
     ]);
-
   const selectedProductCategory =
     categories.find(
       (category) =>
@@ -392,19 +341,12 @@ export function POSScreen({
             ?.category_id,
         ),
     ) ?? null;
-
   const modifierMode =
     getProductModifierMode(
       selectedProduct,
       selectedProductCategory
         ?.name,
     );
-
-  const selectedProductIsKongBurger =
-    isKongBurger(
-      selectedProduct,
-    );
-
   const deliveryProduct =
     products.find(
       (product) =>
@@ -412,7 +354,6 @@ export function POSScreen({
           product,
         ),
     ) ?? null;
-
   const currentDeliveryItem =
     cart.find(
       (item) =>
@@ -420,11 +361,9 @@ export function POSScreen({
           item.product,
         ),
     ) ?? null;
-
   const currentDeliveryDetails =
     currentDeliveryItem
       ?.deliveryDetails ?? null;
-
   const handleToggleDelivery =
     (): void => {
       if (
@@ -441,10 +380,8 @@ export function POSScreen({
                 ),
             ),
         );
-
         return;
       }
-
       const hasRegularProducts =
         cart.some(
           (item) =>
@@ -452,7 +389,6 @@ export function POSScreen({
               item.product,
             ),
         );
-
       if (
         !hasRegularProducts
       ) {
@@ -460,28 +396,22 @@ export function POSScreen({
           'Orden vacía',
           'Agrega al menos un producto antes de activar el envío a domicilio.',
         );
-
         return;
       }
-
       if (!deliveryProduct) {
         Alert.alert(
           'Producto no disponible',
           'No se encontró el producto Envío a domicilio.',
         );
-
         return;
       }
-
       setSelectedDeliveryProduct(
         deliveryProduct,
       );
-
       setIsDeliveryModalVisible(
         true,
       );
     };
-
   const handleEditDelivery =
     (): void => {
       if (!deliveryProduct) {
@@ -489,19 +419,15 @@ export function POSScreen({
           'Producto no disponible',
           'No se encontró el producto Envío a domicilio.',
         );
-
         return;
       }
-
       setSelectedDeliveryProduct(
         deliveryProduct,
       );
-
       setIsDeliveryModalVisible(
         true,
       );
     };
-
   const handleProductPress = (
     product: Product,
   ): void => {
@@ -513,129 +439,71 @@ export function POSScreen({
       setSelectedDeliveryProduct(
         product,
       );
-
       setIsDeliveryModalVisible(
         true,
       );
-
       return;
     }
-
     setSelectedProduct(
       product,
     );
-
     setProductNotes('');
-
     setIsModifierModalVisible(
       true,
     );
   };
-
   const handleCloseModifierModal =
     (): void => {
       setIsModifierModalVisible(
         false,
       );
-
       setSelectedProduct(null);
-
       setProductNotes('');
     };
-
   const handleCloseDeliveryModal =
     (): void => {
       setIsDeliveryModalVisible(
         false,
       );
-
       setSelectedDeliveryProduct(
         null,
       );
     };
-
   const handleConfirmDelivery = (
     deliveryDetails:
       DeliveryDetails,
-
-    deliveryFee:
-      number,
   ): void => {
     if (
       !selectedDeliveryProduct
     ) {
       return;
     }
-
-    const normalizedDeliveryFee =
-      Number(
-        deliveryFee,
-      );
-
-    if (
-      !Number.isFinite(
-        normalizedDeliveryFee,
-      ) ||
-      normalizedDeliveryFee <
-      0
-    ) {
-      Alert.alert(
-        'Tarifa inválida',
-        'No se pudo determinar correctamente el costo del envío.',
-      );
-
-      return;
-    }
-
     const deliveryItemId =
       `${selectedDeliveryProduct.id}-delivery`;
-
     const deliveryItem:
       CartItem = {
-      id:
-        deliveryItemId,
-
+      id: deliveryItemId,
       product: {
         ...selectedDeliveryProduct,
-
-        /*
-         * El producto de domicilio dentro
-         * del carrito lleva el costo completo:
-         *
-         * tarifa base + cargo por zona.
-         */
-        price:
-          normalizedDeliveryFee,
       },
-
-      quantity:
-        1,
-
-      notes:
-        '',
-
-      selectedModifiers:
-        [],
-
+      quantity: 1,
+      notes: '',
+      selectedModifiers: [],
       deliveryDetails: {
         ...deliveryDetails,
       },
     };
-
     setCart(
       (
         currentCart,
       ) => {
         const existingDeliveryIndex =
           currentCart.findIndex(
-            (
-              item,
-            ) =>
+            (item) =>
               isDeliveryProduct(
                 item.product,
               ),
           );
-
         if (
           existingDeliveryIndex ===
           -1
@@ -645,7 +513,6 @@ export function POSScreen({
             deliveryItem,
           ];
         }
-
         return currentCart.map(
           (
             item,
@@ -658,10 +525,8 @@ export function POSScreen({
         );
       },
     );
-
     handleCloseDeliveryModal();
   };
-
   const handleConfirmAddToCart =
     (
       configuration:
@@ -670,67 +535,53 @@ export function POSScreen({
       if (!selectedProduct) {
         return;
       }
-
       const {
         selectedModifiers = [],
         comboComponents = [],
       } = configuration;
-
       const productToAdd =
         selectedProduct;
-
       const cleanNotes =
         productNotes.trim();
-
       const normalizedComponents =
         cloneComboComponents(
           comboComponents,
         );
-
       const modifierIdentifier =
         createModifierIdentifier(
           selectedModifiers,
         );
-
       const comboIdentifier =
         createComboIdentifier(
           normalizedComponents,
         );
-
       const cartItemId = [
         productToAdd.id,
         cleanNotes,
         modifierIdentifier,
         comboIdentifier,
       ].join('-');
-
       const itemToAdd:
         CartItem = {
         id: cartItemId,
-
         product: {
           ...productToAdd,
         },
-
         quantity: 1,
-
         notes:
           cleanNotes,
-
         selectedModifiers:
           selectedModifiers.map(
             (modifier) => ({
               ...modifier,
             }),
           ),
-
         comboComponents:
           normalizedComponents
             .length > 0
             ? normalizedComponents
             : undefined,
       };
-
       setCart(
         (
           currentCart,
@@ -741,7 +592,6 @@ export function POSScreen({
                 item.id ===
                 cartItemId,
             );
-
           if (
             existingItemIndex ===
             -1
@@ -751,7 +601,6 @@ export function POSScreen({
               itemToAdd,
             ];
           }
-
           return currentCart.map(
             (
               item,
@@ -763,7 +612,6 @@ export function POSScreen({
               ) {
                 return item;
               }
-
               const preservedComponents =
                 item.comboComponents &&
                   item
@@ -777,14 +625,11 @@ export function POSScreen({
                       .comboComponents ??
                     [],
                   );
-
               return {
                 ...item,
-
                 quantity:
                   item.quantity +
                   itemToAdd.quantity,
-
                 selectedModifiers:
                   item
                     .selectedModifiers
@@ -807,7 +652,6 @@ export function POSScreen({
                           ...modifier,
                         }),
                       ),
-
                 comboComponents:
                   preservedComponents
                     .length > 0
@@ -818,10 +662,8 @@ export function POSScreen({
           );
         },
       );
-
       handleCloseModifierModal();
     };
-
   const handleUpdateQuantity = (
     itemId: string,
     quantityChange: number,
@@ -837,7 +679,6 @@ export function POSScreen({
             ) {
               return item;
             }
-
             if (
               isDeliveryProduct(
                 item.product,
@@ -851,16 +692,13 @@ export function POSScreen({
                   quantity: 1,
                 };
               }
-
               return {
                 ...item,
                 quantity: 0,
               };
             }
-
             return {
               ...item,
-
               quantity:
                 item.quantity +
                 quantityChange,
@@ -872,7 +710,6 @@ export function POSScreen({
           ),
     );
   };
-
   const handleRemoveCartItem = (
     itemId: string,
   ): void => {
@@ -887,14 +724,11 @@ export function POSScreen({
         ),
     );
   };
-
   const handleClearCart =
     (): void => {
       setCart([]);
-
       setEditingOrderId(null);
     };
-
   const handleCheckout = async (
     totalAmount: number,
   ): Promise<void> => {
@@ -905,7 +739,6 @@ export function POSScreen({
             item.product,
           ),
       );
-
     if (
       !hasRegularProducts ||
       isProcessingOrder
@@ -921,14 +754,12 @@ export function POSScreen({
       setIsProcessingOrder(
         true,
       );
-
       if (editingOrderId) {
         await updateKitchenOrder(
           editingOrderId,
           cart,
           totalAmount,
         );
-
         Alert.alert(
           '🍳 ¡Pedido actualizado!',
           'Los cambios fueron enviados a cocina.',
@@ -951,19 +782,16 @@ export function POSScreen({
           pendingOrderRequest.current = {
             id:
               createRequestId(),
-
             fingerprint:
               orderFingerprint,
           };
         }
-
         const result =
           await createKitchenOrder(
             cart,
             totalAmount,
             pendingOrderRequest.current.id,
           );
-
         if (
           result &&
           'success' in result &&
@@ -973,7 +801,6 @@ export function POSScreen({
             'No se pudo crear la orden.',
           );
         }
-
         /*
          * Ya tenemos confirmación de que
          * Supabase recibió la solicitud.
@@ -981,24 +808,19 @@ export function POSScreen({
          */
         pendingOrderRequest.current =
           null;
-
         Alert.alert(
           '🍳 ¡Pedido enviado!',
           'La orden fue enviada a cocina.',
         );
       }
-
       setCart([]);
-
       setEditingOrderId(null);
-
       await fetchKitchenOrders();
     } catch (error) {
       console.error(
         '❌ Error al guardar el pedido:',
         error,
       );
-
       Alert.alert(
         '⚠️ Error al procesar',
         error instanceof Error
@@ -1011,7 +833,6 @@ export function POSScreen({
       );
     }
   };
-
   return (
     <View
       style={
@@ -1039,7 +860,6 @@ export function POSScreen({
           >
             🔎
           </Text>
-
           <TextInput
             value={
               searchText
@@ -1056,7 +876,6 @@ export function POSScreen({
             autoCapitalize="none"
             returnKeyType="search"
           />
-
           {searchText.length >
             0 ? (
             <TouchableOpacity
@@ -1077,7 +896,6 @@ export function POSScreen({
             </TouchableOpacity>
           ) : null}
         </View>
-
         <CategoryTabs
           categorias={
             visibleCategories
@@ -1089,7 +907,6 @@ export function POSScreen({
             setSelectedCategoryId
           }
         />
-
         <MenuList
           products={
             filteredProducts
@@ -1102,7 +919,6 @@ export function POSScreen({
           }
         />
       </View>
-
       {!isPhone ? (
         <CartComponent
           cart={cart}
@@ -1126,7 +942,6 @@ export function POSScreen({
           }
         />
       ) : null}
-
       {isPhone &&
         cart.length > 0 ? (
         <TouchableOpacity
@@ -1151,7 +966,6 @@ export function POSScreen({
             >
               🛒
             </Text>
-
             <View>
               <Text
                 style={
@@ -1160,7 +974,6 @@ export function POSScreen({
               >
                 Ver orden
               </Text>
-
               <Text
                 style={
                   styles.mobileCartSubtitle
@@ -1176,7 +989,6 @@ export function POSScreen({
               </Text>
             </View>
           </View>
-
           <View
             style={
               styles.mobileCartBarRight
@@ -1192,7 +1004,6 @@ export function POSScreen({
                 2,
               )}
             </Text>
-
             <Text
               style={
                 styles.mobileCartArrow
@@ -1203,7 +1014,6 @@ export function POSScreen({
           </View>
         </TouchableOpacity>
       ) : null}
-
       <Modal
         visible={
           isPhone &&
@@ -1237,7 +1047,6 @@ export function POSScreen({
               >
                 Orden actual
               </Text>
-
               <Text
                 style={
                   styles.mobileCartModalSubtitle
@@ -1252,7 +1061,6 @@ export function POSScreen({
                   : 'productos'}
               </Text>
             </View>
-
             <TouchableOpacity
               style={
                 styles.mobileCartCloseButton
@@ -1271,7 +1079,6 @@ export function POSScreen({
               </Text>
             </TouchableOpacity>
           </View>
-
           <View style={styles.mobileCartContent}>
             {isMobileCartReady ? (
               <CartComponent
@@ -1285,11 +1092,9 @@ export function POSScreen({
                 }
                 onClearCart={() => {
                   handleClearCart();
-
                   setIsMobileCartReady(
                     false,
                   );
-
                   setIsMobileCartVisible(
                     false,
                   );
@@ -1300,11 +1105,9 @@ export function POSScreen({
                   await handleCheckout(
                     totalAmount,
                   );
-
                   setIsMobileCartReady(
                     false,
                   );
-
                   setIsMobileCartVisible(
                     false,
                   );
@@ -1320,7 +1123,6 @@ export function POSScreen({
           </View>
         </View>
       </Modal>
-
       <ProductConfiguratorModal
         visible={
           isModifierModalVisible
@@ -1339,9 +1141,6 @@ export function POSScreen({
         }
         mode={
           modifierMode
-        }
-        isKongBurger={
-          selectedProductIsKongBurger
         }
         meats={
           meats
@@ -1365,7 +1164,6 @@ export function POSScreen({
           handleConfirmAddToCart
         }
       />
-
       <DeliveryConfiguratorModal
         visible={
           isDeliveryModalVisible
@@ -1386,7 +1184,6 @@ export function POSScreen({
     </View>
   );
 }
-
 function cloneComboComponents(
   components:
     | ComboComponentSelection[]
@@ -1397,11 +1194,9 @@ function cloneComboComponents(
   ).map(
     (component) => ({
       ...component,
-
       product: {
         ...component.product,
       },
-
       selectedModifiers: (
         component
           .selectedModifiers ??
@@ -1414,7 +1209,6 @@ function cloneComboComponents(
     }),
   );
 }
-
 function createModifierIdentifier(
   modifiers:
     ProductConfigurationResult[
@@ -1431,7 +1225,6 @@ function createModifierIdentifier(
     .sort()
     .join(',');
 }
-
 function createComboIdentifier(
   components:
     | ComboComponentSelection[]
@@ -1453,7 +1246,6 @@ function createComboIdentifier(
           )
           .sort()
           .join(',');
-
         return [
           component.slotId,
           component.type,
@@ -1467,7 +1259,6 @@ function createComboIdentifier(
     .sort()
     .join('|');
 }
-
 function normalizeText(
   value:
     | string
@@ -1487,7 +1278,6 @@ function normalizeText(
       'es',
     );
 }
-
 function createOrderFingerprint(
   cart: Cart,
   totalAmount: number,
@@ -1497,22 +1287,17 @@ function createOrderFingerprint(
       Number(
         totalAmount,
       ).toFixed(2),
-
     items:
       cart.map(
         (item) => ({
           id:
             item.id,
-
           productId:
             item.product.id,
-
           quantity:
             item.quantity,
-
           notes:
             item.notes.trim(),
-
           modifiers: (
             item.selectedModifiers ??
             []
@@ -1522,7 +1307,6 @@ function createOrderFingerprint(
                 modifier.id,
             )
             .sort(),
-
           components: (
             item.comboComponents ??
             []
@@ -1530,16 +1314,12 @@ function createOrderFingerprint(
             (component) => ({
               slotId:
                 component.slotId,
-
               productId:
                 component.product.id,
-
               quantity:
                 component.quantity,
-
               notes:
                 component.notes.trim(),
-
               modifiers: (
                 component
                   .selectedModifiers ??
@@ -1552,7 +1332,6 @@ function createOrderFingerprint(
                 .sort(),
             }),
           ),
-
           delivery:
             item.deliveryDetails ??
             null,
@@ -1560,11 +1339,9 @@ function createOrderFingerprint(
       ),
   });
 }
-
 function createRequestId(): string {
   const cryptoObject =
     globalThis.crypto;
-
   if (
     cryptoObject &&
     typeof cryptoObject.randomUUID ===
@@ -1572,7 +1349,6 @@ function createRequestId(): string {
   ) {
     return cryptoObject.randomUUID();
   }
-
   /*
    * Fallback UUID v4 para
    * ambientes donde randomUUID
@@ -1591,14 +1367,12 @@ function createRequestId(): string {
         Math.floor(
           Math.random() * 16,
         );
-
       const value =
         character === 'x'
           ? random
           : (
             random & 0x3
           ) | 0x8;
-
       return value.toString(
         16,
       );

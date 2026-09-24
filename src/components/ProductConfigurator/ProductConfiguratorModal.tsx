@@ -3,7 +3,6 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-
 import {
   ActivityIndicator,
   Modal,
@@ -15,84 +14,60 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-
 import {
   Category,
   ComboComponentSelection,
   Product,
   SelectedModifier,
 } from '../../types';
-
 import {
   getAvailableModifiersByGroupId,
   ModifierWithGroup,
   ProductModifierMode,
 } from '../../services/modifierService';
-
 import {
   getActiveProductModifierGroups,
   ProductModifierGroup,
 } from '../../services/productModifierGroupService';
-
 import {
   getActiveWeeklySauce,
   WeeklySauce,
 } from '../../services/weeklySauceService';
-
 import {
   getAvailableProductFlavors,
   ProductFlavor,
 } from '../../services/productFlavorService';
-
 import {
   styles,
 } from '../modifier-modal/ModifierModal.styles';
-
 import {
   ComboConfigurator,
   ComboConfiguratorSelection,
 } from './ComboConfigurator';
-
 export interface ProductConfigurationResult {
   selectedModifiers: SelectedModifier[];
   comboComponents: ComboComponentSelection[];
 }
-
 interface ProductConfiguratorModalProps {
   visible: boolean;
-
   product: Product | null;
-
   products: Product[];
-
   categories: Category[];
-
   notes: string;
-
   mode: ProductModifierMode;
-
-  isKongBurger: boolean;
-
   meats: SelectedModifier[];
-
   sauces: SelectedModifier[];
-
   isLoading: boolean;
-
   error: string | null;
-
   onNotesChange: (
     text: string,
   ) => void;
-
   onClose: () => void;
-
   onConfirm: (
     configuration:
       ProductConfigurationResult,
   ) => void;
 }
-
 export const ProductConfiguratorModal:
   React.FC<
     ProductConfiguratorModalProps
@@ -103,7 +78,6 @@ export const ProductConfiguratorModal:
     categories,
     notes,
     mode,
-    isKongBurger,
     meats,
     sauces,
     isLoading,
@@ -116,118 +90,94 @@ export const ProductConfiguratorModal:
       width,
       height,
     } = useWindowDimensions();
-
     const isPhone =
       width < 700;
-
     const isSmallPhone =
       width < 430;
-
     const isShortScreen =
       height < 700;
-
     const [
       selectedMeatIds,
       setSelectedMeatIds,
     ] = useState<string[]>([]);
-
     const MAXIMUM_SAUCES = 3;
-
     const [
       selectedSauceIds,
       setSelectedSauceIds,
     ] = useState<string[]>([]);
-
     const [
       productFlavors,
       setProductFlavors,
     ] = useState<ProductFlavor[]>([]);
-
     const [
       selectedFlavorId,
       setSelectedFlavorId,
     ] = useState<
       string | null
     >(null);
-
     const [
       areFlavorsLoading,
       setAreFlavorsLoading,
     ] = useState(false);
-
     const [
       flavorsError,
       setFlavorsError,
     ] = useState<
       string | null
     >(null);
-
     const [
       productModifierGroups,
       setProductModifierGroups,
     ] = useState<ProductModifierGroup[]>([]);
-
     const [
       modifiersByGroup,
       setModifiersByGroup,
     ] = useState<
       Record<string, ModifierWithGroup[]>
     >({});
-
     const [
       selectedModifierIdsByGroup,
       setSelectedModifierIdsByGroup,
     ] = useState<
       Record<string, string[]>
     >({});
-
     const [
       areProductGroupsLoading,
       setAreProductGroupsLoading,
     ] = useState(false);
-
     const [
       productGroupsError,
       setProductGroupsError,
     ] = useState<
       string | null
     >(null);
-
     const [
       comboSelection,
       setComboSelection,
     ] = useState<
       ComboConfiguratorSelection | null
     >(null);
-
     const [
       weeklySauce,
       setWeeklySauce,
     ] = useState<
       WeeklySauce | null
     >(null);
-
     const isBurger =
       mode === 'burger';
-
     const isWings =
       mode === 'wings';
-
     const isBoneless =
       mode === 'boneless';
-
     const isCombo =
       mode === 'combo';
-
     const requiresSauce =
       isWings ||
       isBoneless;
-
     const normalizedProductName =
       normalizeText(
         product?.name,
       );
-
     const productCategoryName =
       categories.find(
         (category) =>
@@ -238,29 +188,42 @@ export const ProductConfiguratorModal:
             product?.category_id,
           ),
       )?.name ?? '';
-
     const normalizedCategoryName =
       normalizeText(
         productCategoryName,
       );
-
-    const isThreeCheeseBurger =
-      isBurger &&
-      (
-        normalizedProductName
-          .includes(
-            '3 quesos',
-          ) ||
-        normalizedProductName
-          .includes(
-            'tres quesos',
-          )
+    const meatGroupAssociation =
+      useMemo(
+        () =>
+          productModifierGroups.find(
+            association =>
+              association.group
+                ?.code ===
+              'meat',
+          ) ?? null,
+        [
+          productModifierGroups,
+        ],
       );
-
+    const minimumMeats =
+      meatGroupAssociation
+        ?.minSelections ??
+      0;
+    const maximumMeats =
+      meatGroupAssociation
+        ?.maxSelections ??
+      0;
     const requiresMeat =
-      isBurger &&
-      !isThreeCheeseBurger;
-
+      Boolean(
+        meatGroupAssociation &&
+        (
+          meatGroupAssociation
+            .isRequired ||
+          minimumMeats > 0
+        ),
+      );
+    const allowsMultipleMeats =
+      maximumMeats > 1;
     const isHotDog =
       normalizedCategoryName
         .includes(
@@ -278,7 +241,6 @@ export const ProductConfiguratorModal:
         .includes(
           'hot dog',
         );
-
     const isDrink =
       normalizedCategoryName
         .includes(
@@ -296,7 +258,6 @@ export const ProductConfiguratorModal:
         .includes(
           'malteada',
         );
-
     const isFries =
       normalizedCategoryName
         .includes(
@@ -306,7 +267,6 @@ export const ProductConfiguratorModal:
         .includes(
           'papa',
         );
-
     const notesPlaceholder =
       isWings ||
         isBoneless
@@ -319,20 +279,6 @@ export const ProductConfiguratorModal:
               isHotDog
               ? 'Ej: Sin cebolla, sin chile, extra mayonesa...'
               : 'Ej: Indicaciones especiales para tu producto...';
-
-    const isDoubleBurger =
-      isBurger &&
-      normalizedProductName.includes(
-        'hamburguesa doble',
-      );
-
-    const allowsTwoMeats =
-      isKongBurger ||
-      isDoubleBurger;
-
-    const maximumMeats =
-      allowsTwoMeats ? 2 : 1;
-
     /**
      * Estos grupos son los que todavía maneja
      * el configurador legacy para no duplicarlos.
@@ -348,7 +294,6 @@ export const ProductConfiguratorModal:
               const code =
                 association.group
                   ?.code;
-
               return (
                 code !== 'meat' &&
                 code !== 'sauce' &&
@@ -360,7 +305,6 @@ export const ProductConfiguratorModal:
           productModifierGroups,
         ],
       );
-
     const selectedModifiers =
       useMemo<
         SelectedModifier[]
@@ -384,7 +328,6 @@ export const ProductConfiguratorModal:
                 modifier !==
                 undefined,
             );
-
         const selectedSauces =
           selectedSauceIds
             .map(
@@ -404,7 +347,6 @@ export const ProductConfiguratorModal:
                 modifier !==
                 undefined,
             );
-
         const selectedFlavor =
           selectedFlavorId
             ? productFlavors.find(
@@ -413,7 +355,6 @@ export const ProductConfiguratorModal:
                 selectedFlavorId,
             )
             : undefined;
-
         const flavorModifier:
           SelectedModifier | null =
           selectedFlavor
@@ -421,22 +362,17 @@ export const ProductConfiguratorModal:
               id:
                 selectedFlavor
                   .modifierId,
-
               name:
                 selectedFlavor.name,
-
               extra_price:
                 '0.00',
-
               group_name:
                 'Sabor',
-
               is_available:
                 selectedFlavor
                   .isAvailable,
             }
             : null;
-
         const genericModifiers =
           genericProductModifierGroups
             .flatMap(
@@ -445,12 +381,10 @@ export const ProductConfiguratorModal:
                   selectedModifierIdsByGroup[
                     association.modifierGroupId
                   ] ?? [];
-
                 const availableModifiers =
                   modifiersByGroup[
                     association.modifierGroupId
                   ] ?? [];
-
                 return selectedIds
                   .map(
                     modifierId =>
@@ -471,28 +405,22 @@ export const ProductConfiguratorModal:
                     modifier => ({
                       id:
                         modifier.id,
-
                       name:
                         modifier.name,
-
                       extra_price:
                         modifier.extra_price,
-
                       group_name:
                         modifier.group_name,
-
                       is_available:
                         modifier.is_available,
                     }) as SelectedModifier,
                   );
               },
             );
-
         return [
           ...selectedMeats,
           ...selectedSauces,
           ...genericModifiers,
-
           ...(flavorModifier
             ? [
               flavorModifier,
@@ -510,7 +438,6 @@ export const ProductConfiguratorModal:
         selectedModifierIdsByGroup,
         modifiersByGroup,
       ]);
-
     const isSelectionValid =
       useMemo(() => {
         if (isCombo) {
@@ -520,7 +447,6 @@ export const ProductConfiguratorModal:
             false
           );
         }
-
         if (
           isLoading ||
           error ||
@@ -531,7 +457,17 @@ export const ProductConfiguratorModal:
         ) {
           return false;
         }
-
+        if (
+          meatGroupAssociation &&
+          (
+            selectedMeatIds.length <
+              minimumMeats ||
+            selectedMeatIds.length >
+              maximumMeats
+          )
+        ) {
+          return false;
+        }
         if (
           requiresMeat &&
           selectedMeatIds.length ===
@@ -539,7 +475,6 @@ export const ProductConfiguratorModal:
         ) {
           return false;
         }
-
         if (
           requiresSauce &&
           selectedSauceIds.length ===
@@ -547,7 +482,6 @@ export const ProductConfiguratorModal:
         ) {
           return false;
         }
-
         if (
           productFlavors.length >
           0 &&
@@ -555,7 +489,6 @@ export const ProductConfiguratorModal:
         ) {
           return false;
         }
-
         for (
           const association of
           genericProductModifierGroups
@@ -566,21 +499,18 @@ export const ProductConfiguratorModal:
                 association.modifierGroupId
               ] ?? []
             ).length;
-
           if (
             selectedCount <
             association.minSelections
           ) {
             return false;
           }
-
           if (
             selectedCount >
             association.maxSelections
           ) {
             return false;
           }
-
           if (
             association.isRequired &&
             selectedCount ===
@@ -589,7 +519,6 @@ export const ProductConfiguratorModal:
             return false;
           }
         }
-
         return true;
       }, [
         isCombo,
@@ -598,6 +527,9 @@ export const ProductConfiguratorModal:
         error,
         areFlavorsLoading,
         flavorsError,
+        meatGroupAssociation,
+        minimumMeats,
+        maximumMeats,
         requiresMeat,
         requiresSauce,
         selectedMeatIds,
@@ -609,55 +541,41 @@ export const ProductConfiguratorModal:
         genericProductModifierGroups,
         selectedModifierIdsByGroup,
       ]);
-
     useEffect(() => {
       if (!visible) {
         return;
       }
-
       setSelectedMeatIds([]);
-
       setSelectedSauceIds([]);
-
       setSelectedFlavorId(
         null,
       );
-
       setProductFlavors([]);
-
       setComboSelection(
         null,
       );
-
       setFlavorsError(
         null,
       );
-
       setProductModifierGroups(
         [],
       );
-
       setModifiersByGroup(
         {},
       );
-
       setSelectedModifierIdsByGroup(
         {},
       );
-
       setProductGroupsError(
         null,
       );
-
       let isMounted =
         true;
-
       const loadWeeklySauce =
         async () => {
           try {
             const data =
               await getActiveWeeklySauce();
-
             if (
               isMounted
             ) {
@@ -672,7 +590,6 @@ export const ProductConfiguratorModal:
               'Error loading weekly sauce:',
               weeklySauceError,
             );
-
             if (
               isMounted
             ) {
@@ -682,7 +599,6 @@ export const ProductConfiguratorModal:
             }
           }
         };
-
       const loadProductFlavors =
         async () => {
           if (
@@ -691,23 +607,19 @@ export const ProductConfiguratorModal:
           ) {
             return;
           }
-
           try {
             setAreFlavorsLoading(
               true,
             );
-
             const flavors =
               await getAvailableProductFlavors(
                 product.id,
               );
-
             if (
               !isMounted
             ) {
               return;
             }
-
             setProductFlavors(
               flavors,
             );
@@ -718,13 +630,11 @@ export const ProductConfiguratorModal:
               'Error loading product flavors:',
               flavorLoadError,
             );
-
             if (
               !isMounted
             ) {
               return;
             }
-
             setFlavorsError(
               flavorLoadError
                 instanceof Error
@@ -742,7 +652,6 @@ export const ProductConfiguratorModal:
             }
           }
         };
-
       const loadProductModifierGroups =
         async () => {
           if (
@@ -751,30 +660,25 @@ export const ProductConfiguratorModal:
           ) {
             return;
           }
-
           try {
             setAreProductGroupsLoading(
               true,
             );
-
             const associations =
               await getActiveProductModifierGroups(
                 product.id,
               );
-
             if (
               !isMounted
             ) {
               return;
             }
-
             const genericAssociations =
               associations.filter(
                 association => {
                   const code =
                     association.group
                       ?.code;
-
                   return (
                     code !== 'meat' &&
                     code !== 'sauce' &&
@@ -782,11 +686,9 @@ export const ProductConfiguratorModal:
                   );
                 },
               );
-
             setProductModifierGroups(
               associations,
             );
-
             if (
               genericAssociations.length ===
               0
@@ -794,10 +696,8 @@ export const ProductConfiguratorModal:
               setModifiersByGroup(
                 {},
               );
-
               return;
             }
-
             const groupEntries =
               await Promise.all(
                 genericAssociations.map(
@@ -806,7 +706,6 @@ export const ProductConfiguratorModal:
                       await getAvailableModifiersByGroupId(
                         association.modifierGroupId,
                       );
-
                     return [
                       association.modifierGroupId,
                       modifiers,
@@ -814,13 +713,11 @@ export const ProductConfiguratorModal:
                   },
                 ),
               );
-
             if (
               !isMounted
             ) {
               return;
             }
-
             setModifiersByGroup(
               Object.fromEntries(
                 groupEntries,
@@ -833,13 +730,11 @@ export const ProductConfiguratorModal:
               'Error loading product modifier groups:',
               groupLoadError,
             );
-
             if (
               !isMounted
             ) {
               return;
             }
-
             setProductGroupsError(
               groupLoadError
                 instanceof Error
@@ -856,13 +751,9 @@ export const ProductConfiguratorModal:
             }
           }
         };
-
       void loadWeeklySauce();
-
       void loadProductFlavors();
-
       void loadProductModifierGroups();
-
       return () => {
         isMounted =
           false;
@@ -872,11 +763,9 @@ export const ProductConfiguratorModal:
       product?.id,
       isCombo,
     ]);
-
     if (!product) {
       return null;
     }
-
     const handleMeatPress = (
       modifierId: string,
     ): void => {
@@ -897,7 +786,6 @@ export const ProductConfiguratorModal:
                   modifierId,
               );
           }
-
           if (
             maximumMeats ===
             1
@@ -906,7 +794,6 @@ export const ProductConfiguratorModal:
               modifierId,
             ];
           }
-
           if (
             currentSelection
               .length >=
@@ -914,7 +801,6 @@ export const ProductConfiguratorModal:
           ) {
             return currentSelection;
           }
-
           return [
             ...currentSelection,
             modifierId,
@@ -922,7 +808,6 @@ export const ProductConfiguratorModal:
         },
       );
     };
-
     const handleDoubleMeat = (
       modifierId: string,
     ): void => {
@@ -931,14 +816,13 @@ export const ProductConfiguratorModal:
           currentSelection,
         ) => {
           if (
-            !allowsTwoMeats ||
+            !allowsMultipleMeats ||
             currentSelection
               .length !==
             1
           ) {
             return currentSelection;
           }
-
           return [
             modifierId,
             modifierId,
@@ -946,7 +830,6 @@ export const ProductConfiguratorModal:
         },
       );
     };
-
     const handleSaucePress = (
       modifierId: string,
     ): void => {
@@ -967,7 +850,6 @@ export const ProductConfiguratorModal:
                   modifierId,
               );
           }
-
           if (
             currentSelection
               .length >=
@@ -975,7 +857,6 @@ export const ProductConfiguratorModal:
           ) {
             return currentSelection;
           }
-
           return [
             ...currentSelection,
             modifierId,
@@ -983,11 +864,9 @@ export const ProductConfiguratorModal:
         },
       );
     };
-
     const handleGenericModifierPress = (
       association:
         ProductModifierGroup,
-
       modifierId: string,
     ): void => {
       setSelectedModifierIdsByGroup(
@@ -996,7 +875,6 @@ export const ProductConfiguratorModal:
             current[
               association.modifierGroupId
             ] ?? [];
-
           if (
             currentSelection.includes(
               modifierId,
@@ -1004,7 +882,6 @@ export const ProductConfiguratorModal:
           ) {
             return {
               ...current,
-
               [association.modifierGroupId]:
                 currentSelection.filter(
                   id =>
@@ -1013,31 +890,26 @@ export const ProductConfiguratorModal:
                 ),
             };
           }
-
           if (
             association.maxSelections ===
             1
           ) {
             return {
               ...current,
-
               [association.modifierGroupId]:
                 [
                   modifierId,
                 ],
             };
           }
-
           if (
             currentSelection.length >=
             association.maxSelections
           ) {
             return current;
           }
-
           return {
             ...current,
-
             [association.modifierGroupId]:
               [
                 ...currentSelection,
@@ -1047,7 +919,6 @@ export const ProductConfiguratorModal:
         },
       );
     };
-
     const handleConfirm =
       (): void => {
         if (
@@ -1055,7 +926,6 @@ export const ProductConfiguratorModal:
         ) {
           return;
         }
-
         if (isCombo) {
           if (
             !comboSelection ||
@@ -1064,28 +934,22 @@ export const ProductConfiguratorModal:
           ) {
             return;
           }
-
           onConfirm({
             selectedModifiers:
               [],
-
             comboComponents: [
               ...comboSelection
                 .components,
             ],
           });
-
           return;
         }
-
         onConfirm({
           selectedModifiers,
-
           comboComponents:
             [],
         });
       };
-
     const selectedSingleMeat =
       selectedMeatIds
         .length === 1
@@ -1097,7 +961,6 @@ export const ProductConfiguratorModal:
             selectedMeatIds[0],
         )
         : undefined;
-
     return (
       <Modal
         animationType="fade"
@@ -1113,7 +976,6 @@ export const ProductConfiguratorModal:
           style={[
             styles
               .modalBackdrop,
-
             isPhone &&
             styles
               .modalBackdropPhone,
@@ -1123,15 +985,12 @@ export const ProductConfiguratorModal:
             style={[
               styles
                 .modalContent,
-
               isPhone &&
               styles
                 .modalContentPhone,
-
               isSmallPhone &&
               styles
                 .modalContentSmallPhone,
-
               isShortScreen &&
               styles
                 .modalContentShort,
@@ -1141,7 +1000,6 @@ export const ProductConfiguratorModal:
               style={[
                 styles
                   .modalTitle,
-
                 isPhone &&
                 styles
                   .modalTitlePhone,
@@ -1150,12 +1008,10 @@ export const ProductConfiguratorModal:
               Ajustes de{' '}
               {product.name}
             </Text>
-
             <Text
               style={[
                 styles
                   .modalSubtitle,
-
                 isPhone &&
                 styles
                   .modalSubtitlePhone,
@@ -1163,14 +1019,14 @@ export const ProductConfiguratorModal:
             >
               {isCombo
                 ? 'Configura los productos incluidos en el combo:'
-                : isKongBurger
-                  ? 'Selecciona hasta 2 tipos de carne para tu Kong Burger:'
-                  : requiresMeat ||
-                    requiresSauce
+                : requiresMeat
+                  ? maximumMeats > 1
+                    ? `Selecciona entre ${minimumMeats || 1} y ${maximumMeats} opciones de ${meatGroupAssociation?.group?.name ?? 'este grupo'}:`
+                    : `Selecciona ${meatGroupAssociation?.group?.name ?? 'la opción'} obligatoria:`
+                  : requiresSauce
                     ? 'Selecciona las opciones obligatorias:'
                     : ''}
             </Text>
-
             {weeklySauce &&
               requiresSauce && (
                 <View
@@ -1207,7 +1063,6 @@ export const ProductConfiguratorModal:
                         .modifier_name
                     }
                   </Text>
-
                   <Text
                     style={{
                       color:
@@ -1229,7 +1084,6 @@ export const ProductConfiguratorModal:
                   </Text>
                 </View>
               )}
-
             <ScrollView
               style={
                 styles
@@ -1257,7 +1111,6 @@ export const ProductConfiguratorModal:
                       size="large"
                       color="#FFBF00"
                     />
-
                     <Text
                       style={
                         styles
@@ -1269,7 +1122,6 @@ export const ProductConfiguratorModal:
                     </Text>
                   </View>
                 )}
-
               {!isCombo &&
                 !isLoading &&
                 error && (
@@ -1282,7 +1134,6 @@ export const ProductConfiguratorModal:
                     {error}
                   </Text>
                 )}
-
               {isCombo && (
                 <ComboConfigurator
                   product={
@@ -1302,7 +1153,6 @@ export const ProductConfiguratorModal:
                   }
                 />
               )}
-
               {!isLoading &&
                 !error &&
                 requiresMeat && (
@@ -1318,18 +1168,23 @@ export const ProductConfiguratorModal:
                           .sectionLabel
                       }
                     >
-                      Tipo de
-                      carne *{' '}
-                      {allowsTwoMeats
-                        ? '(Selecciona 1 o 2)'
-                        : '(Obligatorio)'}
+                      {meatGroupAssociation
+                        ?.group
+                        ?.name ??
+                        'Opciones'}{' '}
+                      {requiresMeat
+                        ? '* '
+                        : ''}
+                      {maximumMeats > 1
+                        ? `(Selecciona de ${minimumMeats} a ${maximumMeats})`
+                        : requiresMeat
+                          ? '(Obligatorio)'
+                          : '(Opcional)'}
                     </Text>
-
                     <View
                       style={[
                         styles
                           .optionsContainerHorizontal,
-
                         isPhone &&
                         styles
                           .optionsContainerPhone,
@@ -1349,11 +1204,9 @@ export const ProductConfiguratorModal:
                                   modifier.id,
                               )
                               .length;
-
                           const isSelected =
                             selectedCount >
                             0;
-
                           return (
                             <TouchableOpacity
                               key={
@@ -1362,13 +1215,11 @@ export const ProductConfiguratorModal:
                               style={[
                                 styles
                                   .optionButtonChip,
-
                                 isPhone
                                   ? styles
                                     .optionButtonChipPhone
                                   : styles
                                     .optionButtonChipTablet,
-
                                 isSelected &&
                                 styles
                                   .optionButtonSelected,
@@ -1386,11 +1237,9 @@ export const ProductConfiguratorModal:
                                 style={[
                                   styles
                                     .optionText,
-
                                   isPhone &&
                                   styles
                                     .optionTextPhone,
-
                                   isSelected &&
                                   styles
                                     .optionTextSelected,
@@ -1399,7 +1248,6 @@ export const ProductConfiguratorModal:
                                 {
                                   modifier.name
                                 }
-
                                 {selectedCount >
                                   1
                                   ? ` (x${selectedCount})`
@@ -1410,8 +1258,7 @@ export const ProductConfiguratorModal:
                         },
                       )}
                     </View>
-
-                    {allowsTwoMeats &&
+                    {allowsMultipleMeats &&
                       selectedSingleMeat && (
                         <TouchableOpacity
                           style={
@@ -1430,8 +1277,7 @@ export const ProductConfiguratorModal:
                                 .doubleMeatText
                             }
                           >
-                            ¿Hacerla
-                            doble de{' '}
+                            Duplicar{' '}
                             {
                               selectedSingleMeat
                                 .name
@@ -1442,7 +1288,6 @@ export const ProductConfiguratorModal:
                       )}
                   </View>
                 )}
-
               {!isLoading &&
                 !error &&
                 requiresSauce && (
@@ -1464,7 +1309,6 @@ export const ProductConfiguratorModal:
                       * (Selecciona
                       de 1 a 3)
                     </Text>
-
                     <Text
                       style={{
                         color:
@@ -1485,12 +1329,10 @@ export const ProductConfiguratorModal:
                       }{' '}
                       seleccionadas
                     </Text>
-
                     <View
                       style={[
                         styles
                           .optionsContainerHorizontal,
-
                         isPhone &&
                         styles
                           .optionsContainerPhone,
@@ -1505,12 +1347,10 @@ export const ProductConfiguratorModal:
                               .includes(
                                 modifier.id,
                               );
-
                           const isWeeklySauce =
                             weeklySauce
                               ?.modifier_id ===
                             modifier.id;
-
                           return (
                             <TouchableOpacity
                               key={
@@ -1519,46 +1359,35 @@ export const ProductConfiguratorModal:
                               style={[
                                 styles
                                   .optionButtonChip,
-
                                 isPhone
                                   ? styles
                                     .optionButtonChipPhone
                                   : styles
                                     .optionButtonChipTablet,
-
                                 {
                                   flexBasis:
                                     isPhone
                                       ? '100%'
                                       : '48%',
-
                                   flexGrow:
                                     1,
-
                                   flexShrink:
                                     1,
-
                                   minHeight:
                                     46,
-
                                   justifyContent:
                                     'center',
-
                                   alignItems:
                                     'center',
-
                                   paddingHorizontal:
                                     10,
                                 },
-
                                 isSelected &&
                                 styles
                                   .optionButtonSelected,
-
                                 isWeeklySauce && {
                                   borderColor:
                                     '#FFBF00',
-
                                   borderWidth:
                                     2,
                                 },
@@ -1579,27 +1408,21 @@ export const ProductConfiguratorModal:
                                 style={[
                                   styles
                                     .optionText,
-
                                   {
                                     width:
                                       '100%',
-
                                     textAlign:
                                       'center',
                                   },
-
                                   isPhone &&
                                   styles
                                     .optionTextPhone,
-
                                   isSelected &&
                                   styles
                                     .optionTextSelected,
-
                                   isWeeklySauce && {
                                     color:
                                       '#FFBF00',
-
                                     fontWeight:
                                       '900',
                                   },
@@ -1608,27 +1431,21 @@ export const ProductConfiguratorModal:
                                 {isWeeklySauce
                                   ? '🌶️ '
                                   : ''}
-
                                 {
                                   modifier.name
                                 }
                               </Text>
-
                               {isWeeklySauce && (
                                 <Text
                                   style={{
                                     color:
                                       '#D6C98A',
-
                                     fontSize:
                                       9,
-
                                     fontWeight:
                                       '800',
-
                                     marginTop:
                                       3,
-
                                     textAlign:
                                       'center',
                                   }}
@@ -1649,7 +1466,6 @@ export const ProductConfiguratorModal:
                     </View>
                   </View>
                 )}
-
               {!isCombo &&
                 areFlavorsLoading && (
                   <View
@@ -1662,7 +1478,6 @@ export const ProductConfiguratorModal:
                       size="small"
                       color="#FFBF00"
                     />
-
                     <Text
                       style={
                         styles
@@ -1674,7 +1489,6 @@ export const ProductConfiguratorModal:
                     </Text>
                   </View>
                 )}
-
               {!isCombo &&
                 !areFlavorsLoading &&
                 flavorsError && (
@@ -1689,7 +1503,6 @@ export const ProductConfiguratorModal:
                     }
                   </Text>
                 )}
-
               {!isCombo &&
                 !areFlavorsLoading &&
                 !flavorsError &&
@@ -1710,12 +1523,10 @@ export const ProductConfiguratorModal:
                       Sabor *
                       (Obligatorio)
                     </Text>
-
                     <View
                       style={[
                         styles
                           .optionsContainerHorizontal,
-
                         isPhone &&
                         styles
                           .optionsContainerPhone,
@@ -1728,7 +1539,6 @@ export const ProductConfiguratorModal:
                           const isSelected =
                             selectedFlavorId ===
                             flavor.id;
-
                           return (
                             <TouchableOpacity
                               key={
@@ -1737,35 +1547,27 @@ export const ProductConfiguratorModal:
                               style={[
                                 styles
                                   .optionButtonChip,
-
                                 isPhone
                                   ? styles
                                     .optionButtonChipPhone
                                   : styles
                                     .optionButtonChipTablet,
-
                                 {
                                   flexBasis:
                                     isPhone
                                       ? '100%'
                                       : '48%',
-
                                   flexGrow:
                                     1,
-
                                   flexShrink:
                                     1,
-
                                   minHeight:
                                     46,
-
                                   justifyContent:
                                     'center',
-
                                   alignItems:
                                     'center',
                                 },
-
                                 isSelected &&
                                 styles
                                   .optionButtonSelected,
@@ -1786,19 +1588,15 @@ export const ProductConfiguratorModal:
                                 style={[
                                   styles
                                     .optionText,
-
                                   {
                                     width:
                                       '100%',
-
                                     textAlign:
                                       'center',
                                   },
-
                                   isPhone &&
                                   styles
                                     .optionTextPhone,
-
                                   isSelected &&
                                   styles
                                     .optionTextSelected,
@@ -1815,7 +1613,6 @@ export const ProductConfiguratorModal:
                     </View>
                   </View>
                 )}
-
               {!isCombo &&
                 areProductGroupsLoading && (
                   <View
@@ -1828,7 +1625,6 @@ export const ProductConfiguratorModal:
                       size="small"
                       color="#FFBF00"
                     />
-
                     <Text
                       style={
                         styles
@@ -1840,7 +1636,6 @@ export const ProductConfiguratorModal:
                     </Text>
                   </View>
                 )}
-
               {!isCombo &&
                 !areProductGroupsLoading &&
                 productGroupsError && (
@@ -1855,7 +1650,6 @@ export const ProductConfiguratorModal:
                     }
                   </Text>
                 )}
-
               {!isCombo &&
                 !areProductGroupsLoading &&
                 !productGroupsError &&
@@ -1865,20 +1659,16 @@ export const ProductConfiguratorModal:
                       association.group
                         ?.name ??
                       'Opciones';
-
                     const groupModifiers =
                       modifiersByGroup[
                         association.modifierGroupId
                       ] ?? [];
-
                     const selectedIds =
                       selectedModifierIdsByGroup[
                         association.modifierGroupId
                       ] ?? [];
-
                     const selectedCount =
                       selectedIds.length;
-
                     return (
                       <View
                         key={
@@ -1906,17 +1696,14 @@ export const ProductConfiguratorModal:
                             ? `(Selecciona ${association.maxSelections})`
                             : `(Selecciona de ${association.minSelections} a ${association.maxSelections})`}
                         </Text>
-
                         {association.maxSelections >
                           1 && (
                           <Text
                             style={{
                               color:
                                 '#AAAAAA',
-
                               fontSize:
                                 12,
-
                               marginBottom:
                                 8,
                             }}
@@ -1928,17 +1715,14 @@ export const ProductConfiguratorModal:
                             seleccionadas
                           </Text>
                         )}
-
                         {groupModifiers.length ===
                         0 ? (
                           <Text
                             style={{
                               color:
                                 '#888888',
-
                               fontSize:
                                 11,
-
                               marginBottom:
                                 8,
                             }}
@@ -1950,7 +1734,6 @@ export const ProductConfiguratorModal:
                             style={[
                               styles
                                 .optionsContainerHorizontal,
-
                               isPhone &&
                               styles
                                 .optionsContainerPhone,
@@ -1962,7 +1745,6 @@ export const ProductConfiguratorModal:
                                   selectedIds.includes(
                                     modifier.id,
                                   );
-
                                 return (
                                   <TouchableOpacity
                                     key={
@@ -1971,35 +1753,27 @@ export const ProductConfiguratorModal:
                                     style={[
                                       styles
                                         .optionButtonChip,
-
                                       isPhone
                                         ? styles
                                           .optionButtonChipPhone
                                         : styles
                                           .optionButtonChipTablet,
-
                                       {
                                         flexBasis:
                                           isPhone
                                             ? '100%'
                                             : '48%',
-
                                         flexGrow:
                                           1,
-
                                         flexShrink:
                                           1,
-
                                         minHeight:
                                           46,
-
                                         justifyContent:
                                           'center',
-
                                         alignItems:
                                           'center',
                                       },
-
                                       isSelected &&
                                       styles
                                         .optionButtonSelected,
@@ -2021,19 +1795,15 @@ export const ProductConfiguratorModal:
                                       style={[
                                         styles
                                           .optionText,
-
                                         {
                                           width:
                                             '100%',
-
                                           textAlign:
                                             'center',
                                         },
-
                                         isPhone &&
                                         styles
                                           .optionTextPhone,
-
                                         isSelected &&
                                         styles
                                           .optionTextSelected,
@@ -2042,7 +1812,6 @@ export const ProductConfiguratorModal:
                                       {
                                         modifier.name
                                       }
-
                                       {Number(
                                         modifier.extra_price,
                                       ) >
@@ -2064,7 +1833,6 @@ export const ProductConfiguratorModal:
                     );
                   },
                 )}
-
               {!isCombo && (
                 <>
                   {(isBurger ||
@@ -2073,22 +1841,16 @@ export const ProductConfiguratorModal:
                         style={{
                           marginBottom:
                             12,
-
                           paddingVertical:
                             10,
-
                           paddingHorizontal:
                             12,
-
                           borderRadius:
                             8,
-
                           backgroundColor:
                             '#242424',
-
                           borderWidth:
                             1,
-
                           borderColor:
                             '#444444',
                         }}
@@ -2097,10 +1859,8 @@ export const ProductConfiguratorModal:
                           style={{
                             color:
                               '#DDDDDD',
-
                             fontSize:
                               12,
-
                             lineHeight:
                               18,
                           }}
@@ -2115,12 +1875,10 @@ export const ProductConfiguratorModal:
                         </Text>
                       </View>
                     )}
-
                   <Text
                     style={[
                       styles
                         .sectionLabel,
-
                       styles
                         .notesLabel,
                     ]}
@@ -2129,16 +1887,13 @@ export const ProductConfiguratorModal:
                     adicionales
                     (opcional)
                   </Text>
-
                   <TextInput
                     style={[
                       styles
                         .notesInput,
-
                       isPhone &&
                       styles
                         .notesInputPhone,
-
                       Platform.OS ===
                       'web' &&
                       isPhone && {
@@ -2164,13 +1919,11 @@ export const ProductConfiguratorModal:
                 </>
               )}
             </ScrollView>
-
             {!isCombo && (
               <View
                 style={[
                   styles
                     .modalActions,
-
                   isSmallPhone &&
                   styles
                     .modalActionsPhone,
@@ -2180,7 +1933,6 @@ export const ProductConfiguratorModal:
                   style={[
                     styles
                       .modalCancelBtn,
-
                     isSmallPhone &&
                     styles
                       .modalActionButtonPhone,
@@ -2201,16 +1953,13 @@ export const ProductConfiguratorModal:
                     Cancelar
                   </Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[
                     styles
                       .modalAddBtn,
-
                     isSmallPhone &&
                     styles
                       .modalActionButtonPhone,
-
                     !isSelectionValid &&
                     styles
                       .modalAddBtnDisabled,
@@ -2229,7 +1978,6 @@ export const ProductConfiguratorModal:
                     style={[
                       styles
                         .modalAddText,
-
                       !isSelectionValid &&
                       styles
                         .modalAddTextDisabled,
@@ -2241,13 +1989,11 @@ export const ProductConfiguratorModal:
                 </TouchableOpacity>
               </View>
             )}
-
             {isCombo && (
               <View
                 style={[
                   styles
                     .modalActions,
-
                   isSmallPhone &&
                   styles
                     .modalActionsPhone,
@@ -2257,7 +2003,6 @@ export const ProductConfiguratorModal:
                   style={[
                     styles
                       .modalCancelBtn,
-
                     isSmallPhone &&
                     styles
                       .modalActionButtonPhone,
@@ -2278,16 +2023,13 @@ export const ProductConfiguratorModal:
                     Cancelar
                   </Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[
                     styles
                       .modalAddBtn,
-
                     isSmallPhone &&
                     styles
                       .modalActionButtonPhone,
-
                     !isSelectionValid &&
                     styles
                       .modalAddBtnDisabled,
@@ -2306,7 +2048,6 @@ export const ProductConfiguratorModal:
                     style={[
                       styles
                         .modalAddText,
-
                       !isSelectionValid &&
                       styles
                         .modalAddTextDisabled,
@@ -2323,7 +2064,6 @@ export const ProductConfiguratorModal:
       </Modal>
     );
   };
-
 function normalizeText(
   value:
     | string

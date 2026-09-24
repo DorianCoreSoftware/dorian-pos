@@ -4,7 +4,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-
 import {
   ActivityIndicator,
   Alert,
@@ -15,49 +14,38 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
-
 import {
   useModifiers,
 } from '../../hooks/useModifiers';
-
 import {
   getActiveCategories,
 } from '../../services/categoryService';
-
 import {
   getProductModifierMode,
-  isKongBurger,
 } from '../../services/modifierService';
-
 import {
   getActiveProducts,
 } from '../../services/products';
-
 import {
   getActiveWeeklySauce,
   WeeklySauce,
 } from '../../services/weeklySauceService';
-
 import {
   isDeliveryProduct,
 } from '../../Utils/delivery';
-
 import {
   getOrderTrackingCode,
 } from '../../Utils/orderTracking';
-
 import {
   Cart,
   Category,
   DeliveryDetails,
   Product,
 } from '../../types';
-
 import WebCartButton from '../components/WebCartButton';
 import WebCartModal from '../components/WebCartModal';
 import WebCategoryTabs from '../components/WebCategoryTabs';
@@ -66,60 +54,44 @@ import WebHeader from '../components/WebHeader';
 import WebOrderSuccessModal from '../components/WebOrderSuccessModal';
 import { WebOrderTrackingModal } from '../components/WebOrderTrackingModal';
 import WebProductCard from '../components/WebProductCard';
-
 import {
   createWebOrder,
   WebFulfillmentType,
 } from '../services/webOrderService';
-
 import {
   getPublicBusinessStatus,
   PublicBusinessStatus,
 } from '../services/webBusinessHoursService';
-
 import {
   addConfiguredProductToCart,
   getCartSummary,
   removeCartItem,
   updateCartQuantity,
 } from '../utils/webCart';
-
 import {
   createRequestId,
   createWebOrderFingerprint,
 } from '../utils/webOrderRequest';
-
 import {
   getRecentWebOrderTrackingCodes,
   saveWebOrderTrackingCode,
 } from '../utils/webOrderHistory';
-
 import styles from './WebMenuScreen.styles';
 import { WebFeedbackModal } from '../components/WebFeedbackModal';
-
-interface Props {
-  onRewardsPress?:
-  () => void;
-}
-
 function getColumns(
   width: number,
 ): number {
   if (width >= 1100) {
     return 4;
   }
-
   if (width >= 760) {
     return 3;
   }
-
   if (width >= 520) {
     return 2;
   }
-
   return 1;
 }
-
 function normalizeText(
   value:
     | string
@@ -139,7 +111,6 @@ function normalizeText(
       'es',
     );
 }
-
 function getTrackingCodeFromPath():
   | string
   | null {
@@ -149,17 +120,14 @@ function getTrackingCodeFromPath():
   ) {
     return null;
   }
-
   const match =
     window.location.pathname.match(
       /^\/pedido\/([0-9a-fA-F]{8})\/?$/,
     );
-
   return match?.[1]
     ? match[1].toUpperCase()
     : null;
 }
-
 function updateTrackingPath(
   trackingCode:
     | string
@@ -171,26 +139,22 @@ function updateTrackingPath(
   ) {
     return;
   }
-
   const nextPath =
     trackingCode
       ? `/pedido/${trackingCode}`
       : '/';
-
   if (
     window.location.pathname ===
     nextPath
   ) {
     return;
   }
-
   window.history.pushState(
     {},
     '',
     nextPath,
   );
 }
-
 function formatBusinessTime(
   value:
     | string
@@ -200,7 +164,6 @@ function formatBusinessTime(
   if (!value) {
     return '';
   }
-
   const [
     hourText,
     minuteText,
@@ -210,12 +173,10 @@ function formatBusinessTime(
       5,
     )
     .split(':');
-
   const hour =
     Number(
       hourText,
     );
-
   if (
     !Number.isFinite(
       hour,
@@ -223,19 +184,15 @@ function formatBusinessTime(
   ) {
     return value;
   }
-
   const suffix =
     hour >= 12
       ? 'PM'
       : 'AM';
-
   const hour12 =
     hour % 12 ||
     12;
-
   return `${hour12}:${minuteText} ${suffix}`;
 }
-
 function getBusinessAvailabilityText(
   status:
     | PublicBusinessStatus
@@ -244,14 +201,12 @@ function getBusinessAvailabilityText(
   if (!status) {
     return 'No pudimos confirmar el horario.';
   }
-
   if (!status.webOrdersEnabled) {
     return (
       status.pauseMessage?.trim() ||
       'Los pedidos web están pausados temporalmente.'
     );
   }
-
   if (
     status.todayIsException &&
     !status.todayIsOpen
@@ -261,35 +216,24 @@ function getBusinessAvailabilityText(
       'Hoy no laboramos.'
     );
   }
-
   if (!status.todayIsOpen) {
     return 'Hoy no laboramos.';
   }
-
   const schedule =
     `Horario de hoy: ${formatBusinessTime(
       status.todayOpenTime,
     )} - ${formatBusinessTime(
       status.todayCloseTime,
     )}`;
-
   if (
     status.todayIsException &&
     status.exceptionReason?.trim()
   ) {
     return `${status.exceptionReason.trim()} · ${schedule}`;
   }
-
   return schedule;
 }
-
-export default function WebMenuScreen({
-  onRewardsPress,
-}: Props) {
-  const [
-    showScrollTopButton,
-    setShowScrollTopButton,
-  ] = useState(false);
+export default function WebMenuScreen() {
   const [
     isFeedbackVisible,
     setIsFeedbackVisible,
@@ -297,149 +241,123 @@ export default function WebMenuScreen({
   const {
     width: windowWidth,
   } = useWindowDimensions();
-
   const [
     categories,
     setCategories,
   ] = useState<Category[]>([]);
-
   const [
     products,
     setProducts,
   ] = useState<Product[]>([]);
-
   const [
     selectedCategoryId,
     setSelectedCategoryId,
   ] = useState<
     string | null
   >(null);
-
   const [
     loading,
     setLoading,
   ] = useState(true);
-
   const [
     refreshing,
     setRefreshing,
   ] = useState(false);
-
   const [
     error,
     setError,
   ] = useState<
     string | null
   >(null);
-
   const [
     selectedProduct,
     setSelectedProduct,
   ] = useState<
     Product | null
   >(null);
-
   const [
     productNotes,
     setProductNotes,
   ] = useState('');
-
   const [
     isConfiguratorVisible,
     setIsConfiguratorVisible,
   ] = useState(false);
-
   const [
     cart,
     setCart,
   ] = useState<Cart>([]);
-
   const [
     isCartVisible,
     setIsCartVisible,
   ] = useState(false);
-
   const [
     isCheckoutVisible,
     setIsCheckoutVisible,
   ] = useState(false);
-
   const [
     weeklySauce,
     setWeeklySauce,
   ] = useState<
     WeeklySauce | null
   >(null);
-
   const [
     isSubmittingOrder,
     setIsSubmittingOrder,
   ] = useState(false);
-
   const [
     submitError,
     setSubmitError,
   ] = useState<
     string | null
   >(null);
-
   const [
     successfulOrderId,
     setSuccessfulOrderId,
   ] = useState<
     string | null
   >(null);
-
   const [
     recentTrackingCodes,
     setRecentTrackingCodes,
   ] = useState<string[]>([]);
-
   const [
     isTrackingVisible,
     setIsTrackingVisible,
   ] = useState(false);
-
   const [
     trackingInitialCode,
     setTrackingInitialCode,
   ] = useState<
     string | null
   >(null);
-
   const [
     businessStatus,
     setBusinessStatus,
   ] = useState<
     PublicBusinessStatus | null
   >(null);
-
   const [
     isBusinessStatusLoading,
     setIsBusinessStatusLoading,
   ] = useState(true);
-
   const [
     businessStatusError,
     setBusinessStatusError,
   ] = useState<
     string | null
   >(null);
-
   const menuScrollRef =
     useRef<ScrollView | null>(
       null,
     );
-
   const productSectionTopRef =
     useRef(0);
-
   const pendingWebOrderRequest =
     useRef<{
       id: string;
       fingerprint: string;
     } | null>(null);
-
   const {
     meats,
     sauces,
@@ -448,7 +366,6 @@ export default function WebMenuScreen({
     error:
     modifiersError,
   } = useModifiers();
-
   const visibleCategories =
     useMemo(() => {
       const hiddenCategoryNames =
@@ -458,7 +375,6 @@ export default function WebMenuScreen({
         ].map(
           normalizeText,
         );
-
       return categories
         .filter(
           (category) =>
@@ -483,7 +399,6 @@ export default function WebMenuScreen({
             ),
         );
     }, [categories]);
-
   const deliveryProduct =
     useMemo(
       () =>
@@ -496,14 +411,12 @@ export default function WebMenuScreen({
         null,
       [products],
     );
-
   const deliveryFee =
     deliveryProduct
       ? Number(
         deliveryProduct.price,
       )
       : 0;
-
   async function loadBusinessStatus():
     Promise<
       PublicBusinessStatus | null
@@ -512,29 +425,23 @@ export default function WebMenuScreen({
       setBusinessStatusError(
         null,
       );
-
       const status =
         await getPublicBusinessStatus();
-
       setBusinessStatus(
         status,
       );
-
       return status;
     } catch (statusError) {
       console.error(
         'Error cargando horario del negocio:',
         statusError,
       );
-
       setBusinessStatusError(
         'No pudimos confirmar si estamos abiertos.',
       );
-
       setBusinessStatus(
         null,
       );
-
       return null;
     } finally {
       setIsBusinessStatusLoading(
@@ -542,7 +449,6 @@ export default function WebMenuScreen({
       );
     }
   }
-
   async function loadMenu(
     isRefresh = false,
   ) {
@@ -552,9 +458,7 @@ export default function WebMenuScreen({
       } else {
         setLoading(true);
       }
-
       setError(null);
-
       const [
         loadedCategories,
         loadedProducts,
@@ -573,33 +477,26 @@ export default function WebMenuScreen({
               () => null,
             ),
         ]);
-
       setCategories(
         loadedCategories,
       );
-
       setProducts(
         loadedProducts,
       );
-
       setWeeklySauce(
         loadedWeeklySauce,
       );
-
       setBusinessStatus(
         loadedBusinessStatus,
       );
-
       setBusinessStatusError(
         loadedBusinessStatus
           ? null
           : 'No pudimos confirmar si estamos abiertos.',
       );
-
       setIsBusinessStatusLoading(
         false,
       );
-
       const hiddenCategoryNames =
         [
           'Complementos de combo',
@@ -607,7 +504,6 @@ export default function WebMenuScreen({
         ].map(
           normalizeText,
         );
-
       const firstVisibleCategory =
         loadedCategories
           .filter(
@@ -633,7 +529,6 @@ export default function WebMenuScreen({
               ),
           )[0] ??
         null;
-
       setSelectedCategoryId(
         (current) => {
           if (
@@ -651,7 +546,6 @@ export default function WebMenuScreen({
           ) {
             return current;
           }
-
           return (
             firstVisibleCategory
               ?.id ?? null
@@ -663,7 +557,6 @@ export default function WebMenuScreen({
         'Error cargando menú web:',
         loadError,
       );
-
       setError(
         'No pudimos cargar el menú. Intenta nuevamente.',
       );
@@ -672,11 +565,9 @@ export default function WebMenuScreen({
       setRefreshing(false);
     }
   }
-
   useEffect(() => {
     void loadMenu();
   }, []);
-
   useEffect(() => {
     const intervalId =
       setInterval(
@@ -685,61 +576,49 @@ export default function WebMenuScreen({
         },
         60_000,
       );
-
     return () => {
       clearInterval(
         intervalId,
       );
     };
   }, []);
-
   useEffect(() => {
     setRecentTrackingCodes(
       getRecentWebOrderTrackingCodes(),
     );
   }, []);
-
   useEffect(() => {
     const syncTrackingFromPath =
       () => {
         const code =
           getTrackingCodeFromPath();
-
         if (code) {
           setTrackingInitialCode(
             code,
           );
-
           setIsTrackingVisible(
             true,
           );
-
           return;
         }
-
         setIsTrackingVisible(
           false,
         );
-
         setTrackingInitialCode(
           null,
         );
       };
-
     syncTrackingFromPath();
-
     if (
       typeof window ===
       'undefined'
     ) {
       return;
     }
-
     window.addEventListener(
       'popstate',
       syncTrackingFromPath,
     );
-
     return () => {
       window.removeEventListener(
         'popstate',
@@ -747,7 +626,6 @@ export default function WebMenuScreen({
       );
     };
   }, []);
-
   const visibleProducts =
     useMemo(
       () =>
@@ -773,14 +651,12 @@ export default function WebMenuScreen({
                   Number(
                     second.price,
                   );
-
                 if (
                   priceDifference !==
                   0
                 ) {
                   return priceDifference;
                 }
-
                 return first.name.localeCompare(
                   second.name,
                   'es',
@@ -797,7 +673,6 @@ export default function WebMenuScreen({
         selectedCategoryId,
       ],
     );
-
   const selectedProductCategory =
     categories.find(
       (category) =>
@@ -805,19 +680,12 @@ export default function WebMenuScreen({
         selectedProduct
           ?.category_id,
     ) ?? null;
-
   const modifierMode =
     getProductModifierMode(
       selectedProduct,
       selectedProductCategory
         ?.name,
     );
-
-  const selectedProductIsKongBurger =
-    isKongBurger(
-      selectedProduct,
-    );
-
   const cartSummary =
     useMemo(
       () =>
@@ -830,20 +698,16 @@ export default function WebMenuScreen({
         weeklySauce,
       ],
     );
-
   const columns =
     getColumns(
       windowWidth,
     );
-
   const availableWidth =
     Math.min(
       windowWidth,
       1180,
     ) - 40;
-
   const gap = 16;
-
   const cardWidth =
     Math.max(
       220,
@@ -854,63 +718,51 @@ export default function WebMenuScreen({
       ) /
       columns,
     );
-
   const canCheckout =
     businessStatus?.isOpen ===
     true;
-
   const businessScheduleText =
     getBusinessAvailabilityText(
       businessStatus,
     );
-
   function handleCategorySelect(
     categoryId: string,
   ): void {
     setSelectedCategoryId(
       categoryId,
     );
-
     requestAnimationFrame(
       () => {
         menuScrollRef.current?.scrollTo({
           y:
             productSectionTopRef.current,
-
           animated:
             true,
         });
       },
     );
   }
-
   const handleProductPress = (
     product: Product,
   ) => {
     setSelectedProduct(
       product,
     );
-
     setProductNotes('');
-
     setIsConfiguratorVisible(
       true,
     );
   };
-
   const handleCloseConfigurator =
     () => {
       setIsConfiguratorVisible(
         false,
       );
-
       setSelectedProduct(
         null,
       );
-
       setProductNotes('');
     };
-
   const handleConfirmConfiguration =
     (
       configuration:
@@ -921,7 +773,6 @@ export default function WebMenuScreen({
       ) {
         return;
       }
-
       setCart(
         (currentCart) =>
           addConfiguredProductToCart(
@@ -931,24 +782,19 @@ export default function WebMenuScreen({
             configuration,
           ),
       );
-
       pendingWebOrderRequest
         .current = null;
-
       handleCloseConfigurator();
     };
-
   function handleCartMutation(
     nextCart: Cart,
   ) {
     setCart(
       nextCart,
     );
-
     pendingWebOrderRequest
       .current = null;
   }
-
   function handleContinueToCheckout():
     void {
     if (
@@ -958,10 +804,8 @@ export default function WebMenuScreen({
         'Verificando horario',
         'Espera un momento mientras confirmamos si estamos recibiendo pedidos.',
       );
-
       return;
     }
-
     if (
       !canCheckout
     ) {
@@ -974,31 +818,24 @@ export default function WebMenuScreen({
             : 'No pudimos confirmar el horario. Intenta nuevamente en un momento.'
         ),
       );
-
       return;
     }
-
     setSubmitError(
       null,
     );
-
     setIsCartVisible(
       false,
     );
-
     setIsCheckoutVisible(
       true,
     );
   }
-
   async function handleSubmitWebOrder(
     data: {
       fulfillmentType:
       WebFulfillmentType;
-
       customerName: string;
       customerPhone: string;
-
       deliveryDetails:
       DeliveryDetails | null;
     },
@@ -1009,10 +846,8 @@ export default function WebMenuScreen({
     ) {
       return;
     }
-
     const latestBusinessStatus =
       await loadBusinessStatus();
-
     if (
       !latestBusinessStatus
         ?.isOpen
@@ -1024,12 +859,9 @@ export default function WebMenuScreen({
           )}`
           : 'No pudimos confirmar el horario de atención. Intenta nuevamente.',
       );
-
       return;
     }
-
     setSubmitError(null);
-
     const fingerprint =
       createWebOrderFingerprint(
         cart,
@@ -1038,7 +870,6 @@ export default function WebMenuScreen({
         data.customerPhone,
         data.deliveryDetails,
       );
-
     if (
       !pendingWebOrderRequest
         .current ||
@@ -1051,67 +882,50 @@ export default function WebMenuScreen({
         .current = {
         id:
           createRequestId(),
-
         fingerprint,
       };
     }
-
     const requestId =
       pendingWebOrderRequest
         .current.id;
-
     try {
       setIsSubmittingOrder(
         true,
       );
-
       const result =
         await createWebOrder({
           cart,
-
           customerName:
             data.customerName,
-
           customerPhone:
             data.customerPhone,
-
           fulfillmentType:
             data.fulfillmentType,
-
           deliveryDetails:
             data.deliveryDetails,
-
           clientRequestId:
             requestId,
         });
-
       setSuccessfulOrderId(
         result.orderId,
       );
-
       const trackingCode =
         getOrderTrackingCode(
           result.orderId,
         );
-
       saveWebOrderTrackingCode(
         trackingCode,
       );
-
       setRecentTrackingCodes(
         getRecentWebOrderTrackingCodes(),
       );
-
       setCart([]);
-
       setIsCartVisible(
         false,
       );
-
       setIsCheckoutVisible(
         false,
       );
-
       pendingWebOrderRequest
         .current = null;
     } catch (orderError) {
@@ -1119,7 +933,6 @@ export default function WebMenuScreen({
         'Error creando pedido web:',
         orderError,
       );
-
       setSubmitError(
         orderError instanceof
           Error
@@ -1132,88 +945,67 @@ export default function WebMenuScreen({
       );
     }
   }
-
   function handleOpenOrderTracking(
     trackingCode: string,
   ): void {
     updateTrackingPath(
       trackingCode,
     );
-
     setTrackingInitialCode(
       trackingCode,
     );
-
     setIsTrackingVisible(
       true,
     );
   }
-
   function handleOpenManualTracking() {
     updateTrackingPath(
       null,
     );
-
     setTrackingInitialCode(
       null,
     );
-
     setIsTrackingVisible(
       true,
     );
   }
-
   function handleTrackSuccessfulOrder() {
     if (
       !successfulOrderId
     ) {
       return;
     }
-
     const trackingCode =
       getOrderTrackingCode(
         successfulOrderId,
       );
-
     updateTrackingPath(
       trackingCode,
     );
-
     setTrackingInitialCode(
       trackingCode,
     );
-
     setSuccessfulOrderId(
       null,
     );
-
     setIsTrackingVisible(
       true,
     );
   }
-
   function handleCloseTracking() {
     updateTrackingPath(
       null,
     );
-
     setIsTrackingVisible(
       false,
     );
-
     setTrackingInitialCode(
       null,
     );
   }
-
   return (
     <View style={styles.screen}>
-      <WebHeader
-        onRewardsPress={
-          onRewardsPress
-        }
-      />
-
+      <WebHeader />
       <ScrollView
         ref={
           menuScrollRef
@@ -1223,25 +1015,13 @@ export default function WebMenuScreen({
         }
         contentContainerStyle={[
           styles.scrollContent,
-
           cartSummary.totalItems >
-          0 &&
+            0 &&
           styles.scrollContentWithCart,
         ]}
         stickyHeaderIndices={[
           2,
         ]}
-        onScroll={
-          event => {
-            setShowScrollTopButton(
-              event.nativeEvent.contentOffset.y >
-              280,
-            );
-          }
-        }
-        scrollEventThrottle={
-          16
-        }
         refreshControl={
           <RefreshControl
             refreshing={
@@ -1263,58 +1043,55 @@ export default function WebMenuScreen({
         >
           {recentTrackingCodes.length >
             0 && (
-              <View
+            <View
+              style={
+                styles.recentOrdersBlock
+              }
+            >
+              <Text
                 style={
-                  styles.recentOrdersBlock
+                  styles.recentOrdersLabel
                 }
               >
-                <Text
-                  style={
-                    styles.recentOrdersLabel
-                  }
-                >
-                  PEDIDOS RECIENTES
-                </Text>
-
-                <View
-                  style={
-                    styles.recentOrdersRow
-                  }
-                >
-                  {recentTrackingCodes.map(
-                    trackingCode => (
-                      <Pressable
-                        key={
-                          trackingCode
+                PEDIDOS RECIENTES
+              </Text>
+              <View
+                style={
+                  styles.recentOrdersRow
+                }
+              >
+                {recentTrackingCodes.map(
+                  trackingCode => (
+                    <Pressable
+                      key={
+                        trackingCode
+                      }
+                      onPress={() =>
+                        handleOpenOrderTracking(
+                          trackingCode,
+                        )
+                      }
+                      style={({
+                        pressed,
+                      }) => [
+                        styles.recentOrderButton,
+                        pressed &&
+                        styles.recentOrderButtonPressed,
+                      ]}
+                    >
+                      <Text
+                        style={
+                          styles.recentOrderButtonText
                         }
-                        onPress={() =>
-                          handleOpenOrderTracking(
-                            trackingCode,
-                          )
-                        }
-                        style={({
-                          pressed,
-                        }) => [
-                            styles.recentOrderButton,
-
-                            pressed &&
-                            styles.recentOrderButtonPressed,
-                          ]}
                       >
-                        <Text
-                          style={
-                            styles.recentOrderButtonText
-                          }
-                        >
-                          #{trackingCode}
-                        </Text>
-                      </Pressable>
-                    ),
-                  )}
-                </View>
+                        #{trackingCode}
+                      </Text>
+                    </Pressable>
+                  ),
+                )}
               </View>
-            )}
-
+            </View>
+          )}
           <View
             style={
               styles.topActionsRow
@@ -1327,11 +1104,10 @@ export default function WebMenuScreen({
               style={({
                 pressed,
               }) => [
-                  styles.topActionPrimary,
-
-                  pressed &&
-                  styles.topActionPressed,
-                ]}
+                styles.topActionPrimary,
+                pressed &&
+                styles.topActionPressed,
+              ]}
             >
               <Text
                 style={
@@ -1341,7 +1117,6 @@ export default function WebMenuScreen({
                 Seguir pedido
               </Text>
             </Pressable>
-
             <Pressable
               onPress={() =>
                 setIsFeedbackVisible(
@@ -1351,11 +1126,10 @@ export default function WebMenuScreen({
               style={({
                 pressed,
               }) => [
-                  styles.topActionSecondary,
-
-                  pressed &&
-                  styles.topActionPressed,
-                ]}
+                styles.topActionSecondary,
+                pressed &&
+                styles.topActionPressed,
+              ]}
             >
               <Text
                 style={
@@ -1367,7 +1141,6 @@ export default function WebMenuScreen({
             </Pressable>
           </View>
         </View>
-
         <View
           style={
             styles.businessStatusOuter
@@ -1376,7 +1149,6 @@ export default function WebMenuScreen({
           <View
             style={[
               styles.businessStatusCard,
-
               canCheckout
                 ? styles.businessStatusCardOpen
                 : styles.businessStatusCardClosed,
@@ -1398,7 +1170,6 @@ export default function WebMenuScreen({
                     ? '🟢'
                     : '🔴'}
               </Text>
-
               <View
                 style={
                   styles.businessStatusTextBox
@@ -1407,7 +1178,6 @@ export default function WebMenuScreen({
                 <Text
                   style={[
                     styles.businessStatusTitle,
-
                     canCheckout
                       ? styles.businessStatusTitleOpen
                       : styles.businessStatusTitleClosed,
@@ -1421,7 +1191,6 @@ export default function WebMenuScreen({
                         ? 'Pedidos web pausados'
                         : 'Cerrado · Pedidos no disponibles'}
                 </Text>
-
                 <Text
                   style={
                     styles.businessStatusSubtitle
@@ -1430,11 +1199,10 @@ export default function WebMenuScreen({
                   {isBusinessStatusLoading
                     ? 'Consultando el horario de atención...'
                     : businessStatusError ??
-                    businessScheduleText}
+                      businessScheduleText}
                 </Text>
               </View>
             </View>
-
             {!canCheckout &&
               !isBusinessStatusLoading && (
                 <Text
@@ -1448,7 +1216,6 @@ export default function WebMenuScreen({
               )}
           </View>
         </View>
-
         <View
           style={
             styles.categorySticky
@@ -1456,20 +1223,19 @@ export default function WebMenuScreen({
         >
           {visibleCategories.length >
             0 && (
-              <WebCategoryTabs
-                categories={
-                  visibleCategories
-                }
-                selectedCategoryId={
-                  selectedCategoryId
-                }
-                onSelectCategory={
-                  handleCategorySelect
-                }
-              />
-            )}
+            <WebCategoryTabs
+              categories={
+                visibleCategories
+              }
+              selectedCategoryId={
+                selectedCategoryId
+              }
+              onSelectCategory={
+                handleCategorySelect
+              }
+            />
+          )}
         </View>
-
         <View
           onLayout={
             event => {
@@ -1481,133 +1247,128 @@ export default function WebMenuScreen({
             styles.productSection
           }
         >
-          {loading ? (
-            <View
+        {loading ? (
+          <View
+            style={
+              styles.centerState
+            }
+          >
+            <ActivityIndicator
+              size="large"
+              color="#FFB000"
+            />
+            <Text
               style={
-                styles.centerState
+                styles.stateText
               }
             >
-              <ActivityIndicator
-                size="large"
-                color="#FFB000"
-              />
-
-              <Text
-                style={
-                  styles.stateText
-                }
-              >
-                Cargando menú...
-              </Text>
-            </View>
-          ) : error ? (
+              Cargando menú...
+            </Text>
+          </View>
+        ) : error ? (
+          <View
+            style={
+              styles.centerState
+            }
+          >
+            <Text
+              style={
+                styles.errorTitle
+              }
+            >
+              Algo salió mal
+            </Text>
+            <Text
+              style={
+                styles.stateText
+              }
+            >
+              {error}
+            </Text>
+          </View>
+        ) : (
+          <>
             <View
               style={
-                styles.centerState
+                styles.sectionHeader
               }
             >
               <Text
                 style={
-                  styles.errorTitle
+                  styles.sectionTitle
                 }
               >
-                Algo salió mal
+                {
+                  visibleCategories.find(
+                    (category) =>
+                      category.id ===
+                      selectedCategoryId,
+                  )?.name ??
+                  'Menú'
+                }
               </Text>
-
               <Text
                 style={
-                  styles.stateText
+                  styles.productCount
                 }
               >
-                {error}
+                {
+                  visibleProducts.length
+                }{' '}
+                producto
+                {
+                  visibleProducts.length ===
+                    1
+                    ? ''
+                    : 's'
+                }
               </Text>
             </View>
-          ) : (
-            <>
+            {visibleProducts.length ===
+              0 ? (
               <View
                 style={
-                  styles.sectionHeader
+                  styles.centerState
                 }
               >
                 <Text
                   style={
-                    styles.sectionTitle
+                    styles.stateText
                   }
                 >
-                  {
-                    visibleCategories.find(
-                      (category) =>
-                        category.id ===
-                        selectedCategoryId,
-                    )?.name ??
-                    'Menú'
-                  }
-                </Text>
-
-                <Text
-                  style={
-                    styles.productCount
-                  }
-                >
-                  {
-                    visibleProducts.length
-                  }{' '}
-                  producto
-                  {
-                    visibleProducts.length ===
-                      1
-                      ? ''
-                      : 's'
-                  }
+                  No hay productos disponibles en esta categoría.
                 </Text>
               </View>
-
-              {visibleProducts.length ===
-                0 ? (
-                <View
-                  style={
-                    styles.centerState
-                  }
-                >
-                  <Text
-                    style={
-                      styles.stateText
-                    }
-                  >
-                    No hay productos disponibles en esta categoría.
-                  </Text>
-                </View>
-              ) : (
-                <View
-                  style={
-                    styles.grid
-                  }
-                >
-                  {visibleProducts.map(
-                    (product) => (
-                      <WebProductCard
-                        key={
-                          product.id
-                        }
-                        product={
-                          product
-                        }
-                        width={
-                          cardWidth
-                        }
-                        onPress={
-                          handleProductPress
-                        }
-                      />
-                    ),
-                  )}
-                </View>
-              )}
-            </>
-          )}
+            ) : (
+              <View
+                style={
+                  styles.grid
+                }
+              >
+                {visibleProducts.map(
+                  (product) => (
+                    <WebProductCard
+                      key={
+                        product.id
+                      }
+                      product={
+                        product
+                      }
+                      width={
+                        cardWidth
+                      }
+                      onPress={
+                        handleProductPress
+                      }
+                    />
+                  ),
+                )}
+              </View>
+            )}
+          </>
+        )}
         </View>
       </ScrollView>
-
       <WebCartButton
         totalItems={
           cartSummary.totalItems
@@ -1621,7 +1382,6 @@ export default function WebMenuScreen({
           )
         }
       />
-
       <ProductConfiguratorModal
         visible={
           isConfiguratorVisible
@@ -1640,9 +1400,6 @@ export default function WebMenuScreen({
         }
         mode={
           modifierMode
-        }
-        isKongBurger={
-          selectedProductIsKongBurger
         }
         meats={
           meats
@@ -1666,7 +1423,6 @@ export default function WebMenuScreen({
           handleConfirmConfiguration
         }
       />
-
       <WebCartModal
         canCheckout={
           canCheckout
@@ -1713,7 +1469,6 @@ export default function WebMenuScreen({
                 itemId,
                 change,
               );
-
             handleCartMutation(
               nextCart,
             );
@@ -1726,7 +1481,6 @@ export default function WebMenuScreen({
                 cart,
                 itemId,
               );
-
             handleCartMutation(
               nextCart,
             );
@@ -1736,7 +1490,6 @@ export default function WebMenuScreen({
           handleCartMutation(
             [],
           );
-
           setIsCartVisible(
             false,
           );
@@ -1745,7 +1498,6 @@ export default function WebMenuScreen({
           handleContinueToCheckout
         }
       />
-
       <WebCheckoutModal
         visible={
           isCheckoutVisible
@@ -1775,11 +1527,9 @@ export default function WebMenuScreen({
           ) {
             return;
           }
-
           setSubmitError(
             null,
           );
-
           setIsCheckoutVisible(
             false,
           );
@@ -1788,7 +1538,6 @@ export default function WebMenuScreen({
           handleSubmitWebOrder
         }
       />
-
       <WebOrderSuccessModal
         visible={
           !!successfulOrderId
@@ -1805,7 +1554,6 @@ export default function WebMenuScreen({
           )
         }
       />
-
       <WebOrderTrackingModal
         visible={
           isTrackingVisible
@@ -1817,7 +1565,6 @@ export default function WebMenuScreen({
           handleCloseTracking
         }
       />
-
       <WebFeedbackModal
         visible={
           isFeedbackVisible
@@ -1828,30 +1575,6 @@ export default function WebMenuScreen({
           )
         }
       />
-      {showScrollTopButton && (
-        <Pressable
-          onPress={() =>
-            menuScrollRef.current?.scrollTo({
-              y: 0,
-              animated: true,
-            })
-          }
-          style={({ pressed }) => [
-            styles.scrollTopButton,
-
-            pressed &&
-            styles.scrollTopButtonPressed,
-          ]}
-        >
-          <Text
-            style={
-              styles.scrollTopButtonText
-            }
-          >
-            ↑
-          </Text>
-        </Pressable>
-      )}
     </View>
   );
 }
