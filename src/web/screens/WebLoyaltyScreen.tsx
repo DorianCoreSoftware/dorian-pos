@@ -14,10 +14,6 @@ import {
     View,
 } from 'react-native';
 
-import {
-    Asset,
-} from 'expo-asset';
-
 import QRCode from 'qrcode';
 
 import {
@@ -32,6 +28,10 @@ import {
     getSavedWebLoyaltyToken,
     saveWebLoyaltyToken,
 } from '../utils/webLoyaltyStorage';
+
+import {
+    useBusiness,
+} from '../../context/BusinessContext';
 
 import styles from './WebLoyaltyScreen.styles';
 
@@ -54,6 +54,9 @@ function loadHtmlImage(
             const image =
                 new window.Image();
 
+            image.crossOrigin =
+                'anonymous';
+
             image.onload =
                 () => {
                     resolve(
@@ -72,84 +75,6 @@ function loadHtmlImage(
 
             image.src =
                 src;
-        },
-    );
-}
-
-async function getBundledAssetDataUrl(
-    assetModule: number,
-): Promise<string> {
-    const asset =
-        Asset.fromModule(
-            assetModule,
-        );
-
-    await asset.downloadAsync();
-
-    const uri =
-        asset.localUri ??
-        asset.uri;
-
-    if (!uri) {
-        throw new Error(
-            'No se pudo resolver el logo.',
-        );
-    }
-
-    const response =
-        await fetch(
-            uri,
-        );
-
-    if (!response.ok) {
-        throw new Error(
-            `No se pudo cargar el logo: ${response.status}`,
-        );
-    }
-
-    const blob =
-        await response.blob();
-
-    return new Promise(
-        (
-            resolve,
-            reject,
-        ) => {
-            const reader =
-                new FileReader();
-
-            reader.onloadend =
-                () => {
-                    if (
-                        typeof reader.result ===
-                        'string'
-                    ) {
-                        resolve(
-                            reader.result,
-                        );
-
-                        return;
-                    }
-
-                    reject(
-                        new Error(
-                            'No se pudo convertir el logo.',
-                        ),
-                    );
-                };
-
-            reader.onerror =
-                () => {
-                    reject(
-                        new Error(
-                            'No se pudo leer el logo.',
-                        ),
-                    );
-                };
-
-            reader.readAsDataURL(
-                blob,
-            );
         },
     );
 }
@@ -175,6 +100,45 @@ function getLoyaltyTokenFromPath():
 export default function WebLoyaltyScreen({
     onBack,
 }: Props) {
+    const {
+        business,
+        theme,
+    } = useBusiness();
+
+    const businessName =
+        business?.identity.businessName ??
+        'Dorian POS';
+
+    const shortName =
+        business?.identity.shortName ??
+        businessName;
+
+    const logoUrl =
+        business?.identity.logoUrl;
+
+    const rewardsLabel =
+        `${shortName} Rewards`;
+
+    const safeBusinessName =
+        shortName
+            .trim()
+            .toLowerCase()
+            .normalize(
+                'NFD',
+            )
+            .replace(
+                /[\u0300-\u036f]/g,
+                '',
+            )
+            .replace(
+                /[^a-z0-9]+/g,
+                '-',
+            )
+            .replace(
+                /^-+|-+$/g,
+                '',
+            );
+
     const [
         authMode,
         setAuthMode,
@@ -735,7 +699,7 @@ export default function WebLoyaltyScreen({
                     170;
 
                 ctx.fillStyle =
-                    '#FFB000';
+                    theme.primary;
 
                 ctx.beginPath();
 
@@ -758,65 +722,59 @@ export default function WebLoyaltyScreen({
                 // LOGO
                 // =========================================
 
-                try {
-                    const logoDataUrl =
-                        await getBundledAssetDataUrl(
-                            require(
-                                '../../../assets/BurgerKongWOFondo.png',
-                            ),
+                if (logoUrl) {
+                    try {
+                        const logo =
+                            await loadHtmlImage(
+                                logoUrl,
+                            );
+
+                        const maxLogoWidth =
+                            145;
+
+                        const maxLogoHeight =
+                            125;
+
+                        const logoRatio =
+                            Math.min(
+                                maxLogoWidth /
+                                    logo.naturalWidth,
+
+                                maxLogoHeight /
+                                    logo.naturalHeight,
+                            );
+
+                        const logoWidth =
+                            logo.naturalWidth *
+                            logoRatio;
+
+                        const logoHeight =
+                            logo.naturalHeight *
+                            logoRatio;
+
+                        const logoX =
+                            headerX + 55;
+
+                        const logoY =
+                            headerY +
+                            (
+                                headerHeight -
+                                logoHeight
+                            ) / 2;
+
+                        ctx.drawImage(
+                            logo,
+                            logoX,
+                            logoY,
+                            logoWidth,
+                            logoHeight,
                         );
-
-                    const logo =
-                        await loadHtmlImage(
-                            logoDataUrl,
+                    } catch (error) {
+                        console.error(
+                            'ERROR CARGANDO LOGO REWARDS:',
+                            error,
                         );
-
-                    const maxLogoWidth =
-                        145;
-
-                    const maxLogoHeight =
-                        125;
-
-                    const logoRatio =
-                        Math.min(
-                            maxLogoWidth /
-                            logo.naturalWidth,
-
-                            maxLogoHeight /
-                            logo.naturalHeight,
-                        );
-
-                    const logoWidth =
-                        logo.naturalWidth *
-                        logoRatio;
-
-                    const logoHeight =
-                        logo.naturalHeight *
-                        logoRatio;
-
-                    const logoX =
-                        headerX + 55;
-
-                    const logoY =
-                        headerY +
-                        (
-                            headerHeight -
-                            logoHeight
-                        ) /
-                        2;
-
-                    ctx.drawImage(
-                        logo,
-                        logoX,
-                        logoY,
-                        logoWidth,
-                        logoHeight,
-                    );
-                } catch (error) {
-                    console.error(
-                        'ERROR CARGANDO LOGO REWARDS:',
-                        error,
-                    );
+                    }
                 }
 
                 // =========================================
@@ -894,7 +852,7 @@ export default function WebLoyaltyScreen({
                     '500 23px Arial';
 
                 ctx.fillText(
-                    'Cliente Burger Kong Rewards',
+                    `Cliente ${rewardsLabel}`,
                     width / 2,
                     333,
                 );
@@ -1034,13 +992,13 @@ export default function WebLoyaltyScreen({
                 ctx.fill();
 
                 ctx.fillStyle =
-                    '#FFB000';
+                    theme.primary;
 
                 ctx.font =
                     '800 18px Arial';
 
                 ctx.fillText(
-                    'BURGER KONG REWARDS',
+                    rewardsLabel.toUpperCase(),
                     width / 2,
                     1278,
                 );
@@ -1118,9 +1076,13 @@ export default function WebLoyaltyScreen({
 
     return (
         <ScrollView
-            style={
-                styles.container
-            }
+            style={[
+                styles.container,
+                {
+                    backgroundColor:
+                        theme.background,
+                },
+            ]}
             contentContainerStyle={
                 styles.contentContainer
             }
@@ -1139,34 +1101,38 @@ export default function WebLoyaltyScreen({
                     }
                 >
                     <Text
-                        style={
-                            styles.backButtonText
-                        }
+                        style={[
+                            styles.backButtonText,
+                            { color: theme.primary },
+                        ]}
                     >
                         ← Menú
                     </Text>
                 </Pressable>
 
                 <Text
-                    style={
-                        styles.brand
-                    }
+                    style={[
+                        styles.brand,
+                        { color: theme.primary },
+                    ]}
                 >
-                    Burger Kong
+                    {businessName}
                 </Text>
 
                 <Text
-                    style={
-                        styles.title
-                    }
+                    style={[
+                        styles.title,
+                        { color: theme.text },
+                    ]}
                 >
                     Rewards
                 </Text>
 
                 <Text
-                    style={
-                        styles.subtitle
-                    }
+                    style={[
+                        styles.subtitle,
+                        { color: theme.textMuted },
+                    ]}
                 >
                     Acumula visitas y desbloquea premios.
                 </Text>
@@ -1174,9 +1140,13 @@ export default function WebLoyaltyScreen({
 
             {!status ? (
                 <View
-                    style={
-                        styles.registerCard
-                    }
+                    style={[
+                            styles.registerCard,
+                            {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                            },
+                        ]}
                 >
                     <View
                         style={{
@@ -1185,7 +1155,7 @@ export default function WebLoyaltyScreen({
 
                             borderWidth: 1,
                             borderColor:
-                                '#3A3A3A',
+                                theme.border,
 
                             borderRadius: 10,
 
@@ -1209,8 +1179,8 @@ export default function WebLoyaltyScreen({
                                 backgroundColor:
                                     authMode ===
                                         'login'
-                                        ? '#FFB000'
-                                        : '#151515',
+                                        ? theme.primary
+                                        : theme.surfaceAlt,
                             }}
                             onPress={() =>
                                 changeAuthMode(
@@ -1223,8 +1193,8 @@ export default function WebLoyaltyScreen({
                                     color:
                                         authMode ===
                                             'login'
-                                            ? '#111111'
-                                            : '#BBBBBB',
+                                            ? theme.onPrimary
+                                            : theme.textMuted,
 
                                     fontWeight:
                                         '900',
@@ -1248,8 +1218,8 @@ export default function WebLoyaltyScreen({
                                 backgroundColor:
                                     authMode ===
                                         'register'
-                                        ? '#FFB000'
-                                        : '#151515',
+                                        ? theme.primary
+                                        : theme.surfaceAlt,
                             }}
                             onPress={() =>
                                 changeAuthMode(
@@ -1262,8 +1232,8 @@ export default function WebLoyaltyScreen({
                                     color:
                                         authMode ===
                                             'register'
-                                            ? '#111111'
-                                            : '#BBBBBB',
+                                            ? theme.onPrimary
+                                            : theme.textMuted,
 
                                     fontWeight:
                                         '900',
@@ -1279,33 +1249,41 @@ export default function WebLoyaltyScreen({
                         ? (
                             <>
                                 <Text
-                                    style={
-                                        styles.sectionTitle
-                                    }
+                                    style={[
+                                styles.sectionTitle,
+                                { color: theme.text },
+                            ]}
                                 >
                                     Bienvenido de nuevo
                                 </Text>
 
                                 <Text
-                                    style={
-                                        styles.sectionText
-                                    }
+                                    style={[
+                                styles.sectionText,
+                                { color: theme.textMuted },
+                            ]}
                                 >
-                                    Ingresa con el teléfono y PIN que registraste en Burger Kong Rewards.
+                                    Ingresa con el teléfono y PIN que registraste en {rewardsLabel}.
                                 </Text>
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Teléfono
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         phone
                                     }
@@ -1313,23 +1291,29 @@ export default function WebLoyaltyScreen({
                                         setPhone
                                     }
                                     placeholder="10 dígitos"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                     keyboardType="phone-pad"
                                     maxLength={14}
                                 />
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     PIN
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         pin
                                     }
@@ -1347,7 +1331,7 @@ export default function WebLoyaltyScreen({
                                         )
                                     }
                                     placeholder="6 dígitos"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                     keyboardType="number-pad"
                                     secureTextEntry
                                     maxLength={6}
@@ -1355,9 +1339,10 @@ export default function WebLoyaltyScreen({
 
                                 {errorMessage ? (
                                     <Text
-                                        style={
-                                            styles.errorText
-                                        }
+                                        style={[
+                                styles.errorText,
+                                { color: theme.danger },
+                            ]}
                                     >
                                         {errorMessage}
                                     </Text>
@@ -1366,6 +1351,7 @@ export default function WebLoyaltyScreen({
                                 <Pressable
                                     style={[
                                         styles.primaryButton,
+                                        { backgroundColor: theme.primary },
 
                                         saving &&
                                         styles.buttonDisabled,
@@ -1380,14 +1366,15 @@ export default function WebLoyaltyScreen({
                                     {saving
                                         ? (
                                             <ActivityIndicator
-                                                color="#111111"
+                                                color={theme.onPrimary}
                                             />
                                         )
                                         : (
                                             <Text
-                                                style={
-                                                    styles.primaryButtonText
-                                                }
+                                                style={[
+                                                        styles.primaryButtonText,
+                                                        { color: theme.onPrimary },
+                                                    ]}
                                             >
                                                 Entrar a Rewards
                                             </Text>
@@ -1398,33 +1385,41 @@ export default function WebLoyaltyScreen({
                         : (
                             <>
                                 <Text
-                                    style={
-                                        styles.sectionTitle
-                                    }
+                                    style={[
+                                styles.sectionTitle,
+                                { color: theme.text },
+                            ]}
                                 >
-                                    Únete a Burger Kong Rewards
+                                    Únete a {rewardsLabel}
                                 </Text>
 
                                 <Text
-                                    style={
-                                        styles.sectionText
-                                    }
+                                    style={[
+                                styles.sectionText,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Regístrate y recibe tu QR personal para acumular visitas y desbloquear premios.
                                 </Text>
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Nombre
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         name
                                     }
@@ -1432,21 +1427,27 @@ export default function WebLoyaltyScreen({
                                         setName
                                     }
                                     placeholder="Tu nombre"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                 />
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Teléfono
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         phone
                                     }
@@ -1454,23 +1455,29 @@ export default function WebLoyaltyScreen({
                                         setPhone
                                     }
                                     placeholder="10 dígitos"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                     keyboardType="phone-pad"
                                     maxLength={14}
                                 />
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Correo
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         email
                                     }
@@ -1478,23 +1485,29 @@ export default function WebLoyaltyScreen({
                                         setEmail
                                     }
                                     placeholder="Opcional"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                 />
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Crea un PIN
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         pin
                                     }
@@ -1512,24 +1525,30 @@ export default function WebLoyaltyScreen({
                                         )
                                     }
                                     placeholder="6 dígitos"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                     keyboardType="number-pad"
                                     secureTextEntry
                                     maxLength={6}
                                 />
 
                                 <Text
-                                    style={
-                                        styles.label
-                                    }
+                                    style={[
+                                styles.label,
+                                { color: theme.textMuted },
+                            ]}
                                 >
                                     Confirma tu PIN
                                 </Text>
 
                                 <TextInput
-                                    style={
-                                        styles.input
-                                    }
+                                    style={[
+                                        styles.input,
+                                        {
+                                            borderColor: theme.border,
+                                            backgroundColor: theme.background,
+                                            color: theme.text,
+                                        },
+                                    ]}
                                     value={
                                         confirmPin
                                     }
@@ -1547,7 +1566,7 @@ export default function WebLoyaltyScreen({
                                         )
                                     }
                                     placeholder="Repite los 6 dígitos"
-                                    placeholderTextColor="#777777"
+                                    placeholderTextColor={theme.textMuted}
                                     keyboardType="number-pad"
                                     secureTextEntry
                                     maxLength={6}
@@ -1555,9 +1574,10 @@ export default function WebLoyaltyScreen({
 
                                 {errorMessage ? (
                                     <Text
-                                        style={
-                                            styles.errorText
-                                        }
+                                        style={[
+                                styles.errorText,
+                                { color: theme.danger },
+                            ]}
                                     >
                                         {errorMessage}
                                     </Text>
@@ -1566,6 +1586,7 @@ export default function WebLoyaltyScreen({
                                 <Pressable
                                     style={[
                                         styles.primaryButton,
+                                        { backgroundColor: theme.primary },
 
                                         saving &&
                                         styles.buttonDisabled,
@@ -1580,14 +1601,15 @@ export default function WebLoyaltyScreen({
                                     {saving
                                         ? (
                                             <ActivityIndicator
-                                                color="#111111"
+                                                color={theme.onPrimary}
                                             />
                                         )
                                         : (
                                             <Text
-                                                style={
-                                                    styles.primaryButtonText
-                                                }
+                                                style={[
+                                                        styles.primaryButtonText,
+                                                        { color: theme.onPrimary },
+                                                    ]}
                                             >
                                                 Crear mi cuenta Rewards
                                             </Text>
@@ -1599,30 +1621,37 @@ export default function WebLoyaltyScreen({
             ) : (
                 <>
                     <View
-                        style={
-                            styles.customerCard
-                        }
+                        style={[
+                            styles.customerCard,
+                            {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                            },
+                        ]}
                     >
                         <Text
-                            style={
-                                styles.customerHello
-                            }
+                            style={[
+                                styles.customerHello,
+                                { color: theme.text },
+                            ]}
                         >
                             Hola, {status.customer.name}
                         </Text>
 
                         <Text
-                            style={
-                                styles.visitCount
-                            }
+                            style={[
+                                styles.visitCount,
+                                { color: theme.primary },
+                            ]}
                         >
                             {status.customer.totalVisits}
                         </Text>
 
                         <Text
-                            style={
-                                styles.visitLabel
-                            }
+                            style={[
+                                styles.visitLabel,
+                                { color: theme.textMuted },
+                            ]}
                         >
                             {status.customer.totalVisits ===
                                 1
@@ -1634,22 +1663,28 @@ export default function WebLoyaltyScreen({
                             0
                             ? (
                                 <View
-                                    style={
-                                        styles.availableBanner
-                                    }
+                                    style={[
+                                            styles.availableBanner,
+                                            {
+                                                borderColor: theme.primary,
+                                                backgroundColor: theme.surfaceAlt,
+                                            },
+                                        ]}
                                 >
                                     <Text
-                                        style={
-                                            styles.availableBannerTitle
-                                        }
+                                        style={[
+                                styles.availableBannerTitle,
+                                { color: theme.primary },
+                            ]}
                                     >
                                         🎁 Tienes recompensa
                                     </Text>
 
                                     <Text
-                                        style={
-                                            styles.availableBannerText
-                                        }
+                                        style={[
+                                styles.availableBannerText,
+                                { color: theme.text },
+                            ]}
                                     >
                                         {availableRewards.length ===
                                             1
@@ -1663,30 +1698,34 @@ export default function WebLoyaltyScreen({
                         {nextReward
                             ? (
                                 <View
-                                    style={
-                                        styles.progressCard
-                                    }
+                                    style={[
+                                            styles.progressCard,
+                                            { borderTopColor: theme.border },
+                                        ]}
                                 >
                                     <Text
-                                        style={
-                                            styles.progressTitle
-                                        }
+                                        style={[
+                                styles.progressTitle,
+                                { color: theme.textMuted },
+                            ]}
                                     >
                                         Próxima recompensa
                                     </Text>
 
                                     <Text
-                                        style={
-                                            styles.progressReward
-                                        }
+                                        style={[
+                                styles.progressReward,
+                                { color: theme.text },
+                            ]}
                                     >
                                         {nextReward.name}
                                     </Text>
 
                                     <Text
-                                        style={
-                                            styles.progressText
-                                        }
+                                        style={[
+                                styles.progressText,
+                                { color: theme.textMuted },
+                            ]}
                                     >
                                         Te faltan{' '}
                                         {
@@ -1699,13 +1738,15 @@ export default function WebLoyaltyScreen({
                                     </Text>
 
                                     <View
-                                        style={
-                                            styles.progressTrack
-                                        }
+                                        style={[
+                                            styles.progressTrack,
+                                            { backgroundColor: theme.surfaceAlt },
+                                        ]}
                                     >
                                         <View
                                             style={[
                                                 styles.progressFill,
+                                                { backgroundColor: theme.primary },
                                                 {
                                                     width:
                                                         `${Math.min(
@@ -1725,9 +1766,10 @@ export default function WebLoyaltyScreen({
                                     </View>
 
                                     <Text
-                                        style={
-                                            styles.progressCounter
-                                        }
+                                        style={[
+                                styles.progressCounter,
+                                { color: theme.textMuted },
+                            ]}
                                     >
                                         {
                                             status.customer.totalVisits
@@ -1743,24 +1785,30 @@ export default function WebLoyaltyScreen({
                     </View>
 
                     <View
-                        style={
-                            styles.qrCard
-                        }
+                        style={[
+                            styles.qrCard,
+                            {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                            },
+                        ]}
                     >
                         <Text
-                            style={
-                                styles.sectionTitle
-                            }
+                            style={[
+                                styles.sectionTitle,
+                                { color: theme.text },
+                            ]}
                         >
                             Tu QR
                         </Text>
 
                         <Text
-                            style={
-                                styles.sectionText
-                            }
+                            style={[
+                                styles.sectionText,
+                                { color: theme.textMuted },
+                            ]}
                         >
-                            Muéstralo en Burger Kong al realizar tu compra.
+                            Muéstralo en {businessName} al realizar tu compra.
                         </Text>
 
                         {qrDataUrl
@@ -1784,13 +1832,14 @@ export default function WebLoyaltyScreen({
                             )
                             : (
                                 <ActivityIndicator
-                                    color="#FFB000"
+                                    color={theme.primary}
                                 />
                             )}
 
                         <Pressable
                             style={[
                                 styles.downloadQrButton,
+                                { backgroundColor: theme.primary },
 
                                 !qrDataUrl &&
                                 styles.buttonDisabled,
@@ -1803,32 +1852,39 @@ export default function WebLoyaltyScreen({
                             }}
                         >
                             <Text
-                                style={
-                                    styles.downloadQrButtonText
-                                }
+                                style={[
+                                    styles.downloadQrButtonText,
+                                    { color: theme.onPrimary },
+                                ]}
                             >
                                 Descargar mi QR
                             </Text>
                         </Pressable>
 
                         <Text
-                            style={
-                                styles.downloadQrHint
-                            }
+                            style={[
+                                styles.downloadQrHint,
+                                { color: theme.textMuted },
+                            ]}
                         >
                             Guárdalo en tu galería para mostrarlo rápidamente en tu próxima visita.
                         </Text>
                     </View>
 
                     <View
-                        style={
-                            styles.rewardsCard
-                        }
+                        style={[
+                            styles.rewardsCard,
+                            {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                            },
+                        ]}
                     >
                         <Text
-                            style={
-                                styles.sectionTitle
-                            }
+                            style={[
+                                styles.sectionTitle,
+                                { color: theme.text },
+                            ]}
                         >
                             Tus recompensas
                         </Text>
@@ -1850,9 +1906,15 @@ export default function WebLoyaltyScreen({
                                         }
                                         style={[
                                             styles.rewardRow,
+                                            { borderColor: theme.border },
 
                                             available &&
                                             styles.rewardRowAvailable,
+
+                                            available && {
+                                                borderColor: theme.primary,
+                                                backgroundColor: theme.surfaceAlt,
+                                            },
 
                                             redeemed &&
                                             styles.rewardRowRedeemed,
@@ -1864,9 +1926,10 @@ export default function WebLoyaltyScreen({
                                             }
                                         >
                                             <Text
-                                                style={
-                                                    styles.rewardName
-                                                }
+                                                style={[
+                                styles.rewardName,
+                                { color: theme.text },
+                            ]}
                                             >
                                                 {reward.name}
                                             </Text>
@@ -1874,9 +1937,10 @@ export default function WebLoyaltyScreen({
                                             {reward.description
                                                 ? (
                                                     <Text
-                                                        style={
-                                                            styles.rewardDescription
-                                                        }
+                                                        style={[
+                                styles.rewardDescription,
+                                { color: theme.textMuted },
+                            ]}
                                                     >
                                                         {reward.description}
                                                     </Text>
@@ -1884,9 +1948,10 @@ export default function WebLoyaltyScreen({
                                                 : null}
 
                                             <Text
-                                                style={
-                                                    styles.rewardRequirement
-                                                }
+                                                style={[
+                                styles.rewardRequirement,
+                                { color: theme.primary },
+                            ]}
                                             >
                                                 {
                                                     reward.requiredVisits
@@ -1910,6 +1975,8 @@ export default function WebLoyaltyScreen({
                                                     available &&
                                                     styles.rewardStatusAvailable,
 
+                                                    available && { color: theme.primary },
+
                                                     redeemed &&
                                                     styles.rewardStatusRedeemed,
                                                 ]}
@@ -1930,46 +1997,55 @@ export default function WebLoyaltyScreen({
                     </View>
 
                     <View
-                        style={
-                            styles.howItWorksCard
-                        }
+                        style={[
+                            styles.howItWorksCard,
+                            {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                            },
+                        ]}
                     >
                         <Text
-                            style={
-                                styles.sectionTitle
-                            }
+                            style={[
+                                styles.sectionTitle,
+                                { color: theme.text },
+                            ]}
                         >
                             ¿Cómo funciona?
                         </Text>
 
                         <Text
-                            style={
-                                styles.stepText
-                            }
+                            style={[
+                                styles.stepText,
+                                { color: theme.textMuted },
+                            ]}
                         >
-                            1. Haz tu compra en Burger Kong.
+                            1. Haz tu compra en {businessName}.
                         </Text>
 
                         <Text
-                            style={
-                                styles.stepText
-                            }
+                            style={[
+                                styles.stepText,
+                                { color: theme.textMuted },
+                            ]}
                         >
                             2. Muestra tu QR al momento de pagar.
                         </Text>
 
                         <Text
-                            style={
-                                styles.stepText
-                            }
+                            style={[
+                                styles.stepText,
+                                { color: theme.textMuted },
+                            ]}
                         >
                             3. Acumula visitas y desbloquea premios.
                         </Text>
 
                         <Text
-                            style={
-                                styles.stepText
-                            }
+                            style={[
+                                styles.stepText,
+                                { color: theme.textMuted },
+                            ]}
                         >
                             4. Cuando un premio esté disponible, solicítalo en el local.
                         </Text>
@@ -1984,9 +2060,10 @@ export default function WebLoyaltyScreen({
                         }
                     >
                         <Text
-                            style={
-                                styles.resetButtonText
-                            }
+                            style={[
+                                styles.resetButtonText,
+                                { color: theme.textMuted },
+                            ]}
                         >
                             Usar otra cuenta
                         </Text>

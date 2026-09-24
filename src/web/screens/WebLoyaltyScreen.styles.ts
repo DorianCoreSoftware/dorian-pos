@@ -43,13 +43,11 @@ const styles =
         },
 
         backButtonText: {
-            color: '#FFB000',
             fontSize: 14,
             fontWeight: '800',
         },
 
         brand: {
-            color: '#FFB000',
             fontSize: 15,
             fontWeight: '900',
             textTransform: 'uppercase',
@@ -96,7 +94,6 @@ const styles =
         },
 
         visitCount: {
-            color: '#FFB000',
             fontSize: 54,
             fontWeight: '900',
             marginTop: 12,
@@ -149,13 +146,10 @@ const styles =
             borderRadius: 10,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor:
-                '#FFB000',
             marginTop: 22,
         },
 
         primaryButtonText: {
-            color: '#111111',
             fontWeight: '900',
             fontSize: 15,
         },
@@ -173,17 +167,12 @@ const styles =
 
         availableBanner: {
             borderWidth: 1,
-            borderColor:
-                '#FFB000',
             borderRadius: 12,
-            backgroundColor:
-                '#2A2200',
             padding: 14,
             marginTop: 20,
         },
 
         availableBannerTitle: {
-            color: '#FFB000',
             fontSize: 15,
             fontWeight: '900',
         },
@@ -233,8 +222,6 @@ const styles =
 
         progressFill: {
             height: '100%',
-            backgroundColor:
-                '#FFB000',
         },
 
         progressCounter: {
@@ -291,12 +278,7 @@ const styles =
             gap: 12,
         },
 
-        rewardRowAvailable: {
-            borderColor:
-                '#FFB000',
-            backgroundColor:
-                '#282100',
-        },
+        rewardRowAvailable: {},
 
         rewardRowRedeemed: {
             opacity: 0.65,
@@ -319,7 +301,6 @@ const styles =
         },
 
         rewardRequirement: {
-            color: '#FFB000',
             fontSize: 12,
             fontWeight: '800',
             marginTop: 7,
@@ -335,9 +316,7 @@ const styles =
             fontWeight: '900',
         },
 
-        rewardStatusAvailable: {
-            color: '#FFB000',
-        },
+        rewardStatusAvailable: {},
 
         rewardStatusRedeemed: {
             color: '#65C978',
@@ -377,14 +356,12 @@ const styles =
             minHeight: 48,
             paddingHorizontal: 22,
             borderRadius: 10,
-            backgroundColor: '#FFB000',
             alignItems: 'center',
             justifyContent: 'center',
             marginTop: 18,
         },
 
         downloadQrButtonText: {
-            color: '#111111',
             fontSize: 14,
             fontWeight: '900',
         },
