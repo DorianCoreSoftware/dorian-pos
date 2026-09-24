@@ -1,8 +1,8 @@
-import { ComboRecipe } from "../domain/entities/ComboRecipe";
-
-
+import {
+  ComboRecipe,
+} from '../domain/entities/ComboRecipe';
 export interface ComboRepository {
   getRecipeByComboProductId(
-    comboProductId: string
+    comboProductId: string,
   ): Promise<ComboRecipe | null>;
 }

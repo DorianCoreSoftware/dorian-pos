@@ -33,9 +33,6 @@ import {
   updateKitchenOrder,
 } from '../../services/orders';
 import {
-  getProductModifierMode,
-} from '../../services/modifierService';
-import {
   Cart,
   CartItem,
   Category,
@@ -330,23 +327,6 @@ export function POSScreen({
       selectedCategoryId,
       searchText,
     ]);
-  const selectedProductCategory =
-    categories.find(
-      (category) =>
-        String(
-          category.id,
-        ) ===
-        String(
-          selectedProduct
-            ?.category_id,
-        ),
-    ) ?? null;
-  const modifierMode =
-    getProductModifierMode(
-      selectedProduct,
-      selectedProductCategory
-        ?.name,
-    );
   const deliveryProduct =
     products.find(
       (product) =>
@@ -1130,17 +1110,8 @@ export function POSScreen({
         product={
           selectedProduct
         }
-        products={
-          products
-        }
-        categories={
-          categories
-        }
         notes={
           productNotes
-        }
-        mode={
-          modifierMode
         }
         meats={
           meats

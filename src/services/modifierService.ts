@@ -18,14 +18,7 @@ import {
 } from '../repositories/ModifierRepository';
 import {
   Modifier,
-  Product,
 } from '../types';
-export type ProductModifierMode =
-  | 'burger'
-  | 'wings'
-  | 'boneless'
-  | 'combo'
-  | 'none';
 export interface GroupedModifiers {
   meats: ModifierWithGroup[];
   sauces: ModifierWithGroup[];
@@ -475,79 +468,6 @@ export async function setModifierGroupActive(
         : 'No se pudo desactivar el grupo.',
     );
   }
-}
-/**
- * Determina el configurador requerido
- * por un producto.
- */
-export function getProductModifierMode(
-  product: Product | null,
-  categoryName?: string,
-): ProductModifierMode {
-  if (!product) {
-    return 'none';
-  }
-  const normalizedName =
-    normalizeText(
-      product.name,
-    );
-  const normalizedCategory =
-    normalizeText(
-      categoryName,
-    );
-  if (
-    normalizedName.includes(
-      'combo',
-    ) ||
-    normalizedCategory.includes(
-      'combo',
-    )
-  ) {
-    return 'combo';
-  }
-  if (
-    normalizedName.includes(
-      'boneless',
-    ) ||
-    normalizedCategory.includes(
-      'boneless',
-    )
-  ) {
-    return 'boneless';
-  }
-  if (
-    normalizedName.includes(
-      'alita',
-    ) ||
-    normalizedName.includes(
-      'wing',
-    ) ||
-    normalizedCategory.includes(
-      'alita',
-    ) ||
-    normalizedCategory.includes(
-      'wing',
-    )
-  ) {
-    return 'wings';
-  }
-  if (
-    normalizedName.includes(
-      'hamburguesa',
-    ) ||
-    normalizedName.includes(
-      'burger',
-    ) ||
-    normalizedCategory.includes(
-      'hamburguesa',
-    ) ||
-    normalizedCategory.includes(
-      'burger',
-    )
-  ) {
-    return 'burger';
-  }
-  return 'none';
 }
 /**
  * Obtiene el grupo nuevo usando:

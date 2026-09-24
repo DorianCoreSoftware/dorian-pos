@@ -25,9 +25,6 @@ import {
   getActiveCategories,
 } from '../../services/categoryService';
 import {
-  getProductModifierMode,
-} from '../../services/modifierService';
-import {
   getActiveProducts,
 } from '../../services/products';
 import {
@@ -672,19 +669,6 @@ export default function WebMenuScreen() {
         products,
         selectedCategoryId,
       ],
-    );
-  const selectedProductCategory =
-    categories.find(
-      (category) =>
-        category.id ===
-        selectedProduct
-          ?.category_id,
-    ) ?? null;
-  const modifierMode =
-    getProductModifierMode(
-      selectedProduct,
-      selectedProductCategory
-        ?.name,
     );
   const cartSummary =
     useMemo(
@@ -1389,17 +1373,8 @@ export default function WebMenuScreen() {
         product={
           selectedProduct
         }
-        products={
-          products
-        }
-        categories={
-          categories
-        }
         notes={
           productNotes
-        }
-        mode={
-          modifierMode
         }
         meats={
           meats

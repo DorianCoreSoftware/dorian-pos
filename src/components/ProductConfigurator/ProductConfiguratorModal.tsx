@@ -15,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import {
-  Category,
   ComboComponentSelection,
   Product,
   SelectedModifier,
@@ -23,8 +22,10 @@ import {
 import {
   getAvailableModifiersByGroupId,
   ModifierWithGroup,
-  ProductModifierMode,
 } from '../../services/modifierService';
+import {
+  hasActiveComboRecipe,
+} from '../../services/comboService';
 import {
   getActiveProductModifierGroups,
   ProductModifierGroup,
@@ -51,10 +52,7 @@ export interface ProductConfigurationResult {
 interface ProductConfiguratorModalProps {
   visible: boolean;
   product: Product | null;
-  products: Product[];
-  categories: Category[];
   notes: string;
-  mode: ProductModifierMode;
   meats: SelectedModifier[];
   sauces: SelectedModifier[];
   isLoading: boolean;
@@ -74,10 +72,7 @@ export const ProductConfiguratorModal:
   > = ({
     visible,
     product,
-    products,
-    categories,
     notes,
-    mode,
     meats,
     sauces,
     isLoading,
@@ -100,7 +95,6 @@ export const ProductConfiguratorModal:
       selectedMeatIds,
       setSelectedMeatIds,
     ] = useState<string[]>([]);
-    const MAXIMUM_SAUCES = 3;
     const [
       selectedSauceIds,
       setSelectedSauceIds,
@@ -163,35 +157,22 @@ export const ProductConfiguratorModal:
     ] = useState<
       WeeklySauce | null
     >(null);
-    const isBurger =
-      mode === 'burger';
-    const isWings =
-      mode === 'wings';
-    const isBoneless =
-      mode === 'boneless';
-    const isCombo =
-      mode === 'combo';
-    const requiresSauce =
-      isWings ||
-      isBoneless;
-    const normalizedProductName =
-      normalizeText(
-        product?.name,
-      );
-    const productCategoryName =
-      categories.find(
-        (category) =>
-          String(
-            category.id,
-          ) ===
-          String(
-            product?.category_id,
-          ),
-      )?.name ?? '';
-    const normalizedCategoryName =
-      normalizeText(
-        productCategoryName,
-      );
+    const [
+      isCombo,
+      setIsCombo,
+    ] = useState(false);
+    const [
+      comboCheckedProductId,
+      setComboCheckedProductId,
+    ] = useState<
+      string | null
+    >(null);
+    const [
+      comboDetectionError,
+      setComboDetectionError,
+    ] = useState<
+      string | null
+    >(null);
     const meatGroupAssociation =
       useMemo(
         () =>
@@ -200,6 +181,19 @@ export const ProductConfiguratorModal:
               association.group
                 ?.code ===
               'meat',
+          ) ?? null,
+        [
+          productModifierGroups,
+        ],
+      );
+    const sauceGroupAssociation =
+      useMemo(
+        () =>
+          productModifierGroups.find(
+            association =>
+              association.group
+                ?.code ===
+              'sauce',
           ) ?? null,
         [
           productModifierGroups,
@@ -224,61 +218,25 @@ export const ProductConfiguratorModal:
       );
     const allowsMultipleMeats =
       maximumMeats > 1;
-    const isHotDog =
-      normalizedCategoryName
-        .includes(
-          'hotdog',
-        ) ||
-      normalizedCategoryName
-        .includes(
-          'hot dog',
-        ) ||
-      normalizedProductName
-        .includes(
-          'hotdog',
-        ) ||
-      normalizedProductName
-        .includes(
-          'hot dog',
-        );
-    const isDrink =
-      normalizedCategoryName
-        .includes(
-          'bebida',
-        ) ||
-      normalizedCategoryName
-        .includes(
-          'malteada',
-        ) ||
-      normalizedProductName
-        .includes(
-          'bebida',
-        ) ||
-      normalizedProductName
-        .includes(
-          'malteada',
-        );
-    const isFries =
-      normalizedCategoryName
-        .includes(
-          'papa',
-        ) ||
-      normalizedProductName
-        .includes(
-          'papa',
-        );
+    const minimumSauces =
+      sauceGroupAssociation
+        ?.minSelections ??
+      0;
+    const maximumSauces =
+      sauceGroupAssociation
+        ?.maxSelections ??
+      0;
+    const requiresSauce =
+      Boolean(
+        sauceGroupAssociation &&
+        (
+          sauceGroupAssociation
+            .isRequired ||
+          minimumSauces > 0
+        ),
+      );
     const notesPlaceholder =
-      isWings ||
-        isBoneless
-        ? 'Ej: Poca salsa, sin ranch, ranch aparte...'
-        : isDrink
-          ? 'Ej: Poco hielo, sin crema, sin jarabe...'
-          : isFries
-            ? 'Ej: Sin queso, poca salsa, aderezo aparte...'
-            : isBurger ||
-              isHotDog
-              ? 'Ej: Sin cebolla, sin chile, extra mayonesa...'
-              : 'Ej: Indicaciones especiales para tu producto...';
+      'Ej: Indicaciones especiales para tu producto...';
     /**
      * Estos grupos son los que todavía maneja
      * el configurador legacy para no duplicarlos.
@@ -440,6 +398,14 @@ export const ProductConfiguratorModal:
       ]);
     const isSelectionValid =
       useMemo(() => {
+        if (
+          !product?.id ||
+          comboCheckedProductId !==
+            product.id ||
+          comboDetectionError
+        ) {
+          return false;
+        }
         if (isCombo) {
           return (
             comboSelection
@@ -472,6 +438,17 @@ export const ProductConfiguratorModal:
           requiresMeat &&
           selectedMeatIds.length ===
           0
+        ) {
+          return false;
+        }
+        if (
+          sauceGroupAssociation &&
+          (
+            selectedSauceIds.length <
+              minimumSauces ||
+            selectedSauceIds.length >
+              maximumSauces
+          )
         ) {
           return false;
         }
@@ -521,6 +498,9 @@ export const ProductConfiguratorModal:
         }
         return true;
       }, [
+        product?.id,
+        comboCheckedProductId,
+        comboDetectionError,
         isCombo,
         comboSelection,
         isLoading,
@@ -531,6 +511,9 @@ export const ProductConfiguratorModal:
         minimumMeats,
         maximumMeats,
         requiresMeat,
+        sauceGroupAssociation,
+        minimumSauces,
+        maximumSauces,
         requiresSauce,
         selectedMeatIds,
         selectedSauceIds,
@@ -541,6 +524,76 @@ export const ProductConfiguratorModal:
         genericProductModifierGroups,
         selectedModifierIdsByGroup,
       ]);
+    useEffect(() => {
+      if (
+        !visible ||
+        !product?.id
+      ) {
+        setIsCombo(false);
+        setComboCheckedProductId(
+          null,
+        );
+        setComboDetectionError(
+          null,
+        );
+        return;
+      }
+      let isMounted =
+        true;
+      setIsCombo(false);
+      setComboCheckedProductId(
+        null,
+      );
+      setComboDetectionError(
+        null,
+      );
+      const detectCombo =
+        async () => {
+          try {
+            const hasRecipe =
+              await hasActiveComboRecipe(
+                product.id,
+              );
+            if (!isMounted) {
+              return;
+            }
+            setIsCombo(
+              hasRecipe,
+            );
+            setComboCheckedProductId(
+              product.id,
+            );
+          } catch (
+            comboError
+          ) {
+            console.error(
+              'Error detecting combo recipe:',
+              comboError,
+            );
+            if (!isMounted) {
+              return;
+            }
+            setIsCombo(false);
+            setComboCheckedProductId(
+              product.id,
+            );
+            setComboDetectionError(
+              comboError
+                instanceof Error
+                ? comboError.message
+                : 'No se pudo comprobar la configuración del producto.',
+            );
+          }
+        };
+      void detectCombo();
+      return () => {
+        isMounted =
+          false;
+      };
+    }, [
+      visible,
+      product?.id,
+    ]);
     useEffect(() => {
       if (!visible) {
         return;
@@ -603,6 +656,8 @@ export const ProductConfiguratorModal:
         async () => {
           if (
             !product?.id ||
+            comboCheckedProductId !==
+              product.id ||
             isCombo
           ) {
             return;
@@ -656,6 +711,8 @@ export const ProductConfiguratorModal:
         async () => {
           if (
             !product?.id ||
+            comboCheckedProductId !==
+              product.id ||
             isCombo
           ) {
             return;
@@ -761,6 +818,7 @@ export const ProductConfiguratorModal:
     }, [
       visible,
       product?.id,
+      comboCheckedProductId,
       isCombo,
     ]);
     if (!product) {
@@ -851,9 +909,10 @@ export const ProductConfiguratorModal:
               );
           }
           if (
+            maximumSauces <= 0 ||
             currentSelection
               .length >=
-            MAXIMUM_SAUCES
+            maximumSauces
           ) {
             return currentSelection;
           }
@@ -996,6 +1055,47 @@ export const ProductConfiguratorModal:
                 .modalContentShort,
             ]}
           >
+            {product?.id &&
+              comboCheckedProductId !==
+                product.id && (
+                <View
+                  style={{
+                    paddingVertical:
+                      24,
+                    alignItems:
+                      'center',
+                  }}
+                >
+                  <ActivityIndicator
+                    size="large"
+                    color="#FFBF00"
+                  />
+                  <Text
+                    style={{
+                      color:
+                        '#FFFFFF',
+                      marginTop:
+                        10,
+                    }}
+                  >
+                    Cargando configuración...
+                  </Text>
+                </View>
+              )}
+            {comboDetectionError && (
+              <Text
+                style={{
+                  color:
+                    '#FF5252',
+                  textAlign:
+                    'center',
+                  marginBottom:
+                    12,
+                }}
+              >
+                {comboDetectionError}
+              </Text>
+            )}
             <Text
               style={[
                 styles
@@ -1023,12 +1123,16 @@ export const ProductConfiguratorModal:
                   ? maximumMeats > 1
                     ? `Selecciona entre ${minimumMeats || 1} y ${maximumMeats} opciones de ${meatGroupAssociation?.group?.name ?? 'este grupo'}:`
                     : `Selecciona ${meatGroupAssociation?.group?.name ?? 'la opción'} obligatoria:`
-                  : requiresSauce
-                    ? 'Selecciona las opciones obligatorias:'
+                  : sauceGroupAssociation
+                    ? maximumSauces > 1
+                      ? `Selecciona entre ${minimumSauces} y ${maximumSauces} opciones de ${sauceGroupAssociation.group?.name ?? 'este grupo'}:`
+                      : requiresSauce
+                        ? `Selecciona ${sauceGroupAssociation.group?.name ?? 'la opción'} obligatoria:`
+                        : `Selecciona ${sauceGroupAssociation.group?.name ?? 'una opción'} si lo deseas:`
                     : ''}
             </Text>
             {weeklySauce &&
-              requiresSauce && (
+              sauceGroupAssociation && (
                 <View
                   style={{
                     marginTop: 10,
@@ -1099,7 +1203,7 @@ export const ProductConfiguratorModal:
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 isLoading && (
                   <View
                     style={
@@ -1122,7 +1226,7 @@ export const ProductConfiguratorModal:
                     </Text>
                   </View>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 !isLoading &&
                 error && (
                   <Text
@@ -1134,7 +1238,7 @@ export const ProductConfiguratorModal:
                     {error}
                   </Text>
                 )}
-              {isCombo && (
+              {comboCheckedProductId === product.id && isCombo && (
                 <ComboConfigurator
                   product={
                     product
@@ -1155,7 +1259,7 @@ export const ProductConfiguratorModal:
               )}
               {!isLoading &&
                 !error &&
-                requiresMeat && (
+                meatGroupAssociation && (
                   <View
                     style={
                       styles
@@ -1290,7 +1394,7 @@ export const ProductConfiguratorModal:
                 )}
               {!isLoading &&
                 !error &&
-                requiresSauce && (
+                sauceGroupAssociation && (
                   <View
                     style={
                       styles
@@ -1303,11 +1407,19 @@ export const ProductConfiguratorModal:
                           .sectionLabel
                       }
                     >
-                      {isBoneless
-                        ? 'Salsas de los boneless'
-                        : 'Salsas de las alitas'}{' '}
-                      * (Selecciona
-                      de 1 a 3)
+                      {
+                        sauceGroupAssociation
+                          .group?.name ??
+                        'Opciones'
+                      }{' '}
+                      {requiresSauce
+                        ? '*'
+                        : ''}{' '}
+                      {maximumSauces > 1
+                        ? `(Selecciona de ${minimumSauces} a ${maximumSauces})`
+                        : requiresSauce
+                          ? '(Obligatorio)'
+                          : '(Opcional)'}
                     </Text>
                     <Text
                       style={{
@@ -1325,7 +1437,7 @@ export const ProductConfiguratorModal:
                       }
                       /
                       {
-                        MAXIMUM_SAUCES
+                        maximumSauces
                       }{' '}
                       seleccionadas
                     </Text>
@@ -1466,7 +1578,7 @@ export const ProductConfiguratorModal:
                     </View>
                   </View>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 areFlavorsLoading && (
                   <View
                     style={
@@ -1489,7 +1601,7 @@ export const ProductConfiguratorModal:
                     </Text>
                   </View>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 !areFlavorsLoading &&
                 flavorsError && (
                   <Text
@@ -1503,7 +1615,7 @@ export const ProductConfiguratorModal:
                     }
                   </Text>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 !areFlavorsLoading &&
                 !flavorsError &&
                 productFlavors.length >
@@ -1613,7 +1725,7 @@ export const ProductConfiguratorModal:
                     </View>
                   </View>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 areProductGroupsLoading && (
                   <View
                     style={
@@ -1636,7 +1748,7 @@ export const ProductConfiguratorModal:
                     </Text>
                   </View>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 !areProductGroupsLoading &&
                 productGroupsError && (
                   <Text
@@ -1650,7 +1762,7 @@ export const ProductConfiguratorModal:
                     }
                   </Text>
                 )}
-              {!isCombo &&
+              {comboCheckedProductId === product.id && !isCombo &&
                 !areProductGroupsLoading &&
                 !productGroupsError &&
                 genericProductModifierGroups.map(
@@ -1833,48 +1945,8 @@ export const ProductConfiguratorModal:
                     );
                   },
                 )}
-              {!isCombo && (
+              {comboCheckedProductId === product.id && !isCombo && (
                 <>
-                  {(isBurger ||
-                    isHotDog) && (
-                      <View
-                        style={{
-                          marginBottom:
-                            12,
-                          paddingVertical:
-                            10,
-                          paddingHorizontal:
-                            12,
-                          borderRadius:
-                            8,
-                          backgroundColor:
-                            '#242424',
-                          borderWidth:
-                            1,
-                          borderColor:
-                            '#444444',
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color:
-                              '#DDDDDD',
-                            fontSize:
-                              12,
-                            lineHeight:
-                              18,
-                          }}
-                        >
-                          Incluye:
-                          jitomate,
-                          cebolla,
-                          chile,
-                          mayonesa,
-                          catsup y
-                          mostaza.
-                        </Text>
-                      </View>
-                    )}
                   <Text
                     style={[
                       styles
@@ -1919,7 +1991,7 @@ export const ProductConfiguratorModal:
                 </>
               )}
             </ScrollView>
-            {!isCombo && (
+            {comboCheckedProductId === product.id && !isCombo && (
               <View
                 style={[
                   styles
@@ -1989,7 +2061,7 @@ export const ProductConfiguratorModal:
                 </TouchableOpacity>
               </View>
             )}
-            {isCombo && (
+            {comboCheckedProductId === product.id && isCombo && (
               <View
                 style={[
                   styles
@@ -2064,24 +2136,3 @@ export const ProductConfiguratorModal:
       </Modal>
     );
   };
-function normalizeText(
-  value:
-    | string
-    | null
-    | undefined,
-): string {
-  return (
-    value ?? ''
-  )
-    .normalize(
-      'NFD',
-    )
-    .replace(
-      /[\u0300-\u036f]/g,
-      '',
-    )
-    .trim()
-    .toLocaleLowerCase(
-      'es',
-    );
-}
