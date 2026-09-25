@@ -4,11 +4,9 @@ import {
   fetchActiveModifierGroups,
   fetchAllModifiers,
   fetchAvailableModifiers,
-  fetchModifierGroupByCode,
   fetchModifierGroups,
   insertModifier,
   insertModifierGroup,
-  ModifierGroup,
   ModifierGroupEntity,
   ModifierWithGroup,
   setModifierAvailableById,
@@ -19,34 +17,14 @@ import {
 import {
   Modifier,
 } from '../types';
-
-export type ProductModifierMode =
-  | 'burger'
-  | 'wings'
-  | 'boneless'
-  | 'combo'
-  | 'none';
-
-export interface GroupedModifiers {
-  meats: ModifierWithGroup[];
-  sauces: ModifierWithGroup[];
-}
 export interface CreateModifierInput {
   name: string;
   extraPrice: number;
-  /**
-   * Compatibilidad temporal con AdminModifiers actual.
-   */
-  groupName?: ModifierGroup;
-  /**
-   * Nuevo modelo.
-   */
   groupId?: string | null;
 }
 export interface UpdateModifierInput {
   name: string;
   extraPrice: number;
-  groupName?: ModifierGroup;
   groupId?: string | null;
   isAvailable: boolean;
 }
@@ -59,34 +37,6 @@ export interface UpdateModifierGroupInput {
   name: string;
   position: number;
   isActive: boolean;
-}
-/**
- * Modificadores utilizados actualmente
- * por los configuradores de productos.
- *
- * Ya no depende de group_name.
- */
-export async function getAvailableModifiers(): Promise<
-  GroupedModifiers
-> {
-  const modifiers =
-    await fetchAvailableModifiers();
-  return {
-    meats:
-      modifiers.filter(
-        modifier =>
-          modifier.group
-            ?.code ===
-          'meat',
-      ),
-    sauces:
-      modifiers.filter(
-        modifier =>
-          modifier.group
-            ?.code ===
-          'sauce',
-      ),
-  };
 }
 /**
  * Obtiene los modificadores disponibles
@@ -118,46 +68,6 @@ export async function getAvailableModifiersByGroupId(
   } catch (error) {
     console.error(
       'Error al obtener modificadores del grupo:',
-      error,
-    );
-    throw new Error(
-      error instanceof Error
-        ? error.message
-        : 'No se pudieron obtener los modificadores del grupo.',
-    );
-  }
-}
-/**
- * Obtiene los modificadores disponibles
- * pertenecientes a un grupo por su código.
- *
- * Útil para reglas internas como:
- * meat, sauce, drink_flavor, ice_cream_flavor.
- */
-export async function getAvailableModifiersByGroupCode(
-  groupCode: string,
-): Promise<
-  ModifierWithGroup[]
-> {
-  const cleanGroupCode =
-    groupCode.trim();
-  if (!cleanGroupCode) {
-    throw new Error(
-      'El código del grupo es obligatorio.',
-    );
-  }
-  try {
-    const modifiers =
-      await fetchAvailableModifiers();
-    return modifiers.filter(
-      modifier =>
-        modifier.group
-          ?.code ===
-        cleanGroupCode,
-    );
-  } catch (error) {
-    console.error(
-      'Error al obtener modificadores por código de grupo:',
       error,
     );
     throw new Error(
@@ -238,7 +148,6 @@ export async function createModifier(
     const resolvedGroup =
       await resolveModifierGroup(
         input.groupId,
-        input.groupName,
       );
     const data:
       CreateModifierData = {
@@ -248,16 +157,6 @@ export async function createModifier(
         input.extraPrice,
       groupId:
         resolvedGroup.id,
-      /**
-       * Campo legacy.
-       *
-       * Lo mantenemos sincronizado
-       * mientras terminamos la migración.
-       */
-      groupName:
-        getLegacyGroupName(
-          resolvedGroup.code,
-        ),
     };
     return await insertModifier(
       data,
@@ -295,7 +194,6 @@ export async function updateModifier(
     const resolvedGroup =
       await resolveModifierGroup(
         input.groupId,
-        input.groupName,
       );
     return await updateModifierById(
       modifierId,
@@ -306,10 +204,6 @@ export async function updateModifier(
           input.extraPrice,
         groupId:
           resolvedGroup.id,
-        groupName:
-          getLegacyGroupName(
-            resolvedGroup.code,
-          ),
         isAvailable:
           input.isAvailable,
       },
@@ -478,112 +372,48 @@ export async function setModifierGroupActive(
   }
 }
 /**
- * Obtiene el grupo nuevo usando:
- *
- * 1. groupId, si ya viene de la nueva UI.
- * 2. groupName legacy, mientras AdminModifiers
- *    todavía use Carne/Salsa/Sabor.
+ * Resuelve el grupo asociado al modificador usando
+ * exclusivamente el modelo nuevo basado en groupId.
  */
 async function resolveModifierGroup(
   groupId?:
     | string
     | null,
-  legacyGroupName?:
-    ModifierGroup,
 ): Promise<ModifierGroupEntity> {
-  if (
-    groupId?.trim()
-  ) {
-    const groups =
-      await fetchModifierGroups();
-    const group =
-      groups.find(
-        item =>
-          item.id ===
-          groupId,
-      );
-    if (!group) {
-      throw new Error(
-        'El grupo de modificadores seleccionado no existe.',
-      );
-    }
-    if (
-      !group.is_active
-    ) {
-      throw new Error(
-        'El grupo de modificadores seleccionado está inactivo.',
-      );
-    }
-    return group;
-  }
-  const code =
-    getCodeFromLegacyGroupName(
-      legacyGroupName,
-    );
-  if (!code) {
+  const cleanGroupId =
+    groupId?.trim();
+
+  if (!cleanGroupId) {
     throw new Error(
       'Debes seleccionar un grupo de modificadores.',
     );
   }
+
+  const groups =
+    await fetchModifierGroups();
+
   const group =
-    await fetchModifierGroupByCode(
-      code,
+    groups.find(
+      item =>
+        item.id ===
+        cleanGroupId,
     );
+
   if (!group) {
     throw new Error(
-      `No existe el grupo de modificadores "${code}".`,
+      'El grupo de modificadores seleccionado no existe.',
     );
   }
-  if (
-    !group.is_active
-  ) {
+
+  if (!group.is_active) {
     throw new Error(
-      `El grupo "${group.name}" está inactivo.`,
+      'El grupo de modificadores seleccionado está inactivo.',
     );
   }
+
   return group;
 }
-/**
- * Traducción temporal de la UI antigua
- * hacia los códigos nuevos.
- */
-function getCodeFromLegacyGroupName(
-  groupName?:
-    ModifierGroup,
-): string | null {
-  switch (
-    groupName
-  ) {
-    case 'Carne':
-      return 'meat';
-    case 'Salsa':
-      return 'sauce';
-    case 'Sabor':
-      return 'drink_flavor';
-    default:
-      return null;
-  }
-}
-/**
- * Traducción temporal desde grupos nuevos
- * hacia group_name legacy.
- */
-function getLegacyGroupName(
-  code: string,
-): ModifierGroup {
-  switch (
-    code
-  ) {
-    case 'meat':
-      return 'Carne';
-    case 'sauce':
-      return 'Salsa';
-    case 'drink_flavor':
-      return 'Sabor';
-    default:
-      return null;
-  }
-}
+
 function validateModifierId(
   modifierId: string,
 ): void {

@@ -41,9 +41,16 @@ import {
 import { uploadProductImage } from '../../../services/productImageService';
 
 import {
+    getAllModifiers,
     getModifierGroups,
     ModifierGroupEntity,
+    ModifierWithGroup,
 } from '../../../services/modifierService';
+
+import {
+    getProductModifierOptions,
+    saveProductModifierOptions,
+} from '../../../services/productModifierOptionService';
 
 import {
     getProductModifierGroups,
@@ -74,6 +81,7 @@ interface ProductModifierGroupForm {
     isRequired: boolean;
     minSelections: string;
     maxSelections: string;
+    allowDuplicates: boolean;
     position: number;
 }
 
@@ -112,6 +120,21 @@ export function AdminProducts({
         productModifierGroups,
         setProductModifierGroups,
     ] = useState<ProductModifierGroupForm[]>([]);
+
+    const [
+        allModifiers,
+        setAllModifiers,
+    ] = useState<ModifierWithGroup[]>([]);
+
+    const [
+        modifierOptionIdsByGroup,
+        setModifierOptionIdsByGroup,
+    ] = useState<Record<string, string[] | null>>({});
+
+    const [
+        optionSelectorGroupId,
+        setOptionSelectorGroupId,
+    ] = useState<string | null>(null);
 
     const [
         isLoadingProductGroups,
@@ -199,10 +222,12 @@ export function AdminProducts({
                         loadedProducts,
                         loadedCategories,
                         loadedModifierGroups,
+                        loadedModifiers,
                     ] = await Promise.all([
                         getAllProducts(),
                         getCategories(),
                         getModifierGroups(),
+                        getAllModifiers(),
                     ]);
 
                     setProducts(
@@ -215,6 +240,10 @@ export function AdminProducts({
 
                     setModifierGroups(
                         loadedModifierGroups,
+                    );
+
+                    setAllModifiers(
+                        loadedModifiers,
                     );
                 } catch (error) {
                     console.error(
@@ -321,6 +350,9 @@ export function AdminProducts({
                 [],
             );
 
+            setModifierOptionIdsByGroup({});
+            setOptionSelectorGroupId(null);
+
             setComboRecipeForm(
                 INITIAL_COMBO_RECIPE_FORM,
             );
@@ -377,6 +409,9 @@ export function AdminProducts({
                 [],
             );
 
+            setModifierOptionIdsByGroup({});
+            setOptionSelectorGroupId(null);
+
             setComboRecipeForm(
                 INITIAL_COMBO_RECIPE_FORM,
             );
@@ -400,9 +435,13 @@ export function AdminProducts({
 
                 const [
                     associations,
+                    productOptions,
                     comboRecipe,
                 ] = await Promise.all([
                     getProductModifierGroups(
+                        product.id,
+                    ),
+                    getProductModifierOptions(
                         product.id,
                     ),
                     getComboRecipeForAdmin(
@@ -429,10 +468,54 @@ export function AdminProducts({
                                     association.maxSelections,
                                 ),
 
+                            allowDuplicates:
+                                association.allowDuplicates,
+
                             position:
                                 association.position,
                         }),
                     ),
+                );
+
+                const optionIdsByGroup:
+                    Record<string, string[] | null> = {};
+
+                associations.forEach(association => {
+                    const ids =
+                        productOptions
+                            .filter(option => {
+                                const modifier =
+                                    allModifiers.find(
+                                        item =>
+                                            item.id ===
+                                            option.modifierId,
+                                    );
+
+                                return (
+                                    modifier?.group_id ===
+                                    association.modifierGroupId
+                                );
+                            })
+                            .sort(
+                                (left, right) =>
+                                    left.position -
+                                    right.position,
+                            )
+                            .map(
+                                option =>
+                                    option.modifierId,
+                            );
+
+                    optionIdsByGroup[
+                        association.modifierGroupId
+                    ] =
+                        ids.length > 0
+                            ? ids
+                            : null;
+                });
+
+                setModifierOptionIdsByGroup(
+                    optionIdsByGroup,
                 );
 
                 setComboRecipeExists(
@@ -636,12 +719,31 @@ export function AdminProducts({
                     );
 
                 if (exists) {
+                    setModifierOptionIdsByGroup(
+                        currentOptions => {
+                            const next = {
+                                ...currentOptions,
+                            };
+
+                            delete next[group.id];
+
+                            return next;
+                        },
+                    );
+
                     return current.filter(
                         config =>
                             config.modifierGroupId !==
                             group.id,
                     );
                 }
+
+                setModifierOptionIdsByGroup(
+                    currentOptions => ({
+                        ...currentOptions,
+                        [group.id]: null,
+                    }),
+                );
 
                 return [
                     ...current,
@@ -657,6 +759,9 @@ export function AdminProducts({
 
                         maxSelections:
                             '1',
+
+                        allowDuplicates:
+                            false,
 
                         position:
                             group.position,
@@ -688,6 +793,143 @@ export function AdminProducts({
         );
     };
 
+    const getModifiersForGroup = (
+        modifierGroupId: string,
+    ): ModifierWithGroup[] =>
+        allModifiers
+            .filter(
+                modifier =>
+                    modifier.group_id ===
+                        modifierGroupId &&
+                    modifier.is_available,
+            )
+            .sort((left, right) =>
+                left.name.localeCompare(
+                    right.name,
+                    'es',
+                    {
+                        sensitivity: 'base',
+                    },
+                ),
+            );
+
+    const getModifierOptionSummary = (
+        modifierGroupId: string,
+    ): string => {
+        const selectedIds =
+            modifierOptionIdsByGroup[
+                modifierGroupId
+            ];
+
+        if (selectedIds === null ||
+            selectedIds === undefined) {
+            return 'Todas las opciones';
+        }
+
+        return selectedIds.length === 1
+            ? '1 seleccionada'
+            : `${selectedIds.length} seleccionadas`;
+    };
+
+    const toggleModifierOption = (
+        modifierGroupId: string,
+        modifierId: string,
+    ): void => {
+        const groupModifiers =
+            getModifiersForGroup(
+                modifierGroupId,
+            );
+
+        setModifierOptionIdsByGroup(
+            current => {
+                const currentValue =
+                    current[
+                        modifierGroupId
+                    ];
+
+                const selectedIds =
+                    currentValue === null ||
+                    currentValue === undefined
+                        ? groupModifiers.map(
+                            modifier =>
+                                modifier.id,
+                        )
+                        : currentValue;
+
+                if (
+                    selectedIds.includes(
+                        modifierId,
+                    )
+                ) {
+                    if (
+                        selectedIds.length === 1
+                    ) {
+                        return current;
+                    }
+
+                    return {
+                        ...current,
+                        [modifierGroupId]:
+                            selectedIds.filter(
+                                id =>
+                                    id !==
+                                    modifierId,
+                            ),
+                    };
+                }
+
+                const nextIds = [
+                    ...selectedIds,
+                    modifierId,
+                ];
+
+                if (
+                    nextIds.length ===
+                    groupModifiers.length
+                ) {
+                    return {
+                        ...current,
+                        [modifierGroupId]:
+                            null,
+                    };
+                }
+
+                return {
+                    ...current,
+                    [modifierGroupId]:
+                        nextIds,
+                };
+            },
+        );
+    };
+
+    const getModifierOptionIdsToSave =
+        (): string[] => {
+            const ids: string[] = [];
+
+            productModifierGroups.forEach(
+                group => {
+                    const selectedIds =
+                        modifierOptionIdsByGroup[
+                            group.modifierGroupId
+                        ];
+
+                    if (
+                        selectedIds === null ||
+                        selectedIds === undefined
+                    ) {
+                        return;
+                    }
+
+                    ids.push(...selectedIds);
+                },
+            );
+
+            return Array.from(
+                new Set(ids),
+            );
+        };
+
     const getValidatedModifierGroups =
         (): Array<{
             productId: string;
@@ -695,6 +937,7 @@ export function AdminProducts({
             isRequired: boolean;
             minSelections: number;
             maxSelections: number;
+            allowDuplicates: boolean;
             position: number;
             isActive: boolean;
         }> | null => {
@@ -705,6 +948,7 @@ export function AdminProducts({
                     isRequired: boolean;
                     minSelections: number;
                     maxSelections: number;
+                    allowDuplicates: boolean;
                     position: number;
                     isActive: boolean;
                 }> = [];
@@ -795,6 +1039,9 @@ export function AdminProducts({
                     minSelections,
 
                     maxSelections,
+
+                    allowDuplicates:
+                        config.allowDuplicates,
 
                     position:
                         config.position,
@@ -1161,6 +1408,11 @@ export function AdminProducts({
                         ),
                     );
 
+                    await saveProductModifierOptions(
+                        selectedProduct.id,
+                        getModifierOptionIdsToSave(),
+                    );
+
                     if (
                         comboRecipeForm.enabled ||
                         comboRecipeExists
@@ -1226,6 +1478,11 @@ export function AdminProducts({
                         ),
                     );
 
+                    await saveProductModifierOptions(
+                        createdProduct.id,
+                        getModifierOptionIdsToSave(),
+                    );
+
                     if (
                         comboRecipeForm.enabled
                     ) {
@@ -1262,6 +1519,9 @@ export function AdminProducts({
                 setProductModifierGroups(
                     [],
                 );
+
+                setModifierOptionIdsByGroup({});
+                setOptionSelectorGroupId(null);
 
                 setComboRecipeForm(
                     INITIAL_COMBO_RECIPE_FORM,
@@ -1653,6 +1913,251 @@ export function AdminProducts({
                 styles.container
             }
         >
+            <Modal
+                visible={
+                    optionSelectorGroupId !== null
+                }
+                transparent
+                animationType="fade"
+                onRequestClose={() =>
+                    setOptionSelectorGroupId(
+                        null,
+                    )
+                }
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor:
+                            'rgba(0,0,0,0.72)',
+                        justifyContent:
+                            'center',
+                        padding: 20,
+                    }}
+                >
+                    <View
+                        style={{
+                            maxHeight:
+                                '75%',
+                            borderRadius:
+                                12,
+                            backgroundColor:
+                                '#202020',
+                            borderWidth:
+                                1,
+                            borderColor:
+                                '#444444',
+                            padding: 14,
+                        }}
+                    >
+                        {(() => {
+                            const group =
+                                modifierGroups.find(
+                                    item =>
+                                        item.id ===
+                                        optionSelectorGroupId,
+                                );
+
+                            const modifiers =
+                                optionSelectorGroupId
+                                    ? getModifiersForGroup(
+                                        optionSelectorGroupId,
+                                    )
+                                    : [];
+
+                            const selectedIds =
+                                optionSelectorGroupId
+                                    ? modifierOptionIdsByGroup[
+                                        optionSelectorGroupId
+                                    ]
+                                    : null;
+
+                            const usesAll =
+                                selectedIds === null ||
+                                selectedIds === undefined;
+
+                            return (
+                                <>
+                                    <Text
+                                        style={{
+                                            color:
+                                                '#FFFFFF',
+                                            fontSize:
+                                                16,
+                                            fontWeight:
+                                                '900',
+                                            marginBottom:
+                                                4,
+                                        }}
+                                    >
+                                        {group?.name ??
+                                            'Opciones'}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            color:
+                                                '#888888',
+                                            fontSize:
+                                                10,
+                                            marginBottom:
+                                                12,
+                                        }}
+                                    >
+                                        Limita las opciones disponibles solo para este producto.
+                                    </Text>
+
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            if (
+                                                optionSelectorGroupId
+                                            ) {
+                                                setModifierOptionIdsByGroup(
+                                                    current => ({
+                                                        ...current,
+                                                        [optionSelectorGroupId]:
+                                                            null,
+                                                    }),
+                                                );
+                                            }
+                                        }}
+                                        style={{
+                                            padding: 11,
+                                            borderRadius:
+                                                8,
+                                            borderWidth:
+                                                1,
+                                            borderColor:
+                                                usesAll
+                                                    ? '#FFBF00'
+                                                    : '#555555',
+                                            backgroundColor:
+                                                usesAll
+                                                    ? '#302800'
+                                                    : '#292929',
+                                            marginBottom:
+                                                8,
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color:
+                                                    usesAll
+                                                        ? '#FFBF00'
+                                                        : '#FFFFFF',
+                                                fontWeight:
+                                                    '800',
+                                            }}
+                                        >
+                                            {usesAll
+                                                ? '✓ '
+                                                : ''}
+                                            Todas las opciones
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <ScrollView>
+                                        {modifiers.map(
+                                            modifier => {
+                                                const selected =
+                                                    usesAll ||
+                                                    Boolean(
+                                                        selectedIds?.includes(
+                                                            modifier.id,
+                                                        ),
+                                                    );
+
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={
+                                                            modifier.id
+                                                        }
+                                                        onPress={() => {
+                                                            if (
+                                                                optionSelectorGroupId
+                                                            ) {
+                                                                toggleModifierOption(
+                                                                    optionSelectorGroupId,
+                                                                    modifier.id,
+                                                                );
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: 11,
+                                                            borderRadius:
+                                                                8,
+                                                            borderWidth:
+                                                                1,
+                                                            borderColor:
+                                                                selected
+                                                                    ? '#FFBF00'
+                                                                    : '#444444',
+                                                            backgroundColor:
+                                                                selected
+                                                                    ? '#302800'
+                                                                    : '#292929',
+                                                            marginBottom:
+                                                                8,
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                color:
+                                                                    selected
+                                                                        ? '#FFBF00'
+                                                                        : '#FFFFFF',
+                                                                fontWeight:
+                                                                    selected
+                                                                        ? '800'
+                                                                        : '500',
+                                                            }}
+                                                        >
+                                                            {selected
+                                                                ? '✓ '
+                                                                : ''}
+                                                            {modifier.name}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                );
+                                            },
+                                        )}
+                                    </ScrollView>
+
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            setOptionSelectorGroupId(
+                                                null,
+                                            )
+                                        }
+                                        style={{
+                                            marginTop: 6,
+                                            padding: 12,
+                                            borderRadius:
+                                                8,
+                                            backgroundColor:
+                                                '#FFBF00',
+                                            alignItems:
+                                                'center',
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color:
+                                                    '#171717',
+                                                fontWeight:
+                                                    '900',
+                                            }}
+                                        >
+                                            Listo
+                                        </Text>
+                                    </TouchableOpacity>
+                                </>
+                            );
+                        })()}
+                    </View>
+                </View>
+            </Modal>
+
             <View
                 style={
                     styles.toolbar
@@ -2493,6 +2998,148 @@ export function AdminProducts({
                                                                     }
                                                                 />
                                                             </View>
+                                                        </View>
+
+                                                        <View>
+                                                            <Text
+                                                                style={{
+                                                                    color:
+                                                                        '#AAAAAA',
+                                                                    fontSize:
+                                                                        10,
+                                                                    marginBottom:
+                                                                        4,
+                                                                }}
+                                                            >
+                                                                Opciones disponibles
+                                                            </Text>
+
+                                                            <TouchableOpacity
+                                                                disabled={
+                                                                    isProcessing
+                                                                }
+                                                                onPress={() =>
+                                                                    setOptionSelectorGroupId(
+                                                                        group.id,
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    paddingVertical:
+                                                                        11,
+                                                                    paddingHorizontal:
+                                                                        12,
+                                                                    borderRadius:
+                                                                        8,
+                                                                    borderWidth:
+                                                                        1,
+                                                                    borderColor:
+                                                                        '#555555',
+                                                                    backgroundColor:
+                                                                        '#191919',
+                                                                    flexDirection:
+                                                                        'row',
+                                                                    alignItems:
+                                                                        'center',
+                                                                    justifyContent:
+                                                                        'space-between',
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#FFFFFF',
+                                                                        fontSize:
+                                                                            11,
+                                                                        fontWeight:
+                                                                            '700',
+                                                                    }}
+                                                                >
+                                                                    {getModifierOptionSummary(
+                                                                        group.id,
+                                                                    )}
+                                                                </Text>
+
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#FFBF00',
+                                                                        fontSize:
+                                                                            12,
+                                                                    }}
+                                                                >
+                                                                    ▼
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        </View>
+
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+
+                                                                alignItems:
+                                                                    'center',
+
+                                                                justifyContent:
+                                                                    'space-between',
+                                                            }}
+                                                        >
+                                                            <View
+                                                                style={{
+                                                                    flex:
+                                                                        1,
+
+                                                                    paddingRight:
+                                                                        12,
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#FFFFFF',
+
+                                                                        fontSize:
+                                                                            11,
+
+                                                                        fontWeight:
+                                                                            '800',
+                                                                    }}
+                                                                >
+                                                                    Permitir repetidos
+                                                                </Text>
+
+                                                                <Text
+                                                                    style={{
+                                                                        color:
+                                                                            '#777777',
+
+                                                                        fontSize:
+                                                                            9,
+
+                                                                        marginTop:
+                                                                            2,
+                                                                    }}
+                                                                >
+                                                                    Permite seleccionar varias veces la misma opción.
+                                                                </Text>
+                                                            </View>
+
+                                                            <Switch
+                                                                value={
+                                                                    config.allowDuplicates
+                                                                }
+                                                                onValueChange={(
+                                                                    value,
+                                                                ) =>
+                                                                    updateModifierGroupConfig(
+                                                                        group.id,
+                                                                        {
+                                                                            allowDuplicates:
+                                                                                value,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            />
                                                         </View>
 
                                                         <View

@@ -26,9 +26,6 @@ import {
   ProductConfigurationResult,
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
 import {
-  useModifiers,
-} from '../../hooks/useModifiers';
-import {
   createKitchenOrder,
   updateKitchenOrder,
 } from '../../services/orders';
@@ -197,26 +194,6 @@ export function POSScreen({
       id: string;
       fingerprint: string;
     } | null>(null);
-  const {
-    meats,
-    sauces,
-    isLoading:
-    areModifiersLoading,
-    error:
-    modifiersError,
-    fetchModifiers,
-  } = useModifiers();
-  useEffect(() => {
-    if (
-      modifiersVersion <= 0
-    ) {
-      return;
-    }
-    void fetchModifiers();
-  }, [
-    modifiersVersion,
-    fetchModifiers,
-  ]);
   const [
     isDeliveryModalVisible,
     setIsDeliveryModalVisible,
@@ -1112,18 +1089,6 @@ export function POSScreen({
         }
         notes={
           productNotes
-        }
-        meats={
-          meats
-        }
-        sauces={
-          sauces
-        }
-        isLoading={
-          areModifiersLoading
-        }
-        error={
-          modifiersError
         }
         onNotesChange={
           setProductNotes

@@ -23,6 +23,8 @@ export interface SaveProductModifierGroupInput {
 
   maxSelections: number;
 
+  allowDuplicates: boolean;
+
   position: number;
 
   isActive?: boolean;
@@ -100,6 +102,9 @@ export async function saveProductModifierGroup(
 
     maxSelections:
       input.maxSelections,
+
+    allowDuplicates:
+      input.allowDuplicates,
 
     position:
       input.position,
@@ -192,6 +197,9 @@ export async function saveProductModifierGroups(
 
           maxSelections:
             group.maxSelections,
+
+          allowDuplicates:
+            group.allowDuplicates,
 
           position:
             group.position,

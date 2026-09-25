@@ -19,6 +19,8 @@ export interface ProductModifierGroup {
 
   maxSelections: number;
 
+  allowDuplicates: boolean;
+
   position: number;
 
   isActive: boolean;
@@ -39,6 +41,8 @@ interface ProductModifierGroupDatabaseRecord {
   min_selections: number;
 
   max_selections: number;
+
+  allow_duplicates: boolean;
 
   position: number;
 
@@ -77,6 +81,8 @@ export interface UpsertProductModifierGroupData {
 
   maxSelections: number;
 
+  allowDuplicates: boolean;
+
   position: number;
 
   isActive: boolean;
@@ -89,6 +95,7 @@ const PRODUCT_MODIFIER_GROUP_SELECT = `
   is_required,
   min_selections,
   max_selections,
+  allow_duplicates,
   position,
   is_active,
   modifier_group:modifier_groups!product_modifier_groups_modifier_group_id_fkey(
@@ -132,6 +139,9 @@ function mapRecord(
 
     maxSelections:
       record.max_selections,
+
+    allowDuplicates:
+      record.allow_duplicates,
 
     position:
       record.position,
@@ -309,6 +319,9 @@ export async function upsertProductModifierGroup(
         max_selections:
           input.maxSelections,
 
+        allow_duplicates:
+          input.allowDuplicates,
+
         position:
           input.position,
 
@@ -425,6 +438,9 @@ export async function replaceProductModifierGroups(
 
         max_selections:
           group.maxSelections,
+
+        allow_duplicates:
+          group.allowDuplicates,
 
         position:
           group.position,

@@ -13,6 +13,12 @@ import {
 } from 'react-native';
 
 import {
+  ComboRecipe,
+  ComboRecipeComponent,
+  ComboProductOption,
+} from '../../domain/entities/ComboRecipe';
+
+import {
   Product,
   SelectedModifier,
 } from '../../types';
@@ -20,6 +26,10 @@ import {
 import {
   ComboComponentSelection,
 } from '../../types/combo';
+
+import {
+  getComboRecipeByProductId,
+} from '../../services/comboService';
 
 import {
   getAvailableModifiersByGroupId,
@@ -34,12 +44,6 @@ import {
 import {
   WeeklySauce,
 } from '../../services/weeklySauceService';
-import {
-  ComboProductOption,
-  ComboRecipe,
-  ComboRecipeComponent,
-} from '../../domain/entities/ComboRecipe';
-import { getComboRecipeByProductId } from '../../services/comboService';
 
 export interface ComboConfiguratorSelection {
   components: ComboComponentSelection[];
@@ -544,8 +548,16 @@ export const ComboConfigurator: React.FC<
                       name: modifier.name,
                       extra_price:
                         modifier.extra_price,
-                      group_name:
-                        modifier.group_name,
+                      group_id:
+                        modifier.group_id,
+                      group:
+                        modifier.group
+                          ? {
+                              id: modifier.group.id,
+                              code: modifier.group.code,
+                              name: modifier.group.name,
+                            }
+                          : null,
                       is_available:
                         modifier.is_available,
                     }),
@@ -680,6 +692,48 @@ export const ComboConfigurator: React.FC<
             ...componentSelections,
             [group.modifierGroupId]:
               nextSelections,
+          },
+        };
+      },
+    );
+  }
+
+  function duplicateModifier(
+    componentId: string,
+    group: ProductModifierGroup,
+    modifierId: string,
+  ): void {
+    if (!group.allowDuplicates) {
+      return;
+    }
+
+    setSelectedModifierIdsByComponent(
+      current => {
+        const componentSelections =
+          current[
+            componentId
+          ] ?? {};
+
+        const currentSelections =
+          componentSelections[
+            group.modifierGroupId
+          ] ?? [];
+
+        if (
+          currentSelections.length >=
+          group.maxSelections
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [componentId]: {
+            ...componentSelections,
+            [group.modifierGroupId]: [
+              ...currentSelections,
+              modifierId,
+            ],
           },
         };
       },
@@ -1032,10 +1086,16 @@ export const ComboConfigurator: React.FC<
                 ) : (
                   modifiers.map(
                     modifier => {
+                      const selectedCountForModifier =
+                        selectedIds.filter(
+                          id =>
+                            id ===
+                            modifier.id,
+                        ).length;
+
                       const isSelected =
-                        selectedIds.includes(
-                          modifier.id,
-                        );
+                        selectedCountForModifier >
+                        0;
 
                       const isWeeklySauce =
                         weeklySauce
@@ -1088,6 +1148,10 @@ export const ComboConfigurator: React.FC<
                               ? '🌶️ '
                               : ''}
                             {modifier.name}
+                            {selectedCountForModifier >
+                              1
+                              ? ` (x${selectedCountForModifier})`
+                              : ''}
                           </Text>
 
                           {isWeeklySauce &&
@@ -1103,6 +1167,40 @@ export const ComboConfigurator: React.FC<
                                   2,
                                 )}
                               </Text>
+                            )}
+
+                          {group.allowDuplicates &&
+                            isSelected &&
+                            selectedIds.length <
+                              group.maxSelections && (
+                              <TouchableOpacity
+                                onPress={() =>
+                                  duplicateModifier(
+                                    component.id,
+                                    group,
+                                    modifier.id,
+                                  )
+                                }
+                                style={{
+                                  marginTop: 6,
+                                  paddingVertical: 5,
+                                  paddingHorizontal: 8,
+                                  borderRadius: 6,
+                                  borderWidth: 1,
+                                  borderColor: '#777777',
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: '#FFFFFF',
+                                    fontSize: 10,
+                                    fontWeight: '700',
+                                    textAlign: 'center',
+                                  }}
+                                >
+                                  + Agregar otra
+                                </Text>
+                              </TouchableOpacity>
                             )}
                         </TouchableOpacity>
                       );

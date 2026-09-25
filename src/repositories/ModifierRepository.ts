@@ -6,17 +6,6 @@ import {
   Modifier,
 } from '../types';
 
-/**
- * Valor legacy.
- * Se conserva temporalmente mientras terminamos
- * de migrar toda la app a modifier_groups.
- */
-export type ModifierGroup =
-  | 'Carne'
-  | 'Salsa'
-  | 'Sabor'
-  | null;
-
 export type ModifierGroupCode =
   | 'meat'
   | 'sauce'
@@ -60,9 +49,6 @@ interface ModifierDatabaseRecord {
 
   is_available: boolean;
 
-  group_name:
-    ModifierGroup;
-
   group_id:
     | string
     | null;
@@ -84,12 +70,6 @@ export interface CreateModifierData {
   groupId:
     | string
     | null;
-
-  /**
-   * Campo legacy temporal.
-   */
-  groupName:
-    ModifierGroup;
 }
 
 export interface UpdateModifierData {
@@ -99,9 +79,6 @@ export interface UpdateModifierData {
   groupId:
     | string
     | null;
-
-  groupName:
-    ModifierGroup;
 
   isAvailable: boolean;
 }
@@ -123,7 +100,6 @@ const MODIFIER_SELECT = `
   name,
   extra_price,
   is_available,
-  group_name,
   group_id,
   group:modifier_groups!modifiers_group_id_fkey(
     id,
@@ -200,12 +176,6 @@ function mapModifier(
 
     is_available:
       modifier.is_available,
-
-    /**
-     * Legacy.
-     */
-    group_name:
-      modifier.group_name,
 
     /**
      * Nueva estructura.
@@ -513,9 +483,6 @@ export async function insertModifier(
       group_id:
         modifierData.groupId,
 
-      group_name:
-        modifierData.groupName,
-
       is_available:
         true,
     })
@@ -560,9 +527,6 @@ export async function updateModifierById(
 
       group_id:
         modifierData.groupId,
-
-      group_name:
-        modifierData.groupName,
 
       is_available:
         modifierData.isAvailable,

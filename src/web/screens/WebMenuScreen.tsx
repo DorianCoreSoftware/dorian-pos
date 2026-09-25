@@ -19,9 +19,6 @@ import {
   ProductConfigurationResult,
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
 import {
-  useModifiers,
-} from '../../hooks/useModifiers';
-import {
   getActiveCategories,
 } from '../../services/categoryService';
 import {
@@ -75,6 +72,11 @@ import {
 } from '../utils/webOrderHistory';
 import styles from './WebMenuScreen.styles';
 import { WebFeedbackModal } from '../components/WebFeedbackModal';
+
+interface WebMenuScreenProps {
+  onRewardsPress?: () => void;
+}
+
 function getColumns(
   width: number,
 ): number {
@@ -230,11 +232,6 @@ function getBusinessAvailabilityText(
   }
   return schedule;
 }
-
-interface WebMenuScreenProps {
-  onRewardsPress?: () => void;
-}
-
 export default function WebMenuScreen({
   onRewardsPress,
 }: WebMenuScreenProps) {
@@ -362,14 +359,6 @@ export default function WebMenuScreen({
       id: string;
       fingerprint: string;
     } | null>(null);
-  const {
-    meats,
-    sauces,
-    isLoading:
-    areModifiersLoading,
-    error:
-    modifiersError,
-  } = useModifiers();
   const visibleCategories =
     useMemo(() => {
       const hiddenCategoryNames =
@@ -1386,18 +1375,6 @@ export default function WebMenuScreen({
         }
         notes={
           productNotes
-        }
-        meats={
-          meats
-        }
-        sauces={
-          sauces
-        }
-        isLoading={
-          areModifiersLoading
-        }
-        error={
-          modifiersError
         }
         onNotesChange={
           setProductNotes

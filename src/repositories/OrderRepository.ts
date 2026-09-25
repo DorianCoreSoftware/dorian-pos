@@ -104,7 +104,12 @@ export interface PendingOrderModifierRelation {
     name: string;
     extra_price: string | number;
     is_available: boolean;
-    group_name: 'Carne' | 'Salsa' | 'Sabor' | null;
+    group_id: string | null;
+    group: {
+      id: string;
+      code: string;
+      name: string;
+    } | null;
   } | null;
 }
 
@@ -308,13 +313,27 @@ export async function fetchPendingOrders(): Promise<
         *,
         products(*),
         order_item_modifiers(
-          modifiers(*)
+          modifiers(
+            *,
+            group:modifier_groups!modifiers_group_id_fkey(
+              id,
+              code,
+              name
+            )
+          )
         ),
         order_item_components(
           *,
           products(*),
           order_item_component_modifiers(
-            modifiers(*)
+            modifiers(
+              *,
+              group:modifier_groups!modifiers_group_id_fkey(
+                id,
+                code,
+                name
+              )
+            )
           )
         )
       )
@@ -364,13 +383,27 @@ export async function fetchOrderById(
           *,
           products(*),
           order_item_modifiers(
-            modifiers(*)
+            modifiers(
+              *,
+              group:modifier_groups!modifiers_group_id_fkey(
+                id,
+                code,
+                name
+              )
+            )
           ),
           order_item_components(
             *,
             products(*),
             order_item_component_modifiers(
-              modifiers(*)
+              modifiers(
+                *,
+                group:modifier_groups!modifiers_group_id_fkey(
+                  id,
+                  code,
+                  name
+                )
+              )
             )
           )
         )

@@ -46,8 +46,14 @@ interface ActiveWeeklySauceRow {
 export async function getAvailableSauces(): Promise<SauceOption[]> {
   const { data, error } = await supabase
     .from('modifiers')
-    .select('id, name')
-    .eq('group_name', 'Salsa')
+    .select(`
+      id,
+      name,
+      group:modifier_groups!inner(
+        code
+      )
+    `)
+    .eq('group.code', 'sauce')
     .eq('is_available', true)
     .order('name', { ascending: true });
 

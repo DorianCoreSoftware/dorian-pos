@@ -57,9 +57,12 @@ import {
   getOrderTrackingCode,
 } from '../../Utils/orderTracking';
 
+
+
 import {
   styles,
 } from '../../../App.styles';
+import { getModifierGroupLabel } from '../../Utils/modifierGroup';
 
 interface KitchenProps {
   pendingOrders:
@@ -745,7 +748,13 @@ export function KitchenScreen({
                       .slot_id ??
                     component.id,
 
-                  type: component.component_type,
+                  type:
+                    component
+                      .component_type as
+                    | 'burger'
+                    | 'hotdog'
+                    | 'side'
+                    | 'drink',
 
                   label:
                     component.label,
@@ -952,8 +961,12 @@ export function KitchenScreen({
               •{' '}
               {modifier.name}
 
-              {modifier.group_name
-                ? ` (${modifier.group_name})`
+              {getModifierGroupLabel(
+                modifier,
+              )
+                ? ` (${getModifierGroupLabel(
+                    modifier,
+                  )})`
                 : ''}
             </Text>
           ),
@@ -1042,8 +1055,12 @@ export function KitchenScreen({
                     •{' '}
                     {modifier.name}
 
-                    {modifier.group_name
-                      ? ` (${modifier.group_name})`
+                    {getModifierGroupLabel(
+                      modifier,
+                    )
+                      ? ` (${getModifierGroupLabel(
+                          modifier,
+                        )})`
                       : ''}
                   </Text>
                 ),

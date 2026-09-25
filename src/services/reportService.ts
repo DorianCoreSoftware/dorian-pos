@@ -92,9 +92,9 @@ interface ModifierSalesReportRow {
 }
 
 export type ModifierReportGroup =
-  | 'Salsa'
-  | 'Sabor'
-  | 'Carne';
+  | 'sauce'
+  | 'drink_flavor'
+  | 'meat';
 
 /**
  * Obtiene el resumen general del periodo:
@@ -238,13 +238,13 @@ export async function getProductSalesReport(
  * dentro del rango seleccionado.
  *
  * Puede filtrar por:
- * - Salsa
- * - Sabor
- * - Carne
+ * - sauce
+ * - drink_flavor
+ * - meat
  *
  * Si no se manda group,
  * devuelve todos los modificadores
- * que tengan group_name.
+ * que tengan un modifier_group asociado.
  */
 export async function getModifierSalesReport(
   from: Date,
@@ -305,8 +305,7 @@ export async function getModifierSalesReport(
 }
 
 /**
- * Helpers para no repetir
- * el group_name por toda la app.
+ * Helpers de reportes por código de grupo.
  */
 export function getSauceSalesReport(
   from: Date,
@@ -315,7 +314,7 @@ export function getSauceSalesReport(
   return getModifierSalesReport(
     from,
     to,
-    'Salsa',
+    'sauce',
   );
 }
 
@@ -326,7 +325,7 @@ export function getFlavorSalesReport(
   return getModifierSalesReport(
     from,
     to,
-    'Sabor',
+    'drink_flavor',
   );
 }
 
@@ -337,7 +336,7 @@ export function getMeatSalesReport(
   return getModifierSalesReport(
     from,
     to,
-    'Carne',
+    'meat',
   );
 }
 

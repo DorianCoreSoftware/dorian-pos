@@ -23,7 +23,9 @@ import {
   getAvailableModifiersByGroupId,
   ModifierWithGroup,
 } from '../../services/modifierService';
-
+import {
+  hasActiveComboRecipe,
+} from '../../services/comboService';
 import {
   getActiveProductModifierGroups,
   ProductModifierGroup,
@@ -32,10 +34,7 @@ import {
   getActiveWeeklySauce,
   WeeklySauce,
 } from '../../services/weeklySauceService';
-import {
-  getAvailableProductFlavors,
-  ProductFlavor,
-} from '../../services/productFlavorService';
+
 import {
   styles,
 } from '../modifier-modal/ModifierModal.styles';
@@ -43,7 +42,7 @@ import {
   ComboConfigurator,
   ComboConfiguratorSelection,
 } from './ComboConfigurator';
-import { hasActiveComboRecipe } from '../../services/comboService';
+import { getAvailableProductModifierOptions } from '../../services/productModifierOptionService';
 export interface ProductConfigurationResult {
   selectedModifiers: SelectedModifier[];
   comboComponents: ComboComponentSelection[];
@@ -52,10 +51,6 @@ interface ProductConfiguratorModalProps {
   visible: boolean;
   product: Product | null;
   notes: string;
-  meats: SelectedModifier[];
-  sauces: SelectedModifier[];
-  isLoading: boolean;
-  error: string | null;
   onNotesChange: (
     text: string,
   ) => void;
@@ -72,10 +67,6 @@ export const ProductConfiguratorModal:
     visible,
     product,
     notes,
-    meats,
-    sauces,
-    isLoading,
-    error,
     onNotesChange,
     onClose,
     onConfirm,
@@ -90,34 +81,6 @@ export const ProductConfiguratorModal:
       width < 430;
     const isShortScreen =
       height < 700;
-    const [
-      selectedMeatIds,
-      setSelectedMeatIds,
-    ] = useState<string[]>([]);
-    const [
-      selectedSauceIds,
-      setSelectedSauceIds,
-    ] = useState<string[]>([]);
-    const [
-      productFlavors,
-      setProductFlavors,
-    ] = useState<ProductFlavor[]>([]);
-    const [
-      selectedFlavorId,
-      setSelectedFlavorId,
-    ] = useState<
-      string | null
-    >(null);
-    const [
-      areFlavorsLoading,
-      setAreFlavorsLoading,
-    ] = useState(false);
-    const [
-      flavorsError,
-      setFlavorsError,
-    ] = useState<
-      string | null
-    >(null);
     const [
       productModifierGroups,
       setProductModifierGroups,
@@ -172,229 +135,76 @@ export const ProductConfiguratorModal:
     ] = useState<
       string | null
     >(null);
-    const meatGroupAssociation =
-      useMemo(
-        () =>
-          productModifierGroups.find(
-            association =>
-              association.group
-                ?.code ===
-              'meat',
-          ) ?? null,
-        [
-          productModifierGroups,
-        ],
-      );
-    const sauceGroupAssociation =
-      useMemo(
-        () =>
-          productModifierGroups.find(
-            association =>
-              association.group
-                ?.code ===
-              'sauce',
-          ) ?? null,
-        [
-          productModifierGroups,
-        ],
-      );
-    const minimumMeats =
-      meatGroupAssociation
-        ?.minSelections ??
-      0;
-    const maximumMeats =
-      meatGroupAssociation
-        ?.maxSelections ??
-      0;
-    const requiresMeat =
-      Boolean(
-        meatGroupAssociation &&
-        (
-          meatGroupAssociation
-            .isRequired ||
-          minimumMeats > 0
-        ),
-      );
-    const allowsMultipleMeats =
-      maximumMeats > 1;
-    const minimumSauces =
-      sauceGroupAssociation
-        ?.minSelections ??
-      0;
-    const maximumSauces =
-      sauceGroupAssociation
-        ?.maxSelections ??
-      0;
-    const requiresSauce =
-      Boolean(
-        sauceGroupAssociation &&
-        (
-          sauceGroupAssociation
-            .isRequired ||
-          minimumSauces > 0
-        ),
-      );
     const notesPlaceholder =
       'Ej: Indicaciones especiales para tu producto...';
-    /**
-     * Estos grupos son los que todavía maneja
-     * el configurador legacy para no duplicarlos.
-     *
-     * Cualquier otro grupo asociado al producto
-     * se renderiza de forma genérica.
-     */
-    const genericProductModifierGroups =
+
+    const configurableProductModifierGroups =
       useMemo(
-        () =>
-          productModifierGroups.filter(
-            association => {
-              const code =
-                association.group
-                  ?.code;
-              return (
-                code !== 'meat' &&
-                code !== 'sauce' &&
-                code !== 'drink_flavor'
-              );
-            },
-          ),
-        [
-          productModifierGroups,
-        ],
+        () => productModifierGroups,
+        [productModifierGroups],
       );
+
     const selectedModifiers =
       useMemo<
         SelectedModifier[]
       >(() => {
-        const selectedMeats =
-          selectedMeatIds
-            .map(
-              (modifierId) =>
-                meats.find(
+        return configurableProductModifierGroups
+          .flatMap(
+            association => {
+              const selectedIds =
+                selectedModifierIdsByGroup[
+                  association.modifierGroupId
+                ] ?? [];
+
+              const availableModifiers =
+                modifiersByGroup[
+                  association.modifierGroupId
+                ] ?? [];
+
+              return selectedIds
+                .map(
+                  modifierId =>
+                    availableModifiers.find(
+                      modifier =>
+                        modifier.id ===
+                        modifierId,
+                    ),
+                )
+                .filter(
                   (
                     modifier,
-                  ) =>
-                    modifier.id ===
-                    modifierId,
-                ),
-            )
-            .filter(
-              (
-                modifier,
-              ): modifier is SelectedModifier =>
-                modifier !==
-                undefined,
-            );
-        const selectedSauces =
-          selectedSauceIds
-            .map(
-              (modifierId) =>
-                sauces.find(
-                  (
-                    modifier,
-                  ) =>
-                    modifier.id ===
-                    modifierId,
-                ),
-            )
-            .filter(
-              (
-                modifier,
-              ): modifier is SelectedModifier =>
-                modifier !==
-                undefined,
-            );
-        const selectedFlavor =
-          selectedFlavorId
-            ? productFlavors.find(
-              (flavor) =>
-                flavor.id ===
-                selectedFlavorId,
-            )
-            : undefined;
-        const flavorModifier:
-          SelectedModifier | null =
-          selectedFlavor
-            ? {
-              id:
-                selectedFlavor
-                  .modifierId,
-              name:
-                selectedFlavor.name,
-              extra_price:
-                '0.00',
-              group_name:
-                'Sabor',
-              is_available:
-                selectedFlavor
-                  .isAvailable,
-            }
-            : null;
-        const genericModifiers =
-          genericProductModifierGroups
-            .flatMap(
-              association => {
-                const selectedIds =
-                  selectedModifierIdsByGroup[
-                    association.modifierGroupId
-                  ] ?? [];
-                const availableModifiers =
-                  modifiersByGroup[
-                    association.modifierGroupId
-                  ] ?? [];
-                return selectedIds
-                  .map(
-                    modifierId =>
-                      availableModifiers.find(
-                        modifier =>
-                          modifier.id ===
-                          modifierId,
-                      ),
-                  )
-                  .filter(
-                    (
-                      modifier,
-                    ): modifier is ModifierWithGroup =>
-                      modifier !==
-                      undefined,
-                  )
-                  .map(
-                    modifier => ({
-                      id:
-                        modifier.id,
-                      name:
-                        modifier.name,
-                      extra_price:
-                        modifier.extra_price,
-                      group_name:
-                        modifier.group_name,
-                      is_available:
-                        modifier.is_available,
-                    }) as SelectedModifier,
-                  );
-              },
-            );
-        return [
-          ...selectedMeats,
-          ...selectedSauces,
-          ...genericModifiers,
-          ...(flavorModifier
-            ? [
-              flavorModifier,
-            ]
-            : []),
-        ];
+                  ): modifier is ModifierWithGroup =>
+                    modifier !==
+                    undefined,
+                )
+                .map(
+                  modifier => ({
+                    id: modifier.id,
+                    name: modifier.name,
+                    extra_price:
+                      modifier.extra_price,
+                    group_id:
+                      modifier.group_id,
+                    group:
+                      modifier.group
+                        ? {
+                            id: modifier.group.id,
+                            code: modifier.group.code,
+                            name: modifier.group.name,
+                          }
+                        : null,
+                    is_available:
+                      modifier.is_available,
+                  }) as SelectedModifier,
+                );
+            },
+          );
       }, [
-        selectedMeatIds,
-        selectedSauceIds,
-        selectedFlavorId,
-        productFlavors,
-        meats,
-        sauces,
-        genericProductModifierGroups,
+        configurableProductModifierGroups,
         selectedModifierIdsByGroup,
         modifiersByGroup,
       ]);
+
     const isSelectionValid =
       useMemo(() => {
         if (
@@ -405,6 +215,7 @@ export const ProductConfiguratorModal:
         ) {
           return false;
         }
+
         if (isCombo) {
           return (
             comboSelection
@@ -412,62 +223,17 @@ export const ProductConfiguratorModal:
             false
           );
         }
+
         if (
-          isLoading ||
-          error ||
-          areFlavorsLoading ||
-          flavorsError ||
           areProductGroupsLoading ||
           productGroupsError
         ) {
           return false;
         }
-        if (
-          meatGroupAssociation &&
-          (
-            selectedMeatIds.length <
-              minimumMeats ||
-            selectedMeatIds.length >
-              maximumMeats
-          )
-        ) {
-          return false;
-        }
-        if (
-          requiresMeat &&
-          selectedMeatIds.length ===
-          0
-        ) {
-          return false;
-        }
-        if (
-          sauceGroupAssociation &&
-          (
-            selectedSauceIds.length <
-              minimumSauces ||
-            selectedSauceIds.length >
-              maximumSauces
-          )
-        ) {
-          return false;
-        }
-        if (
-          requiresSauce &&
-          selectedSauceIds.length ===
-          0
-        ) {
-          return false;
-        }
-        if (
-          productFlavors.length >
-          0 &&
-          !selectedFlavorId
-        ) {
-          return false;
-        }
+
         for (
           const association of
-          genericProductModifierGroups
+          configurableProductModifierGroups
         ) {
           const selectedCount =
             (
@@ -475,26 +241,30 @@ export const ProductConfiguratorModal:
                 association.modifierGroupId
               ] ?? []
             ).length;
+
+          const minimum =
+            association.isRequired
+              ? Math.max(
+                  1,
+                  association.minSelections,
+                )
+              : association.minSelections;
+
           if (
             selectedCount <
-            association.minSelections
+            minimum
           ) {
             return false;
           }
+
           if (
             selectedCount >
             association.maxSelections
           ) {
             return false;
           }
-          if (
-            association.isRequired &&
-            selectedCount ===
-            0
-          ) {
-            return false;
-          }
         }
+
         return true;
       }, [
         product?.id,
@@ -502,27 +272,12 @@ export const ProductConfiguratorModal:
         comboDetectionError,
         isCombo,
         comboSelection,
-        isLoading,
-        error,
-        areFlavorsLoading,
-        flavorsError,
-        meatGroupAssociation,
-        minimumMeats,
-        maximumMeats,
-        requiresMeat,
-        sauceGroupAssociation,
-        minimumSauces,
-        maximumSauces,
-        requiresSauce,
-        selectedMeatIds,
-        selectedSauceIds,
-        productFlavors,
-        selectedFlavorId,
         areProductGroupsLoading,
         productGroupsError,
-        genericProductModifierGroups,
+        configurableProductModifierGroups,
         selectedModifierIdsByGroup,
       ]);
+
     useEffect(() => {
       if (
         !visible ||
@@ -597,16 +352,7 @@ export const ProductConfiguratorModal:
       if (!visible) {
         return;
       }
-      setSelectedMeatIds([]);
-      setSelectedSauceIds([]);
-      setSelectedFlavorId(
-        null,
-      );
-      setProductFlavors([]);
       setComboSelection(
-        null,
-      );
-      setFlavorsError(
         null,
       );
       setProductModifierGroups(
@@ -651,61 +397,6 @@ export const ProductConfiguratorModal:
             }
           }
         };
-      const loadProductFlavors =
-        async () => {
-          if (
-            !product?.id ||
-            comboCheckedProductId !==
-              product.id ||
-            isCombo
-          ) {
-            return;
-          }
-          try {
-            setAreFlavorsLoading(
-              true,
-            );
-            const flavors =
-              await getAvailableProductFlavors(
-                product.id,
-              );
-            if (
-              !isMounted
-            ) {
-              return;
-            }
-            setProductFlavors(
-              flavors,
-            );
-          } catch (
-          flavorLoadError
-          ) {
-            console.error(
-              'Error loading product flavors:',
-              flavorLoadError,
-            );
-            if (
-              !isMounted
-            ) {
-              return;
-            }
-            setFlavorsError(
-              flavorLoadError
-                instanceof Error
-                ? flavorLoadError
-                  .message
-                : 'No se pudieron cargar los sabores.',
-            );
-          } finally {
-            if (
-              isMounted
-            ) {
-              setAreFlavorsLoading(
-                false,
-              );
-            }
-          }
-        };
       const loadProductModifierGroups =
         async () => {
           if (
@@ -729,24 +420,11 @@ export const ProductConfiguratorModal:
             ) {
               return;
             }
-            const genericAssociations =
-              associations.filter(
-                association => {
-                  const code =
-                    association.group
-                      ?.code;
-                  return (
-                    code !== 'meat' &&
-                    code !== 'sauce' &&
-                    code !== 'drink_flavor'
-                  );
-                },
-              );
             setProductModifierGroups(
               associations,
             );
             if (
-              genericAssociations.length ===
+              associations.length ===
               0
             ) {
               setModifiersByGroup(
@@ -754,9 +432,16 @@ export const ProductConfiguratorModal:
               );
               return;
             }
-            const groupEntries =
-              await Promise.all(
-                genericAssociations.map(
+
+            const [
+              productOptions,
+              rawGroupEntries,
+            ] = await Promise.all([
+              getAvailableProductModifierOptions(
+                product.id,
+              ),
+              Promise.all(
+                associations.map(
                   async association => {
                     const modifiers =
                       await getAvailableModifiersByGroupId(
@@ -768,6 +453,46 @@ export const ProductConfiguratorModal:
                     ] as const;
                   },
                 ),
+              ),
+            ]);
+
+            const optionPositionByModifierId =
+              new Map(
+                productOptions.map(
+                  option => [
+                    option.modifierId,
+                    option.position,
+                  ] as const,
+                ),
+              );
+
+            const groupEntries =
+              rawGroupEntries.map(
+                ([groupId, modifiers]) => {
+                  const configured =
+                    modifiers
+                      .filter(modifier =>
+                        optionPositionByModifierId.has(
+                          modifier.id,
+                        ),
+                      )
+                      .sort(
+                        (left, right) =>
+                          (optionPositionByModifierId.get(
+                            left.id,
+                          ) ?? 0) -
+                          (optionPositionByModifierId.get(
+                            right.id,
+                          ) ?? 0),
+                      );
+
+                  return [
+                    groupId,
+                    configured.length > 0
+                      ? configured
+                      : modifiers,
+                  ] as const;
+                },
               );
             if (
               !isMounted
@@ -808,7 +533,6 @@ export const ProductConfiguratorModal:
           }
         };
       void loadWeeklySauce();
-      void loadProductFlavors();
       void loadProductModifierGroups();
       return () => {
         isMounted =
@@ -823,105 +547,6 @@ export const ProductConfiguratorModal:
     if (!product) {
       return null;
     }
-    const handleMeatPress = (
-      modifierId: string,
-    ): void => {
-      setSelectedMeatIds(
-        (
-          currentSelection,
-        ) => {
-          if (
-            currentSelection
-              .includes(
-                modifierId,
-              )
-          ) {
-            return currentSelection
-              .filter(
-                (id) =>
-                  id !==
-                  modifierId,
-              );
-          }
-          if (
-            maximumMeats ===
-            1
-          ) {
-            return [
-              modifierId,
-            ];
-          }
-          if (
-            currentSelection
-              .length >=
-            maximumMeats
-          ) {
-            return currentSelection;
-          }
-          return [
-            ...currentSelection,
-            modifierId,
-          ];
-        },
-      );
-    };
-    const handleDoubleMeat = (
-      modifierId: string,
-    ): void => {
-      setSelectedMeatIds(
-        (
-          currentSelection,
-        ) => {
-          if (
-            !allowsMultipleMeats ||
-            currentSelection
-              .length !==
-            1
-          ) {
-            return currentSelection;
-          }
-          return [
-            modifierId,
-            modifierId,
-          ];
-        },
-      );
-    };
-    const handleSaucePress = (
-      modifierId: string,
-    ): void => {
-      setSelectedSauceIds(
-        (
-          currentSelection,
-        ) => {
-          if (
-            currentSelection
-              .includes(
-                modifierId,
-              )
-          ) {
-            return currentSelection
-              .filter(
-                (id) =>
-                  id !==
-                  modifierId,
-              );
-          }
-          if (
-            maximumSauces <= 0 ||
-            currentSelection
-              .length >=
-            maximumSauces
-          ) {
-            return currentSelection;
-          }
-          return [
-            ...currentSelection,
-            modifierId,
-          ];
-        },
-      );
-    };
     const handleGenericModifierPress = (
       association:
         ProductModifierGroup,
@@ -977,6 +602,43 @@ export const ProductConfiguratorModal:
         },
       );
     };
+    const handleDuplicateModifier = (
+      association:
+        ProductModifierGroup,
+      modifierId: string,
+    ): void => {
+      if (
+        !association.allowDuplicates
+      ) {
+        return;
+      }
+
+      setSelectedModifierIdsByGroup(
+        current => {
+          const currentSelection =
+            current[
+              association.modifierGroupId
+            ] ?? [];
+
+          if (
+            currentSelection.length >=
+            association.maxSelections
+          ) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [association.modifierGroupId]:
+              [
+                ...currentSelection,
+                modifierId,
+              ],
+          };
+        },
+      );
+    };
+
     const handleConfirm =
       (): void => {
         if (
@@ -1008,17 +670,6 @@ export const ProductConfiguratorModal:
             [],
         });
       };
-    const selectedSingleMeat =
-      selectedMeatIds
-        .length === 1
-        ? meats.find(
-          (
-            modifier,
-          ) =>
-            modifier.id ===
-            selectedMeatIds[0],
-        )
-        : undefined;
     return (
       <Modal
         animationType="fade"
@@ -1118,20 +769,23 @@ export const ProductConfiguratorModal:
             >
               {isCombo
                 ? 'Configura los productos incluidos en el combo:'
-                : requiresMeat
-                  ? maximumMeats > 1
-                    ? `Selecciona entre ${minimumMeats || 1} y ${maximumMeats} opciones de ${meatGroupAssociation?.group?.name ?? 'este grupo'}:`
-                    : `Selecciona ${meatGroupAssociation?.group?.name ?? 'la opción'} obligatoria:`
-                  : sauceGroupAssociation
-                    ? maximumSauces > 1
-                      ? `Selecciona entre ${minimumSauces} y ${maximumSauces} opciones de ${sauceGroupAssociation.group?.name ?? 'este grupo'}:`
-                      : requiresSauce
-                        ? `Selecciona ${sauceGroupAssociation.group?.name ?? 'la opción'} obligatoria:`
-                        : `Selecciona ${sauceGroupAssociation.group?.name ?? 'una opción'} si lo deseas:`
-                    : ''}
+                : productModifierGroups.length > 0
+                  ? 'Selecciona las opciones para este producto:'
+                  : 'Agrega indicaciones si lo necesitas:'}
             </Text>
             {weeklySauce &&
-              sauceGroupAssociation && (
+              configurableProductModifierGroups.some(
+                association =>
+                  (
+                    modifiersByGroup[
+                      association.modifierGroupId
+                    ] ?? []
+                  ).some(
+                    modifier =>
+                      modifier.id ===
+                      weeklySauce.modifier_id,
+                  ),
+              ) && (
                 <View
                   style={{
                     marginTop: 10,
@@ -1202,41 +856,6 @@ export const ProductConfiguratorModal:
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              {comboCheckedProductId === product.id && !isCombo &&
-                isLoading && (
-                  <View
-                    style={
-                      styles
-                        .loadingContainer
-                    }
-                  >
-                    <ActivityIndicator
-                      size="large"
-                      color="#FFBF00"
-                    />
-                    <Text
-                      style={
-                        styles
-                          .loadingText
-                      }
-                    >
-                      Cargando
-                      opciones...
-                    </Text>
-                  </View>
-                )}
-              {comboCheckedProductId === product.id && !isCombo &&
-                !isLoading &&
-                error && (
-                  <Text
-                    style={
-                      styles
-                        .errorText
-                    }
-                  >
-                    {error}
-                  </Text>
-                )}
               {comboCheckedProductId === product.id && isCombo && (
                 <ComboConfigurator
                   product={
@@ -1250,474 +869,6 @@ export const ProductConfiguratorModal:
                   }
                 />
               )}
-              {!isLoading &&
-                !error &&
-                meatGroupAssociation && (
-                  <View
-                    style={
-                      styles
-                        .requiredSection
-                    }
-                  >
-                    <Text
-                      style={
-                        styles
-                          .sectionLabel
-                      }
-                    >
-                      {meatGroupAssociation
-                        ?.group
-                        ?.name ??
-                        'Opciones'}{' '}
-                      {requiresMeat
-                        ? '* '
-                        : ''}
-                      {maximumMeats > 1
-                        ? `(Selecciona de ${minimumMeats} a ${maximumMeats})`
-                        : requiresMeat
-                          ? '(Obligatorio)'
-                          : '(Opcional)'}
-                    </Text>
-                    <View
-                      style={[
-                        styles
-                          .optionsContainerHorizontal,
-                        isPhone &&
-                        styles
-                          .optionsContainerPhone,
-                      ]}
-                    >
-                      {meats.map(
-                        (
-                          modifier,
-                        ) => {
-                          const selectedCount =
-                            selectedMeatIds
-                              .filter(
-                                (
-                                  id,
-                                ) =>
-                                  id ===
-                                  modifier.id,
-                              )
-                              .length;
-                          const isSelected =
-                            selectedCount >
-                            0;
-                          return (
-                            <TouchableOpacity
-                              key={
-                                modifier.id
-                              }
-                              style={[
-                                styles
-                                  .optionButtonChip,
-                                isPhone
-                                  ? styles
-                                    .optionButtonChipPhone
-                                  : styles
-                                    .optionButtonChipTablet,
-                                isSelected &&
-                                styles
-                                  .optionButtonSelected,
-                              ]}
-                              onPress={() =>
-                                handleMeatPress(
-                                  modifier.id,
-                                )
-                              }
-                              activeOpacity={
-                                0.8
-                              }
-                            >
-                              <Text
-                                style={[
-                                  styles
-                                    .optionText,
-                                  isPhone &&
-                                  styles
-                                    .optionTextPhone,
-                                  isSelected &&
-                                  styles
-                                    .optionTextSelected,
-                                ]}
-                              >
-                                {
-                                  modifier.name
-                                }
-                                {selectedCount >
-                                  1
-                                  ? ` (x${selectedCount})`
-                                  : ''}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        },
-                      )}
-                    </View>
-                    {allowsMultipleMeats &&
-                      selectedSingleMeat && (
-                        <TouchableOpacity
-                          style={
-                            styles
-                              .doubleMeatButton
-                          }
-                          onPress={() =>
-                            handleDoubleMeat(
-                              selectedSingleMeat.id,
-                            )
-                          }
-                        >
-                          <Text
-                            style={
-                              styles
-                                .doubleMeatText
-                            }
-                          >
-                            Duplicar{' '}
-                            {
-                              selectedSingleMeat
-                                .name
-                            }
-                            ?
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                  </View>
-                )}
-              {!isLoading &&
-                !error &&
-                sauceGroupAssociation && (
-                  <View
-                    style={
-                      styles
-                        .requiredSection
-                    }
-                  >
-                    <Text
-                      style={
-                        styles
-                          .sectionLabel
-                      }
-                    >
-                      {
-                        sauceGroupAssociation
-                          .group?.name ??
-                        'Opciones'
-                      }{' '}
-                      {requiresSauce
-                        ? '*'
-                        : ''}{' '}
-                      {maximumSauces > 1
-                        ? `(Selecciona de ${minimumSauces} a ${maximumSauces})`
-                        : requiresSauce
-                          ? '(Obligatorio)'
-                          : '(Opcional)'}
-                    </Text>
-                    <Text
-                      style={{
-                        color:
-                          '#AAAAAA',
-                        fontSize:
-                          12,
-                        marginBottom:
-                          8,
-                      }}
-                    >
-                      {
-                        selectedSauceIds
-                          .length
-                      }
-                      /
-                      {
-                        maximumSauces
-                      }{' '}
-                      seleccionadas
-                    </Text>
-                    <View
-                      style={[
-                        styles
-                          .optionsContainerHorizontal,
-                        isPhone &&
-                        styles
-                          .optionsContainerPhone,
-                      ]}
-                    >
-                      {sauces.map(
-                        (
-                          modifier,
-                        ) => {
-                          const isSelected =
-                            selectedSauceIds
-                              .includes(
-                                modifier.id,
-                              );
-                          const isWeeklySauce =
-                            weeklySauce
-                              ?.modifier_id ===
-                            modifier.id;
-                          return (
-                            <TouchableOpacity
-                              key={
-                                modifier.id
-                              }
-                              style={[
-                                styles
-                                  .optionButtonChip,
-                                isPhone
-                                  ? styles
-                                    .optionButtonChipPhone
-                                  : styles
-                                    .optionButtonChipTablet,
-                                {
-                                  flexBasis:
-                                    isPhone
-                                      ? '100%'
-                                      : '48%',
-                                  flexGrow:
-                                    1,
-                                  flexShrink:
-                                    1,
-                                  minHeight:
-                                    46,
-                                  justifyContent:
-                                    'center',
-                                  alignItems:
-                                    'center',
-                                  paddingHorizontal:
-                                    10,
-                                },
-                                isSelected &&
-                                styles
-                                  .optionButtonSelected,
-                                isWeeklySauce && {
-                                  borderColor:
-                                    '#FFBF00',
-                                  borderWidth:
-                                    2,
-                                },
-                              ]}
-                              onPress={() =>
-                                handleSaucePress(
-                                  modifier.id,
-                                )
-                              }
-                              activeOpacity={
-                                0.8
-                              }
-                            >
-                              <Text
-                                numberOfLines={
-                                  2
-                                }
-                                style={[
-                                  styles
-                                    .optionText,
-                                  {
-                                    width:
-                                      '100%',
-                                    textAlign:
-                                      'center',
-                                  },
-                                  isPhone &&
-                                  styles
-                                    .optionTextPhone,
-                                  isSelected &&
-                                  styles
-                                    .optionTextSelected,
-                                  isWeeklySauce && {
-                                    color:
-                                      '#FFBF00',
-                                    fontWeight:
-                                      '900',
-                                  },
-                                ]}
-                              >
-                                {isWeeklySauce
-                                  ? '🌶️ '
-                                  : ''}
-                                {
-                                  modifier.name
-                                }
-                              </Text>
-                              {isWeeklySauce && (
-                                <Text
-                                  style={{
-                                    color:
-                                      '#D6C98A',
-                                    fontSize:
-                                      9,
-                                    fontWeight:
-                                      '800',
-                                    marginTop:
-                                      3,
-                                    textAlign:
-                                      'center',
-                                  }}
-                                >
-                                  Ahorra
-                                  $
-                                  {weeklySauce
-                                    .discount_amount
-                                    .toFixed(
-                                      2,
-                                    )}
-                                </Text>
-                              )}
-                            </TouchableOpacity>
-                          );
-                        },
-                      )}
-                    </View>
-                  </View>
-                )}
-              {comboCheckedProductId === product.id && !isCombo &&
-                areFlavorsLoading && (
-                  <View
-                    style={
-                      styles
-                        .loadingContainer
-                    }
-                  >
-                    <ActivityIndicator
-                      size="small"
-                      color="#FFBF00"
-                    />
-                    <Text
-                      style={
-                        styles
-                          .loadingText
-                      }
-                    >
-                      Cargando
-                      sabores...
-                    </Text>
-                  </View>
-                )}
-              {comboCheckedProductId === product.id && !isCombo &&
-                !areFlavorsLoading &&
-                flavorsError && (
-                  <Text
-                    style={
-                      styles
-                        .errorText
-                    }
-                  >
-                    {
-                      flavorsError
-                    }
-                  </Text>
-                )}
-              {comboCheckedProductId === product.id && !isCombo &&
-                !areFlavorsLoading &&
-                !flavorsError &&
-                productFlavors.length >
-                0 && (
-                  <View
-                    style={
-                      styles
-                        .requiredSection
-                    }
-                  >
-                    <Text
-                      style={
-                        styles
-                          .sectionLabel
-                      }
-                    >
-                      Sabor *
-                      (Obligatorio)
-                    </Text>
-                    <View
-                      style={[
-                        styles
-                          .optionsContainerHorizontal,
-                        isPhone &&
-                        styles
-                          .optionsContainerPhone,
-                      ]}
-                    >
-                      {productFlavors.map(
-                        (
-                          flavor,
-                        ) => {
-                          const isSelected =
-                            selectedFlavorId ===
-                            flavor.id;
-                          return (
-                            <TouchableOpacity
-                              key={
-                                flavor.id
-                              }
-                              style={[
-                                styles
-                                  .optionButtonChip,
-                                isPhone
-                                  ? styles
-                                    .optionButtonChipPhone
-                                  : styles
-                                    .optionButtonChipTablet,
-                                {
-                                  flexBasis:
-                                    isPhone
-                                      ? '100%'
-                                      : '48%',
-                                  flexGrow:
-                                    1,
-                                  flexShrink:
-                                    1,
-                                  minHeight:
-                                    46,
-                                  justifyContent:
-                                    'center',
-                                  alignItems:
-                                    'center',
-                                },
-                                isSelected &&
-                                styles
-                                  .optionButtonSelected,
-                              ]}
-                              onPress={() =>
-                                setSelectedFlavorId(
-                                  flavor.id,
-                                )
-                              }
-                              activeOpacity={
-                                0.8
-                              }
-                            >
-                              <Text
-                                numberOfLines={
-                                  2
-                                }
-                                style={[
-                                  styles
-                                    .optionText,
-                                  {
-                                    width:
-                                      '100%',
-                                    textAlign:
-                                      'center',
-                                  },
-                                  isPhone &&
-                                  styles
-                                    .optionTextPhone,
-                                  isSelected &&
-                                  styles
-                                    .optionTextSelected,
-                                ]}
-                              >
-                                {
-                                  flavor.name
-                                }
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        },
-                      )}
-                    </View>
-                  </View>
-                )}
               {comboCheckedProductId === product.id && !isCombo &&
                 areProductGroupsLoading && (
                   <View
@@ -1758,7 +909,7 @@ export const ProductConfiguratorModal:
               {comboCheckedProductId === product.id && !isCombo &&
                 !areProductGroupsLoading &&
                 !productGroupsError &&
-                genericProductModifierGroups.map(
+                configurableProductModifierGroups.map(
                   association => {
                     const groupName =
                       association.group
@@ -1846,10 +997,22 @@ export const ProductConfiguratorModal:
                           >
                             {groupModifiers.map(
                               modifier => {
+                                const selectedCountForModifier =
+                                  selectedIds.filter(
+                                    id =>
+                                      id ===
+                                      modifier.id,
+                                  ).length;
+
                                 const isSelected =
-                                  selectedIds.includes(
-                                    modifier.id,
-                                  );
+                                  selectedCountForModifier >
+                                  0;
+
+                                const isWeeklySauce =
+                                  weeklySauce
+                                    ?.modifier_id ===
+                                  modifier.id;
+
                                 return (
                                   <TouchableOpacity
                                     key={
@@ -1882,6 +1045,12 @@ export const ProductConfiguratorModal:
                                       isSelected &&
                                       styles
                                         .optionButtonSelected,
+                                      isWeeklySauce && {
+                                        borderColor:
+                                          '#FFBF00',
+                                        borderWidth:
+                                          2,
+                                      },
                                     ]}
                                     onPress={() =>
                                       handleGenericModifierPress(
@@ -1914,9 +1083,16 @@ export const ProductConfiguratorModal:
                                           .optionTextSelected,
                                       ]}
                                     >
+                                      {isWeeklySauce
+                                        ? '🌶️ '
+                                        : ''}
                                       {
                                         modifier.name
                                       }
+                                      {selectedCountForModifier >
+                                        1
+                                        ? ` (x${selectedCountForModifier})`
+                                        : ''}
                                       {Number(
                                         modifier.extra_price,
                                       ) >
@@ -1928,6 +1104,74 @@ export const ProductConfiguratorModal:
                                         )})`
                                         : ''}
                                     </Text>
+
+                                    {isWeeklySauce &&
+                                      weeklySauce && (
+                                        <Text
+                                          style={{
+                                            color:
+                                              '#D6C98A',
+                                            fontSize:
+                                              9,
+                                            fontWeight:
+                                              '800',
+                                            marginTop:
+                                              3,
+                                            textAlign:
+                                              'center',
+                                          }}
+                                        >
+                                          Ahorra $
+                                          {weeklySauce
+                                            .discount_amount
+                                            .toFixed(
+                                              2,
+                                            )}
+                                        </Text>
+                                      )}
+
+                                    {association.allowDuplicates &&
+                                      isSelected &&
+                                      selectedIds.length <
+                                        association.maxSelections && (
+                                        <TouchableOpacity
+                                          onPress={() =>
+                                            handleDuplicateModifier(
+                                              association,
+                                              modifier.id,
+                                            )
+                                          }
+                                          style={{
+                                            marginTop:
+                                              6,
+                                            paddingVertical:
+                                              5,
+                                            paddingHorizontal:
+                                              8,
+                                            borderRadius:
+                                              6,
+                                            borderWidth:
+                                              1,
+                                            borderColor:
+                                              '#777777',
+                                          }}
+                                        >
+                                          <Text
+                                            style={{
+                                              color:
+                                                '#FFFFFF',
+                                              fontSize:
+                                                10,
+                                              fontWeight:
+                                                '700',
+                                              textAlign:
+                                                'center',
+                                            }}
+                                          >
+                                            + Agregar otra
+                                          </Text>
+                                        </TouchableOpacity>
+                                      )}
                                   </TouchableOpacity>
                                 );
                               },

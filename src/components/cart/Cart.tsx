@@ -26,6 +26,8 @@ import {
   getActiveWeeklySauce,
   WeeklySauce,
 } from '../../services/weeklySauceService';
+import { getModifierGroupCode, getModifierGroupLabel } from '../../Utils/modifierGroup';
+
 
 interface CartProps {
   cart: CartItem[];
@@ -592,7 +594,9 @@ export const Cart: React.FC<
                                 {
                                   borderColor:
                                     getModifierColor(
-                                      modifier.group_name,
+                                      getModifierGroupCode(
+                                        modifier,
+                                      ),
                                     ),
                                 },
                               ]}
@@ -602,8 +606,12 @@ export const Cart: React.FC<
                                   styles.modifierText
                                 }
                               >
-                                {modifier.group_name
-                                  ? `${modifier.group_name}: `
+                                {getModifierGroupLabel(
+                                  modifier,
+                                )
+                                  ? `${getModifierGroupLabel(
+                                      modifier,
+                                    )}: `
                                   : ''}
                                 {
                                   modifier.name
@@ -1107,19 +1115,19 @@ function getWeeklySauceDiscountForItem(
 }
 
 function getModifierColor(
-  groupName:
+  groupCode:
     | string
     | null
     | undefined,
 ): string {
-  switch (groupName) {
-    case 'Carne':
+  switch (groupCode) {
+    case 'meat':
       return '#FFBF00';
 
-    case 'Salsa':
+    case 'sauce':
       return '#FF4D4D';
 
-    case 'Sabor':
+    case 'drink_flavor':
       return '#4DA6FF';
 
     default:

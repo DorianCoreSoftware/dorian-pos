@@ -8,11 +8,11 @@ import {
   View,
 } from 'react-native';
 
-import WebMenuScreen from './screens/WebMenuScreen';
 import WebLoyaltyScreen from './screens/WebLoyaltyScreen';
 
 import styles from './WebApp.styles';
 import { useBusiness } from '../context/BusinessContext';
+import WebMenuScreen from './screens/WebMenuScreen';
 
 type WebRoute =
   | 'menu'
