@@ -31,9 +31,9 @@ import {
   ProductModifierGroup,
 } from '../../services/productModifierGroupService';
 import {
-  getActiveWeeklySauce,
-  WeeklySauce,
-} from '../../services/weeklySauceService';
+  getActiveModifierPromotion,
+  ModifierPromotion,
+} from '../../services/modifierPromotionService';
 
 import {
   styles,
@@ -114,10 +114,10 @@ export const ProductConfiguratorModal:
       ComboConfiguratorSelection | null
     >(null);
     const [
-      weeklySauce,
-      setWeeklySauce,
+      modifierPromotion,
+      setModifierPromotion,
     ] = useState<
-      WeeklySauce | null
+      ModifierPromotion | null
     >(null);
     const [
       isCombo,
@@ -369,29 +369,29 @@ export const ProductConfiguratorModal:
       );
       let isMounted =
         true;
-      const loadWeeklySauce =
+      const loadModifierPromotion =
         async () => {
           try {
             const data =
-              await getActiveWeeklySauce();
+              await getActiveModifierPromotion();
             if (
               isMounted
             ) {
-              setWeeklySauce(
+              setModifierPromotion(
                 data,
               );
             }
           } catch (
-          weeklySauceError
+          modifierPromotionError
           ) {
             console.error(
               'Error loading weekly sauce:',
-              weeklySauceError,
+              modifierPromotionError,
             );
             if (
               isMounted
             ) {
-              setWeeklySauce(
+              setModifierPromotion(
                 null,
               );
             }
@@ -532,7 +532,7 @@ export const ProductConfiguratorModal:
             }
           }
         };
-      void loadWeeklySauce();
+      void loadModifierPromotion();
       void loadProductModifierGroups();
       return () => {
         isMounted =
@@ -773,7 +773,7 @@ export const ProductConfiguratorModal:
                   ? 'Selecciona las opciones para este producto:'
                   : 'Agrega indicaciones si lo necesitas:'}
             </Text>
-            {weeklySauce &&
+            {modifierPromotion &&
               configurableProductModifierGroups.some(
                 association =>
                   (
@@ -783,7 +783,7 @@ export const ProductConfiguratorModal:
                   ).some(
                     modifier =>
                       modifier.id ===
-                      weeklySauce.modifier_id,
+                      modifierPromotion.modifier_id,
                   ),
               ) && (
                 <View
@@ -813,12 +813,8 @@ export const ProductConfiguratorModal:
                         '900',
                     }}
                   >
-                    🌶️ Salsa de
-                    la Semana:{' '}
-                    {
-                      weeklySauce
-                        .modifier_name
-                    }
+                    🏷️ {modifierPromotion.display_name}:{' '}
+                    {modifierPromotion.modifier_name}
                   </Text>
                   <Text
                     style={{
@@ -831,7 +827,7 @@ export const ProductConfiguratorModal:
                     }}
                   >
                     Ahorra $
-                    {weeklySauce
+                    {modifierPromotion
                       .discount_amount
                       .toFixed(
                         2,
@@ -861,8 +857,8 @@ export const ProductConfiguratorModal:
                   product={
                     product
                   }
-                  weeklySauce={
-                    weeklySauce
+                  modifierPromotion={
+                    modifierPromotion
                   }
                   onSelectionChange={
                     setComboSelection
@@ -1008,8 +1004,8 @@ export const ProductConfiguratorModal:
                                   selectedCountForModifier >
                                   0;
 
-                                const isWeeklySauce =
-                                  weeklySauce
+                                const isModifierPromotion =
+                                  modifierPromotion
                                     ?.modifier_id ===
                                   modifier.id;
 
@@ -1045,7 +1041,7 @@ export const ProductConfiguratorModal:
                                       isSelected &&
                                       styles
                                         .optionButtonSelected,
-                                      isWeeklySauce && {
+                                      isModifierPromotion && {
                                         borderColor:
                                           '#FFBF00',
                                         borderWidth:
@@ -1083,7 +1079,7 @@ export const ProductConfiguratorModal:
                                           .optionTextSelected,
                                       ]}
                                     >
-                                      {isWeeklySauce
+                                      {isModifierPromotion
                                         ? '🌶️ '
                                         : ''}
                                       {
@@ -1105,8 +1101,8 @@ export const ProductConfiguratorModal:
                                         : ''}
                                     </Text>
 
-                                    {isWeeklySauce &&
-                                      weeklySauce && (
+                                    {isModifierPromotion &&
+                                      modifierPromotion && (
                                         <Text
                                           style={{
                                             color:
@@ -1122,7 +1118,7 @@ export const ProductConfiguratorModal:
                                           }}
                                         >
                                           Ahorra $
-                                          {weeklySauce
+                                          {modifierPromotion
                                             .discount_amount
                                             .toFixed(
                                               2,

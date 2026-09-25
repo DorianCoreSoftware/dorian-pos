@@ -56,8 +56,11 @@ interface WebCheckoutModalProps {
   subtotal:
   number;
 
-  weeklySauceDiscount:
+  modifierPromotionDiscount:
   number;
+
+  modifierPromotionName:
+  string | null;
 
   pickupTotal:
   number;
@@ -152,7 +155,8 @@ function formatPrice(
 export default function WebCheckoutModal({
   visible,
   subtotal,
-  weeklySauceDiscount,
+  modifierPromotionDiscount,
+  modifierPromotionName,
   pickupTotal,
   deliveryFee,
   submitting,
@@ -1155,12 +1159,12 @@ export default function WebCheckoutModal({
                 }
               />
 
-              {weeklySauceDiscount >
+              {modifierPromotionDiscount >
                 0 && (
                   <SummaryRow
-                    label="Salsa de la Semana"
+                    label={modifierPromotionName ?? 'Promoción'}
                     value={`-${formatPrice(
-                      weeklySauceDiscount,
+                      modifierPromotionDiscount,
                     )}`}
                     discount
                   />

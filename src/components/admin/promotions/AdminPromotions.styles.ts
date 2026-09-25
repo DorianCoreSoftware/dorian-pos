@@ -188,19 +188,19 @@ export const styles =
       minWidth: 140,
     },
 
-    weeklySaucePreview: {
+    modifierPromotionPreview: {
       marginTop: 18,
       padding: 14,
       borderRadius: 10,
       borderWidth: 1,
     },
 
-    weeklySaucePreviewTitle: {
+    modifierPromotionPreviewTitle: {
       fontSize: 14,
       fontWeight: '900',
     },
 
-    weeklySaucePreviewText: {
+    modifierPromotionPreviewText: {
       fontSize: 11,
       lineHeight: 16,
       marginTop: 5,
@@ -283,15 +283,15 @@ export const styles =
       fontWeight: '900',
     },
 
-    sauceList: {
+    modifierList: {
       flexGrow: 0,
     },
 
-    sauceListContent: {
+    modifierListContent: {
       padding: 12,
     },
 
-    sauceOption: {
+    modifierOption: {
       minHeight: 46,
       flexDirection: 'row',
       alignItems: 'center',
@@ -302,21 +302,21 @@ export const styles =
       borderWidth: 1,
     },
 
-    sauceOptionSelected: {
+    modifierOptionSelected: {
       borderWidth: 1,
     },
 
-    sauceOptionText: {
+    modifierOptionText: {
       flex: 1,
       fontSize: 13,
       fontWeight: '800',
     },
 
-    sauceOptionTextSelected: {
+    modifierOptionTextSelected: {
       fontWeight: '900',
     },
 
-    sauceOptionCheck: {
+    modifierOptionCheck: {
       fontSize: 15,
       fontWeight: '900',
       marginLeft: 12,

@@ -18,7 +18,7 @@ import {
   LUCKY_DORIAN,
 } from '../generated/printerAssets';
 import { PromoCoupon } from './promoService';
-import { fetchOrderWeeklySauceDiscounts } from '../repositories/OrderRepository';
+import { fetchOrderModifierPromotionDiscounts } from '../repositories/OrderRepository';
 
 import {
   getOrderTrackingCode,
@@ -325,14 +325,14 @@ export async function printOrderTicket({
       order.total,
     );
 
-  const weeklySauceDiscounts =
-    await fetchOrderWeeklySauceDiscounts(
+  const modifierPromotionDiscounts =
+    await fetchOrderModifierPromotionDiscounts(
       order.id,
     );
 
-  const weeklySauceDiscountTotal =
+  const modifierPromotionDiscountTotal =
     roundCurrency(
-      weeklySauceDiscounts.reduce(
+      modifierPromotionDiscounts.reduce(
         (
           accumulated,
           discount,
@@ -348,7 +348,7 @@ export async function printOrderTicket({
   const subtotal =
     roundCurrency(
       total +
-      weeklySauceDiscountTotal,
+      modifierPromotionDiscountTotal,
     );
 
   const received =
@@ -723,12 +723,12 @@ export async function printOrderTicket({
    * ============================
    *
    * Solamente lo mostramos
-   * separado cuando hubo Salsa
-   * de la Semana.
+   * separado cuando hubo una
+   * promoción de modificador.
    */
 
   if (
-    weeklySauceDiscountTotal > 0
+    modifierPromotionDiscountTotal > 0
   ) {
     await printer.write(
       createAmountRow(
@@ -742,8 +742,15 @@ export async function printOrderTicket({
       true,
     );
 
+    const promotionName =
+      sanitizeTicketText(
+        modifierPromotionDiscounts[0]
+          ?.promotionName ??
+        'PROMOCION',
+      );
+
     await printer.write(
-      'SALSA DE LA SEMANA\n',
+      `${promotionName.toUpperCase()}\n`,
     );
 
     await setBold(
@@ -759,16 +766,16 @@ export async function printOrderTicket({
      */
     for (
       const discount of
-      weeklySauceDiscounts
+      modifierPromotionDiscounts
     ) {
-      const sauceName =
+      const modifierName =
         sanitizeTicketText(
           discount.modifierName,
         );
 
       await printer.write(
         createAmountRow(
-          `  ${sauceName}`,
+          `  ${modifierName}`,
           -Math.abs(
             Number(
               discount.discountAmount,

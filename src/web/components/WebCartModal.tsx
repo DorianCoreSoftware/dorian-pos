@@ -18,7 +18,8 @@ interface WebCartModalProps {
   visible: boolean;
   cart: Cart;
   subtotal: number;
-  weeklySauceDiscount: number;
+  modifierPromotionDiscount: number;
+  modifierPromotionName: string | null;
   total: number;
 
   canCheckout: boolean;
@@ -59,7 +60,8 @@ export default function WebCartModal({
   visible,
   cart,
   subtotal,
-  weeklySauceDiscount,
+  modifierPromotionDiscount,
+  modifierPromotionName,
   total,
   canCheckout,
   checkoutDisabledMessage,
@@ -397,7 +399,7 @@ export default function WebCartModal({
               </Text>
             </View>
 
-            {weeklySauceDiscount >
+            {modifierPromotionDiscount >
               0 && (
               <View
                 style={
@@ -409,7 +411,7 @@ export default function WebCartModal({
                     styles.discountLabel
                   }
                 >
-                  Salsa de la Semana
+                  {modifierPromotionName ?? 'Promoción'}
                 </Text>
 
                 <Text
@@ -419,7 +421,7 @@ export default function WebCartModal({
                 >
                   -
                   {formatPrice(
-                    weeklySauceDiscount,
+                    modifierPromotionDiscount,
                   )}
                 </Text>
               </View>

@@ -9,8 +9,8 @@ import {
 } from '../../components/ProductConfigurator/ProductConfiguratorModal';
 
 import {
-  WeeklySauce,
-} from '../../services/weeklySauceService';
+  ModifierPromotion,
+} from '../../services/modifierPromotionService';
 
 export function addConfiguredProductToCart(
   cart: Cart,
@@ -193,8 +193,8 @@ export function removeCartItem(
 
 export function getCartSummary(
   cart: Cart,
-  weeklySauce:
-    WeeklySauce | null,
+  modifierPromotion:
+    ModifierPromotion | null,
 ) {
   const totalItems =
     cart.reduce(
@@ -221,17 +221,17 @@ export function getCartSummary(
       0,
     );
 
-  const weeklySauceDiscount =
-    weeklySauce
+  const modifierPromotionDiscount =
+    modifierPromotion
       ? cart.reduce(
           (
             total,
             item,
           ) =>
             total +
-            getWeeklySauceDiscountForItem(
+            getModifierPromotionDiscountForItem(
               item,
-              weeklySauce,
+              modifierPromotion,
             ),
           0,
         )
@@ -241,13 +241,13 @@ export function getCartSummary(
     Math.max(
       0,
       subtotal -
-      weeklySauceDiscount,
+      modifierPromotionDiscount,
     );
 
   return {
     totalItems,
     subtotal,
-    weeklySauceDiscount,
+    modifierPromotionDiscount,
     total,
   };
 }
@@ -333,14 +333,14 @@ function createComboIdentifier(
     .join('|');
 }
 
-function getWeeklySauceDiscountForItem(
+function getModifierPromotionDiscountForItem(
   item: CartItem,
-  weeklySauce:
-    WeeklySauce,
+  modifierPromotion:
+    ModifierPromotion,
 ): number {
   const discountPerEligibleUnit =
     Number(
-      weeklySauce
+      modifierPromotion
         .discount_amount,
     );
 
@@ -354,18 +354,18 @@ function getWeeklySauceDiscountForItem(
     return 0;
   }
 
-  const hasDirectWeeklySauce =
+  const hasDirectModifierPromotion =
     item.selectedModifiers
       ?.some(
         (modifier) =>
           modifier.id ===
-          weeklySauce
+          modifierPromotion
             .modifier_id,
       ) ??
     false;
 
   const directEligibleUnits =
-    hasDirectWeeklySauce
+    hasDirectModifierPromotion
       ? item.quantity
       : 0;
 
@@ -378,19 +378,19 @@ function getWeeklySauceDiscountForItem(
         total,
         component,
       ) => {
-        const hasWeeklySauce =
+        const hasModifierPromotion =
           component
             .selectedModifiers
             ?.some(
               (modifier) =>
                 modifier.id ===
-                weeklySauce
+                modifierPromotion
                   .modifier_id,
             ) ??
           false;
 
         if (
-          !hasWeeklySauce
+          !hasModifierPromotion
         ) {
           return total;
         }

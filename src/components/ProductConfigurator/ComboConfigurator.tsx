@@ -42,8 +42,8 @@ import {
 } from '../../services/productModifierGroupService';
 
 import {
-  WeeklySauce,
-} from '../../services/weeklySauceService';
+  ModifierPromotion,
+} from '../../services/modifierPromotionService';
 
 export interface ComboConfiguratorSelection {
   components: ComboComponentSelection[];
@@ -53,8 +53,8 @@ export interface ComboConfiguratorSelection {
 interface ComboConfiguratorProps {
   product: Product;
 
-  weeklySauce:
-    | WeeklySauce
+  modifierPromotion:
+    | ModifierPromotion
     | null;
 
   onSelectionChange?: (
@@ -81,7 +81,7 @@ export const ComboConfigurator: React.FC<
   ComboConfiguratorProps
 > = ({
   product,
-  weeklySauce,
+  modifierPromotion,
   onSelectionChange,
 }) => {
   const [
@@ -1097,8 +1097,8 @@ export const ComboConfigurator: React.FC<
                         selectedCountForModifier >
                         0;
 
-                      const isWeeklySauce =
-                        weeklySauce
+                      const isModifierPromotion =
+                        modifierPromotion
                           ?.modifier_id ===
                         modifier.id;
 
@@ -1116,13 +1116,13 @@ export const ComboConfigurator: React.FC<
                             padding: 12,
                             borderRadius: 8,
                             borderWidth:
-                              isWeeklySauce
+                              isModifierPromotion
                                 ? 2
                                 : 1,
                             marginBottom: 8,
                             borderColor:
                               isSelected ||
-                              isWeeklySauce
+                              isModifierPromotion
                                 ? '#FFBF00'
                                 : '#555555',
                             backgroundColor:
@@ -1134,17 +1134,17 @@ export const ComboConfigurator: React.FC<
                           <Text
                             style={{
                               color:
-                                isWeeklySauce
+                                isModifierPromotion
                                   ? '#FFBF00'
                                   : '#FFFFFF',
                               fontWeight:
                                 isSelected ||
-                                isWeeklySauce
+                                isModifierPromotion
                                   ? '700'
                                   : '400',
                             }}
                           >
-                            {isWeeklySauce
+                            {isModifierPromotion
                               ? '🌶️ '
                               : ''}
                             {modifier.name}
@@ -1154,8 +1154,8 @@ export const ComboConfigurator: React.FC<
                               : ''}
                           </Text>
 
-                          {isWeeklySauce &&
-                            weeklySauce && (
+                          {isModifierPromotion &&
+                            modifierPromotion && (
                               <Text
                                 style={{
                                   color: '#D6C98A',
@@ -1163,7 +1163,7 @@ export const ComboConfigurator: React.FC<
                                   marginTop: 3,
                                 }}
                               >
-                                Salsa de la Semana · Ahorra ${weeklySauce.discount_amount.toFixed(
+                                ${modifierPromotion.display_name} · Ahorra ${modifierPromotion.discount_amount.toFixed(
                                   2,
                                 )}
                               </Text>

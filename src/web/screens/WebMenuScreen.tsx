@@ -25,9 +25,9 @@ import {
   getActiveProducts,
 } from '../../services/products';
 import {
-  getActiveWeeklySauce,
-  WeeklySauce,
-} from '../../services/weeklySauceService';
+  getActiveModifierPromotion,
+  ModifierPromotion,
+} from '../../services/modifierPromotionService';
 import {
   isDeliveryProduct,
 } from '../../Utils/delivery';
@@ -297,10 +297,10 @@ export default function WebMenuScreen({
     setIsCheckoutVisible,
   ] = useState(false);
   const [
-    weeklySauce,
-    setWeeklySauce,
+    modifierPromotion,
+    setModifierPromotion,
   ] = useState<
-    WeeklySauce | null
+    ModifierPromotion | null
   >(null);
   const [
     isSubmittingOrder,
@@ -455,13 +455,13 @@ export default function WebMenuScreen({
       const [
         loadedCategories,
         loadedProducts,
-        loadedWeeklySauce,
+        loadedModifierPromotion,
         loadedBusinessStatus,
       ] =
         await Promise.all([
           getActiveCategories(),
           getActiveProducts(),
-          getActiveWeeklySauce()
+          getActiveModifierPromotion()
             .catch(
               () => null,
             ),
@@ -476,8 +476,8 @@ export default function WebMenuScreen({
       setProducts(
         loadedProducts,
       );
-      setWeeklySauce(
-        loadedWeeklySauce,
+      setModifierPromotion(
+        loadedModifierPromotion,
       );
       setBusinessStatus(
         loadedBusinessStatus,
@@ -671,11 +671,11 @@ export default function WebMenuScreen({
       () =>
         getCartSummary(
           cart,
-          weeklySauce,
+          modifierPromotion,
         ),
       [
         cart,
-        weeklySauce,
+        modifierPromotion,
       ],
     );
   const columns =
@@ -1409,9 +1409,13 @@ export default function WebMenuScreen({
         subtotal={
           cartSummary.subtotal
         }
-        weeklySauceDiscount={
+        modifierPromotionDiscount={
           cartSummary
-            .weeklySauceDiscount
+            .modifierPromotionDiscount
+        }
+        modifierPromotionName={
+          modifierPromotion
+            ?.display_name ?? null
         }
         total={
           cartSummary.total
@@ -1468,9 +1472,13 @@ export default function WebMenuScreen({
         subtotal={
           cartSummary.subtotal
         }
-        weeklySauceDiscount={
+        modifierPromotionDiscount={
           cartSummary
-            .weeklySauceDiscount
+            .modifierPromotionDiscount
+        }
+        modifierPromotionName={
+          modifierPromotion
+            ?.display_name ?? null
         }
         pickupTotal={
           cartSummary.total

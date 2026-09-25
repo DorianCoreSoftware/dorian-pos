@@ -23,9 +23,9 @@ import {
 } from '../../Utils/delivery';
 
 import {
-  getActiveWeeklySauce,
-  WeeklySauce,
-} from '../../services/weeklySauceService';
+  getActiveModifierPromotion,
+  ModifierPromotion,
+} from '../../services/modifierPromotionService';
 import { getModifierGroupCode, getModifierGroupLabel } from '../../Utils/modifierGroup';
 
 
@@ -72,10 +72,10 @@ export const Cart: React.FC<
     ] = useState(false);
 
     const [
-      weeklySauce,
-      setWeeklySauce,
+      modifierPromotion,
+      setModifierPromotion,
     ] = useState<
-      WeeklySauce | null
+      ModifierPromotion | null
     >(null);
 
     const deliveryItem =
@@ -116,14 +116,14 @@ export const Cart: React.FC<
         0,
       );
 
-    const weeklySauceDiscount =
-      weeklySauce
+    const modifierPromotionDiscount =
+      modifierPromotion
         ? regularItems.reduce(
             (sum, item) =>
               sum +
-              getWeeklySauceDiscountForItem(
+              getModifierPromotionDiscountForItem(
                 item,
-                weeklySauce,
+                modifierPromotion,
               ),
             0,
           )
@@ -133,7 +133,7 @@ export const Cart: React.FC<
       Math.max(
         0,
         subtotalAmount -
-        weeklySauceDiscount,
+        modifierPromotionDiscount,
       );
 
     const cannotCheckout =
@@ -147,14 +147,14 @@ export const Cart: React.FC<
     useEffect(() => {
       let isMounted = true;
 
-      const loadWeeklySauce =
+      const loadModifierPromotion =
         async () => {
           try {
             const data =
-              await getActiveWeeklySauce();
+              await getActiveModifierPromotion();
 
             if (isMounted) {
-              setWeeklySauce(
+              setModifierPromotion(
                 data,
               );
             }
@@ -165,14 +165,14 @@ export const Cart: React.FC<
             );
 
             if (isMounted) {
-              setWeeklySauce(
+              setModifierPromotion(
                 null,
               );
             }
           }
         };
 
-      void loadWeeklySauce();
+      void loadModifierPromotion();
 
       return () => {
         isMounted = false;
@@ -731,10 +731,10 @@ export const Cart: React.FC<
                       ).toFixed(2)}
                     </Text>
 
-                    {weeklySauce &&
-                      getWeeklySauceDiscountForItem(
+                    {modifierPromotion &&
+                      getModifierPromotionDiscountForItem(
                         item,
-                        weeklySauce,
+                        modifierPromotion,
                       ) >
                         0 ? (
                       <View
@@ -761,7 +761,7 @@ export const Cart: React.FC<
                               '900',
                           }}
                         >
-                          🌶️ Salsa de la Semana
+                          🏷️ {modifierPromotion.display_name}
                         </Text>
 
                         <Text
@@ -772,11 +772,11 @@ export const Cart: React.FC<
                             marginTop: 2,
                           }}
                         >
-                          {weeklySauce.modifier_name}
+                          {modifierPromotion.modifier_name}
                           {' '}· -$
-                          {getWeeklySauceDiscountForItem(
+                          {getModifierPromotionDiscountForItem(
                             item,
-                            weeklySauce,
+                            modifierPromotion,
                           ).toFixed(
                             2,
                           )}
@@ -884,7 +884,7 @@ export const Cart: React.FC<
             styles.cartFooter
           }
         >
-          {weeklySauceDiscount >
+          {modifierPromotionDiscount >
             0 ? (
             <>
               <View
@@ -949,7 +949,7 @@ export const Cart: React.FC<
                       '800',
                   }}
                 >
-                  🌶️ Salsa de la Semana
+                  🏷️ {modifierPromotion?.display_name}
                 </Text>
 
                 <Text
@@ -963,7 +963,7 @@ export const Cart: React.FC<
                   }}
                 >
                   -$
-                  {weeklySauceDiscount.toFixed(
+                  {modifierPromotionDiscount.toFixed(
                     2,
                   )}
                 </Text>
@@ -1026,13 +1026,13 @@ export const Cart: React.FC<
   };
 
 
-function getWeeklySauceDiscountForItem(
+function getModifierPromotionDiscountForItem(
   item: CartItem,
-  weeklySauce: WeeklySauce,
+  modifierPromotion: ModifierPromotion,
 ): number {
   const discountPerEligibleUnit =
     Number(
-      weeklySauce.discount_amount,
+      modifierPromotion.discount_amount,
     );
 
   if (
@@ -1045,16 +1045,16 @@ function getWeeklySauceDiscountForItem(
     return 0;
   }
 
-  const hasDirectWeeklySauce =
+  const hasDirectModifierPromotion =
     item.selectedModifiers?.some(
       (modifier) =>
         modifier.id ===
-        weeklySauce.modifier_id,
+        modifierPromotion.modifier_id,
     ) ??
     false;
 
   const directEligibleUnits =
-    hasDirectWeeklySauce
+    hasDirectModifierPromotion
       ? item.quantity
       : 0;
 
@@ -1067,17 +1067,17 @@ function getWeeklySauceDiscountForItem(
         total,
         component,
       ) => {
-        const hasWeeklySauce =
+        const hasModifierPromotion =
           component
             .selectedModifiers
             ?.some(
               (modifier) =>
                 modifier.id ===
-                weeklySauce.modifier_id,
+                modifierPromotion.modifier_id,
             ) ??
           false;
 
-        if (!hasWeeklySauce) {
+        if (!hasModifierPromotion) {
           return total;
         }
 

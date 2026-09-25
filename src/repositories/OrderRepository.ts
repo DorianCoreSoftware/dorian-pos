@@ -476,7 +476,7 @@ export interface PendingOrderDeliveryDetailsRecord {
   updated_at: string;
 }
 
-export interface OrderWeeklySauceDiscountRecord {
+export interface OrderModifierPromotionDiscountRecord {
   id: string;
 
   order_id: string;
@@ -490,6 +490,8 @@ export interface OrderWeeklySauceDiscountRecord {
   | null;
 
   modifier_id: string;
+
+  promotion_name: string;
 
   discount_amount:
   | string
@@ -505,7 +507,7 @@ export interface OrderWeeklySauceDiscountRecord {
   | null;
 }
 
-export interface OrderWeeklySauceDiscount {
+export interface OrderModifierPromotionDiscount {
   id: string;
 
   orderId: string;
@@ -522,20 +524,22 @@ export interface OrderWeeklySauceDiscount {
 
   modifierName: string;
 
+  promotionName: string;
+
   discountAmount: number;
 
   createdAt: string;
 }
 
-export async function fetchOrderWeeklySauceDiscounts(
+export async function fetchOrderModifierPromotionDiscounts(
   orderId: string,
-): Promise<OrderWeeklySauceDiscount[]> {
+): Promise<OrderModifierPromotionDiscount[]> {
   const {
     data,
     error,
   } = await supabase
     .from(
-      'order_weekly_sauce_discounts',
+      'order_modifier_promotion_discounts',
     )
     .select(`
       id,
@@ -543,6 +547,7 @@ export async function fetchOrderWeeklySauceDiscounts(
       order_item_id,
       order_item_component_id,
       modifier_id,
+      promotion_name,
       discount_amount,
       created_at,
       modifiers(
@@ -563,7 +568,7 @@ export async function fetchOrderWeeklySauceDiscounts(
 
   if (error) {
     throw new Error(
-      `No se pudieron consultar los descuentos de Salsa de la Semana: ${error.message}`,
+      `No se pudieron consultar los descuentos de la promoción de modificador: ${error.message}`,
     );
   }
 
@@ -573,7 +578,7 @@ export async function fetchOrderWeeklySauceDiscounts(
     (record) => {
       const typedRecord =
         record as unknown as
-        OrderWeeklySauceDiscountRecord;
+        OrderModifierPromotionDiscountRecord;
 
       return {
         id:
@@ -596,7 +601,11 @@ export async function fetchOrderWeeklySauceDiscounts(
         modifierName:
           typedRecord.modifiers
             ?.name ??
-          'Salsa de la Semana',
+          'Promoción',
+
+        promotionName:
+          typedRecord.promotion_name ||
+          'Promoción',
 
         discountAmount:
           Number(

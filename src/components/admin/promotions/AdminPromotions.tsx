@@ -23,11 +23,11 @@ import {
 } from '../../../services/promotionService';
 
 import {
-  getAvailableSauces,
-  getWeeklySauceSettings,
-  SauceOption,
-  saveWeeklySauceSettings,
-} from '../../../services/weeklySauceService';
+  getAvailablePromotionModifiers,
+  getModifierPromotionSettings,
+  ModifierPromotionOption,
+  saveModifierPromotionSettings,
+} from '../../../services/modifierPromotionService';
 
 import {
   useBusiness,
@@ -66,7 +66,7 @@ function formatLocalDate(
   return `${year}-${month}-${day}`;
 }
 
-function getDefaultWeeklySauceDates() {
+function getDefaultModifierPromotionDates() {
   const start =
     new Date();
 
@@ -147,7 +147,7 @@ export function AdminPromotions() {
   const defaultDates =
     useMemo(
       () =>
-        getDefaultWeeklySauceDates(),
+        getDefaultModifierPromotionDates(),
       [],
     );
 
@@ -184,60 +184,66 @@ export function AdminPromotions() {
     useState('100');
 
   const [
-    weeklySauceSettingsId,
-    setWeeklySauceSettingsId,
+    modifierPromotionSettingsId,
+    setModifierPromotionSettingsId,
   ] =
     useState<
       string | null
     >(null);
 
   const [
-    weeklySauceEnabled,
-    setWeeklySauceEnabled,
+    modifierPromotionName,
+    setModifierPromotionName,
+  ] =
+    useState('Salsa de la Semana');
+
+  const [
+    modifierPromotionEnabled,
+    setModifierPromotionEnabled,
   ] =
     useState(false);
 
   const [
-    weeklySauceModifierId,
-    setWeeklySauceModifierId,
+    modifierPromotionModifierId,
+    setModifierPromotionModifierId,
   ] =
     useState<
       string | null
     >(null);
 
   const [
-    weeklySauceDiscount,
-    setWeeklySauceDiscount,
+    modifierPromotionDiscount,
+    setModifierPromotionDiscount,
   ] =
     useState('5.00');
 
   const [
-    weeklySauceStartsAt,
-    setWeeklySauceStartsAt,
+    modifierPromotionStartsAt,
+    setModifierPromotionStartsAt,
   ] =
     useState(
       defaultDates.startsAt,
     );
 
   const [
-    weeklySauceEndsAt,
-    setWeeklySauceEndsAt,
+    modifierPromotionEndsAt,
+    setModifierPromotionEndsAt,
   ] =
     useState(
       defaultDates.endsAt,
     );
 
   const [
-    sauces,
-    setSauces,
+    promotionModifiers,
+    setPromotionModifiers,
   ] =
     useState<
-      SauceOption[]
+      ModifierPromotionOption[]
     >([]);
 
   const [
-    sauceSelectorVisible,
-    setSauceSelectorVisible,
+    modifierSelectorVisible,
+    setModifierSelectorVisible,
   ] =
     useState(false);
 
@@ -261,17 +267,17 @@ export function AdminPromotions() {
       string | null
     >(null);
 
-  const selectedSauce =
+  const selectedPromotionModifier =
     useMemo(
       () =>
-        sauces.find(
-          sauce =>
-            sauce.id ===
-            weeklySauceModifierId,
+        promotionModifiers.find(
+          modifier =>
+            modifier.id ===
+            modifierPromotionModifierId,
         ) ?? null,
       [
-        sauces,
-        weeklySauceModifierId,
+        promotionModifiers,
+        modifierPromotionModifierId,
       ],
     );
 
@@ -287,7 +293,7 @@ export function AdminPromotions() {
         null,
       );
 
-      setSauceSelectorVisible(
+      setModifierSelectorVisible(
         false,
       );
 
@@ -307,13 +313,13 @@ export function AdminPromotions() {
 
           const [
             promotionData,
-            weeklySauceData,
-            sauceOptions,
+            modifierPromotionData,
+            promotionModifierOptions,
           ] =
             await Promise.all([
               getPromotionSettings(),
-              getWeeklySauceSettings(),
-              getAvailableSauces(),
+              getModifierPromotionSettings(),
+              getAvailablePromotionModifiers(),
             ]);
 
           setSettings(
@@ -344,30 +350,35 @@ export function AdminPromotions() {
             ),
           );
 
-          setSauces(
-            sauceOptions,
+          setPromotionModifiers(
+            promotionModifierOptions,
           );
 
           if (
-            weeklySauceData
+            modifierPromotionData
           ) {
-            setWeeklySauceSettingsId(
-              weeklySauceData.id,
+            setModifierPromotionSettingsId(
+              modifierPromotionData.id,
             );
 
-            setWeeklySauceEnabled(
-              weeklySauceData
+            setModifierPromotionName(
+              modifierPromotionData
+                .display_name,
+            );
+
+            setModifierPromotionEnabled(
+              modifierPromotionData
                 .is_enabled,
             );
 
-            setWeeklySauceModifierId(
-              weeklySauceData
+            setModifierPromotionModifierId(
+              modifierPromotionData
                 .modifier_id,
             );
 
-            setWeeklySauceDiscount(
+            setModifierPromotionDiscount(
               Number(
-                weeklySauceData
+                modifierPromotionData
                   .discount_amount ??
                 5,
               ).toFixed(
@@ -375,15 +386,15 @@ export function AdminPromotions() {
               ),
             );
 
-            setWeeklySauceStartsAt(
-              weeklySauceData
+            setModifierPromotionStartsAt(
+              modifierPromotionData
                 .starts_at ??
               defaultDates
                 .startsAt,
             );
 
-            setWeeklySauceEndsAt(
-              weeklySauceData
+            setModifierPromotionEndsAt(
+              modifierPromotionData
                 .ends_at ??
               defaultDates
                 .endsAt,
@@ -433,9 +444,9 @@ export function AdminPromotions() {
           luckyDorianChance,
         );
 
-      const parsedWeeklySauceDiscount =
+      const parsedModifierPromotionDiscount =
         Number(
-          weeklySauceDiscount,
+          modifierPromotionDiscount,
         );
 
       if (
@@ -474,12 +485,24 @@ export function AdminPromotions() {
       }
 
       if (
-        weeklySauceEnabled &&
-        !weeklySauceModifierId
+        modifierPromotionEnabled &&
+        !modifierPromotionName.trim()
       ) {
         Alert.alert(
-          'Salsa requerida',
-          'Selecciona la Salsa de la Semana.',
+          'Nombre requerido',
+          'Ingresa un nombre visible para la promoción.',
+        );
+
+        return;
+      }
+
+      if (
+        modifierPromotionEnabled &&
+        !modifierPromotionModifierId
+      ) {
+        Alert.alert(
+          'Modificador requerido',
+          'Selecciona el modificador que recibirá la promoción.',
         );
 
         return;
@@ -487,23 +510,23 @@ export function AdminPromotions() {
 
       if (
         !Number.isFinite(
-          parsedWeeklySauceDiscount,
+          parsedModifierPromotionDiscount,
         ) ||
-        parsedWeeklySauceDiscount <
+        parsedModifierPromotionDiscount <
           0
       ) {
         Alert.alert(
           'Descuento inválido',
-          'El descuento de la Salsa de la Semana debe ser mayor o igual a 0.',
+          'El descuento de la promoción debe ser mayor o igual a 0.',
         );
 
         return;
       }
 
       if (
-        weeklySauceEnabled &&
+        modifierPromotionEnabled &&
         !isValidDateInput(
-          weeklySauceStartsAt,
+          modifierPromotionStartsAt,
         )
       ) {
         Alert.alert(
@@ -515,9 +538,9 @@ export function AdminPromotions() {
       }
 
       if (
-        weeklySauceEnabled &&
+        modifierPromotionEnabled &&
         !isValidDateInput(
-          weeklySauceEndsAt,
+          modifierPromotionEndsAt,
         )
       ) {
         Alert.alert(
@@ -529,9 +552,9 @@ export function AdminPromotions() {
       }
 
       if (
-        weeklySauceEnabled &&
-        weeklySauceEndsAt <
-          weeklySauceStartsAt
+        modifierPromotionEnabled &&
+        modifierPromotionEndsAt <
+          modifierPromotionStartsAt
       ) {
         Alert.alert(
           'Vigencia inválida',
@@ -563,31 +586,34 @@ export function AdminPromotions() {
           },
         );
 
-        const weeklySauceId =
-          await saveWeeklySauceSettings(
-            weeklySauceSettingsId,
+        const modifierPromotionId =
+          await saveModifierPromotionSettings(
+            modifierPromotionSettingsId,
             {
+              display_name:
+                modifierPromotionName.trim(),
+
               modifier_id:
-                weeklySauceModifierId,
+                modifierPromotionModifierId,
 
               discount_amount:
-                parsedWeeklySauceDiscount,
+                parsedModifierPromotionDiscount,
 
               is_enabled:
-                weeklySauceEnabled,
+                modifierPromotionEnabled,
 
               starts_at:
-                weeklySauceStartsAt ||
+                modifierPromotionStartsAt ||
                 null,
 
               ends_at:
-                weeklySauceEndsAt ||
+                modifierPromotionEndsAt ||
                 null,
             },
           );
 
-        setWeeklySauceSettingsId(
-          weeklySauceId,
+        setModifierPromotionSettingsId(
+          modifierPromotionId,
         );
 
         setSettings({
@@ -1111,7 +1137,7 @@ export function AdminPromotions() {
           </View>
         </View>
 
-        {/* SALSA DE LA SEMANA */}
+        {/* PROMOCIÓN DE MODIFICADOR */}
         <View
           style={[
             styles.card,
@@ -1143,7 +1169,7 @@ export function AdminPromotions() {
                   },
                 ]}
               >
-                🌶️ Salsa de la Semana
+                🏷️ Promoción de modificador
               </Text>
 
               <Text
@@ -1155,18 +1181,16 @@ export function AdminPromotions() {
                   },
                 ]}
               >
-                Destaca una salsa de baja rotación
-                y ofrece un descuento cuando el
-                cliente la elija.
+                Configura cualquier modificador del catálogo y ofrece un descuento cuando el cliente lo elija.
               </Text>
             </View>
 
             <Switch
               value={
-                weeklySauceEnabled
+                modifierPromotionEnabled
               }
               onValueChange={
-                setWeeklySauceEnabled
+                setModifierPromotionEnabled
               }
               trackColor={{
                 false:
@@ -1176,7 +1200,7 @@ export function AdminPromotions() {
                   theme.primary,
               }}
               thumbColor={
-                weeklySauceEnabled
+                modifierPromotionEnabled
                   ? theme.onPrimary
                   : theme.textMuted
               }
@@ -1201,7 +1225,71 @@ export function AdminPromotions() {
                 },
               ]}
             >
-              Salsa
+              Nombre visible
+            </Text>
+
+            <TextInput
+              value={
+                modifierPromotionName
+              }
+              onChangeText={
+                setModifierPromotionName
+              }
+              editable={
+                modifierPromotionEnabled
+              }
+              placeholder="Ej: Salsa de la Semana"
+              placeholderTextColor={
+                theme.textMuted
+              }
+              style={[
+                styles.input,
+                {
+                  width: '100%',
+                  borderColor:
+                    theme.border,
+                  backgroundColor:
+                    theme.surfaceAlt,
+                  color:
+                    theme.text,
+                },
+                !modifierPromotionEnabled &&
+                styles.inputDisabled,
+              ]}
+            />
+
+            <Text
+              style={[
+                styles.fieldHelp,
+                {
+                  color:
+                    theme.textMuted,
+                },
+              ]}
+            >
+              Este texto se mostrará al cliente, en el carrito y en el ticket.
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.fieldContainer,
+              {
+                borderTopColor:
+                  theme.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
+            >
+              Modificador
             </Text>
 
             <TouchableOpacity
@@ -1215,14 +1303,14 @@ export function AdminPromotions() {
                     theme.surfaceAlt,
                 },
 
-                !weeklySauceEnabled &&
+                !modifierPromotionEnabled &&
                 styles.inputDisabled,
               ]}
               disabled={
-                !weeklySauceEnabled
+                !modifierPromotionEnabled
               }
               onPress={() =>
-                setSauceSelectorVisible(
+                setModifierSelectorVisible(
                   true,
                 )
               }
@@ -1235,12 +1323,13 @@ export function AdminPromotions() {
                       theme.text,
                   },
 
-                  !selectedSauce &&
+                  !selectedPromotionModifier &&
                   styles.selectorPlaceholder,
                 ]}
               >
-                {selectedSauce?.name ??
-                  'Seleccionar salsa'}
+                {selectedPromotionModifier
+                  ? `${selectedPromotionModifier.group_name} · ${selectedPromotionModifier.name}`
+                  : 'Seleccionar modificador'}
               </Text>
 
               <Text
@@ -1265,8 +1354,7 @@ export function AdminPromotions() {
                 },
               ]}
             >
-              Solo se muestran salsas disponibles
-              del catálogo.
+              Se muestran modificadores disponibles pertenecientes a grupos activos.
             </Text>
           </View>
 
@@ -1310,11 +1398,11 @@ export function AdminPromotions() {
 
               <TextInput
                 value={
-                  weeklySauceDiscount
+                  modifierPromotionDiscount
                 }
                 onChangeText={
                   value =>
-                    setWeeklySauceDiscount(
+                    setModifierPromotionDiscount(
                       value.replace(
                         ',',
                         '.',
@@ -1323,7 +1411,7 @@ export function AdminPromotions() {
                 }
                 keyboardType="decimal-pad"
                 editable={
-                  weeklySauceEnabled
+                  modifierPromotionEnabled
                 }
                 style={[
                   styles.input,
@@ -1339,7 +1427,7 @@ export function AdminPromotions() {
                       theme.text,
                   },
 
-                  !weeklySauceEnabled &&
+                  !modifierPromotionEnabled &&
                   styles.inputDisabled,
                 ]}
               />
@@ -1416,13 +1504,13 @@ export function AdminPromotions() {
 
                 <DateCalendarSelect
                   value={
-                    weeklySauceStartsAt
+                    modifierPromotionStartsAt
                   }
                   disabled={
-                    !weeklySauceEnabled
+                    !modifierPromotionEnabled
                   }
                   onChange={
-                    setWeeklySauceStartsAt
+                    setModifierPromotionStartsAt
                   }
                 />
               </View>
@@ -1446,24 +1534,24 @@ export function AdminPromotions() {
 
                 <DateCalendarSelect
                   value={
-                    weeklySauceEndsAt
+                    modifierPromotionEndsAt
                   }
                   disabled={
-                    !weeklySauceEnabled
+                    !modifierPromotionEnabled
                   }
                   onChange={
-                    setWeeklySauceEndsAt
+                    setModifierPromotionEndsAt
                   }
                 />
               </View>
             </View>
           </View>
 
-          {weeklySauceEnabled &&
-            selectedSauce && (
+          {modifierPromotionEnabled &&
+            selectedPromotionModifier && (
               <View
                 style={[
-                  styles.weeklySaucePreview,
+                  styles.modifierPromotionPreview,
                   {
                     borderColor:
                       theme.primary,
@@ -1475,19 +1563,19 @@ export function AdminPromotions() {
               >
                 <Text
                   style={[
-                    styles.weeklySaucePreviewTitle,
+                    styles.modifierPromotionPreviewTitle,
                     {
                       color:
                         theme.primary,
                     },
                   ]}
                 >
-                  🌶️ {selectedSauce.name}
+                  🏷️ {modifierPromotionName.trim() || 'Promoción'}: {selectedPromotionModifier.name}
                 </Text>
 
                 <Text
                   style={[
-                    styles.weeklySaucePreviewText,
+                    styles.modifierPromotionPreviewText,
                     {
                       color:
                         theme.textMuted,
@@ -1496,12 +1584,12 @@ export function AdminPromotions() {
                 >
                   El cliente recibe $
                   {Number(
-                    weeklySauceDiscount ||
+                    modifierPromotionDiscount ||
                     0,
                   ).toFixed(
                     2,
                   )}{' '}
-                  de descuento al elegir esta salsa.
+                  de descuento al elegir este modificador.
                 </Text>
               </View>
             )}
@@ -1543,12 +1631,12 @@ export function AdminPromotions() {
 
       <Modal
         visible={
-          sauceSelectorVisible
+          modifierSelectorVisible
         }
         transparent
         animationType="fade"
         onRequestClose={() =>
-          setSauceSelectorVisible(
+          setModifierSelectorVisible(
             false,
           )
         }
@@ -1593,7 +1681,7 @@ export function AdminPromotions() {
                     },
                   ]}
                 >
-                  Seleccionar salsa
+                  Seleccionar modificador
                 </Text>
 
                 <Text
@@ -1605,8 +1693,7 @@ export function AdminPromotions() {
                     },
                   ]}
                 >
-                  Elige la salsa que tendrá
-                  descuento esta semana.
+                  Elige cualquier modificador disponible para esta promoción.
                 </Text>
               </View>
 
@@ -1619,7 +1706,7 @@ export function AdminPromotions() {
                   },
                 ]}
                 onPress={() =>
-                  setSauceSelectorVisible(
+                  setModifierSelectorVisible(
                     false,
                   )
                 }
@@ -1640,26 +1727,26 @@ export function AdminPromotions() {
 
             <ScrollView
               style={
-                styles.sauceList
+                styles.modifierList
               }
               contentContainerStyle={
-                styles.sauceListContent
+                styles.modifierListContent
               }
               keyboardShouldPersistTaps="handled"
             >
-              {sauces.map(
-                sauce => {
+              {promotionModifiers.map(
+                modifier => {
                   const selected =
-                    sauce.id ===
-                    weeklySauceModifierId;
+                    modifier.id ===
+                    modifierPromotionModifierId;
 
                   return (
                     <TouchableOpacity
                       key={
-                        sauce.id
+                        modifier.id
                       }
                       style={[
-                        styles.sauceOption,
+                        styles.modifierOption,
                         {
                           borderColor:
                             selected
@@ -1673,18 +1760,18 @@ export function AdminPromotions() {
                         },
                       ]}
                       onPress={() => {
-                        setWeeklySauceModifierId(
-                          sauce.id,
+                        setModifierPromotionModifierId(
+                          modifier.id,
                         );
 
-                        setSauceSelectorVisible(
+                        setModifierSelectorVisible(
                           false,
                         );
                       }}
                     >
                       <Text
                         style={[
-                          styles.sauceOptionText,
+                          styles.modifierOptionText,
                           {
                             color:
                               selected
@@ -1693,13 +1780,13 @@ export function AdminPromotions() {
                           },
                         ]}
                       >
-                        {sauce.name}
+                        {modifier.group_name} · {modifier.name}
                       </Text>
 
                       {selected && (
                         <Text
                           style={[
-                            styles.sauceOptionCheck,
+                            styles.modifierOptionCheck,
                             {
                               color:
                                 theme.primary,
