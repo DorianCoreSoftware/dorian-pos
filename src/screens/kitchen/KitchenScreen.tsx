@@ -745,13 +745,7 @@ export function KitchenScreen({
                       .slot_id ??
                     component.id,
 
-                  type:
-                    component
-                      .component_type as
-                    | 'burger'
-                    | 'hotdog'
-                    | 'side'
-                    | 'drink',
+                  type: component.component_type,
 
                   label:
                     component.label,

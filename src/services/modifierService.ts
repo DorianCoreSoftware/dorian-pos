@@ -19,6 +19,14 @@ import {
 import {
   Modifier,
 } from '../types';
+
+export type ProductModifierMode =
+  | 'burger'
+  | 'wings'
+  | 'boneless'
+  | 'combo'
+  | 'none';
+
 export interface GroupedModifiers {
   meats: ModifierWithGroup[];
   sauces: ModifierWithGroup[];

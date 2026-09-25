@@ -36,37 +36,37 @@ export interface OrderRecord {
   id: string;
 
   total:
-    | string
-    | number;
+  | string
+  | number;
 
   status:
-    OrderStatus;
+  OrderStatus;
 
   order_source:
-    OrderSource;
+  OrderSource;
 
   fulfillment_type:
-    FulfillmentType;
+  FulfillmentType;
 
   customer_name:
-    string | null;
+  string | null;
 
   customer_phone:
-    string | null;
+  string | null;
 
   driver_id:
-    string | null;
+  string | null;
 
   profiles:
-    | {
-        id: string;
-        first_name: string | null;
-        last_name: string | null;
-      }
-    | null;
+  | {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+  }
+  | null;
 
   created_at:
-    string;
+  string;
 }
 
 /**
@@ -205,11 +205,7 @@ export interface CreateKitchenOrderRpcItem {
   components: Array<{
     productId: string;
 
-    type:
-    | 'burger'
-    | 'hotdog'
-    | 'side'
-    | 'drink';
+    type: string;
 
     label: string;
     quantity: number;
@@ -451,27 +447,27 @@ export interface OrderWeeklySauceDiscountRecord {
   order_id: string;
 
   order_item_id:
-    | string
-    | null;
+  | string
+  | null;
 
   order_item_component_id:
-    | string
-    | null;
+  | string
+  | null;
 
   modifier_id: string;
 
   discount_amount:
-    | string
-    | number;
+  | string
+  | number;
 
   created_at: string;
 
   modifiers:
-    | {
-        id: string;
-        name: string;
-      }
-    | null;
+  | {
+    id: string;
+    name: string;
+  }
+  | null;
 }
 
 export interface OrderWeeklySauceDiscount {
@@ -480,12 +476,12 @@ export interface OrderWeeklySauceDiscount {
   orderId: string;
 
   orderItemId:
-    | string
-    | null;
+  | string
+  | null;
 
   orderItemComponentId:
-    | string
-    | null;
+  | string
+  | null;
 
   modifierId: string;
 
@@ -542,7 +538,7 @@ export async function fetchOrderWeeklySauceDiscounts(
     (record) => {
       const typedRecord =
         record as unknown as
-          OrderWeeklySauceDiscountRecord;
+        OrderWeeklySauceDiscountRecord;
 
       return {
         id:

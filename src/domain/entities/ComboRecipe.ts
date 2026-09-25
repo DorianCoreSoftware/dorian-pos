@@ -1,8 +1,4 @@
-export type ComboComponentType =
-  | 'burger'
-  | 'hotdog'
-  | 'side'
-  | 'drink';
+export type ComboComponentType = string;
 
 export type ComboSelectionMode =
   | 'fixed'
@@ -22,7 +18,6 @@ export interface ComboProductOption {
   isAvailable: boolean;
   isActive: boolean;
   isComboOption: boolean;
-  flavors: ProductFlavor[];
 }
 
 export interface ComboComponentProductRule {
@@ -42,9 +37,6 @@ export interface ComboRecipeComponent {
   selectableCategoryId: string | null;
 
   allowsNotes: boolean;
-  requiresMeat: boolean;
-  requiresSauce: boolean;
-  requiresDrinkFlavor: boolean;
 
   fixedProduct: ComboProductOption | null;
   options: ComboProductOption[];
@@ -56,13 +48,4 @@ export interface ComboRecipe {
   comboProductId: string;
   enabled: boolean;
   components: ComboRecipeComponent[];
-}
-
-export interface ProductFlavor {
-  id: string;
-  productId: string;
-  modifierId: string;
-  name: string;
-  isAvailable: boolean;
-  position: number;
 }

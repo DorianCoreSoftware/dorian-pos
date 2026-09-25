@@ -23,9 +23,7 @@ import {
   getAvailableModifiersByGroupId,
   ModifierWithGroup,
 } from '../../services/modifierService';
-import {
-  hasActiveComboRecipe,
-} from '../../services/comboService';
+
 import {
   getActiveProductModifierGroups,
   ProductModifierGroup,
@@ -45,6 +43,7 @@ import {
   ComboConfigurator,
   ComboConfiguratorSelection,
 } from './ComboConfigurator';
+import { hasActiveComboRecipe } from '../../services/comboService';
 export interface ProductConfigurationResult {
   selectedModifiers: SelectedModifier[];
   comboComponents: ComboComponentSelection[];
@@ -1242,12 +1241,6 @@ export const ProductConfiguratorModal:
                 <ComboConfigurator
                   product={
                     product
-                  }
-                  meats={
-                    meats
-                  }
-                  sauces={
-                    sauces
                   }
                   weeklySauce={
                     weeklySauce

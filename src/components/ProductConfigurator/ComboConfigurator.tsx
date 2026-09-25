@@ -13,11 +13,6 @@ import {
 } from 'react-native';
 
 import {
-  ComboRecipe,
-  ComboRecipeComponent,
-} from '../../domain/entities/ComboRecipe';
-
-import {
   Product,
   SelectedModifier,
 } from '../../types';
@@ -27,12 +22,24 @@ import {
 } from '../../types/combo';
 
 import {
-  getComboRecipeByProductId,
-} from '../../services/comboService';
+  getAvailableModifiersByGroupId,
+  ModifierWithGroup,
+} from '../../services/modifierService';
+
+import {
+  getActiveProductModifierGroups,
+  ProductModifierGroup,
+} from '../../services/productModifierGroupService';
 
 import {
   WeeklySauce,
 } from '../../services/weeklySauceService';
+import {
+  ComboProductOption,
+  ComboRecipe,
+  ComboRecipeComponent,
+} from '../../domain/entities/ComboRecipe';
+import { getComboRecipeByProductId } from '../../services/comboService';
 
 export interface ComboConfiguratorSelection {
   components: ComboComponentSelection[];
@@ -41,10 +48,6 @@ export interface ComboConfiguratorSelection {
 
 interface ComboConfiguratorProps {
   product: Product;
-
-  meats: SelectedModifier[];
-
-  sauces: SelectedModifier[];
 
   weeklySauce:
     | WeeklySauce
@@ -55,58 +58,62 @@ interface ComboConfiguratorProps {
   ) => void;
 }
 
+type ProductModifierGroupsByProductId = Record<
+  string,
+  ProductModifierGroup[]
+>;
+
+type ModifiersByGroupId = Record<
+  string,
+  ModifierWithGroup[]
+>;
+
+type SelectedModifierIdsByComponent = Record<
+  string,
+  Record<string, string[]>
+>;
+
 export const ComboConfigurator: React.FC<
   ComboConfiguratorProps
 > = ({
   product,
-  meats,
-  sauces,
   weeklySauce,
   onSelectionChange,
 }) => {
-  const MAXIMUM_SAUCES = 3;
-
   const [
     recipe,
     setRecipe,
-  ] = useState<
-    ComboRecipe | null
-  >(null);
+  ] = useState<ComboRecipe | null>(null);
 
   const [
     selectedOptionIds,
     setSelectedOptionIds,
-  ] = useState<
-    Record<string, string>
-  >({});
-
-  const [
-    selectedFlavorIds,
-    setSelectedFlavorIds,
-  ] = useState<
-    Record<string, string>
-  >({});
-
-  const [
-    selectedMeatIds,
-    setSelectedMeatIds,
-  ] = useState<
-    Record<string, string>
-  >({});
-
-  const [
-    selectedSauceIds,
-    setSelectedSauceIds,
-  ] = useState<
-    Record<string, string[]>
-  >({});
+  ] = useState<Record<string, string>>({});
 
   const [
     componentNotes,
     setComponentNotes,
-  ] = useState<
-    Record<string, string>
-  >({});
+  ] = useState<Record<string, string>>({});
+
+  const [
+    modifierGroupsByProductId,
+    setModifierGroupsByProductId,
+  ] = useState<ProductModifierGroupsByProductId>({});
+
+  const [
+    modifiersByGroupId,
+    setModifiersByGroupId,
+  ] = useState<ModifiersByGroupId>({});
+
+  const [
+    selectedModifierIdsByComponent,
+    setSelectedModifierIdsByComponent,
+  ] = useState<SelectedModifierIdsByComponent>({});
+
+  const [
+    loadedModifierProductIds,
+    setLoadedModifierProductIds,
+  ] = useState<Record<string, boolean>>({});
 
   const [
     isLoading,
@@ -114,146 +121,57 @@ export const ComboConfigurator: React.FC<
   ] = useState(false);
 
   const [
+    areModifiersLoading,
+    setAreModifiersLoading,
+  ] = useState(false);
+
+  const [
     error,
     setError,
-  ] = useState<
-    string | null
-  >(null);
+  ] = useState<string | null>(null);
 
-  const isSelectionValid =
-    useMemo(() => {
-      if (!recipe) {
-        return false;
-      }
+  function getSelectedProduct(
+    component: ComboRecipeComponent,
+  ): ComboProductOption | null {
+    if (
+      component.selectionMode ===
+      'fixed'
+    ) {
+      return component.fixedProduct;
+    }
 
-      return recipe.components.every(
-        (component) => {
-          if (
-            component.requiresMeat &&
-            meats.length > 0 &&
-            !selectedMeatIds[
-              component.id
-            ]
-          ) {
-            return false;
-          }
+    const selectedOptionId =
+      selectedOptionIds[
+        component.id
+      ];
 
-          if (
-            component.requiresSauce &&
-            sauces.length > 0 &&
-            (
-              selectedSauceIds[
-                component.id
-              ]?.length ??
-              0
-            ) ===
-              0
-          ) {
-            return false;
-          }
+    if (!selectedOptionId) {
+      return null;
+    }
 
-          if (
-            component.selectionMode ===
-            'fixed'
-          ) {
-            return Boolean(
-              component.fixedProduct?.id,
-            );
-          }
-
-          const selectedOptionId =
-            selectedOptionIds[
-              component.id
-            ];
-
-          if (!selectedOptionId) {
-            return false;
-          }
-
-          const selectedOption =
-            component.options.find(
-              (option) =>
-                option.id ===
-                selectedOptionId,
-            );
-
-          if (!selectedOption) {
-            return false;
-          }
-
-          if (
-            !component
-              .requiresDrinkFlavor
-          ) {
-            return true;
-          }
-
-          const availableFlavors =
-            selectedOption.flavors ??
-            [];
-
-          if (
-            availableFlavors.length ===
-            0
-          ) {
-            return true;
-          }
-
-          const selectedFlavorId =
-            selectedFlavorIds[
-              component.id
-            ];
-
-          if (!selectedFlavorId) {
-            return false;
-          }
-
-          return availableFlavors.some(
-            (flavor) =>
-              flavor.id ===
-              selectedFlavorId,
-          );
-        },
-      );
-    }, [
-      recipe,
-      meats,
-      sauces,
-      selectedOptionIds,
-      selectedFlavorIds,
-      selectedMeatIds,
-      selectedSauceIds,
-    ]);
+    return (
+      component.options.find(
+        option =>
+          option.id ===
+          selectedOptionId,
+      ) ?? null
+    );
+  }
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadRecipe():
-    Promise<void> {
+    async function loadRecipe(): Promise<void> {
       try {
         setIsLoading(true);
         setError(null);
         setRecipe(null);
-
-        setSelectedOptionIds(
-          {},
-        );
-
-        setSelectedFlavorIds(
-          {},
-        );
-
-        setSelectedMeatIds(
-          {},
-        );
-
-        setSelectedSauceIds(
-          {},
-        );
-
-        setComponentNotes(
-          {},
-        );
+        setSelectedOptionIds({});
+        setComponentNotes({});
+        setModifierGroupsByProductId({});
+        setModifiersByGroupId({});
+        setSelectedModifierIdsByComponent({});
+        setLoadedModifierProductIds({});
 
         const loadedRecipe =
           await getComboRecipeByProductId(
@@ -268,13 +186,10 @@ export const ComboConfigurator: React.FC<
           setError(
             `No existe una receta activa para "${product.name}".`,
           );
-
           return;
         }
 
-        setRecipe(
-          loadedRecipe,
-        );
+        setRecipe(loadedRecipe);
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -302,174 +217,377 @@ export const ComboConfigurator: React.FC<
     product.name,
   ]);
 
+  const selectedProducts =
+    useMemo(() => {
+      if (!recipe) {
+        return [];
+      }
+
+      return recipe.components
+        .map(
+          component =>
+            getSelectedProduct(
+              component,
+            ),
+        )
+        .filter(
+          (
+            selectedProduct,
+          ): selectedProduct is ComboProductOption =>
+            selectedProduct !== null,
+        );
+    }, [
+      recipe,
+      selectedOptionIds,
+    ]);
+
+  useEffect(() => {
+    if (!recipe) {
+      return;
+    }
+
+    const uniqueProductIds =
+      Array.from(
+        new Set(
+          selectedProducts.map(
+            selectedProduct =>
+              selectedProduct.id,
+          ),
+        ),
+      );
+
+    const productIdsToLoad =
+      uniqueProductIds.filter(
+        productId =>
+          !loadedModifierProductIds[
+            productId
+          ],
+      );
+
+    if (
+      productIdsToLoad.length ===
+      0
+    ) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadModifierData(): Promise<void> {
+      try {
+        setAreModifiersLoading(true);
+
+        const productEntries =
+          await Promise.all(
+            productIdsToLoad.map(
+              async productId => {
+                const groups =
+                  await getActiveProductModifierGroups(
+                    productId,
+                  );
+
+                return [
+                  productId,
+                  groups,
+                ] as const;
+              },
+            ),
+          );
+
+        const uniqueGroupIds =
+          Array.from(
+            new Set(
+              productEntries.flatMap(
+                ([, groups]) =>
+                  groups.map(
+                    group =>
+                      group.modifierGroupId,
+                  ),
+              ),
+            ),
+          );
+
+        const groupIdsToLoad =
+          uniqueGroupIds.filter(
+            groupId =>
+              !Object.prototype.hasOwnProperty.call(
+                modifiersByGroupId,
+                groupId,
+              ),
+          );
+
+        const groupEntries =
+          await Promise.all(
+            groupIdsToLoad.map(
+              async groupId => {
+                const modifiers =
+                  await getAvailableModifiersByGroupId(
+                    groupId,
+                  );
+
+                return [
+                  groupId,
+                  modifiers,
+                ] as const;
+              },
+            ),
+          );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setModifierGroupsByProductId(
+          current => ({
+            ...current,
+            ...Object.fromEntries(
+              productEntries,
+            ),
+          }),
+        );
+
+        if (
+          groupEntries.length >
+          0
+        ) {
+          setModifiersByGroupId(
+            current => ({
+              ...current,
+              ...Object.fromEntries(
+                groupEntries,
+              ),
+            }),
+          );
+        }
+
+        setLoadedModifierProductIds(
+          current => ({
+            ...current,
+            ...Object.fromEntries(
+              productIdsToLoad.map(
+                productId => [
+                  productId,
+                  true,
+                ],
+              ),
+            ),
+          }),
+        );
+      } catch (modifierLoadError) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error(
+          'Error cargando modificadores del combo:',
+          modifierLoadError,
+        );
+
+        setError(
+          modifierLoadError instanceof Error
+            ? modifierLoadError.message
+            : 'No se pudieron cargar las opciones del combo.',
+        );
+      } finally {
+        if (isMounted) {
+          setAreModifiersLoading(false);
+        }
+      }
+    }
+
+    void loadModifierData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    recipe,
+    selectedProducts,
+    loadedModifierProductIds,
+    modifiersByGroupId,
+  ]);
+
+  const isSelectionValid =
+    useMemo(() => {
+      if (
+        !recipe ||
+        isLoading ||
+        areModifiersLoading ||
+        error
+      ) {
+        return false;
+      }
+
+      return recipe.components.every(
+        component => {
+          const selectedProduct =
+            getSelectedProduct(
+              component,
+            );
+
+          if (!selectedProduct) {
+            return false;
+          }
+
+          if (
+            !loadedModifierProductIds[
+              selectedProduct.id
+            ]
+          ) {
+            return false;
+          }
+
+          const groups =
+            modifierGroupsByProductId[
+              selectedProduct.id
+            ] ?? [];
+
+          return groups.every(
+            group => {
+              const selectedCount =
+                (
+                  selectedModifierIdsByComponent[
+                    component.id
+                  ]?.[
+                    group.modifierGroupId
+                  ] ?? []
+                ).length;
+
+              const minimum =
+                group.isRequired
+                  ? Math.max(
+                      1,
+                      group.minSelections,
+                    )
+                  : group.minSelections;
+
+              return (
+                selectedCount >=
+                  minimum &&
+                selectedCount <=
+                  group.maxSelections
+              );
+            },
+          );
+        },
+      );
+    }, [
+      recipe,
+      isLoading,
+      areModifiersLoading,
+      error,
+      selectedOptionIds,
+      loadedModifierProductIds,
+      modifierGroupsByProductId,
+      selectedModifierIdsByComponent,
+    ]);
+
   const selectedComponents =
     useMemo<
       ComboComponentSelection[]
-    >(
-      () => {
-        if (!recipe) {
-          return [];
-        }
+    >(() => {
+      if (!recipe) {
+        return [];
+      }
 
-        return recipe.components.flatMap(
-          (component) => {
-            const selectedProduct =
-              component.selectionMode ===
-              'fixed'
-                ? component.fixedProduct
-                : component.options.find(
-                    (option) =>
-                      option.id ===
-                      selectedOptionIds[
-                        component.id
-                      ],
-                  );
+      return recipe.components.flatMap(
+        component => {
+          const selectedProduct =
+            getSelectedProduct(
+              component,
+            );
 
-            if (!selectedProduct) {
-              return [];
-            }
+          if (!selectedProduct) {
+            return [];
+          }
 
-            const selectedFlavorId =
-              selectedFlavorIds[
-                component.id
-              ];
+          const groups =
+            modifierGroupsByProductId[
+              selectedProduct.id
+            ] ?? [];
 
-            const selectedFlavor =
-              (
-                selectedProduct.flavors ??
-                []
-              ).find(
-                (flavor) =>
-                  flavor.id ===
-                  selectedFlavorId,
-              );
-
-            const selectedMeatId =
-              selectedMeatIds[
-                component.id
-              ];
-
-            const selectedMeat =
-              meats.find(
-                (meat) =>
-                  meat.id ===
-                  selectedMeatId,
-              );
-
-            const componentSauceIds =
-              selectedSauceIds[
-                component.id
-              ] ??
-              [];
-
-            const selectedSauces =
-              componentSauceIds
-                .map(
-                  (sauceId) =>
-                    sauces.find(
-                      (sauce) =>
-                        sauce.id ===
-                        sauceId,
-                    ),
-                )
-                .filter(
-                  (
-                    sauce,
-                  ): sauce is SelectedModifier =>
-                    sauce !==
-                    undefined,
-                );
-
-            const selectedModifiers:
-              SelectedModifier[] =
-              [];
-
-            if (
-              component.requiresMeat &&
-              selectedMeat
-            ) {
-              selectedModifiers.push({
-                ...selectedMeat,
-              });
-            }
-
-            if (selectedFlavor) {
-              selectedModifiers.push({
-                id:
-                  selectedFlavor
-                    .modifierId,
-
-                name:
-                  selectedFlavor
-                    .name,
-
-                extra_price:
-                  '0.00',
-
-                group_name:
-                  'Sabor',
-
-                is_available:
-                  selectedFlavor
-                    .isAvailable,
-              });
-            }
-
-            if (
-              component.requiresSauce
-            ) {
-              selectedModifiers.push(
-                ...selectedSauces,
-              );
-            }
-
-            return [
-              {
-                slotId:
-                  component.id,
-
-                type:
-                  component.type,
-
-                label:
-                  component.label,
-
-                product:
-                  mapComboProductToProduct(
-                    selectedProduct,
-                  ),
-
-                quantity: 1,
-
-                notes:
-                  componentNotes[
+          const selectedModifiers:
+            SelectedModifier[] =
+            groups.flatMap(
+              group => {
+                const selectedIds =
+                  selectedModifierIdsByComponent[
                     component.id
-                  ]?.trim() ??
-                  '',
+                  ]?.[
+                    group.modifierGroupId
+                  ] ?? [];
 
-                selectedModifiers,
+                const availableModifiers =
+                  modifiersByGroupId[
+                    group.modifierGroupId
+                  ] ?? [];
+
+                return selectedIds
+                  .map(
+                    modifierId =>
+                      availableModifiers.find(
+                        modifier =>
+                          modifier.id ===
+                          modifierId,
+                      ),
+                  )
+                  .filter(
+                    (
+                      modifier,
+                    ): modifier is ModifierWithGroup =>
+                      modifier !==
+                      undefined,
+                  )
+                  .map(
+                    modifier => ({
+                      id: modifier.id,
+                      name: modifier.name,
+                      extra_price:
+                        modifier.extra_price,
+                      group_name:
+                        modifier.group_name,
+                      is_available:
+                        modifier.is_available,
+                    }),
+                  );
               },
-            ];
-          },
-        );
-      },
-      [
-        recipe,
-        meats,
-        sauces,
-        selectedOptionIds,
-        selectedFlavorIds,
-        selectedMeatIds,
-        selectedSauceIds,
-        componentNotes,
-      ],
-    );
+            );
+
+          return [
+            {
+              slotId:
+                component.id,
+              type:
+                component.type,
+              label:
+                component.label,
+              product:
+                mapComboProductToProduct(
+                  selectedProduct,
+                ),
+              quantity: 1,
+              notes:
+                componentNotes[
+                  component.id
+                ]?.trim() ?? '',
+              selectedModifiers,
+            },
+          ];
+        },
+      );
+    }, [
+      recipe,
+      selectedOptionIds,
+      componentNotes,
+      modifierGroupsByProductId,
+      modifiersByGroupId,
+      selectedModifierIdsByComponent,
+    ]);
 
   useEffect(() => {
     onSelectionChange?.({
       components:
         selectedComponents,
-
       isValid:
         isSelectionValid,
     });
@@ -484,16 +602,15 @@ export const ComboConfigurator: React.FC<
     optionId: string,
   ): void {
     setSelectedOptionIds(
-      (currentSelections) => ({
+      currentSelections => ({
         ...currentSelections,
-
         [componentId]:
           optionId,
       }),
     );
 
-    setSelectedFlavorIds(
-      (currentSelections) => {
+    setSelectedModifierIdsByComponent(
+      currentSelections => {
         const nextSelections = {
           ...currentSelections,
         };
@@ -507,77 +624,63 @@ export const ComboConfigurator: React.FC<
     );
   }
 
-  function selectFlavor(
+  function selectModifier(
     componentId: string,
-    flavorId: string,
+    group: ProductModifierGroup,
+    modifierId: string,
   ): void {
-    setSelectedFlavorIds(
-      (currentSelections) => ({
-        ...currentSelections,
-
-        [componentId]:
-          flavorId,
-      }),
-    );
-  }
-
-  function selectMeat(
-    componentId: string,
-    meatId: string,
-  ): void {
-    setSelectedMeatIds(
-      (currentSelections) => ({
-        ...currentSelections,
-
-        [componentId]:
-          meatId,
-      }),
-    );
-  }
-
-  function selectSauce(
-    componentId: string,
-    sauceId: string,
-  ): void {
-    setSelectedSauceIds(
-      (currentSelections) => {
-        const current =
-          currentSelections[
+    setSelectedModifierIdsByComponent(
+      current => {
+        const componentSelections =
+          current[
             componentId
-          ] ??
-          [];
+          ] ?? {};
+
+        const currentSelections =
+          componentSelections[
+            group.modifierGroupId
+          ] ?? [];
+
+        let nextSelections:
+          string[];
 
         if (
-          current.includes(
-            sauceId,
+          currentSelections.includes(
+            modifierId,
           )
         ) {
-          return {
-            ...currentSelections,
-
-            [componentId]:
-              current.filter(
-                (id) =>
-                  id !==
-                  sauceId,
-              ),
-          };
-        }
-
-        if (
-          current.length >=
-          MAXIMUM_SAUCES
+          nextSelections =
+            currentSelections.filter(
+              id =>
+                id !==
+                modifierId,
+            );
+        } else if (
+          group.maxSelections ===
+          1
         ) {
-          return currentSelections;
+          nextSelections = [
+            modifierId,
+          ];
+        } else if (
+          currentSelections.length >=
+          group.maxSelections
+        ) {
+          return current;
+        } else {
+          nextSelections = [
+            ...currentSelections,
+            modifierId,
+          ];
         }
 
         return {
-          ...currentSelections,
-
-          [componentId]: [
-            ...current,
-            sauceId,
-          ],
+          ...current,
+          [componentId]: {
+            ...componentSelections,
+            [group.modifierGroupId]:
+              nextSelections,
+          },
         };
       },
     );
@@ -588,9 +691,8 @@ export const ComboConfigurator: React.FC<
     notes: string,
   ): void {
     setComponentNotes(
-      (currentNotes) => ({
+      currentNotes => ({
         ...currentNotes,
-
         [componentId]:
           notes,
       }),
@@ -598,78 +700,34 @@ export const ComboConfigurator: React.FC<
   }
 
   function mapComboProductToProduct(
-    comboProduct: {
-      id: string;
-      categoryId: string;
-      name: string;
-      description:
-        | string
-        | null;
-      price: number;
-      imageUrl:
-        | string
-        | null;
-      isAvailable: boolean;
-      isActive: boolean;
-      isComboOption: boolean;
-    },
+    comboProduct: ComboProductOption,
   ): Product {
     return {
       id:
         comboProduct.id,
-
       category_id:
         comboProduct.categoryId,
-
       name:
         comboProduct.name,
-
       description:
         comboProduct.description,
-
       price:
         comboProduct.price,
-
       image_url:
         comboProduct.imageUrl,
-
       is_available:
         comboProduct.isAvailable,
-
       is_active:
         comboProduct.isActive,
-
       created_at:
-        new Date()
-          .toISOString(),
+        new Date().toISOString(),
     };
   }
 
-  function getNotesPlaceholder(
-    component:
-      ComboRecipeComponent,
-  ): string {
-    switch (
-      component.type
-    ) {
-      case 'burger':
-        return 'Ej. sin cebolla';
-
-      case 'hotdog':
-        return 'Ej. sin jitomate';
-
-      default:
-        return 'Agregar indicaciones';
-    }
-  }
-
   function renderComponentNotes(
-    component:
-      ComboRecipeComponent,
+    component: ComboRecipeComponent,
   ): React.ReactNode {
-    if (
-      !component.allowsNotes
-    ) {
+    if (!component.allowsNotes) {
       return null;
     }
 
@@ -681,17 +739,10 @@ export const ComboConfigurator: React.FC<
       >
         <Text
           style={{
-            color:
-              '#FFFFFF',
-
-            fontSize:
-              14,
-
-            fontWeight:
-              '700',
-
-            marginBottom:
-              8,
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: '700',
+            marginBottom: 8,
           }}
         >
           Indicaciones
@@ -701,76 +752,46 @@ export const ComboConfigurator: React.FC<
           value={
             componentNotes[
               component.id
-            ] ??
-            ''
+            ] ?? ''
           }
           onChangeText={
-            (notes) =>
+            notes =>
               updateComponentNotes(
                 component.id,
                 notes,
               )
           }
-          placeholder={
-            getNotesPlaceholder(
-              component,
-            )
-          }
+          placeholder="Agregar indicaciones"
           placeholderTextColor="#888888"
           multiline
           maxLength={250}
           textAlignVertical="top"
           style={{
-            minHeight:
-              74,
-
-            paddingVertical:
-              10,
-
-            paddingHorizontal:
-              12,
-
-            borderRadius:
-              8,
-
-            borderWidth:
-              1,
-
-            borderColor:
-              '#555555',
-
-            backgroundColor:
-              '#202020',
-
-            color:
-              '#FFFFFF',
-
-            fontSize:
-              14,
+            minHeight: 74,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: '#555555',
+            backgroundColor: '#202020',
+            color: '#FFFFFF',
+            fontSize: 14,
           }}
         />
 
         <Text
           style={{
-            color:
-              '#888888',
-
-            fontSize:
-              11,
-
-            marginTop:
-              4,
-
-            textAlign:
-              'right',
+            color: '#888888',
+            fontSize: 11,
+            marginTop: 4,
+            textAlign: 'right',
           }}
         >
           {
             (
               componentNotes[
                 component.id
-              ] ??
-              ''
+              ] ?? ''
             ).length
           }
           /250
@@ -779,358 +800,15 @@ export const ComboConfigurator: React.FC<
     );
   }
 
-  function renderMeatSelector(
-    component:
-      ComboRecipeComponent,
-  ): React.ReactNode {
-    if (
-      !component.requiresMeat
-    ) {
-      return null;
-    }
-
-    if (
-      meats.length ===
-      0
-    ) {
-      return (
-        <Text
-          style={{
-            color:
-              '#FF5252',
-
-            marginTop:
-              12,
-          }}
-        >
-          No hay tipos de carne disponibles.
-        </Text>
-      );
-    }
-
-    const selectedMeatId =
-      selectedMeatIds[
-        component.id
-      ];
-
-    return (
-      <View
-        style={{
-          marginTop: 12,
-        }}
-      >
-        <Text
-          style={{
-            color:
-              '#FFFFFF',
-
-            fontSize:
-              15,
-
-            fontWeight:
-              '700',
-
-            marginBottom:
-              8,
-          }}
-        >
-          Elige el tipo de carne
-        </Text>
-
-        {meats.map(
-          (meat) => {
-            const isSelected =
-              selectedMeatId ===
-              meat.id;
-
-            return (
-              <TouchableOpacity
-                key={
-                  meat.id
-                }
-                onPress={() =>
-                  selectMeat(
-                    component.id,
-                    meat.id,
-                  )
-                }
-                style={{
-                  padding:
-                    12,
-
-                  borderRadius:
-                    8,
-
-                  borderWidth:
-                    1,
-
-                  marginBottom:
-                    8,
-
-                  borderColor:
-                    isSelected
-                      ? '#FFBF00'
-                      : '#555555',
-
-                  backgroundColor:
-                    isSelected
-                      ? '#463800'
-                      : '#292929',
-                }}
-              >
-                <Text
-                  style={{
-                    color:
-                      '#FFFFFF',
-
-                    fontWeight:
-                      isSelected
-                        ? '700'
-                        : '400',
-                  }}
-                >
-                  {meat.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          },
-        )}
-      </View>
-    );
-  }
-
-  function renderSauceSelector(
-    component:
-      ComboRecipeComponent,
-  ): React.ReactNode {
-    if (
-      !component.requiresSauce
-    ) {
-      return null;
-    }
-
-    if (
-      sauces.length ===
-      0
-    ) {
-      return (
-        <Text
-          style={{
-            color:
-              '#FF5252',
-
-            marginTop:
-              12,
-          }}
-        >
-          No hay salsas disponibles.
-        </Text>
-      );
-    }
-
-    const componentSauces =
-      selectedSauceIds[
-        component.id
-      ] ??
-      [];
-
-    return (
-      <View
-        style={{
-          marginTop: 12,
-        }}
-      >
-        <Text
-          style={{
-            color:
-              '#FFFFFF',
-
-            fontSize:
-              15,
-
-            fontWeight:
-              '700',
-
-            marginBottom:
-              4,
-          }}
-        >
-          Elige de 1 a 3 salsas
-        </Text>
-
-        <Text
-          style={{
-            color:
-              '#AAAAAA',
-
-            fontSize:
-              11,
-
-            marginBottom:
-              8,
-          }}
-        >
-          {
-            componentSauces.length
-          }
-          /{MAXIMUM_SAUCES} seleccionadas
-        </Text>
-
-        {weeklySauce && (
-          <View
-            style={{
-              padding:
-                9,
-
-              marginBottom:
-                8,
-
-              borderRadius:
-                8,
-
-              borderWidth:
-                1,
-
-              borderColor:
-                '#8A6A00',
-
-              backgroundColor:
-                '#302800',
-            }}
-          >
-            <Text
-              style={{
-                color:
-                  '#FFBF00',
-
-                fontSize:
-                  11,
-
-                fontWeight:
-                  '900',
-              }}
-            >
-              🌶️ {weeklySauce.modifier_name}
-              {' '}· Ahorra $
-              {weeklySauce.discount_amount.toFixed(
-                2,
-              )}
-            </Text>
-          </View>
-        )}
-
-        {sauces.map(
-          (sauce) => {
-            const isSelected =
-              componentSauces.includes(
-                sauce.id,
-              );
-
-            const isWeeklySauce =
-              weeklySauce
-                ?.modifier_id ===
-              sauce.id;
-
-            return (
-              <TouchableOpacity
-                key={
-                  sauce.id
-                }
-                onPress={() =>
-                  selectSauce(
-                    component.id,
-                    sauce.id,
-                  )
-                }
-                style={{
-                  padding:
-                    12,
-
-                  borderRadius:
-                    8,
-
-                  borderWidth:
-                    isWeeklySauce
-                      ? 2
-                      : 1,
-
-                  marginBottom:
-                    8,
-
-                  borderColor:
-                    isSelected ||
-                    isWeeklySauce
-                      ? '#FFBF00'
-                      : '#555555',
-
-                  backgroundColor:
-                    isSelected
-                      ? '#463800'
-                      : '#292929',
-                }}
-              >
-                <Text
-                  style={{
-                    color:
-                      isWeeklySauce
-                        ? '#FFBF00'
-                        : '#FFFFFF',
-
-                    fontWeight:
-                      isSelected ||
-                      isWeeklySauce
-                        ? '700'
-                        : '400',
-                  }}
-                >
-                  {isWeeklySauce
-                    ? '🌶️ '
-                    : ''}
-                  {sauce.name}
-                </Text>
-
-                {isWeeklySauce && (
-                  <Text
-                    style={{
-                      color:
-                        '#D6C98A',
-
-                      fontSize:
-                        10,
-
-                      marginTop:
-                        3,
-                    }}
-                  >
-                    Salsa de la Semana · Ahorra $
-                    {weeklySauce.discount_amount.toFixed(
-                      2,
-                    )}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            );
-          },
-        )}
-      </View>
-    );
-  }
-
   function renderFixedComponent(
-    component:
-      ComboRecipeComponent,
+    component: ComboRecipeComponent,
   ): React.ReactNode {
-    if (
-      !component.fixedProduct
-    ) {
+    if (!component.fixedProduct) {
       return (
         <Text
           style={{
-            color:
-              '#FF5252',
-
-            marginTop:
-              6,
+            color: '#FF5252',
+            marginTop: 6,
           }}
         >
           Producto fijo no disponible.
@@ -1141,32 +819,20 @@ export const ComboConfigurator: React.FC<
     return (
       <View
         style={{
-          marginTop:
-            8,
-
-          padding:
-            12,
-
-          borderRadius:
-            8,
-
-          backgroundColor:
-            '#292929',
+          marginTop: 8,
+          padding: 12,
+          borderRadius: 8,
+          backgroundColor: '#292929',
         }}
       >
         <Text
           style={{
-            color:
-              '#FFFFFF',
-
-            fontWeight:
-              '600',
+            color: '#FFFFFF',
+            fontWeight: '600',
           }}
         >
           {
-            component
-              .fixedProduct
-              .name
+            component.fixedProduct.name
           }
         </Text>
       </View>
@@ -1174,58 +840,39 @@ export const ComboConfigurator: React.FC<
   }
 
   function renderSelectableComponent(
-    component:
-      ComboRecipeComponent,
+    component: ComboRecipeComponent,
   ): React.ReactNode {
     const selectedOptionId =
       selectedOptionIds[
         component.id
       ];
 
-    const selectedOption =
-      component.options.find(
-        (option) =>
-          option.id ===
-          selectedOptionId,
-      );
-
-    const flavors =
-      selectedOption
-        ?.flavors ??
-      [];
-
     return (
       <View
         style={{
-          marginTop:
-            8,
-
-          gap:
-            8,
+          marginTop: 8,
+          gap: 8,
         }}
       >
         {component.options.length ===
         0 ? (
           <Text
             style={{
-              color:
-                '#FF5252',
+              color: '#FF5252',
             }}
           >
             No hay opciones disponibles.
           </Text>
         ) : (
           component.options.map(
-            (option) => {
+            option => {
               const isSelected =
                 selectedOptionId ===
                 option.id;
 
               return (
                 <TouchableOpacity
-                  key={
-                    option.id
-                  }
+                  key={option.id}
                   onPress={() =>
                     selectOption(
                       component.id,
@@ -1233,20 +880,13 @@ export const ComboConfigurator: React.FC<
                     )
                   }
                   style={{
-                    padding:
-                      12,
-
-                    borderRadius:
-                      8,
-
-                    borderWidth:
-                      1,
-
+                    padding: 12,
+                    borderRadius: 8,
+                    borderWidth: 1,
                     borderColor:
                       isSelected
                         ? '#FFBF00'
                         : '#555555',
-
                     backgroundColor:
                       isSelected
                         ? '#463800'
@@ -1255,9 +895,7 @@ export const ComboConfigurator: React.FC<
                 >
                   <Text
                     style={{
-                      color:
-                        '#FFFFFF',
-
+                      color: '#FFFFFF',
                       fontWeight:
                         isSelected
                           ? '700'
@@ -1271,101 +909,211 @@ export const ComboConfigurator: React.FC<
             },
           )
         )}
+      </View>
+    );
+  }
 
-        {component
-          .requiresDrinkFlavor &&
-          selectedOption &&
-          flavors.length >
-            0 && (
-            <View
-              style={{
-                marginTop:
-                  12,
-              }}
-            >
-              <Text
+  function renderModifierGroups(
+    component: ComboRecipeComponent,
+  ): React.ReactNode {
+    const selectedProduct =
+      getSelectedProduct(
+        component,
+      );
+
+    if (!selectedProduct) {
+      return null;
+    }
+
+    if (
+      !loadedModifierProductIds[
+        selectedProduct.id
+      ]
+    ) {
+      return (
+        <View
+          style={{
+            marginTop: 12,
+            alignItems: 'center',
+          }}
+        >
+          <ActivityIndicator
+            size="small"
+            color="#FFBF00"
+          />
+        </View>
+      );
+    }
+
+    const groups =
+      modifierGroupsByProductId[
+        selectedProduct.id
+      ] ?? [];
+
+    if (groups.length === 0) {
+      return null;
+    }
+
+    return (
+      <>
+        {groups.map(
+          group => {
+            const modifiers =
+              modifiersByGroupId[
+                group.modifierGroupId
+              ] ?? [];
+
+            const selectedIds =
+              selectedModifierIdsByComponent[
+                component.id
+              ]?.[
+                group.modifierGroupId
+              ] ?? [];
+
+            const minimum =
+              group.isRequired
+                ? Math.max(
+                    1,
+                    group.minSelections,
+                  )
+                : group.minSelections;
+
+            const groupName =
+              group.group?.name ??
+              'Opciones';
+
+            return (
+              <View
+                key={
+                  group.modifierGroupId
+                }
                 style={{
-                  color:
-                    '#FFFFFF',
-
-                  fontSize:
-                    15,
-
-                  fontWeight:
-                    '700',
-
-                  marginBottom:
-                    8,
+                  marginTop: 12,
                 }}
               >
-                Elige el sabor
-              </Text>
+                <Text
+                  style={{
+                    color: '#FFFFFF',
+                    fontSize: 15,
+                    fontWeight: '700',
+                    marginBottom: 4,
+                  }}
+                >
+                  {groupName}
+                  {minimum > 0
+                    ? ' *'
+                    : ''}
+                </Text>
 
-              {flavors.map(
-                (flavor) => {
-                  const isFlavorSelected =
-                    selectedFlavorIds[
-                      component.id
-                    ] ===
-                    flavor.id;
+                <Text
+                  style={{
+                    color: '#AAAAAA',
+                    fontSize: 11,
+                    marginBottom: 8,
+                  }}
+                >
+                  {group.maxSelections ===
+                  1
+                    ? minimum > 0
+                      ? 'Selecciona una opción'
+                      : 'Selecciona hasta una opción'
+                    : `Selecciona de ${minimum} a ${group.maxSelections}`}
+                </Text>
 
-                  return (
-                    <TouchableOpacity
-                      key={
-                        flavor.id
-                      }
-                      onPress={() =>
-                        selectFlavor(
-                          component.id,
-                          flavor.id,
-                        )
-                      }
-                      style={{
-                        padding:
-                          12,
+                {modifiers.length ===
+                0 ? (
+                  <Text
+                    style={{
+                      color: '#FF5252',
+                    }}
+                  >
+                    No hay opciones disponibles para {groupName}.
+                  </Text>
+                ) : (
+                  modifiers.map(
+                    modifier => {
+                      const isSelected =
+                        selectedIds.includes(
+                          modifier.id,
+                        );
 
-                        borderRadius:
-                          8,
+                      const isWeeklySauce =
+                        weeklySauce
+                          ?.modifier_id ===
+                        modifier.id;
 
-                        borderWidth:
-                          1,
+                      return (
+                        <TouchableOpacity
+                          key={modifier.id}
+                          onPress={() =>
+                            selectModifier(
+                              component.id,
+                              group,
+                              modifier.id,
+                            )
+                          }
+                          style={{
+                            padding: 12,
+                            borderRadius: 8,
+                            borderWidth:
+                              isWeeklySauce
+                                ? 2
+                                : 1,
+                            marginBottom: 8,
+                            borderColor:
+                              isSelected ||
+                              isWeeklySauce
+                                ? '#FFBF00'
+                                : '#555555',
+                            backgroundColor:
+                              isSelected
+                                ? '#463800'
+                                : '#292929',
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color:
+                                isWeeklySauce
+                                  ? '#FFBF00'
+                                  : '#FFFFFF',
+                              fontWeight:
+                                isSelected ||
+                                isWeeklySauce
+                                  ? '700'
+                                  : '400',
+                            }}
+                          >
+                            {isWeeklySauce
+                              ? '🌶️ '
+                              : ''}
+                            {modifier.name}
+                          </Text>
 
-                        marginBottom:
-                          8,
-
-                        borderColor:
-                          isFlavorSelected
-                            ? '#FFBF00'
-                            : '#555555',
-
-                        backgroundColor:
-                          isFlavorSelected
-                            ? '#463800'
-                            : '#292929',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color:
-                            '#FFFFFF',
-
-                          fontWeight:
-                            isFlavorSelected
-                              ? '700'
-                              : '400',
-                        }}
-                      >
-                        {
-                          flavor.name
-                        }
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                },
-              )}
-            </View>
-          )}
-      </View>
+                          {isWeeklySauce &&
+                            weeklySauce && (
+                              <Text
+                                style={{
+                                  color: '#D6C98A',
+                                  fontSize: 10,
+                                  marginTop: 3,
+                                }}
+                              >
+                                Salsa de la Semana · Ahorra ${weeklySauce.discount_amount.toFixed(
+                                  2,
+                                )}
+                              </Text>
+                            )}
+                        </TouchableOpacity>
+                      );
+                    },
+                  )
+                )}
+              </View>
+            );
+          },
+        )}
+      </>
     );
   }
 
@@ -1373,11 +1121,8 @@ export const ComboConfigurator: React.FC<
     return (
       <View
         style={{
-          paddingVertical:
-            30,
-
-          alignItems:
-            'center',
+          paddingVertical: 30,
+          alignItems: 'center',
         }}
       >
         <ActivityIndicator
@@ -1387,11 +1132,8 @@ export const ComboConfigurator: React.FC<
 
         <Text
           style={{
-            color:
-              '#FFFFFF',
-
-            marginTop:
-              12,
+            color: '#FFFFFF',
+            marginTop: 12,
           }}
         >
           Cargando configuración del combo...
@@ -1404,17 +1146,13 @@ export const ComboConfigurator: React.FC<
     return (
       <View
         style={{
-          paddingVertical:
-            20,
+          paddingVertical: 20,
         }}
       >
         <Text
           style={{
-            color:
-              '#FF5252',
-
-            textAlign:
-              'center',
+            color: '#FF5252',
+            textAlign: 'center',
           }}
         >
           {error}
@@ -1430,110 +1168,54 @@ export const ComboConfigurator: React.FC<
   return (
     <View
       style={{
-        paddingVertical:
-          16,
+        paddingVertical: 16,
       }}
     >
       <Text
         style={{
-          color:
-            '#FFFFFF',
-
-          fontSize:
-            18,
-
-          fontWeight:
-            '700',
-
-          textAlign:
-            'center',
-
-          marginBottom:
-            16,
+          color: '#FFFFFF',
+          fontSize: 18,
+          fontWeight: '700',
+          textAlign: 'center',
+          marginBottom: 16,
         }}
       >
         Configura {product.name}
       </Text>
 
       {recipe.components.map(
-        (component) => (
+        component => (
           <View
-            key={
-              component.id
-            }
+            key={component.id}
             style={{
-              paddingVertical:
-                12,
-
-              paddingHorizontal:
-                14,
-
-              marginBottom:
-                12,
-
-              borderWidth:
-                1,
-
-              borderColor:
-                '#555555',
-
-              borderRadius:
-                8,
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              marginBottom: 12,
+              borderWidth: 1,
+              borderColor: '#555555',
+              borderRadius: 8,
             }}
           >
             <Text
               style={{
-                color:
-                  '#FFFFFF',
-
-                fontSize:
-                  15,
-
-                fontWeight:
-                  '700',
+                color: '#FFFFFF',
+                fontSize: 15,
+                fontWeight: '700',
               }}
             >
-              {
-                component.label
-              }
+              {component.label}
             </Text>
 
-            <Text
-              style={{
-                color:
-                  '#AAAAAA',
+            {component.selectionMode ===
+            'fixed'
+              ? renderFixedComponent(
+                  component,
+                )
+              : renderSelectableComponent(
+                  component,
+                )}
 
-                fontSize:
-                  12,
-
-                marginTop:
-                  3,
-              }}
-            >
-              {
-                component.selectionMode ===
-                'fixed'
-                  ? 'Incluido en el combo'
-                  : 'Selecciona una opción'
-              }
-            </Text>
-
-            {
-              component.selectionMode ===
-              'fixed'
-                ? renderFixedComponent(
-                    component,
-                  )
-                : renderSelectableComponent(
-                    component,
-                  )
-            }
-
-            {renderMeatSelector(
-              component,
-            )}
-
-            {renderSauceSelector(
+            {renderModifierGroups(
               component,
             )}
 
@@ -1542,6 +1224,19 @@ export const ComboConfigurator: React.FC<
             )}
           </View>
         ),
+      )}
+
+      {areModifiersLoading && (
+        <Text
+          style={{
+            color: '#AAAAAA',
+            fontSize: 12,
+            textAlign: 'center',
+            marginTop: 4,
+          }}
+        >
+          Cargando opciones...
+        </Text>
       )}
     </View>
   );

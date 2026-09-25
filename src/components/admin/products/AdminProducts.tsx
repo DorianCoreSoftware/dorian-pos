@@ -50,6 +50,17 @@ import {
     saveProductModifierGroups,
 } from '../../../services/productModifierGroupService';
 
+import {
+    getComboRecipeForAdmin,
+    saveComboRecipe,
+} from '../../../services/comboService';
+
+import {
+    ComboRecipeEditor,
+    ComboRecipeFormState,
+    INITIAL_COMBO_RECIPE_FORM,
+} from './ComboRecipeEditor';
+
 interface ProductFormState {
     name: string;
     description: string;
@@ -105,6 +116,23 @@ export function AdminProducts({
     const [
         isLoadingProductGroups,
         setIsLoadingProductGroups,
+    ] = useState(false);
+
+    const [
+        comboRecipeForm,
+        setComboRecipeForm,
+    ] = useState<ComboRecipeFormState>(
+        INITIAL_COMBO_RECIPE_FORM,
+    );
+
+    const [
+        comboRecipeExists,
+        setComboRecipeExists,
+    ] = useState(false);
+
+    const [
+        isLoadingComboRecipe,
+        setIsLoadingComboRecipe,
     ] = useState(false);
 
     const [
@@ -293,6 +321,14 @@ export function AdminProducts({
                 [],
             );
 
+            setComboRecipeForm(
+                INITIAL_COMBO_RECIPE_FORM,
+            );
+
+            setComboRecipeExists(
+                false,
+            );
+
             setForm({
                 ...INITIAL_FORM,
 
@@ -341,6 +377,14 @@ export function AdminProducts({
                 [],
             );
 
+            setComboRecipeForm(
+                INITIAL_COMBO_RECIPE_FORM,
+            );
+
+            setComboRecipeExists(
+                false,
+            );
+
             setIsModalVisible(
                 true,
             );
@@ -350,10 +394,21 @@ export function AdminProducts({
                     true,
                 );
 
-                const associations =
-                    await getProductModifierGroups(
+                setIsLoadingComboRecipe(
+                    true,
+                );
+
+                const [
+                    associations,
+                    comboRecipe,
+                ] = await Promise.all([
+                    getProductModifierGroups(
                         product.id,
-                    );
+                    ),
+                    getComboRecipeForAdmin(
+                        product.id,
+                    ),
+                ]);
 
                 setProductModifierGroups(
                     associations.map(
@@ -379,15 +434,84 @@ export function AdminProducts({
                         }),
                     ),
                 );
+
+                setComboRecipeExists(
+                    comboRecipe !== null,
+                );
+
+                setComboRecipeForm(
+                    comboRecipe
+                        ? {
+                            enabled:
+                                comboRecipe.enabled,
+
+                            components:
+                                comboRecipe.components.map(
+                                    component => ({
+                                        clientId:
+                                            component.id,
+
+                                        slotKey:
+                                            component.slotKey,
+
+                                        type:
+                                            component.type,
+
+                                        label:
+                                            component.label,
+
+                                        selectionMode:
+                                            component.selectionMode,
+
+                                        fixedProductId:
+                                            component.fixedProductId ??
+                                            '',
+
+                                        selectableCategoryId:
+                                            component.selectableCategoryId ??
+                                            '',
+
+                                        allowsNotes:
+                                            component.allowsNotes,
+
+                                        allowedProductIds:
+                                            component.rules.some(
+                                                rule =>
+                                                    rule.ruleType ===
+                                                    'allowed',
+                                            )
+                                                ? component.rules
+                                                    .filter(
+                                                        rule =>
+                                                            rule.ruleType ===
+                                                            'allowed',
+                                                    )
+                                                    .map(
+                                                        rule =>
+                                                            rule.productId,
+                                                    )
+                                                : component.options.map(
+                                                    option =>
+                                                        option.id,
+                                                ),
+                                    }),
+                                ),
+                        }
+                        : INITIAL_COMBO_RECIPE_FORM,
+                );
             } catch (error) {
                 Alert.alert(
                     'Error',
                     error instanceof Error
                         ? error.message
-                        : 'No se pudieron cargar los grupos del producto.',
+                        : 'No se pudo cargar la configuración del producto.',
                 );
             } finally {
                 setIsLoadingProductGroups(
+                    false,
+                );
+
+                setIsLoadingComboRecipe(
                     false,
                 );
             }
@@ -407,6 +531,14 @@ export function AdminProducts({
 
             setProductModifierGroups(
                 [],
+            );
+
+            setComboRecipeForm(
+                INITIAL_COMBO_RECIPE_FORM,
+            );
+
+            setComboRecipeExists(
+                false,
             );
 
             setForm(
@@ -675,6 +807,223 @@ export function AdminProducts({
             return result;
         };
 
+    const getValidatedComboComponents =
+        (): Array<{
+            slotKey: string;
+            type: string;
+            label: string;
+            selectionMode:
+                | 'fixed'
+                | 'selectable';
+            fixedProductId:
+                | string
+                | null;
+            selectableCategoryId:
+                | string
+                | null;
+            allowsNotes: boolean;
+            position: number;
+            allowedProductIds: string[];
+        }> | null => {
+            if (
+                !comboRecipeForm.enabled
+            ) {
+                return [];
+            }
+
+            if (
+                comboRecipeForm.components.length ===
+                0
+            ) {
+                Alert.alert(
+                    'Combo incompleto',
+                    'Agrega al menos un componente al combo.',
+                );
+
+                return null;
+            }
+
+            const slotKeys =
+                new Set<string>();
+
+            const result:
+                Array<{
+                    slotKey: string;
+                    type: string;
+                    label: string;
+                    selectionMode:
+                        | 'fixed'
+                        | 'selectable';
+                    fixedProductId:
+                        | string
+                        | null;
+                    selectableCategoryId:
+                        | string
+                        | null;
+                    allowsNotes: boolean;
+                    position: number;
+                    allowedProductIds: string[];
+                }> = [];
+
+            for (
+                let index = 0;
+                index <
+                comboRecipeForm.components.length;
+                index += 1
+            ) {
+                const component =
+                    comboRecipeForm.components[
+                        index
+                    ];
+
+                const cleanLabel =
+                    component.label.trim();
+
+                const cleanType =
+                    component.type.trim();
+
+                const cleanSlotKey =
+                    component.slotKey.trim() ||
+                    `component_${index + 1}`;
+
+                if (!cleanLabel) {
+                    Alert.alert(
+                        'Componente incompleto',
+                        `Ingresa el nombre visible del componente ${index + 1}.`,
+                    );
+
+                    return null;
+                }
+
+                if (!cleanType) {
+                    Alert.alert(
+                        'Tipo requerido',
+                        `Ingresa el tipo interno del componente "${cleanLabel}".`,
+                    );
+
+                    return null;
+                }
+
+                if (
+                    slotKeys.has(
+                        cleanSlotKey,
+                    )
+                ) {
+                    Alert.alert(
+                        'Configuración inválida',
+                        `La clave interna "${cleanSlotKey}" está repetida.`,
+                    );
+
+                    return null;
+                }
+
+                slotKeys.add(
+                    cleanSlotKey,
+                );
+
+                if (
+                    component.selectionMode ===
+                    'fixed'
+                ) {
+                    if (
+                        !component.fixedProductId
+                    ) {
+                        Alert.alert(
+                            'Producto requerido',
+                            `Selecciona el producto fijo de "${cleanLabel}".`,
+                        );
+
+                        return null;
+                    }
+
+                    result.push({
+                        slotKey:
+                            cleanSlotKey,
+
+                        type:
+                            cleanType,
+
+                        label:
+                            cleanLabel,
+
+                        selectionMode:
+                            'fixed' as const,
+
+                        fixedProductId:
+                            component.fixedProductId,
+
+                        selectableCategoryId:
+                            null,
+
+                        allowsNotes:
+                            component.allowsNotes,
+
+                        position:
+                            index,
+
+                        allowedProductIds:
+                            [],
+                    });
+
+                    continue;
+                }
+
+                if (
+                    !component.selectableCategoryId
+                ) {
+                    Alert.alert(
+                        'Categoría requerida',
+                        `Selecciona la categoría de opciones de "${cleanLabel}".`,
+                    );
+
+                    return null;
+                }
+
+                if (
+                    component.allowedProductIds.length ===
+                    0
+                ) {
+                    Alert.alert(
+                        'Opciones requeridas',
+                        `Selecciona al menos un producto permitido para "${cleanLabel}".`,
+                    );
+
+                    return null;
+                }
+
+                result.push({
+                    slotKey:
+                        cleanSlotKey,
+
+                    type:
+                        cleanType,
+
+                    label:
+                        cleanLabel,
+
+                    selectionMode:
+                        'selectable' as const,
+
+                    fixedProductId:
+                        null,
+
+                    selectableCategoryId:
+                        component.selectableCategoryId,
+
+                    allowsNotes:
+                        component.allowsNotes,
+
+                    position:
+                        index,
+
+                    allowedProductIds:
+                        component.allowedProductIds,
+                });
+            }
+
+            return result;
+        };
+
     const handleSave =
         async (): Promise<void> => {
             if (isProcessing) {
@@ -749,6 +1098,13 @@ export function AdminProducts({
                 return;
             }
 
+            const validatedComboComponents =
+                getValidatedComboComponents();
+
+            if (!validatedComboComponents) {
+                return;
+            }
+
             try {
                 setIsProcessing(true);
 
@@ -805,6 +1161,22 @@ export function AdminProducts({
                         ),
                     );
 
+                    if (
+                        comboRecipeForm.enabled ||
+                        comboRecipeExists
+                    ) {
+                        await saveComboRecipe({
+                            comboProductId:
+                                selectedProduct.id,
+
+                            enabled:
+                                comboRecipeForm.enabled,
+
+                            components:
+                                validatedComboComponents,
+                        });
+                    }
+
                     Alert.alert(
                         'Producto actualizado',
                         `${cleanName} fue actualizado correctamente.`,
@@ -854,6 +1226,21 @@ export function AdminProducts({
                         ),
                     );
 
+                    if (
+                        comboRecipeForm.enabled
+                    ) {
+                        await saveComboRecipe({
+                            comboProductId:
+                                createdProduct.id,
+
+                            enabled:
+                                true,
+
+                            components:
+                                validatedComboComponents,
+                        });
+                    }
+
                     Alert.alert(
                         'Producto creado',
                         `${cleanName} fue agregado al catálogo.`,
@@ -874,6 +1261,14 @@ export function AdminProducts({
 
                 setProductModifierGroups(
                     [],
+                );
+
+                setComboRecipeForm(
+                    INITIAL_COMBO_RECIPE_FORM,
+                );
+
+                setComboRecipeExists(
+                    false,
                 );
 
                 setForm(
@@ -1728,6 +2123,76 @@ export function AdminProducts({
                                 },
                             )}
                         </View>
+
+                        {isLoadingComboRecipe ? (
+                            <View
+                                style={{
+                                    marginTop:
+                                        16,
+
+                                    paddingVertical:
+                                        16,
+
+                                    alignItems:
+                                        'center',
+
+                                    borderRadius:
+                                        10,
+
+                                    borderWidth:
+                                        1,
+
+                                    borderColor:
+                                        '#3A3A3A',
+
+                                    backgroundColor:
+                                        '#202020',
+                                }}
+                            >
+                                <ActivityIndicator
+                                    size="small"
+                                    color="#FFBF00"
+                                />
+
+                                <Text
+                                    style={{
+                                        color:
+                                            '#888888',
+
+                                        fontSize:
+                                            10,
+
+                                        marginTop:
+                                            6,
+                                    }}
+                                >
+                                    Cargando configuración del combo...
+                                </Text>
+                            </View>
+                        ) : (
+                            <ComboRecipeEditor
+                                value={
+                                    comboRecipeForm
+                                }
+                                onChange={
+                                    setComboRecipeForm
+                                }
+                                products={
+                                    products
+                                }
+                                categories={
+                                    categories
+                                }
+                                currentProductId={
+                                    selectedProduct
+                                        ?.id ??
+                                    null
+                                }
+                                disabled={
+                                    isProcessing
+                                }
+                            />
+                        )}
 
                         <View
                             style={{

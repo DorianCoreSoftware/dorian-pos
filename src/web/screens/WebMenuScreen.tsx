@@ -230,7 +230,14 @@ function getBusinessAvailabilityText(
   }
   return schedule;
 }
-export default function WebMenuScreen() {
+
+interface WebMenuScreenProps {
+  onRewardsPress?: () => void;
+}
+
+export default function WebMenuScreen({
+  onRewardsPress,
+}: WebMenuScreenProps) {
   const [
     isFeedbackVisible,
     setIsFeedbackVisible,
@@ -989,7 +996,11 @@ export default function WebMenuScreen() {
   }
   return (
     <View style={styles.screen}>
-      <WebHeader />
+      <WebHeader
+        onRewardsPress={
+          onRewardsPress
+        }
+      />
       <ScrollView
         ref={
           menuScrollRef
@@ -1000,7 +1011,7 @@ export default function WebMenuScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           cartSummary.totalItems >
-            0 &&
+          0 &&
           styles.scrollContentWithCart,
         ]}
         stickyHeaderIndices={[
@@ -1027,55 +1038,55 @@ export default function WebMenuScreen() {
         >
           {recentTrackingCodes.length >
             0 && (
-            <View
-              style={
-                styles.recentOrdersBlock
-              }
-            >
-              <Text
-                style={
-                  styles.recentOrdersLabel
-                }
-              >
-                PEDIDOS RECIENTES
-              </Text>
               <View
                 style={
-                  styles.recentOrdersRow
+                  styles.recentOrdersBlock
                 }
               >
-                {recentTrackingCodes.map(
-                  trackingCode => (
-                    <Pressable
-                      key={
-                        trackingCode
-                      }
-                      onPress={() =>
-                        handleOpenOrderTracking(
-                          trackingCode,
-                        )
-                      }
-                      style={({
-                        pressed,
-                      }) => [
-                        styles.recentOrderButton,
-                        pressed &&
-                        styles.recentOrderButtonPressed,
-                      ]}
-                    >
-                      <Text
-                        style={
-                          styles.recentOrderButtonText
+                <Text
+                  style={
+                    styles.recentOrdersLabel
+                  }
+                >
+                  PEDIDOS RECIENTES
+                </Text>
+                <View
+                  style={
+                    styles.recentOrdersRow
+                  }
+                >
+                  {recentTrackingCodes.map(
+                    trackingCode => (
+                      <Pressable
+                        key={
+                          trackingCode
                         }
+                        onPress={() =>
+                          handleOpenOrderTracking(
+                            trackingCode,
+                          )
+                        }
+                        style={({
+                          pressed,
+                        }) => [
+                            styles.recentOrderButton,
+                            pressed &&
+                            styles.recentOrderButtonPressed,
+                          ]}
                       >
-                        #{trackingCode}
-                      </Text>
-                    </Pressable>
-                  ),
-                )}
+                        <Text
+                          style={
+                            styles.recentOrderButtonText
+                          }
+                        >
+                          #{trackingCode}
+                        </Text>
+                      </Pressable>
+                    ),
+                  )}
+                </View>
               </View>
-            </View>
-          )}
+            )}
           <View
             style={
               styles.topActionsRow
@@ -1088,10 +1099,10 @@ export default function WebMenuScreen() {
               style={({
                 pressed,
               }) => [
-                styles.topActionPrimary,
-                pressed &&
-                styles.topActionPressed,
-              ]}
+                  styles.topActionPrimary,
+                  pressed &&
+                  styles.topActionPressed,
+                ]}
             >
               <Text
                 style={
@@ -1110,10 +1121,10 @@ export default function WebMenuScreen() {
               style={({
                 pressed,
               }) => [
-                styles.topActionSecondary,
-                pressed &&
-                styles.topActionPressed,
-              ]}
+                  styles.topActionSecondary,
+                  pressed &&
+                  styles.topActionPressed,
+                ]}
             >
               <Text
                 style={
@@ -1183,7 +1194,7 @@ export default function WebMenuScreen() {
                   {isBusinessStatusLoading
                     ? 'Consultando el horario de atención...'
                     : businessStatusError ??
-                      businessScheduleText}
+                    businessScheduleText}
                 </Text>
               </View>
             </View>
@@ -1207,18 +1218,18 @@ export default function WebMenuScreen() {
         >
           {visibleCategories.length >
             0 && (
-            <WebCategoryTabs
-              categories={
-                visibleCategories
-              }
-              selectedCategoryId={
-                selectedCategoryId
-              }
-              onSelectCategory={
-                handleCategorySelect
-              }
-            />
-          )}
+              <WebCategoryTabs
+                categories={
+                  visibleCategories
+                }
+                selectedCategoryId={
+                  selectedCategoryId
+                }
+                onSelectCategory={
+                  handleCategorySelect
+                }
+              />
+            )}
         </View>
         <View
           onLayout={
@@ -1231,126 +1242,126 @@ export default function WebMenuScreen() {
             styles.productSection
           }
         >
-        {loading ? (
-          <View
-            style={
-              styles.centerState
-            }
-          >
-            <ActivityIndicator
-              size="large"
-              color="#FFB000"
-            />
-            <Text
-              style={
-                styles.stateText
-              }
-            >
-              Cargando menú...
-            </Text>
-          </View>
-        ) : error ? (
-          <View
-            style={
-              styles.centerState
-            }
-          >
-            <Text
-              style={
-                styles.errorTitle
-              }
-            >
-              Algo salió mal
-            </Text>
-            <Text
-              style={
-                styles.stateText
-              }
-            >
-              {error}
-            </Text>
-          </View>
-        ) : (
-          <>
+          {loading ? (
             <View
               style={
-                styles.sectionHeader
+                styles.centerState
+              }
+            >
+              <ActivityIndicator
+                size="large"
+                color="#FFB000"
+              />
+              <Text
+                style={
+                  styles.stateText
+                }
+              >
+                Cargando menú...
+              </Text>
+            </View>
+          ) : error ? (
+            <View
+              style={
+                styles.centerState
               }
             >
               <Text
                 style={
-                  styles.sectionTitle
+                  styles.errorTitle
                 }
               >
-                {
-                  visibleCategories.find(
-                    (category) =>
-                      category.id ===
-                      selectedCategoryId,
-                  )?.name ??
-                  'Menú'
-                }
+                Algo salió mal
               </Text>
               <Text
                 style={
-                  styles.productCount
+                  styles.stateText
                 }
               >
-                {
-                  visibleProducts.length
-                }{' '}
-                producto
-                {
-                  visibleProducts.length ===
-                    1
-                    ? ''
-                    : 's'
-                }
+                {error}
               </Text>
             </View>
-            {visibleProducts.length ===
-              0 ? (
+          ) : (
+            <>
               <View
                 style={
-                  styles.centerState
+                  styles.sectionHeader
                 }
               >
                 <Text
                   style={
-                    styles.stateText
+                    styles.sectionTitle
                   }
                 >
-                  No hay productos disponibles en esta categoría.
+                  {
+                    visibleCategories.find(
+                      (category) =>
+                        category.id ===
+                        selectedCategoryId,
+                    )?.name ??
+                    'Menú'
+                  }
+                </Text>
+                <Text
+                  style={
+                    styles.productCount
+                  }
+                >
+                  {
+                    visibleProducts.length
+                  }{' '}
+                  producto
+                  {
+                    visibleProducts.length ===
+                      1
+                      ? ''
+                      : 's'
+                  }
                 </Text>
               </View>
-            ) : (
-              <View
-                style={
-                  styles.grid
-                }
-              >
-                {visibleProducts.map(
-                  (product) => (
-                    <WebProductCard
-                      key={
-                        product.id
-                      }
-                      product={
-                        product
-                      }
-                      width={
-                        cardWidth
-                      }
-                      onPress={
-                        handleProductPress
-                      }
-                    />
-                  ),
-                )}
-              </View>
-            )}
-          </>
-        )}
+              {visibleProducts.length ===
+                0 ? (
+                <View
+                  style={
+                    styles.centerState
+                  }
+                >
+                  <Text
+                    style={
+                      styles.stateText
+                    }
+                  >
+                    No hay productos disponibles en esta categoría.
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={
+                    styles.grid
+                  }
+                >
+                  {visibleProducts.map(
+                    (product) => (
+                      <WebProductCard
+                        key={
+                          product.id
+                        }
+                        product={
+                          product
+                        }
+                        width={
+                          cardWidth
+                        }
+                        onPress={
+                          handleProductPress
+                        }
+                      />
+                    ),
+                  )}
+                </View>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
       <WebCartButton

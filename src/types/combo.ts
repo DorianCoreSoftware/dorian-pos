@@ -1,11 +1,7 @@
 import { Product } from './product';
 import { SelectedModifier } from './modifier';
 
-export type ComboComponentType =
-  | 'burger'
-  | 'hotdog'
-  | 'side'
-  | 'drink';
+export type ComboComponentType = string;
 
 export interface ComboComponentSelection {
   slotId: string;

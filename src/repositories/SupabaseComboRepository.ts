@@ -9,7 +9,10 @@ import {
     ComboRecipeComponent,
     ComboSelectionMode,
 } from "../domain/entities/ComboRecipe";
-import { ComboRepository } from './ComboRepository';
+import {
+    ComboRepository,
+    SaveComboRecipeInput,
+} from './ComboRepository';
 
 
 
@@ -29,9 +32,6 @@ interface ComboRecipeComponentRow {
     fixed_product_id: string | null;
     product_category_id: string | null;
     allows_notes: boolean;
-    requires_meat: boolean;
-    requires_sauce: boolean;
-    requires_drink_flavor: boolean;
     position: number;
 }
 
@@ -61,9 +61,84 @@ export class SupabaseComboRepository implements ComboRepository {
     async getRecipeByComboProductId(
         comboProductId: string,
     ): Promise<ComboRecipe | null> {
+        return this.getRecipeByComboProductIdInternal(
+            comboProductId,
+            false,
+        );
+    }
+
+    async getRecipeByComboProductIdForAdmin(
+        comboProductId: string,
+    ): Promise<ComboRecipe | null> {
+        return this.getRecipeByComboProductIdInternal(
+            comboProductId,
+            true,
+        );
+    }
+
+    async saveRecipe(
+        input: SaveComboRecipeInput,
+    ): Promise<string> {
+        const { data, error } =
+            await this.supabase.rpc(
+                'admin_save_combo_recipe',
+                {
+                    p_combo_product_id:
+                        input.comboProductId,
+                    p_enabled:
+                        input.enabled,
+                    p_components:
+                        input.components.map(
+                            component => ({
+                                slotKey:
+                                    component.slotKey,
+                                type:
+                                    component.type,
+                                label:
+                                    component.label,
+                                selectionMode:
+                                    component.selectionMode,
+                                fixedProductId:
+                                    component.fixedProductId,
+                                selectableCategoryId:
+                                    component.selectableCategoryId,
+                                allowsNotes:
+                                    component.allowsNotes,
+                                position:
+                                    component.position,
+                                allowedProductIds:
+                                    component.allowedProductIds,
+                            }),
+                        ),
+                },
+            );
+
+        if (error) {
+            throw new Error(
+                `No fue posible guardar la receta del combo: ${error.message}`,
+            );
+        }
+
+        if (
+            typeof data !== 'string' ||
+            !data
+        ) {
+            throw new Error(
+                'Supabase no devolvió el identificador de la receta.',
+            );
+        }
+
+        return data;
+    }
+
+    private async getRecipeByComboProductIdInternal(
+        comboProductId: string,
+        includeDisabled: boolean,
+    ): Promise<ComboRecipe | null> {
         const recipe =
             await this.getRecipe(
                 comboProductId,
+                includeDisabled,
             );
 
         if (!recipe) {
@@ -118,70 +193,12 @@ export class SupabaseComboRepository implements ComboRepository {
             ),
         ]);
 
-        const allProducts = [
-            ...referencedProducts,
-            ...categoryProducts,
-        ];
-
-        const uniqueProductIds = Array.from(
-            new Set(
-                allProducts.map(
-                    product => product.id,
-                ),
-            ),
-        );
-
-        const flavorRows =
-            await this.getProductFlavors(
-                uniqueProductIds,
-            );
-
-        const flavorsByProductId = new Map<
-            string,
-            ProductFlavorRow[]
-        >();
-
-        flavorRows.forEach(flavor => {
-            const currentFlavors =
-                flavorsByProductId.get(
-                    flavor.product_id,
-                ) ?? [];
-
-            currentFlavors.push(flavor);
-
-            flavorsByProductId.set(
-                flavor.product_id,
-                currentFlavors,
-            );
-        });
-
-        const addFlavors = (
-            product: ComboProductOption,
-        ): ComboProductOption => ({
-            ...product,
-            flavors: this.mapFlavors(
-                flavorsByProductId.get(
-                    product.id,
-                ) ?? [],
-            ),
-        });
-
-        const referencedProductsWithFlavors =
-            referencedProducts.map(
-                addFlavors,
-            );
-
-        const categoryProductsWithFlavors =
-            categoryProducts.map(
-                addFlavors,
-            );
-
         const productsById = new Map<
             string,
             ComboProductOption
         >();
 
-        referencedProductsWithFlavors.forEach(
+        referencedProducts.forEach(
             product => {
                 productsById.set(
                     product.id,
@@ -190,7 +207,7 @@ export class SupabaseComboRepository implements ComboRepository {
             },
         );
 
-        categoryProductsWithFlavors.forEach(
+        categoryProducts.forEach(
             product => {
                 productsById.set(
                     product.id,
@@ -206,7 +223,7 @@ export class SupabaseComboRepository implements ComboRepository {
 
         const productsByCategoryId =
             this.groupProductsByCategoryId(
-                categoryProductsWithFlavors,
+                categoryProducts,
             );
 
         const components =
@@ -243,93 +260,11 @@ export class SupabaseComboRepository implements ComboRepository {
         };
     }
 
-    private mapFlavors(
-        flavors: ProductFlavorRow[],
-    ): ComboProductOption['flavors'] {
-        return flavors.map(flavor => ({
-            id: flavor.id,
-            productId: flavor.product_id,
-            modifierId: flavor.modifier_id,
-            name: flavor.name,
-            isAvailable: flavor.is_available,
-            position: flavor.position,
-        }));
-    }
-
-    private async getProductFlavors(
-        productIds: string[],
-    ): Promise<ProductFlavorRow[]> {
-        if (productIds.length === 0) {
-            console.log(
-                '⚠️ No se recibieron productos para buscar sabores',
-            );
-
-            return [];
-        }
-
-        const { data, error } =
-            await this.supabase
-                .from('product_flavors')
-                .select(`
-        id,
-        product_id,
-        modifier_id,
-        name,
-        is_available,
-        position
-      `)
-                .in('product_id', productIds)
-                .eq('is_available', true)
-                .order('position', {
-                    ascending: true,
-                });
-
-        console.log(
-            '🥤 Sabores recibidos desde Supabase:',
-            {
-                data,
-                error,
-            },
-        );
-
-        if (error) {
-            throw new Error(
-                `No fue posible obtener los sabores: ${error.message}`,
-            );
-        }
-
-        return (data ?? []) as ProductFlavorRow[];
-    }
-
     private async getRecipe(
         comboProductId: string,
+        includeDisabled: boolean,
     ): Promise<ComboRecipeRow | null> {
-        const {
-            data: sessionData,
-            error: sessionError,
-        } = await this.supabase.auth.getSession();
-
-        console.log('🔐 Sesión Supabase:', {
-            userId:
-                sessionData.session?.user.id ?? null,
-            role:
-                sessionData.session?.user.role ?? null,
-            sessionError,
-        });
-
-        const {
-            data: visibleRecipes,
-            error: visibleRecipesError,
-        } = await this.supabase
-            .from('combo_recipes')
-            .select(`
-      id,
-      combo_product_id,
-      enabled
-    `)
-            .limit(5);
-
-        const { data, error } = await this.supabase
+        let query = this.supabase
             .from('combo_recipes')
             .select(`
       id,
@@ -339,9 +274,18 @@ export class SupabaseComboRepository implements ComboRepository {
             .eq(
                 'combo_product_id',
                 comboProductId,
-            )
-            .eq('enabled', true)
-            .maybeSingle<ComboRecipeRow>();
+            );
+
+        if (!includeDisabled) {
+            query = query.eq(
+                'enabled',
+                true,
+            );
+        }
+
+        const { data, error } =
+            await query
+                .maybeSingle<ComboRecipeRow>();
 
         if (error) {
             throw new Error(
@@ -367,9 +311,6 @@ export class SupabaseComboRepository implements ComboRepository {
         fixed_product_id,
         product_category_id,
         allows_notes,
-        requires_meat,
-        requires_sauce,
-        requires_drink_flavor,
         position
       `)
             .eq('combo_recipe_id', recipeId)
@@ -542,10 +483,6 @@ export class SupabaseComboRepository implements ComboRepository {
                 component.product_category_id,
 
             allowsNotes: component.allows_notes,
-            requiresMeat: component.requires_meat,
-            requiresSauce: component.requires_sauce,
-            requiresDrinkFlavor:
-                component.requires_drink_flavor,
 
             fixedProduct,
             options,
@@ -732,7 +669,6 @@ export class SupabaseComboRepository implements ComboRepository {
 
     private mapProduct(
         row: ProductRow,
-        flavors: ProductFlavorRow[] = [],
     ): ComboProductOption {
         return {
             id: row.id,
@@ -744,37 +680,21 @@ export class SupabaseComboRepository implements ComboRepository {
             isAvailable: row.is_available ?? false,
             isActive: row.is_active ?? false,
             isComboOption: row.is_combo_option ?? false,
-            flavors: flavors.map(flavor => ({
-                id: flavor.id,
-                productId: flavor.product_id,
-                modifierId: flavor.modifier_id,
-                name: flavor.name,
-                isAvailable: flavor.is_available,
-                position: flavor.position,
-            })),
         };
     }
 
     private parseComponentType(
         value: string
     ): ComboComponentType {
-        const validValues: ComboComponentType[] = [
-            'burger',
-            'hotdog',
-            'side',
-            'drink',
-        ];
+        const normalizedValue =
+            value.trim();
 
-        if (
-            validValues.includes(
-                value as ComboComponentType
-            )
-        ) {
-            return value as ComboComponentType;
+        if (normalizedValue.length > 0) {
+            return normalizedValue;
         }
 
         throw new Error(
-            `Tipo de componente de combo inválido: ${value}`
+            'El tipo de componente del combo no puede estar vacío.'
         );
     }
 
@@ -807,13 +727,4 @@ export class SupabaseComboRepository implements ComboRepository {
             `Tipo de regla de combo inválido: ${value}`
         );
     }
-}
-
-interface ProductFlavorRow {
-    id: string;
-    product_id: string;
-    modifier_id: string;
-    name: string;
-    is_available: boolean;
-    position: number;
 }
