@@ -377,37 +377,6 @@ export const styles =
 
     /*
      * ============================
-     * DOBLE CARNE
-     * ============================
-     */
-
-    doubleMeatButton: {
-      marginTop:
-        10,
-
-      alignSelf:
-        'flex-start',
-
-      paddingVertical:
-        4,
-    },
-
-    doubleMeatText: {
-      color:
-        '#FFBF00',
-
-      fontSize:
-        13,
-
-      fontWeight:
-        '600',
-
-      textDecorationLine:
-        'underline',
-    },
-
-    /*
-     * ============================
      * NOTAS
      * ============================
      */

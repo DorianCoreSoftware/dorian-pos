@@ -749,12 +749,7 @@ export function KitchenScreen({
                     component.id,
 
                   type:
-                    component
-                      .component_type as
-                    | 'burger'
-                    | 'hotdog'
-                    | 'side'
-                    | 'drink',
+                    component.component_type,
 
                   label:
                     component.label,
@@ -965,8 +960,8 @@ export function KitchenScreen({
                 modifier,
               )
                 ? ` (${getModifierGroupLabel(
-                    modifier,
-                  )})`
+                  modifier,
+                )})`
                 : ''}
             </Text>
           ),
@@ -1059,8 +1054,8 @@ export function KitchenScreen({
                       modifier,
                     )
                       ? ` (${getModifierGroupLabel(
-                          modifier,
-                        )})`
+                        modifier,
+                      )})`
                       : ''}
                   </Text>
                 ),
@@ -1342,9 +1337,9 @@ export function KitchenScreen({
     ) => {
       if (
         order.fulfillmentType !==
-          'delivery' ||
+        'delivery' ||
         order.status !==
-          'on_the_way' ||
+        'on_the_way' ||
         !order.driverName
       ) {
         return null;

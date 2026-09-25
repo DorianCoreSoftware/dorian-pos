@@ -26,7 +26,7 @@ import {
   getActiveModifierPromotion,
   ModifierPromotion,
 } from '../../services/modifierPromotionService';
-import { getModifierGroupCode, getModifierGroupLabel } from '../../Utils/modifierGroup';
+import { getModifierGroupLabel } from '../../Utils/modifierGroup';
 
 
 interface CartProps {
@@ -119,14 +119,14 @@ export const Cart: React.FC<
     const modifierPromotionDiscount =
       modifierPromotion
         ? regularItems.reduce(
-            (sum, item) =>
-              sum +
-              getModifierPromotionDiscountForItem(
-                item,
-                modifierPromotion,
-              ),
-            0,
-          )
+          (sum, item) =>
+            sum +
+            getModifierPromotionDiscountForItem(
+              item,
+              modifierPromotion,
+            ),
+          0,
+        )
         : 0;
 
     const totalAmount =
@@ -160,7 +160,7 @@ export const Cart: React.FC<
             }
           } catch (error) {
             console.error(
-              'Error loading weekly sauce in cart:',
+              'Error loading modifier promotion in cart:',
               error,
             );
 
@@ -588,18 +588,9 @@ export const Cart: React.FC<
                             index,
                           ) => (
                             <View
-                              key={`${item.id}-${modifier.id}-${index}`}
-                              style={[
-                                styles.modifierBadge,
-                                {
-                                  borderColor:
-                                    getModifierColor(
-                                      getModifierGroupCode(
-                                        modifier,
-                                      ),
-                                    ),
-                                },
-                              ]}
+                              style={
+                                styles.modifierBadge
+                              }
                             >
                               <Text
                                 style={
@@ -610,8 +601,8 @@ export const Cart: React.FC<
                                   modifier,
                                 )
                                   ? `${getModifierGroupLabel(
-                                      modifier,
-                                    )}: `
+                                    modifier,
+                                  )}: `
                                   : ''}
                                 {
                                   modifier.name
@@ -736,7 +727,7 @@ export const Cart: React.FC<
                         item,
                         modifierPromotion,
                       ) >
-                        0 ? (
+                      0 ? (
                       <View
                         style={{
                           marginTop: 6,
@@ -1040,7 +1031,7 @@ function getModifierPromotionDiscountForItem(
       discountPerEligibleUnit,
     ) ||
     discountPerEligibleUnit <=
-      0
+    0
   ) {
     return 0;
   }
@@ -1093,7 +1084,7 @@ function getModifierPromotionDiscountForItem(
             Number.isFinite(
               componentQuantity,
             ) &&
-            componentQuantity >
+              componentQuantity >
               0
               ? componentQuantity
               : 1
@@ -1106,33 +1097,12 @@ function getModifierPromotionDiscountForItem(
   const eligibleUnits =
     directEligibleUnits +
     comboEligibleUnits *
-      item.quantity;
+    item.quantity;
 
   return (
     eligibleUnits *
     discountPerEligibleUnit
   );
-}
-
-function getModifierColor(
-  groupCode:
-    | string
-    | null
-    | undefined,
-): string {
-  switch (groupCode) {
-    case 'meat':
-      return '#FFBF00';
-
-    case 'sauce':
-      return '#FF4D4D';
-
-    case 'drink_flavor':
-      return '#4DA6FF';
-
-    default:
-      return '#777777';
-  }
 }
 
 function buildDeliveryAddress(

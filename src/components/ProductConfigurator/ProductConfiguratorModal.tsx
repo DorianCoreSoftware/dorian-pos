@@ -153,12 +153,12 @@ export const ProductConfiguratorModal:
             association => {
               const selectedIds =
                 selectedModifierIdsByGroup[
-                  association.modifierGroupId
+                association.modifierGroupId
                 ] ?? [];
 
               const availableModifiers =
                 modifiersByGroup[
-                  association.modifierGroupId
+                association.modifierGroupId
                 ] ?? [];
 
               return selectedIds
@@ -188,10 +188,10 @@ export const ProductConfiguratorModal:
                     group:
                       modifier.group
                         ? {
-                            id: modifier.group.id,
-                            code: modifier.group.code,
-                            name: modifier.group.name,
-                          }
+                          id: modifier.group.id,
+                          code: modifier.group.code,
+                          name: modifier.group.name,
+                        }
                         : null,
                     is_available:
                       modifier.is_available,
@@ -210,7 +210,7 @@ export const ProductConfiguratorModal:
         if (
           !product?.id ||
           comboCheckedProductId !==
-            product.id ||
+          product.id ||
           comboDetectionError
         ) {
           return false;
@@ -238,16 +238,16 @@ export const ProductConfiguratorModal:
           const selectedCount =
             (
               selectedModifierIdsByGroup[
-                association.modifierGroupId
+              association.modifierGroupId
               ] ?? []
             ).length;
 
           const minimum =
             association.isRequired
               ? Math.max(
-                  1,
-                  association.minSelections,
-                )
+                1,
+                association.minSelections,
+              )
               : association.minSelections;
 
           if (
@@ -318,7 +318,7 @@ export const ProductConfiguratorModal:
               product.id,
             );
           } catch (
-            comboError
+          comboError
           ) {
             console.error(
               'Error detecting combo recipe:',
@@ -385,7 +385,7 @@ export const ProductConfiguratorModal:
           modifierPromotionError
           ) {
             console.error(
-              'Error loading weekly sauce:',
+              'Error loading modifier promotion:',
               modifierPromotionError,
             );
             if (
@@ -402,7 +402,7 @@ export const ProductConfiguratorModal:
           if (
             !product?.id ||
             comboCheckedProductId !==
-              product.id ||
+            product.id ||
             isCombo
           ) {
             return;
@@ -505,7 +505,7 @@ export const ProductConfiguratorModal:
               ),
             );
           } catch (
-            groupLoadError
+          groupLoadError
           ) {
             console.error(
               'Error loading product modifier groups:',
@@ -556,7 +556,7 @@ export const ProductConfiguratorModal:
         current => {
           const currentSelection =
             current[
-              association.modifierGroupId
+            association.modifierGroupId
             ] ?? [];
           if (
             currentSelection.includes(
@@ -617,7 +617,7 @@ export const ProductConfiguratorModal:
         current => {
           const currentSelection =
             current[
-              association.modifierGroupId
+            association.modifierGroupId
             ] ?? [];
 
           if (
@@ -707,7 +707,7 @@ export const ProductConfiguratorModal:
           >
             {product?.id &&
               comboCheckedProductId !==
-                product.id && (
+              product.id && (
                 <View
                   style={{
                     paddingVertical:
@@ -778,7 +778,7 @@ export const ProductConfiguratorModal:
                 association =>
                   (
                     modifiersByGroup[
-                      association.modifierGroupId
+                    association.modifierGroupId
                     ] ?? []
                   ).some(
                     modifier =>
@@ -913,11 +913,11 @@ export const ProductConfiguratorModal:
                       'Opciones';
                     const groupModifiers =
                       modifiersByGroup[
-                        association.modifierGroupId
+                      association.modifierGroupId
                       ] ?? [];
                     const selectedIds =
                       selectedModifierIdsByGroup[
-                        association.modifierGroupId
+                      association.modifierGroupId
                       ] ?? [];
                     const selectedCount =
                       selectedIds.length;
@@ -939,8 +939,8 @@ export const ProductConfiguratorModal:
                         >
                           {groupName}
                           {association.isRequired ||
-                          association.minSelections >
-                          0
+                            association.minSelections >
+                            0
                             ? ' *'
                             : ''}{' '}
                           {association.minSelections ===
@@ -950,25 +950,25 @@ export const ProductConfiguratorModal:
                         </Text>
                         {association.maxSelections >
                           1 && (
-                          <Text
-                            style={{
-                              color:
-                                '#AAAAAA',
-                              fontSize:
-                                12,
-                              marginBottom:
-                                8,
-                            }}
-                          >
-                            {selectedCount}/
-                            {
-                              association.maxSelections
-                            }{' '}
-                            seleccionadas
-                          </Text>
-                        )}
+                            <Text
+                              style={{
+                                color:
+                                  '#AAAAAA',
+                                fontSize:
+                                  12,
+                                marginBottom:
+                                  8,
+                              }}
+                            >
+                              {selectedCount}/
+                              {
+                                association.maxSelections
+                              }{' '}
+                              seleccionadas
+                            </Text>
+                          )}
                         {groupModifiers.length ===
-                        0 ? (
+                          0 ? (
                           <Text
                             style={{
                               color:
@@ -1092,7 +1092,7 @@ export const ProductConfiguratorModal:
                                       {Number(
                                         modifier.extra_price,
                                       ) >
-                                      0
+                                        0
                                         ? ` (+$${Number(
                                           modifier.extra_price,
                                         ).toFixed(
@@ -1129,7 +1129,7 @@ export const ProductConfiguratorModal:
                                     {association.allowDuplicates &&
                                       isSelected &&
                                       selectedIds.length <
-                                        association.maxSelections && (
+                                      association.maxSelections && (
                                         <TouchableOpacity
                                           onPress={() =>
                                             handleDuplicateModifier(
