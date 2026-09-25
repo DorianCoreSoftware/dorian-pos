@@ -376,7 +376,8 @@ export async function fetchOrderById(
         *,
         profiles:driver_id(
           id,
-          name
+          first_name,
+          last_name
         ),
         order_delivery_details(
           *
