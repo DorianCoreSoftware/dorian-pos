@@ -104,7 +104,9 @@ export interface PendingOrderModifierRelation {
     name: string;
     extra_price: string | number;
     is_available: boolean;
-    group_id: string | null;
+
+    group_id: string;
+
     group: {
       id: string;
       code: string;

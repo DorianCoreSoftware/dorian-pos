@@ -658,8 +658,7 @@ export function AdminModifiers({
                 ),
 
             groupId:
-                modifier.group_id ??
-                '',
+                modifier.group_id,
 
             isAvailable:
                 modifier.is_available !==
@@ -921,22 +920,7 @@ export function AdminModifiers({
                         </Text>
 
                         <View
-                            style={[
-                                styles.groupBadge,
-
-                                item.group?.code ===
-                                    'meat'
-                                    ? styles.groupBadgeMeat
-                                    : item.group?.code ===
-                                        'sauce'
-                                        ? styles.groupBadgeSauce
-                                        : item.group?.code ===
-                                            'drink_flavor' ||
-                                            item.group?.code ===
-                                                'ice_cream_flavor'
-                                            ? styles.groupBadgeFlavor
-                                            : styles.groupBadgeOther,
-                            ]}
+                            style={styles.groupBadge}
                         >
                             <Text
                                 style={
