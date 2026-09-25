@@ -1,6 +1,12 @@
-import React from 'react';
+import React, {
+  useMemo,
+  useState,
+} from 'react';
 
 import {
+  Modal,
+  Pressable,
+  ScrollView,
   Switch,
   Text,
   TextInput,
@@ -45,7 +51,58 @@ interface ComboRecipeEditorProps {
   disabled?: boolean;
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+  subtitle?: string;
+}
+
+interface CompactSelectProps {
+  label: string;
+  value: string;
+  options: SelectOption[];
+  placeholder: string;
+  onChange: (
+    value: string,
+  ) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
+}
+
+interface CompactMultiSelectProps {
+  label: string;
+  values: string[];
+  options: SelectOption[];
+  placeholder: string;
+  onChange: (
+    values: string[],
+  ) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
+}
+
 let componentSequence = 0;
+
+function normalizeInternalKey(
+  value: string,
+): string {
+  return value
+    .normalize('NFD')
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
+    .trim()
+    .toLocaleLowerCase('es')
+    .replace(
+      /[^a-z0-9]+/g,
+      '_',
+    )
+    .replace(
+      /^_+|_+$/g,
+      '',
+    );
+}
 
 export function createEmptyComboComponent(
   position: number,
@@ -82,10 +139,27 @@ export function ComboRecipeEditor({
   disabled = false,
 }: ComboRecipeEditorProps) {
   const availableProducts =
-    products.filter(
-      product =>
-        product.is_active !== false &&
-        product.id !== currentProductId,
+    useMemo(
+      () =>
+        products.filter(
+          product =>
+            product.is_active !== false &&
+            product.id !== currentProductId,
+        ),
+      [
+        products,
+        currentProductId,
+      ],
+    );
+
+  const activeCategories =
+    useMemo(
+      () =>
+        categories.filter(
+          category =>
+            category.is_active !== false,
+        ),
+      [categories],
     );
 
   const updateComponent = (
@@ -107,6 +181,42 @@ export function ComboRecipeEditor({
               : component,
         ),
     });
+  };
+
+  const updateComponentLabel = (
+    component:
+      ComboRecipeFormComponent,
+    label: string,
+  ): void => {
+    const previousNormalizedLabel =
+      normalizeInternalKey(
+        component.label,
+      );
+
+    const nextNormalizedLabel =
+      normalizeInternalKey(
+        label,
+      );
+
+    const shouldUpdateType =
+      !component.type.trim() ||
+      component.type === 'item' ||
+      component.type ===
+        previousNormalizedLabel;
+
+    updateComponent(
+      component.clientId,
+      {
+        label,
+        ...(shouldUpdateType &&
+        nextNormalizedLabel
+          ? {
+              type:
+                nextNormalizedLabel,
+            }
+          : {}),
+      },
+    );
   };
 
   const removeComponent = (
@@ -133,33 +243,6 @@ export function ComboRecipeEditor({
         ),
       ],
     });
-  };
-
-  const toggleAllowedProduct = (
-    component:
-      ComboRecipeFormComponent,
-    productId: string,
-  ): void => {
-    const selected =
-      component.allowedProductIds.includes(
-        productId,
-      );
-
-    updateComponent(
-      component.clientId,
-      {
-        allowedProductIds:
-          selected
-            ? component.allowedProductIds.filter(
-                id =>
-                  id !== productId,
-              )
-            : [
-                ...component.allowedProductIds,
-                productId,
-              ],
-      },
-    );
   };
 
   return (
@@ -204,7 +287,7 @@ export function ComboRecipeEditor({
               marginTop: 3,
             }}
           >
-            Actívalo si este producto está compuesto por otros productos del catálogo.
+            Define qué productos incluye y cuáles puede elegir el cliente.
           </Text>
         </View>
 
@@ -249,6 +332,33 @@ export function ComboRecipeEditor({
                         .selectableCategoryId,
                 );
 
+              const fixedProductOptions:
+                SelectOption[] =
+                availableProducts.map(
+                  product => ({
+                    value: product.id,
+                    label: product.name,
+                  }),
+                );
+
+              const categoryOptions:
+                SelectOption[] =
+                activeCategories.map(
+                  category => ({
+                    value: category.id,
+                    label: category.name,
+                  }),
+                );
+
+              const selectableProductOptions:
+                SelectOption[] =
+                selectableProducts.map(
+                  product => ({
+                    value: product.id,
+                    label: product.name,
+                  }),
+                );
+
               return (
                 <View
                   key={
@@ -272,21 +382,42 @@ export function ComboRecipeEditor({
                         'center',
                       justifyContent:
                         'space-between',
-                      marginBottom: 8,
+                      marginBottom: 2,
                     }}
                   >
-                    <Text
+                    <View
                       style={{
-                        color:
-                          '#FFBF00',
-                        fontSize: 12,
-                        fontWeight:
-                          '900',
+                        flex: 1,
+                        paddingRight: 12,
                       }}
                     >
-                      Componente{' '}
-                      {index + 1}
-                    </Text>
+                      <Text
+                        style={{
+                          color:
+                            '#FFBF00',
+                          fontSize: 12,
+                          fontWeight:
+                            '900',
+                        }}
+                      >
+                        Componente{' '}
+                        {index + 1}
+                      </Text>
+
+                      {component.label.trim() ? (
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color:
+                              '#9A9A9A',
+                            fontSize: 9,
+                            marginTop: 2,
+                          }}
+                        >
+                          {component.label.trim()}
+                        </Text>
+                      ) : null}
+                    </View>
 
                     <TouchableOpacity
                       disabled={disabled}
@@ -321,9 +452,9 @@ export function ComboRecipeEditor({
                       component.label
                     }
                     onChangeText={label =>
-                      updateComponent(
-                        component.clientId,
-                        { label },
+                      updateComponentLabel(
+                        component,
+                        label,
                       )
                     }
                     editable={!disabled}
@@ -332,319 +463,118 @@ export function ComboRecipeEditor({
                     style={inputStyle}
                   />
 
-                  <Text
-                    style={labelStyle}
-                  >
-                    Tipo interno
-                  </Text>
-
-                  <TextInput
+                  <CompactSelect
+                    label="Selección"
                     value={
-                      component.type
+                      component.selectionMode
                     }
-                    onChangeText={type =>
+                    options={[
+                      {
+                        value: 'fixed',
+                        label:
+                          'Producto fijo',
+                        subtitle:
+                          'El combo siempre incluye el mismo producto.',
+                      },
+                      {
+                        value:
+                          'selectable',
+                        label:
+                          'Cliente elige',
+                        subtitle:
+                          'El cliente escoge entre los productos permitidos.',
+                      },
+                    ]}
+                    placeholder="Selecciona el tipo"
+                    disabled={disabled}
+                    onChange={mode =>
                       updateComponent(
                         component.clientId,
-                        { type },
+                        {
+                          selectionMode:
+                            mode as ComboSelectionMode,
+                          fixedProductId:
+                            '',
+                          selectableCategoryId:
+                            '',
+                          allowedProductIds:
+                            [],
+                        },
                       )
                     }
-                    editable={!disabled}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    placeholder="Ej. burger, drink, dessert"
-                    placeholderTextColor="#777777"
-                    style={inputStyle}
                   />
-
-                  <Text
-                    style={labelStyle}
-                  >
-                    Selección
-                  </Text>
-
-                  <View
-                    style={{
-                      flexDirection:
-                        'row',
-                      gap: 8,
-                    }}
-                  >
-                    {(
-                      [
-                        'fixed',
-                        'selectable',
-                      ] as ComboSelectionMode[]
-                    ).map(mode => {
-                      const selected =
-                        component.selectionMode ===
-                        mode;
-
-                      return (
-                        <TouchableOpacity
-                          key={mode}
-                          disabled={
-                            disabled
-                          }
-                          onPress={() =>
-                            updateComponent(
-                              component.clientId,
-                              {
-                                selectionMode:
-                                  mode,
-                                fixedProductId:
-                                  '',
-                                selectableCategoryId:
-                                  '',
-                                allowedProductIds:
-                                  [],
-                              },
-                            )
-                          }
-                          style={{
-                            flex: 1,
-                            minHeight: 38,
-                            alignItems:
-                              'center',
-                            justifyContent:
-                              'center',
-                            borderRadius: 7,
-                            borderWidth: 1,
-                            borderColor:
-                              selected
-                                ? '#FFBF00'
-                                : '#444444',
-                            backgroundColor:
-                              selected
-                                ? '#302800'
-                                : '#1E1E1E',
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color:
-                                selected
-                                  ? '#FFBF00'
-                                  : '#AAAAAA',
-                              fontSize: 11,
-                              fontWeight:
-                                '800',
-                            }}
-                          >
-                            {mode ===
-                            'fixed'
-                              ? 'Producto fijo'
-                              : 'Cliente elige'}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
 
                   {component.selectionMode ===
                   'fixed' ? (
-                    <>
-                      <Text
-                        style={labelStyle}
-                      >
-                        Producto incluido
-                      </Text>
-
-                      <View
-                        style={chipContainerStyle}
-                      >
-                        {availableProducts.map(
-                          product => {
-                            const selected =
-                              component.fixedProductId ===
-                              product.id;
-
-                            return (
-                              <TouchableOpacity
-                                key={
-                                  product.id
-                                }
-                                disabled={
-                                  disabled
-                                }
-                                onPress={() =>
-                                  updateComponent(
-                                    component.clientId,
-                                    {
-                                      fixedProductId:
-                                        product.id,
-                                    },
-                                  )
-                                }
-                                style={
-                                  getChipStyle(
-                                    selected,
-                                  )
-                                }
-                              >
-                                <Text
-                                  style={
-                                    getChipTextStyle(
-                                      selected,
-                                    )
-                                  }
-                                >
-                                  {
-                                    product.name
-                                  }
-                                </Text>
-                              </TouchableOpacity>
-                            );
+                    <CompactSelect
+                      label="Producto incluido"
+                      value={
+                        component.fixedProductId
+                      }
+                      options={
+                        fixedProductOptions
+                      }
+                      placeholder="Seleccionar producto"
+                      emptyMessage="No hay productos activos disponibles."
+                      disabled={disabled}
+                      onChange={productId =>
+                        updateComponent(
+                          component.clientId,
+                          {
+                            fixedProductId:
+                              productId,
                           },
-                        )}
-                      </View>
-                    </>
+                        )
+                      }
+                    />
                   ) : (
                     <>
-                      <Text
-                        style={labelStyle}
-                      >
-                        Categoría de opciones
-                      </Text>
-
-                      <View
-                        style={chipContainerStyle}
-                      >
-                        {categories
-                          .filter(
-                            category =>
-                              category.is_active !==
-                              false,
-                          )
-                          .map(
-                            category => {
-                              const selected =
-                                component.selectableCategoryId ===
-                                category.id;
-
-                              return (
-                                <TouchableOpacity
-                                  key={
-                                    category.id
-                                  }
-                                  disabled={
-                                    disabled
-                                  }
-                                  onPress={() =>
-                                    updateComponent(
-                                      component.clientId,
-                                      {
-                                        selectableCategoryId:
-                                          category.id,
-                                        allowedProductIds:
-                                          [],
-                                      },
-                                    )
-                                  }
-                                  style={
-                                    getChipStyle(
-                                      selected,
-                                    )
-                                  }
-                                >
-                                  <Text
-                                    style={
-                                      getChipTextStyle(
-                                        selected,
-                                      )
-                                    }
-                                  >
-                                    {
-                                      category.name
-                                    }
-                                  </Text>
-                                </TouchableOpacity>
-                              );
+                      <CompactSelect
+                        label="Categoría de opciones"
+                        value={
+                          component.selectableCategoryId
+                        }
+                        options={
+                          categoryOptions
+                        }
+                        placeholder="Seleccionar categoría"
+                        emptyMessage="No hay categorías activas."
+                        disabled={disabled}
+                        onChange={categoryId =>
+                          updateComponent(
+                            component.clientId,
+                            {
+                              selectableCategoryId:
+                                categoryId,
+                              allowedProductIds:
+                                [],
                             },
-                          )}
-                      </View>
+                          )
+                        }
+                      />
 
                       {component.selectableCategoryId ? (
-                        <>
-                          <Text
-                            style={labelStyle}
-                          >
-                            Productos permitidos
-                          </Text>
-
-                          <Text
-                            style={{
-                              color:
-                                '#777777',
-                              fontSize: 9,
-                              marginBottom: 7,
-                            }}
-                          >
-                            Selecciona los productos que el cliente podrá elegir dentro de este componente.
-                          </Text>
-
-                          <View
-                            style={chipContainerStyle}
-                          >
-                            {selectableProducts.map(
-                              product => {
-                                const selected =
-                                  component.allowedProductIds.includes(
-                                    product.id,
-                                  );
-
-                                return (
-                                  <TouchableOpacity
-                                    key={
-                                      product.id
-                                    }
-                                    disabled={
-                                      disabled
-                                    }
-                                    onPress={() =>
-                                      toggleAllowedProduct(
-                                        component,
-                                        product.id,
-                                      )
-                                    }
-                                    style={
-                                      getChipStyle(
-                                        selected,
-                                      )
-                                    }
-                                  >
-                                    <Text
-                                      style={
-                                        getChipTextStyle(
-                                          selected,
-                                        )
-                                      }
-                                    >
-                                      {selected
-                                        ? '✓ '
-                                        : ''}
-                                      {
-                                        product.name
-                                      }
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
+                        <CompactMultiSelect
+                          label="Productos permitidos"
+                          values={
+                            component.allowedProductIds
+                          }
+                          options={
+                            selectableProductOptions
+                          }
+                          placeholder="Seleccionar productos"
+                          emptyMessage="No hay productos activos en esta categoría."
+                          disabled={disabled}
+                          onChange={productIds =>
+                            updateComponent(
+                              component.clientId,
+                              {
+                                allowedProductIds:
+                                  productIds,
                               },
-                            )}
-                          </View>
-
-                          {selectableProducts.length ===
-                          0 ? (
-                            <Text
-                              style={{
-                                color:
-                                  '#FF8A80',
-                                fontSize: 10,
-                              }}
-                            >
-                              No hay productos activos en esta categoría.
-                            </Text>
-                          ) : null}
-                        </>
+                            )
+                          }
+                        />
                       ) : null}
                     </>
                   )}
@@ -742,6 +672,514 @@ export function ComboRecipeEditor({
   );
 }
 
+function CompactSelect({
+  label,
+  value,
+  options,
+  placeholder,
+  onChange,
+  disabled = false,
+  emptyMessage = 'No hay opciones disponibles.',
+}: CompactSelectProps) {
+  const [
+    visible,
+    setVisible,
+  ] = useState(false);
+
+  const selectedOption =
+    options.find(
+      option =>
+        option.value === value,
+    ) ?? null;
+
+  const open = (): void => {
+    if (
+      disabled ||
+      options.length === 0
+    ) {
+      return;
+    }
+
+    setVisible(true);
+  };
+
+  return (
+    <>
+      <Text
+        style={labelStyle}
+      >
+        {label}
+      </Text>
+
+      <TouchableOpacity
+        disabled={disabled}
+        onPress={open}
+        style={[
+          selectButtonStyle,
+          disabled
+            ? selectButtonDisabledStyle
+            : null,
+        ]}
+      >
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            color:
+              selectedOption
+                ? '#FFFFFF'
+                : '#777777',
+            fontSize: 11,
+          }}
+        >
+          {selectedOption?.label ??
+            placeholder}
+        </Text>
+
+        <Text
+          style={selectChevronStyle}
+        >
+          ▾
+        </Text>
+      </TouchableOpacity>
+
+      {options.length === 0 ? (
+        <Text
+          style={emptyTextStyle}
+        >
+          {emptyMessage}
+        </Text>
+      ) : null}
+
+      <Modal
+        transparent
+        visible={visible}
+        animationType="fade"
+        onRequestClose={() =>
+          setVisible(false)
+        }
+      >
+        <View
+          style={modalBackdropStyle}
+        >
+          <Pressable
+            style={modalDismissStyle}
+            onPress={() =>
+              setVisible(false)
+            }
+          />
+
+          <View
+            style={modalCardStyle}
+          >
+            <View
+              style={modalHeaderStyle}
+            >
+              <Text
+                style={modalTitleStyle}
+              >
+                {label}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() =>
+                  setVisible(false)
+                }
+              >
+                <Text
+                  style={modalCloseStyle}
+                >
+                  Cerrar
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{
+                maxHeight: 380,
+              }}
+              contentContainerStyle={{
+                paddingBottom: 4,
+              }}
+            >
+              {options.map(
+                option => {
+                  const selected =
+                    option.value ===
+                    value;
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        option.value
+                      }
+                      onPress={() => {
+                        onChange(
+                          option.value,
+                        );
+                        setVisible(
+                          false,
+                        );
+                      }}
+                      style={
+                        getOptionRowStyle(
+                          selected,
+                        )
+                      }
+                    >
+                      <View
+                        style={{
+                          flex: 1,
+                          paddingRight: 10,
+                        }}
+                      >
+                        <Text
+                          style={
+                            getOptionTextStyle(
+                              selected,
+                            )
+                          }
+                        >
+                          {option.label}
+                        </Text>
+
+                        {option.subtitle ? (
+                          <Text
+                            style={{
+                              color:
+                                '#888888',
+                              fontSize: 9,
+                              marginTop: 3,
+                            }}
+                          >
+                            {option.subtitle}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      {selected ? (
+                        <Text
+                          style={{
+                            color:
+                              '#FFBF00',
+                            fontSize: 15,
+                            fontWeight:
+                              '900',
+                          }}
+                        >
+                          ✓
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                },
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+function CompactMultiSelect({
+  label,
+  values,
+  options,
+  placeholder,
+  onChange,
+  disabled = false,
+  emptyMessage = 'No hay opciones disponibles.',
+}: CompactMultiSelectProps) {
+  const [
+    visible,
+    setVisible,
+  ] = useState(false);
+
+  const selectedOptions =
+    options.filter(
+      option =>
+        values.includes(
+          option.value,
+        ),
+    );
+
+  const summary =
+    selectedOptions.length === 0
+      ? placeholder
+      : selectedOptions.length === 1
+        ? selectedOptions[0].label
+        : `${selectedOptions.length} seleccionados`;
+
+  const open = (): void => {
+    if (
+      disabled ||
+      options.length === 0
+    ) {
+      return;
+    }
+
+    setVisible(true);
+  };
+
+  const toggleValue = (
+    optionValue: string,
+  ): void => {
+    if (
+      values.includes(
+        optionValue,
+      )
+    ) {
+      onChange(
+        values.filter(
+          value =>
+            value !==
+            optionValue,
+        ),
+      );
+
+      return;
+    }
+
+    onChange([
+      ...values,
+      optionValue,
+    ]);
+  };
+
+  return (
+    <>
+      <Text
+        style={labelStyle}
+      >
+        {label}
+      </Text>
+
+      <TouchableOpacity
+        disabled={disabled}
+        onPress={open}
+        style={[
+          selectButtonStyle,
+          disabled
+            ? selectButtonDisabledStyle
+            : null,
+        ]}
+      >
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            color:
+              selectedOptions.length >
+              0
+                ? '#FFFFFF'
+                : '#777777',
+            fontSize: 11,
+          }}
+        >
+          {summary}
+        </Text>
+
+        <Text
+          style={selectChevronStyle}
+        >
+          ▾
+        </Text>
+      </TouchableOpacity>
+
+      {selectedOptions.length > 1 ? (
+        <Text
+          numberOfLines={2}
+          style={{
+            color: '#777777',
+            fontSize: 9,
+            marginTop: 5,
+            lineHeight: 13,
+          }}
+        >
+          {selectedOptions
+            .map(
+              option =>
+                option.label,
+            )
+            .join(', ')}
+        </Text>
+      ) : null}
+
+      {options.length === 0 ? (
+        <Text
+          style={emptyTextStyle}
+        >
+          {emptyMessage}
+        </Text>
+      ) : null}
+
+      <Modal
+        transparent
+        visible={visible}
+        animationType="fade"
+        onRequestClose={() =>
+          setVisible(false)
+        }
+      >
+        <View
+          style={modalBackdropStyle}
+        >
+          <Pressable
+            style={modalDismissStyle}
+            onPress={() =>
+              setVisible(false)
+            }
+          />
+
+          <View
+            style={modalCardStyle}
+          >
+            <View
+              style={modalHeaderStyle}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  paddingRight: 10,
+                }}
+              >
+                <Text
+                  style={modalTitleStyle}
+                >
+                  {label}
+                </Text>
+
+                <Text
+                  style={{
+                    color: '#888888',
+                    fontSize: 9,
+                    marginTop: 2,
+                  }}
+                >
+                  {values.length}{' '}
+                  seleccionados
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() =>
+                  setVisible(false)
+                }
+              >
+                <Text
+                  style={modalCloseStyle}
+                >
+                  Listo
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{
+                maxHeight: 380,
+              }}
+              contentContainerStyle={{
+                paddingBottom: 4,
+              }}
+            >
+              {options.map(
+                option => {
+                  const selected =
+                    values.includes(
+                      option.value,
+                    );
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        option.value
+                      }
+                      onPress={() =>
+                        toggleValue(
+                          option.value,
+                        )
+                      }
+                      style={
+                        getOptionRowStyle(
+                          selected,
+                        )
+                      }
+                    >
+                      <View
+                        style={{
+                          flex: 1,
+                          paddingRight: 10,
+                        }}
+                      >
+                        <Text
+                          style={
+                            getOptionTextStyle(
+                              selected,
+                            )
+                          }
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={{
+                          color:
+                            selected
+                              ? '#FFBF00'
+                              : '#777777',
+                          fontSize: 16,
+                          fontWeight:
+                            '900',
+                        }}
+                      >
+                        {selected
+                          ? '☑'
+                          : '☐'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                },
+              )}
+            </ScrollView>
+
+            {values.length > 0 ? (
+              <TouchableOpacity
+                onPress={() =>
+                  onChange([])
+                }
+                style={{
+                  marginTop: 8,
+                  minHeight: 36,
+                  alignItems:
+                    'center',
+                  justifyContent:
+                    'center',
+                  borderRadius: 7,
+                  borderWidth: 1,
+                  borderColor:
+                    '#555555',
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#AAAAAA',
+                    fontSize: 10,
+                    fontWeight: '800',
+                  }}
+                >
+                  Limpiar selección
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
 const labelStyle = {
   color: '#CCCCCC',
   fontSize: 10,
@@ -761,45 +1199,122 @@ const inputStyle = {
   fontSize: 12,
 };
 
-const chipContainerStyle = {
+const selectButtonStyle = {
+  minHeight: 40,
+  paddingHorizontal: 10,
   flexDirection: 'row' as const,
-  flexWrap: 'wrap' as const,
-  gap: 6,
+  alignItems: 'center' as const,
+  borderRadius: 7,
+  borderWidth: 1,
+  borderColor: '#444444',
+  backgroundColor: '#1E1E1E',
 };
 
-function getChipStyle(
+const selectButtonDisabledStyle = {
+  opacity: 0.55,
+};
+
+const selectChevronStyle = {
+  color: '#FFBF00',
+  fontSize: 15,
+  fontWeight: '900' as const,
+  marginLeft: 8,
+};
+
+const emptyTextStyle = {
+  color: '#FF8A80',
+  fontSize: 9,
+  marginTop: 5,
+};
+
+const modalBackdropStyle = {
+  flex: 1,
+  backgroundColor:
+    'rgba(0, 0, 0, 0.72)',
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+  padding: 18,
+};
+
+const modalDismissStyle = {
+  position: 'absolute' as const,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
+const modalCardStyle = {
+  width: '100%' as const,
+  maxWidth: 520,
+  maxHeight: '78%' as const,
+  padding: 14,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#484848',
+  backgroundColor: '#202020',
+};
+
+const modalHeaderStyle = {
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  justifyContent:
+    'space-between' as const,
+  paddingBottom: 10,
+  marginBottom: 4,
+  borderBottomWidth: 1,
+  borderBottomColor: '#383838',
+};
+
+const modalTitleStyle = {
+  color: '#FFFFFF',
+  fontSize: 13,
+  fontWeight: '900' as const,
+};
+
+const modalCloseStyle = {
+  color: '#FFBF00',
+  fontSize: 11,
+  fontWeight: '900' as const,
+};
+
+function getOptionRowStyle(
   selected: boolean,
 ) {
   return {
-    minHeight: 34,
-    paddingHorizontal: 9,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    flexDirection:
+      'row' as const,
     alignItems:
       'center' as const,
-    justifyContent:
-      'center' as const,
-    borderRadius: 7,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor:
       selected
         ? '#FFBF00'
-        : '#444444',
+        : '#3D3D3D',
     backgroundColor:
       selected
         ? '#302800'
-        : '#1E1E1E',
+        : '#252525',
+    marginTop: 7,
   };
 }
 
-function getChipTextStyle(
+function getOptionTextStyle(
   selected: boolean,
 ) {
   return {
     color:
       selected
         ? '#FFBF00'
-        : '#AAAAAA',
-    fontSize: 10,
+        : '#FFFFFF',
+    fontSize: 11,
     fontWeight:
-      '700' as const,
+      selected
+        ? '800' as const
+        : '600' as const,
   };
 }
