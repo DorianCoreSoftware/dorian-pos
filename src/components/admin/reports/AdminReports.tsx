@@ -19,15 +19,18 @@ import DateTimePicker, {
 import {
     DailySalesReport,
     getDailySalesReport,
-    getFlavorSalesReport,
-    getMeatSalesReport,
+    getModifierSalesReport,
     getProductSalesReport,
     getSalesReportSummary,
-    getSauceSalesReport,
     ModifierSalesReport,
     ProductSalesReport,
     SalesReportSummary,
 } from '../../../services/reportService';
+
+import {
+    getModifierGroups,
+    ModifierGroupEntity,
+} from '../../../services/modifierService';
 
 import {
     styles,
@@ -44,11 +47,7 @@ type ProductChartMetric =
     | 'units'
     | 'revenue';
 
-type ReportSection =
-    | 'products'
-    | 'sauces'
-    | 'flavors'
-    | 'meats';
+type ReportSection = string;
 
 const EMPTY_SUMMARY:
     SalesReportSummary = {
@@ -102,25 +101,16 @@ export function AdminReports() {
     >([]);
 
     const [
-        sauces,
-        setSauces,
-    ] = useState<
-        ModifierSalesReport[]
-    >([]);
+        modifierGroups,
+        setModifierGroups,
+    ] = useState<ModifierGroupEntity[]>([]);
 
     const [
-        flavors,
-        setFlavors,
+        modifierReports,
+        setModifierReports,
     ] = useState<
-        ModifierSalesReport[]
-    >([]);
-
-    const [
-        meats,
-        setMeats,
-    ] = useState<
-        ModifierSalesReport[]
-    >([]);
+        Record<string, ModifierSalesReport[]>
+    >({});
 
     const [
         isLoading,
@@ -185,13 +175,43 @@ export function AdminReports() {
                         null,
                     );
 
+                    const allGroups =
+                        await getModifierGroups();
+
+                    const activeGroups =
+                        allGroups
+                            .filter(
+                                group =>
+                                    group.is_active,
+                            )
+                            .sort(
+                                (first, second) => {
+                                    if (
+                                        first.position !==
+                                        second.position
+                                    ) {
+                                        return (
+                                            first.position -
+                                            second.position
+                                        );
+                                    }
+
+                                    return first.name.localeCompare(
+                                        second.name,
+                                        'es',
+                                        {
+                                            sensitivity:
+                                                'base',
+                                        },
+                                    );
+                                },
+                            );
+
                     const [
                         summaryData,
                         productData,
-                        sauceData,
-                        flavorData,
-                        meatData,
                         dailySalesData,
+                        modifierReportEntries,
                     ] =
                         await Promise.all([
                             getSalesReportSummary(
@@ -205,24 +225,23 @@ export function AdminReports() {
                                 50,
                             ),
 
-                            getSauceSalesReport(
-                                dateRange.from,
-                                dateRange.to,
-                            ),
-
-                            getFlavorSalesReport(
-                                dateRange.from,
-                                dateRange.to,
-                            ),
-
-                            getMeatSalesReport(
-                                dateRange.from,
-                                dateRange.to,
-                            ),
-
                             getDailySalesReport(
                                 dateRange.from,
                                 dateRange.to,
+                            ),
+
+                            Promise.all(
+                                activeGroups.map(
+                                    async group =>
+                                        [
+                                            group.code,
+                                            await getModifierSalesReport(
+                                                dateRange.from,
+                                                dateRange.to,
+                                                group.code,
+                                            ),
+                                        ] as const,
+                                ),
                             ),
                         ]);
 
@@ -234,20 +253,18 @@ export function AdminReports() {
                         productData,
                     );
 
-                    setSauces(
-                        sauceData,
-                    );
-
-                    setFlavors(
-                        flavorData,
-                    );
-
-                    setMeats(
-                        meatData,
-                    );
-
                     setDailySales(
                         dailySalesData,
+                    );
+
+                    setModifierGroups(
+                        activeGroups,
+                    );
+
+                    setModifierReports(
+                        Object.fromEntries(
+                            modifierReportEntries,
+                        ),
                     );
                 } catch (error) {
                     console.error(
@@ -274,35 +291,33 @@ export function AdminReports() {
     ]);
 
     const reportRows =
-        useMemo(() => {
-            if (
+        useMemo(
+            () =>
                 activeSection ===
-                'sauces'
-            ) {
-                return sauces;
-            }
+                    'products'
+                    ? []
+                    : modifierReports[
+                        activeSection
+                    ] ?? [],
+            [
+                activeSection,
+                modifierReports,
+            ],
+        );
 
-            if (
-                activeSection ===
-                'flavors'
-            ) {
-                return flavors;
-            }
-
-            if (
-                activeSection ===
-                'meats'
-            ) {
-                return meats;
-            }
-
-            return [];
-        }, [
-            activeSection,
-            sauces,
-            flavors,
-            meats,
-        ]);
+    const activeModifierGroup =
+        useMemo(
+            () =>
+                modifierGroups.find(
+                    group =>
+                        group.code ===
+                        activeSection,
+                ) ?? null,
+            [
+                activeSection,
+                modifierGroups,
+            ],
+        );
 
     const productsByRevenue =
         useMemo(
@@ -668,17 +683,13 @@ export function AdminReports() {
                     }
                 />
 
-                <SauceSalesChart
-                    data={
-                        sauces
-                    }
-                />
-
                 <ModifierGroupsChart
-                    data={[
-                        ...meats,
-                        ...flavors,
-                    ]}
+                    groups={
+                        modifierGroups
+                    }
+                    reportsByGroup={
+                        modifierReports
+                    }
                 />
 
                 {/* SECCIONES */}
@@ -692,19 +703,19 @@ export function AdminReports() {
                         'PRODUCTOS',
                     )}
 
-                    {renderSectionButton(
-                        'sauces',
-                        'SALSAS',
-                    )}
-
-                    {renderSectionButton(
-                        'flavors',
-                        'SABORES',
-                    )}
-
-                    {renderSectionButton(
-                        'meats',
-                        'CARNES',
+                    {modifierGroups.map(
+                        group => (
+                            <React.Fragment
+                                key={
+                                    group.id
+                                }
+                            >
+                                {renderSectionButton(
+                                    group.code,
+                                    group.name.toUpperCase(),
+                                )}
+                            </React.Fragment>
+                        ),
                     )}
                 </View>
 
@@ -806,7 +817,7 @@ export function AdminReports() {
                             }
                         >
                             {getSectionTitle(
-                                activeSection,
+                                activeModifierGroup,
                             )}
                         </Text>
 
@@ -1127,24 +1138,12 @@ function formatCurrency(
 }
 
 function getSectionTitle(
-    section:
-        ReportSection,
+    group:
+        ModifierGroupEntity | null,
 ): string {
-    if (
-        section ===
-        'sauces'
-    ) {
-        return 'Salsas más utilizadas';
-    }
-
-    if (
-        section ===
-        'flavors'
-    ) {
-        return 'Sabores más utilizados';
-    }
-
-    return 'Carnes más utilizadas';
+    return group
+        ? `${group.name} más utilizados`
+        : 'Modificadores más utilizados';
 }
 
 interface DailySalesChartProps {
@@ -1602,240 +1601,21 @@ function TopProductsChart({
     );
 }
 
-interface SauceSalesChartProps {
-    data: ModifierSalesReport[];
-}
-
-function SauceSalesChart({
-    data,
-}: SauceSalesChartProps) {
-    const sauces =
-        [...data].sort(
-            (
-                first,
-                second,
-            ) =>
-                second.units_sold -
-                first.units_sold,
-        );
-
-    const maxUnits =
-        sauces.reduce(
-            (
-                maximum,
-                sauce,
-            ) =>
-                Math.max(
-                    maximum,
-                    sauce.units_sold,
-                ),
-            0,
-        );
-
-    const leastSoldSauces =
-        [...data]
-            .sort(
-                (
-                    first,
-                    second,
-                ) =>
-                    first.units_sold -
-                    second.units_sold,
-            )
-            .slice(
-                0,
-                5,
-            );
-
-    return (
-        <View
-            style={
-                styles.sauceChartCard
-            }
-        >
-            <View>
-                <Text
-                    style={
-                        styles.chartTitle
-                    }
-                >
-                    Rendimiento de salsas
-                </Text>
-
-                <Text
-                    style={
-                        styles.chartSubtitle
-                    }
-                >
-                    Popularidad y rotación de sabores
-                </Text>
-            </View>
-
-            {sauces.length ===
-                0 ? (
-                <View
-                    style={
-                        styles.chartEmpty
-                    }
-                >
-                    <Text
-                        style={
-                            styles.chartEmptyText
-                        }
-                    >
-                        No hay salsas disponibles
-                    </Text>
-                </View>
-            ) : (
-                <>
-                    <View
-                        style={
-                            styles.sauceRanking
-                        }
-                    >
-                        {sauces.map(
-                            (
-                                sauce,
-                                index,
-                            ) => {
-                                const width =
-                                    maxUnits > 0
-                                        ? (
-                                            sauce.units_sold /
-                                            maxUnits
-                                        ) * 100
-                                        : 0;
-
-                                return (
-                                    <View
-                                        key={
-                                            sauce.id
-                                        }
-                                        style={
-                                            styles.sauceRow
-                                        }
-                                    >
-                                        <View
-                                            style={
-                                                styles.sauceHeader
-                                            }
-                                        >
-                                            <Text
-                                                style={
-                                                    styles.sauceName
-                                                }
-                                                numberOfLines={
-                                                    1
-                                                }
-                                            >
-                                                {index + 1}.{' '}
-                                                {sauce.name}
-                                            </Text>
-
-                                            <Text
-                                                style={
-                                                    styles.sauceUnits
-                                                }
-                                            >
-                                                {sauce.units_sold} u.
-                                            </Text>
-                                        </View>
-
-                                        <View
-                                            style={
-                                                styles.sauceBarBackground
-                                            }
-                                        >
-                                            <View
-                                                style={[
-                                                    styles.sauceBar,
-                                                    {
-                                                        width:
-                                                            `${width}%`,
-                                                    },
-                                                ]}
-                                            />
-                                        </View>
-                                    </View>
-                                );
-                            },
-                        )}
-                    </View>
-
-                    <View
-                        style={
-                            styles.lowRotationContainer
-                        }
-                    >
-                        <Text
-                            style={
-                                styles.lowRotationTitle
-                            }
-                        >
-                            BAJA ROTACIÓN
-                        </Text>
-
-                        <Text
-                            style={
-                                styles.lowRotationSubtitle
-                            }
-                        >
-                            Candidatas para Salsa de la Semana
-                        </Text>
-
-                        <View
-                            style={
-                                styles.lowRotationList
-                            }
-                        >
-                            {leastSoldSauces.map(
-                                sauce => (
-                                    <View
-                                        key={
-                                            sauce.id
-                                        }
-                                        style={
-                                            styles.lowRotationBadge
-                                        }
-                                    >
-                                        <Text
-                                            style={
-                                                styles.lowRotationName
-                                            }
-                                        >
-                                            {sauce.name}
-                                        </Text>
-
-                                        <Text
-                                            style={
-                                                styles.lowRotationUnits
-                                            }
-                                        >
-                                            {sauce.units_sold}{' '}
-                                            ventas
-                                        </Text>
-                                    </View>
-                                ),
-                            )}
-                        </View>
-                    </View>
-                </>
-            )}
-        </View>
-    );
-}
-
 interface ModifierGroupsChartProps {
-    data: ModifierSalesReport[];
+    groups: ModifierGroupEntity[];
+    reportsByGroup: Record<
+        string,
+        ModifierSalesReport[]
+    >;
 }
 
 function ModifierGroupsChart({
-    data,
+    groups,
+    reportsByGroup,
 }: ModifierGroupsChartProps) {
-    const groups = [
-        'Carne',
-        'Sabor',
-    ];
+    if (groups.length === 0) {
+        return null;
+    }
 
     return (
         <View
@@ -1856,7 +1636,7 @@ function ModifierGroupsChart({
                     styles.chartSubtitle
                 }
             >
-                Preferencias por tipo de modificador
+                Preferencias por grupo de modificadores
             </Text>
 
             <View
@@ -1867,27 +1647,21 @@ function ModifierGroupsChart({
                 {groups.map(
                     group => {
                         const groupData =
-                            data
-                                .filter(
-                                    modifier =>
-                                        modifier.group_name ===
-                                        group,
-                                )
-                                .sort(
-                                    (
-                                        first,
-                                        second,
-                                    ) =>
-                                        second.units_sold -
-                                        first.units_sold,
-                                );
+                            [
+                                ...(
+                                    reportsByGroup[
+                                        group.code
+                                    ] ?? []
+                                ),
+                            ].sort(
+                                (first, second) =>
+                                    second.units_sold -
+                                    first.units_sold,
+                            );
 
                         const maximum =
                             groupData.reduce(
-                                (
-                                    max,
-                                    modifier,
-                                ) =>
+                                (max, modifier) =>
                                     Math.max(
                                         max,
                                         modifier.units_sold,
@@ -1898,7 +1672,7 @@ function ModifierGroupsChart({
                         return (
                             <View
                                 key={
-                                    group
+                                    group.id
                                 }
                                 style={
                                     styles.modifierGroup
@@ -1909,72 +1683,83 @@ function ModifierGroupsChart({
                                         styles.modifierGroupTitle
                                     }
                                 >
-                                    {group.toUpperCase()}
+                                    {group.name.toUpperCase()}
                                 </Text>
 
-                                {groupData.map(
-                                    modifier => {
-                                        const width =
-                                            maximum > 0
-                                                ? (
-                                                    modifier.units_sold /
-                                                    maximum
-                                                ) *
-                                                100
-                                                : 0;
+                                {groupData.length ===
+                                    0 ? (
+                                    <Text
+                                        style={
+                                            styles.chartEmptyText
+                                        }
+                                    >
+                                        Sin ventas en este periodo
+                                    </Text>
+                                ) : (
+                                    groupData.map(
+                                        modifier => {
+                                            const width =
+                                                maximum > 0
+                                                    ? (
+                                                        modifier.units_sold /
+                                                        maximum
+                                                    ) *
+                                                    100
+                                                    : 0;
 
-                                        return (
-                                            <View
-                                                key={
-                                                    modifier.id
-                                                }
-                                                style={
-                                                    styles.modifierGroupRow
-                                                }
-                                            >
+                                            return (
                                                 <View
-                                                    style={
-                                                        styles.modifierGroupHeader
+                                                    key={
+                                                        modifier.id
                                                     }
-                                                >
-                                                    <Text
-                                                        style={
-                                                            styles.modifierGroupName
-                                                        }
-                                                        numberOfLines={
-                                                            1
-                                                        }
-                                                    >
-                                                        {modifier.name}
-                                                    </Text>
-
-                                                    <Text
-                                                        style={
-                                                            styles.modifierGroupUnits
-                                                        }
-                                                    >
-                                                        {modifier.units_sold} u.
-                                                    </Text>
-                                                </View>
-
-                                                <View
                                                     style={
-                                                        styles.modifierGroupBarBackground
+                                                        styles.modifierGroupRow
                                                     }
                                                 >
                                                     <View
-                                                        style={[
-                                                            styles.modifierGroupBar,
-                                                            {
-                                                                width:
-                                                                    `${width}%`,
-                                                            },
-                                                        ]}
-                                                    />
+                                                        style={
+                                                            styles.modifierGroupHeader
+                                                        }
+                                                    >
+                                                        <Text
+                                                            style={
+                                                                styles.modifierGroupName
+                                                            }
+                                                            numberOfLines={
+                                                                1
+                                                            }
+                                                        >
+                                                            {modifier.name}
+                                                        </Text>
+
+                                                        <Text
+                                                            style={
+                                                                styles.modifierGroupUnits
+                                                            }
+                                                        >
+                                                            {modifier.units_sold} u.
+                                                        </Text>
+                                                    </View>
+
+                                                    <View
+                                                        style={
+                                                            styles.modifierGroupBarBackground
+                                                        }
+                                                    >
+                                                        <View
+                                                            style={[
+                                                                styles.modifierGroupBar,
+                                                                {
+                                                                    width:
+                                                                        `${width}%`,
+                                                                },
+                                                            ]}
+                                                        />
+                                                    </View>
                                                 </View>
-                                            </View>
-                                        );
-                                    },
+                                            );
+                                        },
+                                    )
                                 )}
                             </View>
                         );

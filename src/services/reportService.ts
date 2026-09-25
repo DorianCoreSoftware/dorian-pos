@@ -24,10 +24,8 @@ export interface ProductSalesReport {
 /**
  * Reporte de modificadores que usa la app.
  *
- * Se utiliza también para:
- * - Salsas
- * - Sabores
- * - Carnes
+ * El grupo se obtiene de modifier_groups y puede ser
+ * cualquier grupo configurado por el negocio.
  */
 export interface ModifierSalesReport {
   id: string;
@@ -90,11 +88,6 @@ interface ModifierSalesReportRow {
     | number
     | null;
 }
-
-export type ModifierReportGroup =
-  | 'sauce'
-  | 'drink_flavor'
-  | 'meat';
 
 /**
  * Obtiene el resumen general del periodo:
@@ -237,19 +230,15 @@ export async function getProductSalesReport(
  * Obtiene el consumo de modificadores
  * dentro del rango seleccionado.
  *
- * Puede filtrar por:
- * - sauce
- * - drink_flavor
- * - meat
- *
- * Si no se manda group,
- * devuelve todos los modificadores
- * que tengan un modifier_group asociado.
+ * Si se proporciona groupCode, filtra por
+ * modifier_groups.code. Si no se proporciona,
+ * devuelve todos los modificadores asociados
+ * a un grupo.
  */
 export async function getModifierSalesReport(
   from: Date,
   to: Date,
-  group?: ModifierReportGroup,
+  groupCode?: string,
 ): Promise<ModifierSalesReport[]> {
   const {
     data,
@@ -264,7 +253,7 @@ export async function getModifierSalesReport(
         to.toISOString(),
 
       p_group:
-        group ?? null,
+        groupCode?.trim() || null,
     },
   );
 
@@ -301,42 +290,6 @@ export async function getModifierSalesReport(
           0,
         ),
     }),
-  );
-}
-
-/**
- * Helpers de reportes por código de grupo.
- */
-export function getSauceSalesReport(
-  from: Date,
-  to: Date,
-): Promise<ModifierSalesReport[]> {
-  return getModifierSalesReport(
-    from,
-    to,
-    'sauce',
-  );
-}
-
-export function getFlavorSalesReport(
-  from: Date,
-  to: Date,
-): Promise<ModifierSalesReport[]> {
-  return getModifierSalesReport(
-    from,
-    to,
-    'drink_flavor',
-  );
-}
-
-export function getMeatSalesReport(
-  from: Date,
-  to: Date,
-): Promise<ModifierSalesReport[]> {
-  return getModifierSalesReport(
-    from,
-    to,
-    'meat',
   );
 }
 
