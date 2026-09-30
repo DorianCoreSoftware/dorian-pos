@@ -1021,7 +1021,7 @@ export default function WebLoyaltyScreen({
                     imageUrl;
 
                 link.download =
-                    'burger-kong-rewards.png';
+                    'dorian-rewards.png';
 
                 document.body.appendChild(
                     link,
