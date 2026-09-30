@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -116,7 +120,7 @@ export const styles =
       minHeight: 45,
       paddingHorizontal: 20,
       borderRadius: 8,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 16,
@@ -152,7 +156,7 @@ export const styles =
       minHeight: 42,
       paddingHorizontal: 16,
       borderRadius: 8,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -193,7 +197,7 @@ export const styles =
     },
 
     rewardVisits: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 13,
       fontWeight: '900',
       marginTop: 7,
@@ -206,14 +210,14 @@ export const styles =
 
     editButton: {
       borderWidth: 1,
-      borderColor: '#FFBF00',
+      borderColor: primaryColor,
       borderRadius: 7,
       paddingVertical: 7,
       paddingHorizontal: 12,
     },
 
     editButtonText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 11,
       fontWeight: '900',
     },
@@ -280,3 +284,17 @@ export const styles =
       fontWeight: '800',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

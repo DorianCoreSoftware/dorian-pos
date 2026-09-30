@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -35,7 +42,7 @@ export const styles =
       paddingHorizontal: 14,
       minHeight: 40,
       borderRadius: 8,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -72,13 +79,13 @@ export const styles =
       borderRadius: 999,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      backgroundColor: '#302800',
+      backgroundColor: withAlpha(primaryColor, 0.14),
       borderWidth: 1,
       borderColor: '#5A4A00',
     },
 
     counterBadgeText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 10,
       fontWeight: '900',
     },
@@ -139,7 +146,7 @@ export const styles =
     },
 
     statusNew: {
-      color: '#FFBF00',
+      color: primaryColor,
     },
 
     statusReviewed: {
@@ -198,7 +205,7 @@ export const styles =
       minHeight: 38,
       paddingHorizontal: 12,
       borderRadius: 8,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -209,3 +216,17 @@ export const styles =
       fontWeight: '900',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

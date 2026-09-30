@@ -1,9 +1,13 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
+
 import {
     StyleSheet,
 } from 'react-native';
 
-export const styles =
-    StyleSheet.create({
+const createStyles = (
+  primaryColor: string,
+) =>
+  StyleSheet.create({
         container: {
             flex: 1,
             backgroundColor:
@@ -72,9 +76,9 @@ export const styles =
 
         filterButtonActive: {
             borderColor:
-                '#FFBF00',
+                primaryColor,
             backgroundColor:
-                '#FFBF00',
+                primaryColor,
         },
 
         filterButtonText: {
@@ -107,7 +111,7 @@ export const styles =
         },
 
         summaryValue: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 22,
             fontWeight: '900',
         },
@@ -138,7 +142,7 @@ export const styles =
 
         sectionButtonActive: {
             borderColor:
-                '#FFBF00',
+                primaryColor,
             backgroundColor:
                 '#2E2700',
         },
@@ -150,7 +154,7 @@ export const styles =
         },
 
         sectionButtonTextActive: {
-            color: '#FFBF00',
+            color: primaryColor,
         },
 
         reportCard: {
@@ -200,7 +204,7 @@ export const styles =
         },
 
         rankingValue: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 14,
             fontWeight: '900',
         },
@@ -285,7 +289,7 @@ export const styles =
             width: 30,
             minHeight: 8,
             borderRadius: 6,
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
         },
 
         chartValue: {
@@ -354,7 +358,7 @@ export const styles =
         },
 
         topProductValue: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 12,
             fontWeight: '900',
         },
@@ -370,7 +374,7 @@ export const styles =
         topProductBar: {
             height: '100%',
             borderRadius: 5,
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
         },
 
         topProductsTitleRow: {
@@ -399,7 +403,7 @@ export const styles =
         },
 
         metricButtonActive: {
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
         },
 
         metricButtonText: {
@@ -446,7 +450,7 @@ export const styles =
         },
 
         sauceUnits: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 12,
             fontWeight: '900',
         },
@@ -462,7 +466,7 @@ export const styles =
         sauceBar: {
             height: '100%',
             borderRadius: 5,
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
         },
 
         lowRotationContainer: {
@@ -473,7 +477,7 @@ export const styles =
         },
 
         lowRotationTitle: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 12,
             fontWeight: '900',
         },
@@ -539,7 +543,7 @@ export const styles =
         },
 
         modifierGroupTitle: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 12,
             fontWeight: '900',
             marginBottom: 14,
@@ -580,7 +584,22 @@ export const styles =
         modifierGroupBar: {
             height: '100%',
             borderRadius: 4,
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
         },
     });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
 

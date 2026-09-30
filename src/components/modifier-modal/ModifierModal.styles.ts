@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     /*
      * ============================
@@ -342,10 +349,10 @@ export const styles =
 
     optionButtonSelected: {
       borderColor:
-        '#FFBF00',
+        primaryColor,
 
       backgroundColor:
-        'rgba(255, 191, 0, 0.1)',
+        withAlpha(primaryColor, 0.10),
     },
 
     optionText: {
@@ -369,7 +376,7 @@ export const styles =
 
     optionTextSelected: {
       color:
-        '#FFBF00',
+        primaryColor,
 
       fontWeight:
         'bold',
@@ -519,7 +526,7 @@ export const styles =
         48,
 
       backgroundColor:
-        '#FFBF00',
+        primaryColor,
 
       paddingVertical:
         12,
@@ -564,3 +571,17 @@ export const styles =
         '#666',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

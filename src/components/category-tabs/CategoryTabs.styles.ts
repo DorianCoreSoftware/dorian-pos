@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       height: 70,
@@ -41,8 +45,8 @@ export const styles =
     },
 
     categoryButtonActive: {
-      backgroundColor: '#FFBF00',
-      borderColor: '#FFBF00',
+      backgroundColor: primaryColor,
+      borderColor: primaryColor,
     },
 
     categoryButtonText: {
@@ -60,3 +64,17 @@ export const styles =
       fontWeight: 'bold',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
     useEffect,
     useMemo,
@@ -34,7 +36,12 @@ import {
 
 import {
     styles,
+  setBrandPrimaryColor,
 } from './AdminReports.styles';
+
+import {
+    useCurrency,
+} from '../../../hooks/useCurrency';
 
 type DateFilter =
     | 'today'
@@ -58,6 +65,14 @@ const EMPTY_SUMMARY:
 };
 
 export function AdminReports() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+    const {
+        formatCurrency,
+        formatCompactCurrency,
+    } = useCurrency();
+
     const [
         productChartMetric,
         setProductChartMetric,
@@ -669,6 +684,9 @@ export function AdminReports() {
                     data={
                         dailySales
                     }
+                    formatCompactCurrency={
+                        formatCompactCurrency
+                    }
                 />
 
                 <TopProductsChart
@@ -680,6 +698,9 @@ export function AdminReports() {
                     }
                     onMetricChange={
                         setProductChartMetric
+                    }
+                    formatCurrency={
+                        formatCurrency
                     }
                 />
 
@@ -1125,18 +1146,6 @@ function formatDate(
     );
 }
 
-function formatCurrency(
-    value: number,
-): string {
-    return `$${value.toLocaleString(
-        'es-MX',
-        {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        },
-    )}`;
-}
-
 function getSectionTitle(
     group:
         ModifierGroupEntity | null,
@@ -1148,10 +1157,14 @@ function getSectionTitle(
 
 interface DailySalesChartProps {
     data: DailySalesReport[];
+    formatCompactCurrency: (
+        value: number,
+    ) => string;
 }
 
 function DailySalesChart({
     data,
+    formatCompactCurrency,
 }: DailySalesChartProps) {
     const maxRevenue =
         data.reduce(
@@ -1316,25 +1329,12 @@ function formatShortDate(
     return `${day}/${month}`;
 }
 
-function formatCompactCurrency(
-    value: number,
-): string {
-    if (
-        value >= 1000
-    ) {
-        return `$${(
-            value /
-            1000
-        ).toFixed(1)}k`;
-    }
-
-    return `$${Math.round(
-        value,
-    )}`;
-}
-
 interface TopProductsChartProps {
     data: ProductSalesReport[];
+
+    formatCurrency: (
+        value: number,
+    ) => string;
 
     metric:
     ProductChartMetric;
@@ -1349,6 +1349,7 @@ function TopProductsChart({
     data,
     metric,
     onMetricChange,
+    formatCurrency,
 }: TopProductsChartProps) {
     const topProducts =
         [...data]

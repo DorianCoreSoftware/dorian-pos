@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -100,12 +107,12 @@ export const styles =
       justifyContent: 'center',
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
     },
 
     searchButtonText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 12,
       fontWeight: '800',
     },
@@ -142,8 +149,8 @@ export const styles =
     },
 
     deviceRowSelected: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
     },
 
     deviceInfo: {
@@ -163,7 +170,7 @@ export const styles =
     },
 
     selectedText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 20,
       fontWeight: '900',
       marginLeft: 12,
@@ -199,7 +206,7 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 8,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     saveButtonText: {
@@ -212,3 +219,17 @@ export const styles =
       opacity: 0.5,
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

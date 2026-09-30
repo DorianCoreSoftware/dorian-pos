@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useMemo,
   useState,
@@ -12,7 +14,11 @@ import {
 } from 'react-native';
 
 import { Product } from '../../types';
-import { styles } from './MenuList.styles';
+import {
+  styles,
+  setBrandPrimaryColor,
+} from './MenuList.styles';
+import { useCurrency } from '../../hooks/useCurrency';
 
 export type MenuViewMode =
   | 'large'
@@ -65,6 +71,13 @@ export const MenuList: React.FC<
   onProductPress,
   onRefreshMenu,
 }) => {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+    const {
+      formatCurrency,
+    } = useCurrency();
+
     const [
       viewMode,
       setViewMode,
@@ -291,7 +304,7 @@ export const MenuList: React.FC<
                     }
                   >
                     {item.description ||
-                      'Receta tradicional de Burger Kong.'}
+                      'Producto del menú.'}
                   </Text>
                 ) : null}
 
@@ -306,11 +319,10 @@ export const MenuList: React.FC<
                         styles.productPrice
                       }
                     >
-                      $
-                      {Number(
-                        item.price,
-                      ).toFixed(
-                        2,
+                      {formatCurrency(
+                        Number(
+                          item.price,
+                        ),
                       )}
                     </Text>
 
@@ -351,11 +363,10 @@ export const MenuList: React.FC<
                         styles.productPriceCompact,
                       ]}
                     >
-                      $
-                      {Number(
-                        item.price,
-                      ).toFixed(
-                        2,
+                      {formatCurrency(
+                        Number(
+                          item.price,
+                        ),
                       )}
                     </Text>
                   </View>

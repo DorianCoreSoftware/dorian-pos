@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -33,7 +35,13 @@ import GooglePlaceAutocomplete, {
   GooglePlaceSelection,
 } from './GooglePlaceAutocomplete';
 
-import styles from './WebCheckoutModal.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebCheckoutModal.styles';
+
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
 
 interface CheckoutData {
   fulfillmentType:
@@ -134,24 +142,6 @@ const EMPTY_DELIVERY:
     null,
 };
 
-function formatPrice(
-  value:
-    number,
-): string {
-  return new Intl.NumberFormat(
-    'es-MX',
-    {
-      style:
-        'currency',
-
-      currency:
-        'MXN',
-    },
-  ).format(
-    value,
-  );
-}
-
 export default function WebCheckoutModal({
   visible,
   subtotal,
@@ -164,6 +154,13 @@ export default function WebCheckoutModal({
   onClose,
   onSubmit,
 }: WebCheckoutModalProps) {
+  const { theme: businessTheme } = useBusiness();
+  setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   const [
     fulfillmentType,
     setFulfillmentType,
@@ -804,7 +801,7 @@ export default function WebCheckoutModal({
                 subtitle={
                   deliveryFee >
                     0
-                    ? `Desde ${formatPrice(
+                    ? `Desde ${formatCurrency(
                       deliveryFee,
                     )}`
                     : 'Entrega a domicilio'
@@ -1064,7 +1061,7 @@ export default function WebCheckoutModal({
                                 }
                               >
                                 Tarifa base:{' '}
-                                {formatPrice(
+                                {formatCurrency(
                                   deliveryFee,
                                 )}
                               </Text>
@@ -1076,7 +1073,7 @@ export default function WebCheckoutModal({
                                   }
                                 >
                                   Cargo por zona: +
-                                  {formatPrice(
+                                  {formatCurrency(
                                     deliveryQuote.extraFee,
                                   )}
                                 </Text>
@@ -1096,7 +1093,7 @@ export default function WebCheckoutModal({
                                 }
                               >
                                 Envío:{' '}
-                                {formatPrice(
+                                {formatCurrency(
                                   calculatedDeliveryFee,
                                 )}
                               </Text>
@@ -1153,7 +1150,7 @@ export default function WebCheckoutModal({
               <SummaryRow
                 label="Productos"
                 value={
-                  formatPrice(
+                  formatCurrency(
                     subtotal,
                   )
                 }
@@ -1163,9 +1160,9 @@ export default function WebCheckoutModal({
                 0 && (
                   <SummaryRow
                     label={modifierPromotionName ?? 'Promoción'}
-                    value={`-${formatPrice(
-                      modifierPromotionDiscount,
-                    )}`}
+                    value={formatCurrency(
+                      -modifierPromotionDiscount,
+                    )}
                     discount
                   />
                 )}
@@ -1176,7 +1173,7 @@ export default function WebCheckoutModal({
                     <SummaryRow
                       label="Envío base"
                       value={
-                        formatPrice(
+                        formatCurrency(
                           deliveryFee,
                         )
                       }
@@ -1189,7 +1186,7 @@ export default function WebCheckoutModal({
                       0 && (
                         <SummaryRow
                           label="Cargo por zona"
-                          value={`+${formatPrice(
+                          value={`+${formatCurrency(
                             deliveryQuote
                               .extraFee,
                           )}`}
@@ -1199,7 +1196,7 @@ export default function WebCheckoutModal({
                     <SummaryRow
                       label="Envío a domicilio"
                       value={
-                        formatPrice(
+                        formatCurrency(
                           calculatedDeliveryFee,
                         )
                       }
@@ -1216,7 +1213,7 @@ export default function WebCheckoutModal({
               <SummaryRow
                 label="Total estimado"
                 value={
-                  formatPrice(
+                  formatCurrency(
                     finalTotal,
                   )
                 }
@@ -1297,7 +1294,7 @@ export default function WebCheckoutModal({
                       ? 'Selecciona una dirección'
                       : isQuotingDelivery
                         ? 'Calculando cobertura...'
-                        : `Confirmar pedido · ${formatPrice(
+                        : `Confirmar pedido · ${formatCurrency(
                           finalTotal,
                         )}`}
                 </Text>

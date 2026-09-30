@@ -76,6 +76,7 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './App.styles';
 
 import {
@@ -95,6 +96,10 @@ function MainApp() {
     business,
     theme,
   } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
 
   const {
     user,

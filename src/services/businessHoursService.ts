@@ -1,4 +1,7 @@
+import { DEFAULT_BRAND_PRIMARY } from '../theme/brandStyles';
+
 import { supabase } from './supabase';
+import { DEFAULT_CURRENCY_CODE } from '../Utils/currency';
 
 export interface BusinessHour {
   id: string;
@@ -35,6 +38,12 @@ export interface BusinessSettings {
   features: BusinessFeatures;
   timezone: string;
   webOrderSettings: WebOrderSettings;
+}
+
+export interface SaveBusinessSettingsInput {
+  identity: BusinessIdentity;
+  features: BusinessFeatures;
+  timezone: string;
 }
 
 export interface BusinessHourException {
@@ -95,11 +104,8 @@ const DEFAULT_TIMEZONE =
 const DEFAULT_BUSINESS_NAME =
   'Dorian POS';
 
-const DEFAULT_CURRENCY_CODE =
-  'MXN';
-
 const DEFAULT_PRIMARY_COLOR =
-  '#FFBF00';
+  DEFAULT_BRAND_PRIMARY;
 
 const DEFAULT_SECONDARY_COLOR =
   '#000000';
@@ -354,6 +360,151 @@ export async function getBusinessSettings(): Promise<
         '',
     },
   };
+}
+
+export async function saveBusinessSettings(
+  input: SaveBusinessSettingsInput,
+): Promise<void> {
+  const businessName =
+    input.identity.businessName.trim();
+
+  const shortName =
+    input.identity.shortName.trim();
+
+  const currencyCode =
+    input.identity.currencyCode
+      .trim()
+      .toUpperCase();
+
+  const phone =
+    input.identity.phone.trim();
+
+  const logoUrl =
+    input.identity.logoUrl.trim();
+
+  const primaryColor =
+    input.identity.primaryColor
+      .trim()
+      .toUpperCase();
+
+  const secondaryColor =
+    input.identity.secondaryColor
+      .trim()
+      .toUpperCase();
+
+  const timezone =
+    input.timezone.trim();
+
+  if (!businessName) {
+    throw new Error(
+      'El nombre del negocio es obligatorio.',
+    );
+  }
+
+  if (businessName.length > 80) {
+    throw new Error(
+      'El nombre del negocio no puede superar 80 caracteres.',
+    );
+  }
+
+  if (shortName.length > 40) {
+    throw new Error(
+      'El nombre corto no puede superar 40 caracteres.',
+    );
+  }
+
+  if (!/^[A-Z]{3}$/.test(currencyCode)) {
+    throw new Error(
+      'La moneda debe usar un código ISO de 3 letras, por ejemplo MXN o USD.',
+    );
+  }
+
+  if (phone.length > 30) {
+    throw new Error(
+      'El teléfono no puede superar 30 caracteres.',
+    );
+  }
+
+  if (
+    logoUrl &&
+    !/^https?:\/\//i.test(logoUrl)
+  ) {
+    throw new Error(
+      'El logo debe usar una URL http o https.',
+    );
+  }
+
+  const hexColorRegex =
+    /^#[0-9A-F]{6}$/;
+
+  if (!hexColorRegex.test(primaryColor)) {
+    throw new Error(
+      'El color principal debe usar formato hexadecimal, por ejemplo #FFBF00.',
+    );
+  }
+
+  if (!hexColorRegex.test(secondaryColor)) {
+    throw new Error(
+      'El color secundario debe usar formato hexadecimal, por ejemplo #000000.',
+    );
+  }
+
+  if (!timezone) {
+    throw new Error(
+      'La zona horaria es obligatoria.',
+    );
+  }
+
+  const { error } =
+    await supabase
+      .from('business_settings')
+      .update({
+        business_name:
+          businessName,
+
+        short_name:
+          shortName ||
+          businessName,
+
+        currency_code:
+          currencyCode,
+
+        phone:
+          phone || null,
+
+        logo_url:
+          logoUrl || null,
+
+        primary_color:
+          primaryColor,
+
+        secondary_color:
+          secondaryColor,
+
+        loyalty_enabled:
+          input.features.loyaltyEnabled,
+
+        delivery_enabled:
+          input.features.deliveryEnabled,
+
+        promotions_enabled:
+          input.features.promotionsEnabled,
+
+        kitchen_enabled:
+          input.features.kitchenEnabled,
+
+        timezone,
+
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq('id', 1);
+
+  if (error) {
+    throw new Error(
+      `No se pudo guardar la configuración del negocio: ${error.message}`,
+    );
+  }
 }
 
 export async function getBusinessIdentity(): Promise<

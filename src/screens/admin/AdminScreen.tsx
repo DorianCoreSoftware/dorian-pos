@@ -58,6 +58,10 @@ import {
 } from '../../components/admin/loyalty/AdminLoyalty';
 
 import {
+  AdminBusinessSettings,
+} from '../../components/admin/business-settings/AdminBusinessSettings';
+
+import {
   useBusiness,
 } from '../../context/BusinessContext';
 
@@ -66,6 +70,7 @@ import {
 } from './AdminScreen.styles';
 
 type AdminSection =
+  | 'business'
   | 'products'
   | 'categories'
   | 'modifiers'
@@ -138,6 +143,14 @@ export function AdminScreen({
       () => {
         const sections:
           AdminSectionOption[] = [
+            {
+              key:
+                'business',
+              label:
+                'NEGOCIO',
+              icon:
+                '🏪',
+            },
             {
               key:
                 'products',
@@ -313,6 +326,15 @@ export function AdminScreen({
 
   const renderContent =
     () => {
+      if (
+        activeSection ===
+        'business'
+      ) {
+        return (
+          <AdminBusinessSettings />
+        );
+      }
+
       if (
         activeSection ===
         'products'

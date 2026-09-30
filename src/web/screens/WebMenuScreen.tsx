@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -70,7 +72,9 @@ import {
   getRecentWebOrderTrackingCodes,
   saveWebOrderTrackingCode,
 } from '../utils/webOrderHistory';
-import styles from './WebMenuScreen.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebMenuScreen.styles';
 import { WebFeedbackModal } from '../components/WebFeedbackModal';
 
 interface WebMenuScreenProps {
@@ -235,6 +239,9 @@ function getBusinessAvailabilityText(
 export default function WebMenuScreen({
   onRewardsPress,
 }: WebMenuScreenProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const [
     isFeedbackVisible,
     setIsFeedbackVisible,

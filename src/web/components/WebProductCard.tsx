@@ -14,6 +14,14 @@ import {
 
 import styles from './WebProductCard.styles';
 
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
+
 interface WebProductCardProps {
   product: Product;
 
@@ -24,28 +32,26 @@ interface WebProductCardProps {
     (product: Product) => void;
 }
 
-function formatPrice(
-  price: number,
-): string {
-  return new Intl.NumberFormat(
-    'es-MX',
-    {
-      style:
-        'currency',
-
-      currency:
-        'MXN',
-    },
-  ).format(
-    price,
-  );
-}
-
 export default function WebProductCard({
   product,
   width,
   onPress,
 }: WebProductCardProps) {
+  const {
+    business,
+  } = useBusiness();
+
+  const {
+    formatCurrency,
+  } = useCurrency();
+
+  const placeholderText =
+    business?.identity.shortName
+      ?.trim()
+      .slice(0, 2)
+      .toUpperCase() ||
+    'DP';
+
   return (
     <Pressable
       onPress={() =>
@@ -92,7 +98,7 @@ export default function WebProductCard({
                 styles.placeholderText
               }
             >
-              BK
+              {placeholderText}
             </Text>
           </View>
         )}
@@ -151,7 +157,7 @@ export default function WebProductCard({
               styles.price
             }
           >
-            {formatPrice(
+            {formatCurrency(
               Number(
                 product.price,
               ),

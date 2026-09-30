@@ -14,6 +14,10 @@ import {
 
 import styles from './WebCartModal.styles';
 
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
+
 interface WebCartModalProps {
   visible: boolean;
   cart: Cart;
@@ -44,18 +48,6 @@ interface WebCartModalProps {
   onContinue: () => void;
 }
 
-function formatPrice(
-  value: number,
-): string {
-  return new Intl.NumberFormat(
-    'es-MX',
-    {
-      style: 'currency',
-      currency: 'MXN',
-    },
-  ).format(value);
-}
-
 export default function WebCartModal({
   visible,
   cart,
@@ -71,6 +63,10 @@ export default function WebCartModal({
   onClearCart,
   onContinue,
 }: WebCartModalProps) {
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   return (
     <Modal
       transparent
@@ -187,7 +183,7 @@ export default function WebCartModal({
                           styles.itemPrice
                         }
                       >
-                        {formatPrice(
+                        {formatCurrency(
                           Number(
                             item.product
                               .price,
@@ -393,7 +389,7 @@ export default function WebCartModal({
                   styles.summaryValue
                 }
               >
-                {formatPrice(
+                {formatCurrency(
                   subtotal,
                 )}
               </Text>
@@ -420,7 +416,7 @@ export default function WebCartModal({
                   }
                 >
                   -
-                  {formatPrice(
+                  {formatCurrency(
                     modifierPromotionDiscount,
                   )}
                 </Text>
@@ -446,7 +442,7 @@ export default function WebCartModal({
                   styles.totalValue
                 }
               >
-                {formatPrice(
+                {formatCurrency(
                   total,
                 )}
               </Text>

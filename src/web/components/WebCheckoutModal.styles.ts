@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     backdrop: {
       flex: 1,
@@ -182,7 +189,7 @@ const styles =
         '#FFB000',
 
       backgroundColor:
-        '#2B250C',
+        withAlpha(primaryColor, 0.12),
     },
 
     choiceButtonPressed: {
@@ -712,4 +719,19 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+
+export { styles as default };

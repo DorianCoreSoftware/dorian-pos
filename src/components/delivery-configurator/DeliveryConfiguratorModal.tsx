@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -36,7 +38,12 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './DeliveryConfiguratorModal.styles';
+
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
 
 interface DeliveryConfiguratorModalProps {
   visible:
@@ -118,6 +125,13 @@ export function DeliveryConfiguratorModal({
   onClose,
   onConfirm,
 }: DeliveryConfiguratorModalProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   const [
     form,
     setForm,
@@ -1020,7 +1034,7 @@ export function DeliveryConfiguratorModal({
                           }
                         >
                           Tarifa base:{' '}
-                          {formatPrice(
+                          {formatCurrency(
                             baseDeliveryFee,
                           )}
                         </Text>
@@ -1033,7 +1047,7 @@ export function DeliveryConfiguratorModal({
                             }
                           >
                             Cargo por zona: +
-                            {formatPrice(
+                            {formatCurrency(
                               deliveryQuote.extraFee,
                             )}
                           </Text>
@@ -1053,7 +1067,7 @@ export function DeliveryConfiguratorModal({
                           }
                         >
                           Envío:{' '}
-                          {formatPrice(
+                          {formatCurrency(
                             totalDeliveryFee,
                           )}
                         </Text>
@@ -1158,7 +1172,7 @@ export function DeliveryConfiguratorModal({
                     ? 'Fuera de cobertura'
                     : !hasSelectedPlace
                       ? 'Selecciona dirección'
-                      : `Agregar entrega · ${formatPrice(
+                      : `Agregar entrega · ${formatCurrency(
                         totalDeliveryFee,
                       )}`}
               </Text>
@@ -1343,23 +1357,5 @@ function normalizePhone(
   return value.replace(
     /\D/g,
     '',
-  );
-}
-
-function formatPrice(
-  value:
-    number,
-): string {
-  return new Intl.NumberFormat(
-    'es-MX',
-    {
-      style:
-        'currency',
-
-      currency:
-        'MXN',
-    },
-  ).format(
-    value,
   );
 }

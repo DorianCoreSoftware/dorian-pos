@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useState,
 } from 'react';
@@ -25,10 +27,14 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './LoyaltyScreen.styles';
 import { LoyaltyQrScannerModal } from '../../components/loyalty/LoyaltyQrScannerModal';
 
 export function LoyaltyScreen() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const [
     qrToken,
     setQrToken,

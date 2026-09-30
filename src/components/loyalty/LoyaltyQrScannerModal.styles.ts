@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -38,7 +42,7 @@ export const styles =
     },
 
     permissionButton: {
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       paddingHorizontal: 24,
       minHeight: 48,
       borderRadius: 10,
@@ -110,7 +114,7 @@ export const styles =
       position: 'absolute',
       width: 45,
       height: 45,
-      borderColor: '#FFBF00',
+      borderColor: primaryColor,
     },
 
     topLeft: {
@@ -164,3 +168,17 @@ export const styles =
       fontWeight: '900',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

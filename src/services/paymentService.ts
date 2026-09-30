@@ -9,6 +9,11 @@ import {
   PaymentMethod,
 } from '../types';
 
+import {
+  DEFAULT_CURRENCY_CODE,
+  formatCurrency,
+} from '../Utils/currency';
+
 interface RegisterPaymentParams {
   orderId: string;
   paymentMethod:
@@ -17,6 +22,9 @@ interface RegisterPaymentParams {
 
   amountReceived?:
     number | null;
+
+  currencyCode?:
+    string;
 }
 
 export async function registerOrderPayment({
@@ -24,6 +32,8 @@ export async function registerOrderPayment({
   paymentMethod,
   totalAmount,
   amountReceived = null,
+  currencyCode =
+    DEFAULT_CURRENCY_CODE,
 }: RegisterPaymentParams): Promise<OrderPayment> {
   validateOrderId(
     orderId,
@@ -48,6 +58,7 @@ export async function registerOrderPayment({
       paymentMethod,
       totalAmount,
       amountReceived,
+      currencyCode,
     });
 
   try {
@@ -89,6 +100,8 @@ function buildPaymentPayload({
   paymentMethod,
   totalAmount,
   amountReceived,
+  currencyCode =
+    DEFAULT_CURRENCY_CODE,
 }: RegisterPaymentParams) {
   if (
     paymentMethod ===
@@ -107,6 +120,7 @@ function buildPaymentPayload({
     totalAmount,
     amountReceived ??
       null,
+    currencyCode,
   );
 
   const received =
@@ -170,6 +184,8 @@ function validateCashPayment(
   totalAmount: number,
   amountReceived:
     number | null,
+  currencyCode:
+    string,
 ): void {
   if (
     amountReceived ===
@@ -202,8 +218,9 @@ function validateCashPayment(
       );
 
     throw new Error(
-      `Faltan $${missingAmount.toFixed(
-        2,
+      `Faltan ${formatCurrency(
+        missingAmount,
+        currencyCode,
       )} para completar el pago.`,
     );
   }

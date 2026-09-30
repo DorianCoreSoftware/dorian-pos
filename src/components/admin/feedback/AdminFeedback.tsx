@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -22,6 +24,7 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './AdminFeedback.styles';
 
 const TYPE_LABELS = {
@@ -50,6 +53,9 @@ const STATUS_LABELS = {
 };
 
 export function AdminFeedback() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const [
     items,
     setItems,
@@ -182,7 +188,7 @@ export function AdminFeedback() {
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text

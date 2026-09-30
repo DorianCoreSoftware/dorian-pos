@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useRef,
@@ -47,6 +49,8 @@ export function GooglePlaceSearch({
   'down',
   onPlaceSelected,
 }: GooglePlaceSearchProps) {
+  const { theme: businessTheme } = useBusiness();
+
   const [
     searchText,
     setSearchText,
@@ -621,7 +625,7 @@ export function GooglePlaceSearch({
         {isBusy && (
           <ActivityIndicator
             size="small"
-            color="#FFBF00"
+            color={businessTheme.primary}
           />
         )}
       </View>

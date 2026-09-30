@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useCallback,
   useEffect,
@@ -25,7 +27,10 @@ import {
   setLoyaltyRewardActive,
   updateLoyaltyReward,
 } from '../../../services/adminLoyaltyService';
-import { styles } from './AdminLoyalty.styles';
+import {
+  styles,
+  setBrandPrimaryColor,
+} from './AdminLoyalty.styles';
 
 interface RewardForm {
   name: string;
@@ -53,6 +58,9 @@ const INITIAL_REWARD_FORM:
 };
 
 export function AdminLoyalty() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const {
     width,
   } =
@@ -519,7 +527,7 @@ export function AdminLoyalty() {
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
       </View>
     );

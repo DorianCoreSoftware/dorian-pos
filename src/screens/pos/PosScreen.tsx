@@ -40,6 +40,8 @@ import {
 import {
   styles,
 } from '../../../App.styles';
+
+import { useCurrency } from '../../hooks/useCurrency';
 import {
   DeliveryConfiguratorModal,
 } from '../../components/delivery-configurator';
@@ -79,6 +81,10 @@ export function POSScreen({
   fetchKitchenOrders,
   modifiersVersion,
 }: POSScreenProps) {
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   const visibleCategories =
     useMemo(
       () => {
@@ -956,9 +962,8 @@ export function POSScreen({
                 styles.mobileCartTotal
               }
             >
-              $
-              {mobileCartSummary.totalAmount.toFixed(
-                2,
+              {formatCurrency(
+                mobileCartSummary.totalAmount,
               )}
             </Text>
             <Text

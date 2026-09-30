@@ -16,7 +16,14 @@ import {
   CameraView,
   useCameraPermissions,
 } from 'expo-camera';
-import { styles } from './LoyaltyQrScannerModal.styles';
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
+  styles,
+  setBrandPrimaryColor,
+} from './LoyaltyQrScannerModal.styles';
 
 
 interface Props {
@@ -34,6 +41,17 @@ export function LoyaltyQrScannerModal({
   onClose,
   onScanned,
 }: Props) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    business,
+  } = useBusiness();
+
+  const businessName =
+    business?.identity.businessName ??
+    'Dorian POS';
+
   const [
     permission,
     requestPermission,
@@ -112,7 +130,7 @@ export function LoyaltyQrScannerModal({
           >
             <ActivityIndicator
               size="large"
-              color="#FFBF00"
+              color={businessTheme.primary}
             />
 
             <Text
@@ -142,7 +160,7 @@ export function LoyaltyQrScannerModal({
                 styles.permissionText
               }
             >
-              Burger Kong necesita
+              {businessName} necesita
               acceso a la cámara para
               escanear el QR del cliente.
             </Text>

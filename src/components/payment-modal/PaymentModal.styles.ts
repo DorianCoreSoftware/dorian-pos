@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
@@ -66,7 +70,7 @@ export const styles =
     },
 
     totalAmount: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 34,
       fontWeight: '900',
       marginTop: 4,
@@ -98,7 +102,7 @@ export const styles =
     },
 
     paymentMethodButtonSelected: {
-      borderColor: '#FFBF00',
+      borderColor: primaryColor,
       backgroundColor: '#3A3100',
     },
 
@@ -109,7 +113,7 @@ export const styles =
     },
 
     paymentMethodTextSelected: {
-      color: '#FFBF00',
+      color: primaryColor,
     },
 
     cashSection: {
@@ -214,7 +218,7 @@ export const styles =
       borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     confirmButtonDisabled: {
@@ -231,3 +235,17 @@ export const styles =
       color: '#888888',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

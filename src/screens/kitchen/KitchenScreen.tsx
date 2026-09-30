@@ -1,3 +1,7 @@
+import { withAlpha } from '../../theme/brandStyles';
+
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useState,
 } from 'react';
@@ -63,6 +67,7 @@ import {
   styles,
 } from '../../../App.styles';
 import { getModifierGroupLabel } from '../../Utils/modifierGroup';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface KitchenProps {
   pendingOrders:
@@ -107,6 +112,13 @@ export function KitchenScreen({
   setCart,
   setActiveTab,
 }: KitchenProps) {
+  const { theme: businessTheme } = useBusiness();
+
+  const {
+    currencyCode,
+    formatCurrency,
+  } = useCurrency();
+
   const [
     paymentOrder,
     setPaymentOrder,
@@ -172,18 +184,17 @@ export function KitchenScreen({
             existingPayment
               .paymentMethod ===
               'cash'
-              ? `Esta orden ya fue pagada en efectivo.\n\nRecibido: $${(
+              ? `Esta orden ya fue pagada en efectivo.
+
+Recibido: ${formatCurrency(
                 existingPayment
                   .amountReceived ??
-                0
-              ).toFixed(
-                2,
-              )}\nCambio: $${(
+                0,
+              )}
+Cambio: ${formatCurrency(
                 existingPayment
                   .changeAmount ??
-                0
-              ).toFixed(
-                2,
+                0,
               )}`
               : 'Esta orden ya fue pagada con tarjeta.',
 
@@ -280,6 +291,8 @@ export function KitchenScreen({
                 ),
 
               amountReceived,
+
+              currencyCode,
             },
           );
         } catch (error) {
@@ -331,6 +344,8 @@ export function KitchenScreen({
             amountReceived,
 
             promoCoupon,
+
+            currencyCode,
           });
         } catch (error) {
           console.error(
@@ -938,7 +953,7 @@ export function KitchenScreen({
               key={`${component.id}-${modifier.id}`}
               style={{
                 color:
-                  '#FFBF00',
+                  businessTheme.primary,
 
                 fontSize:
                   12,
@@ -1038,7 +1053,7 @@ export function KitchenScreen({
                     }
                     style={{
                       color:
-                        '#FFBF00',
+                        businessTheme.primary,
 
                       fontSize:
                         13,
@@ -1427,10 +1442,11 @@ export function KitchenScreen({
         </Text>
 
         <Text style={styles.orderTotal}>
-          $
-          {Number(
-            item.total,
-          ).toFixed(2)}
+          {formatCurrency(
+            Number(
+              item.total,
+            ),
+          )}
         </Text>
       </View>
 
@@ -1441,7 +1457,7 @@ export function KitchenScreen({
           backgroundColor:
             item.orderSource ===
               'web'
-              ? '#2B250C'
+              ? withAlpha(businessTheme.primary, 0.12)
               : '#262626',
 
           borderWidth: 1,

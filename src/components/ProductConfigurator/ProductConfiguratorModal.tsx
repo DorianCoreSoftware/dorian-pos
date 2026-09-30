@@ -1,3 +1,7 @@
+import { withAlpha } from '../../theme/brandStyles';
+
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -37,12 +41,14 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from '../modifier-modal/ModifierModal.styles';
 import {
   ComboConfigurator,
   ComboConfiguratorSelection,
 } from './ComboConfigurator';
 import { getAvailableProductModifierOptions } from '../../services/productModifierOptionService';
+import { useCurrency } from '../../hooks/useCurrency';
 export interface ProductConfigurationResult {
   selectedModifiers: SelectedModifier[];
   comboComponents: ComboComponentSelection[];
@@ -71,6 +77,13 @@ export const ProductConfiguratorModal:
     onClose,
     onConfirm,
   }) => {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+    const {
+      formatCurrency,
+    } = useCurrency();
+
     const {
       width,
       height,
@@ -718,7 +731,7 @@ export const ProductConfiguratorModal:
                 >
                   <ActivityIndicator
                     size="large"
-                    color="#FFBF00"
+                    color={businessTheme.primary}
                   />
                   <Text
                     style={{
@@ -800,13 +813,13 @@ export const ProductConfiguratorModal:
                     borderColor:
                       '#8A6A00',
                     backgroundColor:
-                      '#302800',
+                      withAlpha(businessTheme.primary, 0.14),
                   }}
                 >
                   <Text
                     style={{
                       color:
-                        '#FFBF00',
+                        businessTheme.primary,
                       fontSize:
                         12,
                       fontWeight:
@@ -875,7 +888,7 @@ export const ProductConfiguratorModal:
                   >
                     <ActivityIndicator
                       size="small"
-                      color="#FFBF00"
+                      color={businessTheme.primary}
                     />
                     <Text
                       style={
@@ -1043,7 +1056,7 @@ export const ProductConfiguratorModal:
                                         .optionButtonSelected,
                                       isModifierPromotion && {
                                         borderColor:
-                                          '#FFBF00',
+                                          businessTheme.primary,
                                         borderWidth:
                                           2,
                                       },
@@ -1093,10 +1106,10 @@ export const ProductConfiguratorModal:
                                         modifier.extra_price,
                                       ) >
                                         0
-                                        ? ` (+$${Number(
-                                          modifier.extra_price,
-                                        ).toFixed(
-                                          2,
+                                        ? ` (+${formatCurrency(
+                                          Number(
+                                            modifier.extra_price,
+                                          ),
                                         )})`
                                         : ''}
                                     </Text>

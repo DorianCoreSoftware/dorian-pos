@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useEffect,
   useState,
@@ -30,6 +32,7 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './AdminBusinessHours.styles';
 import { DateCalendarSelect, TimeSelect } from './AdminBusinessHoursSelectors';
 
@@ -74,6 +77,9 @@ const EMPTY_EXCEPTION_FORM:
   };
 
 export function AdminBusinessHours() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const [
     hours,
     setHours,
@@ -448,7 +454,7 @@ export function AdminBusinessHours() {
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text

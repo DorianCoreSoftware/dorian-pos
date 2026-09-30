@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -45,6 +47,10 @@ import {
   ModifierPromotion,
 } from '../../services/modifierPromotionService';
 
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
+
 export interface ComboConfiguratorSelection {
   components: ComboComponentSelection[];
   isValid: boolean;
@@ -84,6 +90,12 @@ export const ComboConfigurator: React.FC<
   modifierPromotion,
   onSelectionChange,
 }) => {
+  const { theme: businessTheme } = useBusiness();
+
+    const {
+      formatCurrency,
+    } = useCurrency();
+
   const [
     recipe,
     setRecipe,
@@ -939,7 +951,7 @@ export const ComboConfigurator: React.FC<
                     borderWidth: 1,
                     borderColor:
                       isSelected
-                        ? '#FFBF00'
+                        ? businessTheme.primary
                         : '#555555',
                     backgroundColor:
                       isSelected
@@ -993,7 +1005,7 @@ export const ComboConfigurator: React.FC<
         >
           <ActivityIndicator
             size="small"
-            color="#FFBF00"
+            color={businessTheme.primary}
           />
         </View>
       );
@@ -1123,7 +1135,7 @@ export const ComboConfigurator: React.FC<
                             borderColor:
                               isSelected ||
                               isModifierPromotion
-                                ? '#FFBF00'
+                                ? businessTheme.primary
                                 : '#555555',
                             backgroundColor:
                               isSelected
@@ -1135,7 +1147,7 @@ export const ComboConfigurator: React.FC<
                             style={{
                               color:
                                 isModifierPromotion
-                                  ? '#FFBF00'
+                                  ? businessTheme.primary
                                   : '#FFFFFF',
                               fontWeight:
                                 isSelected ||
@@ -1163,8 +1175,9 @@ export const ComboConfigurator: React.FC<
                                   marginTop: 3,
                                 }}
                               >
-                                ${modifierPromotion.display_name} · Ahorra ${modifierPromotion.discount_amount.toFixed(
-                                  2,
+                                {modifierPromotion.display_name} · Ahorra{' '}
+                                {formatCurrency(
+                                  modifierPromotion.discount_amount,
                                 )}
                               </Text>
                             )}
@@ -1225,7 +1238,7 @@ export const ComboConfigurator: React.FC<
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text

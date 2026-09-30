@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useCallback,
   useEffect,
@@ -35,7 +37,12 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './AdminDeliverySettings.styles';
+
+import {
+  useCurrency,
+} from '../../../hooks/useCurrency';
 
 interface ZoneFormState {
   name: string;
@@ -72,6 +79,13 @@ const INITIAL_ZONE_FORM:
 };
 
 export function AdminDeliverySettings() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   const {
     width,
   } =
@@ -828,7 +842,7 @@ export function AdminDeliverySettings() {
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text
@@ -1253,8 +1267,8 @@ export function AdminDeliverySettings() {
                   >
                     {zone.extraFee >
                       0
-                      ? `+$${zone.extraFee.toFixed(
-                        2,
+                      ? `+${formatCurrency(
+                        zone.extraFee,
                       )}`
                       : 'Sin cargo extra'}
                   </Text>

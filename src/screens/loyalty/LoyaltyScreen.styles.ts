@@ -1,9 +1,13 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
     StyleSheet,
 } from 'react-native';
 
-export const styles =
-    StyleSheet.create({
+const createStyles = (
+  primaryColor: string,
+) =>
+  StyleSheet.create({
         container: {
             flex: 1,
             backgroundColor: '#121212',
@@ -56,7 +60,7 @@ export const styles =
             borderRadius: 8,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
         },
 
         primaryButtonDisabled: {
@@ -76,12 +80,12 @@ export const styles =
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
-            borderColor: '#FFBF00',
+            borderColor: primaryColor,
             backgroundColor: '#2A2400',
         },
 
         secondaryButtonText: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 14,
             fontWeight: '900',
         },
@@ -93,7 +97,7 @@ export const styles =
         },
 
         visits: {
-            color: '#FFBF00',
+            color: primaryColor,
             fontSize: 18,
             fontWeight: '900',
             marginTop: 6,
@@ -116,7 +120,7 @@ export const styles =
         },
 
         rewardAvailable: {
-            borderColor: '#FFBF00',
+            borderColor: primaryColor,
             backgroundColor: '#292200',
         },
 
@@ -144,7 +148,7 @@ export const styles =
         },
 
         availableText: {
-            color: '#FFBF00',
+            color: primaryColor,
         },
 
         redeemedText: {
@@ -156,7 +160,7 @@ export const styles =
             borderRadius: 7,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
             marginTop: 10,
         },
 
@@ -189,7 +193,7 @@ export const styles =
         scanButton: {
             minHeight: 58,
             borderRadius: 10,
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -217,3 +221,17 @@ export const styles =
             marginBottom: 8,
         },
     });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

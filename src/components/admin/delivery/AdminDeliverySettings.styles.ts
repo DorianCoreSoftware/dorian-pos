@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       flex:
@@ -78,7 +85,7 @@ export const styles =
         8,
 
       backgroundColor:
-        '#FFBF00',
+        primaryColor,
     },
 
     retryButtonText: {
@@ -313,7 +320,7 @@ export const styles =
 
     locationHintTitle: {
       color:
-        '#FFBF00',
+        primaryColor,
 
       fontSize:
         11,
@@ -353,7 +360,7 @@ export const styles =
         'center',
 
       backgroundColor:
-        '#FFBF00',
+        primaryColor,
 
       alignSelf:
         'flex-start',
@@ -409,7 +416,7 @@ export const styles =
         'center',
 
       backgroundColor:
-        '#FFBF00',
+        primaryColor,
     },
 
     createButtonText: {
@@ -540,7 +547,7 @@ export const styles =
 
     zoneRange: {
       color:
-        '#FFBF00',
+        primaryColor,
 
       fontSize:
         12,
@@ -621,15 +628,15 @@ export const styles =
         1,
 
       borderColor:
-        '#FFBF00',
+        primaryColor,
 
       backgroundColor:
-        '#292300',
+        withAlpha(primaryColor, 0.11),
     },
 
     editButtonText: {
       color:
-        '#FFBF00',
+        primaryColor,
 
       fontSize:
         11,
@@ -972,7 +979,7 @@ export const styles =
 
     saveButton: {
       backgroundColor:
-        '#FFBF00',
+        primaryColor,
     },
 
     saveButtonText: {
@@ -986,3 +993,17 @@ export const styles =
         '900',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

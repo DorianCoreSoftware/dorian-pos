@@ -1,3 +1,7 @@
+import { withAlpha } from '../../../theme/brandStyles';
+
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useMemo,
   useState,
@@ -138,6 +142,8 @@ export function ComboRecipeEditor({
   currentProductId,
   disabled = false,
 }: ComboRecipeEditorProps) {
+  const { theme: businessTheme } = useBusiness();
+
   const availableProducts =
     useMemo(
       () =>
@@ -394,7 +400,7 @@ export function ComboRecipeEditor({
                       <Text
                         style={{
                           color:
-                            '#FFBF00',
+                            businessTheme.primary,
                           fontSize: 12,
                           fontWeight:
                             '900',
@@ -651,14 +657,14 @@ export function ComboRecipeEditor({
                 'center',
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: '#FFBF00',
+              borderColor: businessTheme.primary,
               backgroundColor:
-                '#292300',
+                withAlpha(businessTheme.primary, 0.11),
             }}
           >
             <Text
               style={{
-                color: '#FFBF00',
+                color: businessTheme.primary,
                 fontSize: 11,
                 fontWeight: '900',
               }}
@@ -681,6 +687,8 @@ function CompactSelect({
   disabled = false,
   emptyMessage = 'No hay opciones disponibles.',
 }: CompactSelectProps) {
+  const { theme: businessTheme } = useBusiness();
+
   const [
     visible,
     setVisible,
@@ -737,7 +745,10 @@ function CompactSelect({
         </Text>
 
         <Text
-          style={selectChevronStyle}
+          style={[
+            selectChevronStyle,
+            { color: businessTheme.primary },
+          ]}
         >
           ▾
         </Text>
@@ -787,7 +798,10 @@ function CompactSelect({
                 }
               >
                 <Text
-                  style={modalCloseStyle}
+                  style={[
+                    modalCloseStyle,
+                    { color: businessTheme.primary },
+                  ]}
                 >
                   Cerrar
                 </Text>
@@ -824,6 +838,7 @@ function CompactSelect({
                       style={
                         getOptionRowStyle(
                           selected,
+                          businessTheme.primary,
                         )
                       }
                     >
@@ -837,6 +852,7 @@ function CompactSelect({
                           style={
                             getOptionTextStyle(
                               selected,
+                              businessTheme.primary,
                             )
                           }
                         >
@@ -861,7 +877,7 @@ function CompactSelect({
                         <Text
                           style={{
                             color:
-                              '#FFBF00',
+                              businessTheme.primary,
                             fontSize: 15,
                             fontWeight:
                               '900',
@@ -891,6 +907,8 @@ function CompactMultiSelect({
   disabled = false,
   emptyMessage = 'No hay opciones disponibles.',
 }: CompactMultiSelectProps) {
+  const { theme: businessTheme } = useBusiness();
+
   const [
     visible,
     setVisible,
@@ -981,7 +999,10 @@ function CompactMultiSelect({
         </Text>
 
         <Text
-          style={selectChevronStyle}
+          style={[
+            selectChevronStyle,
+            { color: businessTheme.primary },
+          ]}
         >
           ▾
         </Text>
@@ -1068,7 +1089,10 @@ function CompactMultiSelect({
                 }
               >
                 <Text
-                  style={modalCloseStyle}
+                  style={[
+                    modalCloseStyle,
+                    { color: businessTheme.primary },
+                  ]}
                 >
                   Listo
                 </Text>
@@ -1103,6 +1127,7 @@ function CompactMultiSelect({
                       style={
                         getOptionRowStyle(
                           selected,
+                          businessTheme.primary,
                         )
                       }
                     >
@@ -1116,6 +1141,7 @@ function CompactMultiSelect({
                           style={
                             getOptionTextStyle(
                               selected,
+                              businessTheme.primary,
                             )
                           }
                         >
@@ -1127,7 +1153,7 @@ function CompactMultiSelect({
                         style={{
                           color:
                             selected
-                              ? '#FFBF00'
+                              ? businessTheme.primary
                               : '#777777',
                           fontSize: 16,
                           fontWeight:
@@ -1215,7 +1241,6 @@ const selectButtonDisabledStyle = {
 };
 
 const selectChevronStyle = {
-  color: '#FFBF00',
   fontSize: 15,
   fontWeight: '900' as const,
   marginLeft: 8,
@@ -1273,13 +1298,13 @@ const modalTitleStyle = {
 };
 
 const modalCloseStyle = {
-  color: '#FFBF00',
   fontSize: 11,
   fontWeight: '900' as const,
 };
 
 function getOptionRowStyle(
   selected: boolean,
+  primaryColor: string,
 ) {
   return {
     minHeight: 44,
@@ -1293,11 +1318,11 @@ function getOptionRowStyle(
     borderWidth: 1,
     borderColor:
       selected
-        ? '#FFBF00'
+        ? primaryColor
         : '#3D3D3D',
     backgroundColor:
       selected
-        ? '#302800'
+        ? withAlpha(primaryColor, 0.14)
         : '#252525',
     marginTop: 7,
   };
@@ -1305,11 +1330,12 @@ function getOptionRowStyle(
 
 function getOptionTextStyle(
   selected: boolean,
+  primaryColor: string,
 ) {
   return {
     color:
       selected
-        ? '#FFBF00'
+        ? primaryColor
         : '#FFFFFF',
     fontSize: 11,
     fontWeight:

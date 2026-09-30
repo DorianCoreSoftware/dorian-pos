@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
     useEffect,
     useState,
@@ -31,11 +33,17 @@ import {
     printTestTicket,
     resetPrinterConnection,
 } from '../../../services/printerService';
-import { styles } from './AdminPrinter.styles';
+import {
+  styles,
+  setBrandPrimaryColor,
+} from './AdminPrinter.styles';
 
 
 
 export function AdminPrinter() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
     const [
         settings,
         setSettings,

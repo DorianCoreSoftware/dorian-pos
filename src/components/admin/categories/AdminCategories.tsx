@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useCallback,
   useEffect,
@@ -30,6 +32,7 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './AdminCategories.styles';
 
 interface AdminCategoriesProps {
@@ -51,6 +54,9 @@ const INITIAL_FORM:
 export function AdminCategories({
   onCategoriesChanged,
 }: AdminCategoriesProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const [
     categories,
     setCategories,
@@ -536,7 +542,7 @@ export function AdminCategories({
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text

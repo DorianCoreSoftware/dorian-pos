@@ -1,6 +1,14 @@
+import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from './src/theme/brandStyles';
+
 import { StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+const createStyles = (
+  primaryColor: string,
+) =>
+  StyleSheet.create({
   // ==========================================
   // CONTENEDORES GENERALES Y LOADING
   // ==========================================
@@ -83,7 +91,7 @@ export const styles = StyleSheet.create({
     borderRadius: 6,
   },
   tabActiveButton: {
-    backgroundColor: '#FFBF00',
+    backgroundColor: primaryColor,
   },
   tabText: {
     color: '#AAA',
@@ -132,7 +140,7 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
   orderId: {
-    color: '#FFBF00',
+    color: primaryColor,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -161,7 +169,7 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   notesText: {
-    color: '#FFBF00',
+    color: primaryColor,
     fontSize: 13,
     fontStyle: 'italic',
     marginTop: 4,
@@ -203,7 +211,7 @@ export const styles = StyleSheet.create({
     borderColor: '#444',
   },
   editOrderButtonText: {
-    color: '#FFBF00',
+    color: primaryColor,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -301,7 +309,7 @@ export const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#D9A500',
-    backgroundColor: '#FFBF00',
+    backgroundColor: primaryColor,
     elevation: 10,
   },
 
@@ -472,7 +480,7 @@ export const styles = StyleSheet.create({
   },
 
   printerTestText: {
-    color: '#FFBF00',
+    color: primaryColor,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -500,15 +508,15 @@ export const styles = StyleSheet.create({
       1,
 
     borderColor:
-      '#FFBF00',
+      primaryColor,
 
     backgroundColor:
-      '#2B250C',
+      withAlpha(primaryColor, 0.12),
   },
 
   editingOrderBadgeText: {
     color:
-      '#FFBF00',
+      primaryColor,
 
     fontSize:
       12,
@@ -517,4 +525,19 @@ export const styles = StyleSheet.create({
       '800',
   },
 });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
 

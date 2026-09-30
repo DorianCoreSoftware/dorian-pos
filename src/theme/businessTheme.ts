@@ -1,3 +1,5 @@
+import { DEFAULT_BRAND_PRIMARY } from './brandStyles';
+
 import {
   BusinessIdentity,
 } from '../services/businessHoursService';
@@ -22,21 +24,43 @@ export interface BusinessTheme {
   warning: string;
 }
 
-const DEFAULT_PRIMARY =
-  '#FFBF00';
-
 const DEFAULT_SECONDARY =
   '#000000';
+
+
+function getContrastTextColor(
+  hexColor: string,
+): string {
+  const clean =
+    hexColor.replace('#', '');
+
+  if (!/^[0-9A-Fa-f]{6}$/.test(clean)) {
+    return '#121212';
+  }
+
+  const red = parseInt(clean.slice(0, 2), 16);
+  const green = parseInt(clean.slice(2, 4), 16);
+  const blue = parseInt(clean.slice(4, 6), 16);
+
+  const luminance =
+    (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+
+  return luminance > 0.58
+    ? '#121212'
+    : '#FFFFFF';
+}
 
 export function createBusinessTheme(
   identity:
     BusinessIdentity | null |
     undefined,
 ): BusinessTheme {
+  const primary =
+    identity?.primaryColor ||
+    DEFAULT_BRAND_PRIMARY;
+
   return {
-    primary:
-      identity?.primaryColor ||
-      DEFAULT_PRIMARY,
+    primary,
 
     secondary:
       identity?.secondaryColor ||
@@ -72,7 +96,7 @@ export function createBusinessTheme(
      * con el color primario.
      */
     onPrimary:
-      '#121212',
+      getContrastTextColor(primary),
 
     /*
      * Colores semánticos.

@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useMemo,
@@ -19,9 +21,14 @@ import {
 import {
   calculateChange,
 } from '../../services/paymentService';
-import { styles } from './PaymentModal.styles';
+import {
+  styles,
+  setBrandPrimaryColor,
+} from './PaymentModal.styles';
 
 
+
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface PaymentModalProps {
   visible: boolean;
@@ -45,6 +52,13 @@ export function PaymentModal({
   onClose,
   onConfirm,
 }: PaymentModalProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   const [
     paymentMethod,
     setPaymentMethod,
@@ -205,10 +219,11 @@ export function PaymentModal({
             <Text
               style={styles.totalAmount}
             >
-              $
-              {Number(
-                totalAmount,
-              ).toFixed(2)}
+              {formatCurrency(
+                Number(
+                  totalAmount,
+                ),
+              )}
             </Text>
           </View>
 
@@ -320,11 +335,11 @@ export function PaymentModal({
                     styles.insufficientText
                   }
                 >
-                  Faltan $
-                  {(
+                  Faltan{' '}
+                  {formatCurrency(
                     totalAmount -
-                    amountReceived
-                  ).toFixed(2)}
+                      amountReceived,
+                  )}
                 </Text>
               ) : null}
 
@@ -346,10 +361,9 @@ export function PaymentModal({
                     styles.changeAmount
                   }
                 >
-                  $
-                  {(
-                    changeAmount ?? 0
-                  ).toFixed(2)}
+                  {formatCurrency(
+                    changeAmount ?? 0,
+                  )}
                 </Text>
               </View>
             </View>

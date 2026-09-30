@@ -1,6 +1,14 @@
+import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
+
 import { StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+const createStyles = (
+  primaryColor: string,
+) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -45,8 +53,8 @@ export const styles = StyleSheet.create({
   },
 
   viewButtonSelected: {
-    backgroundColor: '#FFBF001A',
-    borderColor: '#FFBF00',
+    backgroundColor: withAlpha(primaryColor, 0.10),
+    borderColor: primaryColor,
   },
 
   viewButtonIcon: {
@@ -56,7 +64,7 @@ export const styles = StyleSheet.create({
   },
 
   viewButtonIconSelected: {
-    color: '#FFBF00',
+    color: primaryColor,
   },
 
   viewButtonText: {
@@ -66,7 +74,7 @@ export const styles = StyleSheet.create({
   },
 
   viewButtonTextSelected: {
-    color: '#FFBF00',
+    color: primaryColor,
   },
 
   menuList: {
@@ -225,7 +233,7 @@ export const styles = StyleSheet.create({
   },
 
   productPrice: {
-    color: '#FFBF00',
+    color: primaryColor,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -235,17 +243,17 @@ export const styles = StyleSheet.create({
   },
 
   editPriceBadge: {
-    backgroundColor: '#FFBF0022',
+    backgroundColor: withAlpha(primaryColor, 0.13),
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 4,
     borderWidth: 0.5,
-    borderColor: '#FFBF0088',
+    borderColor: withAlpha(primaryColor, 0.53),
     marginTop: 4,
   },
 
   editPriceText: {
-    color: '#FFBF00',
+    color: primaryColor,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -355,7 +363,7 @@ export const styles = StyleSheet.create({
   },
 
   saveButton: {
-    backgroundColor: '#FFBF00',
+    backgroundColor: primaryColor,
   },
 
   buttonText: {
@@ -374,3 +382,17 @@ export const styles = StyleSheet.create({
     lineHeight: 13,
   },
 });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

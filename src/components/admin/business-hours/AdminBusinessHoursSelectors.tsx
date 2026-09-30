@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
   useMemo,
   useState,
@@ -14,6 +16,7 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './AdminBusinessHoursSelectors.styles';
 
 interface DateCalendarSelectProps {
@@ -360,6 +363,9 @@ export function DateCalendarSelect({
   disabled = false,
   onChange,
 }: DateCalendarSelectProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const [
     visible,
     setVisible,
@@ -703,6 +709,8 @@ export function TimeSelect({
   disabled = false,
   onChange,
 }: TimeSelectProps) {
+  const { theme: businessTheme } = useBusiness();
+  setBrandPrimaryColor(businessTheme.primary);
   const [
     visible,
     setVisible,

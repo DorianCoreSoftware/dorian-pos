@@ -1,3 +1,7 @@
+import { withAlpha } from '../../theme/brandStyles';
+
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useEffect,
   useState,
@@ -16,6 +20,7 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './Cart.styles';
 
 import {
@@ -27,6 +32,7 @@ import {
   ModifierPromotion,
 } from '../../services/modifierPromotionService';
 import { getModifierGroupLabel } from '../../Utils/modifierGroup';
+import { useCurrency } from '../../hooks/useCurrency';
 
 
 interface CartProps {
@@ -66,6 +72,13 @@ export const Cart: React.FC<
   onEditDelivery,
   isMobile = false,
 }) => {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+    const {
+      formatCurrency,
+    } = useCurrency();
+
     const [
       isCollapsed,
       setIsCollapsed,
@@ -263,9 +276,8 @@ export const Cart: React.FC<
                 styles.collapsedCartTotal
               }
             >
-              $
-              {totalAmount.toFixed(
-                2,
+              {formatCurrency(
+                totalAmount,
               )}
             </Text>
 
@@ -518,11 +530,12 @@ export const Cart: React.FC<
                     styles.deliveryPrice
                   }
                 >
-                  $
-                  {Number(
-                    deliveryItem
-                      .product.price,
-                  ).toFixed(2)}
+                  {formatCurrency(
+                    Number(
+                      deliveryItem
+                        .product.price,
+                    ),
+                  )}
                 </Text>
               </View>
             </View>
@@ -712,14 +725,13 @@ export const Cart: React.FC<
                         styles.cartItemPrice
                       }
                     >
-                      $
-                      {(
+                      {formatCurrency(
                         Number(
                           item.product
                             .price,
                         ) *
-                        item.quantity
-                      ).toFixed(2)}
+                          item.quantity,
+                      )}
                     </Text>
 
                     {modifierPromotion &&
@@ -740,13 +752,13 @@ export const Cart: React.FC<
                           borderColor:
                             '#5A4A00',
                           backgroundColor:
-                            '#302800',
+                            withAlpha(businessTheme.primary, 0.14),
                         }}
                       >
                         <Text
                           style={{
                             color:
-                              '#FFBF00',
+                              businessTheme.primary,
                             fontSize: 10,
                             fontWeight:
                               '900',
@@ -764,12 +776,11 @@ export const Cart: React.FC<
                           }}
                         >
                           {modifierPromotion.modifier_name}
-                          {' '}· -$
-                          {getModifierPromotionDiscountForItem(
-                            item,
-                            modifierPromotion,
-                          ).toFixed(
-                            2,
+                          {' '}· {formatCurrency(
+                            -getModifierPromotionDiscountForItem(
+                              item,
+                              modifierPromotion,
+                            ),
                           )}
                         </Text>
                       </View>
@@ -911,9 +922,8 @@ export const Cart: React.FC<
                       '700',
                   }}
                 >
-                  $
-                  {subtotalAmount.toFixed(
-                    2,
+                  {formatCurrency(
+                    subtotalAmount,
                   )}
                 </Text>
               </View>
@@ -933,7 +943,7 @@ export const Cart: React.FC<
                 <Text
                   style={{
                     color:
-                      '#FFBF00',
+                      businessTheme.primary,
                     fontSize:
                       12,
                     fontWeight:
@@ -946,16 +956,15 @@ export const Cart: React.FC<
                 <Text
                   style={{
                     color:
-                      '#FFBF00',
+                      businessTheme.primary,
                     fontSize:
                       12,
                     fontWeight:
                       '900',
                   }}
                 >
-                  -$
-                  {modifierPromotionDiscount.toFixed(
-                    2,
+                  {formatCurrency(
+                    -modifierPromotionDiscount,
                   )}
                 </Text>
               </View>
@@ -980,9 +989,8 @@ export const Cart: React.FC<
                 styles.totalVal
               }
             >
-              $
-              {totalAmount.toFixed(
-                2,
+              {formatCurrency(
+                totalAmount,
               )}
             </Text>
           </View>

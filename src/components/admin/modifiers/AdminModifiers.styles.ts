@@ -1,4 +1,9 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../../theme/brandStyles';
+
+import {
 
     StyleSheet,
 
@@ -6,9 +11,10 @@ import {
 
 
 
-export const styles =
-
-    StyleSheet.create({
+const createStyles = (
+  primaryColor: string,
+) =>
+  StyleSheet.create({
 
         container: {
 
@@ -78,7 +84,7 @@ export const styles =
 
             borderRadius: 8,
 
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
 
         },
 
@@ -240,7 +246,7 @@ export const styles =
 
             justifyContent: 'center',
 
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
 
         },
 
@@ -296,9 +302,9 @@ export const styles =
 
         filterButtonActive: {
 
-            borderColor: '#FFBF00',
+            borderColor: primaryColor,
 
-            backgroundColor: '#302800',
+            backgroundColor: withAlpha(primaryColor, 0.14),
 
         },
 
@@ -318,7 +324,7 @@ export const styles =
 
         filterButtonTextActive: {
 
-            color: '#FFBF00',
+            color: primaryColor,
 
         },
 
@@ -519,7 +525,7 @@ export const styles =
 
         extraPriceText: {
 
-            color: '#FFBF00',
+            color: primaryColor,
 
             fontSize: 12,
 
@@ -555,9 +561,9 @@ export const styles =
 
             borderWidth: 1,
 
-            borderColor: '#FFBF00',
+            borderColor: primaryColor,
 
-            backgroundColor: '#292300',
+            backgroundColor: withAlpha(primaryColor, 0.11),
 
         },
 
@@ -565,7 +571,7 @@ export const styles =
 
         editButtonText: {
 
-            color: '#FFBF00',
+            color: primaryColor,
 
             fontSize: 11,
 
@@ -817,9 +823,9 @@ export const styles =
 
         groupButtonSelected: {
 
-            borderColor: '#FFBF00',
+            borderColor: primaryColor,
 
-            backgroundColor: '#302800',
+            backgroundColor: withAlpha(primaryColor, 0.14),
 
         },
 
@@ -839,7 +845,7 @@ export const styles =
 
         groupButtonTextSelected: {
 
-            color: '#FFBF00',
+            color: primaryColor,
 
         },
 
@@ -949,7 +955,7 @@ export const styles =
 
         saveButton: {
 
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
 
         },
 
@@ -1069,7 +1075,7 @@ export const styles =
 
             justifyContent: 'center',
 
-            backgroundColor: '#FFBF00',
+            backgroundColor: primaryColor,
 
             marginBottom: 14,
 
@@ -1209,7 +1215,7 @@ export const styles =
 
         groupEditorTitle: {
 
-            color: '#FFBF00',
+            color: primaryColor,
 
             fontSize: 15,
 
@@ -1230,3 +1236,18 @@ export const styles =
         },
 
     });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+

@@ -9,6 +9,10 @@ import Constants
   from 'expo-constants';
 
 import {
+  getBusinessSettings,
+} from './businessHoursService';
+
+import {
   supabase,
 } from './supabase';
 
@@ -232,6 +236,24 @@ async function savePushDevice(
   deviceType:
     PushDeviceType,
 ): Promise<void> {
+  let businessShortName =
+    'Dorian';
+
+  try {
+    const settings =
+      await getBusinessSettings();
+
+    businessShortName =
+      settings.identity.shortName ||
+      settings.identity.businessName ||
+      businessShortName;
+  } catch (error) {
+    console.warn(
+      'No se pudo obtener el nombre del negocio para registrar el dispositivo push:',
+      error,
+    );
+  }
+
   const {
     error,
   } = await supabase
@@ -258,8 +280,8 @@ async function savePushDevice(
         device_name:
           deviceType ===
           'driver'
-            ? 'Burger Kong Repartidor'
-            : 'Burger Kong POS',
+            ? `${businessShortName} Repartidor`
+            : `${businessShortName} POS`,
 
         app_version:
           Constants

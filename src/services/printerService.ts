@@ -24,6 +24,12 @@ import {
   getOrderTrackingCode,
 } from '../Utils/orderTracking';
 
+import {
+  DEFAULT_CURRENCY_CODE,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from '../Utils/currency';
+
 let connectedPrinter:
   BluetoothDevice | null = null;
 
@@ -316,9 +322,16 @@ export async function printOrderTicket({
   promoCoupon,
   ticketDate,
   isReprint = false,
+  currencyCode =
+    DEFAULT_CURRENCY_CODE,
 }: PrintOrderTicketParams): Promise<void> {
   const printer =
     await connectPrinter();
+
+  const resolvedCurrencyCode =
+    normalizeCurrencyCode(
+      currencyCode,
+    );
 
   const total =
     Number(
@@ -734,6 +747,7 @@ export async function printOrderTicket({
       createAmountRow(
         'SUBTOTAL',
         subtotal,
+        resolvedCurrencyCode,
       ),
     );
 
@@ -781,6 +795,7 @@ export async function printOrderTicket({
               discount.discountAmount,
             ),
           ),
+          resolvedCurrencyCode,
         ),
       );
     }
@@ -802,6 +817,7 @@ export async function printOrderTicket({
     createAmountRow(
       'TOTAL',
       total,
+      resolvedCurrencyCode,
     ),
   );
 
@@ -828,6 +844,7 @@ export async function printOrderTicket({
       createAmountRow(
         'RECIBIDO',
         received,
+        resolvedCurrencyCode,
       ),
     );
 
@@ -835,6 +852,7 @@ export async function printOrderTicket({
       createAmountRow(
         'CAMBIO',
         change ?? 0,
+        resolvedCurrencyCode,
       ),
     );
   }
@@ -983,6 +1001,9 @@ interface PrintOrderTicketParams {
 
   isReprint?:
   boolean;
+
+  currencyCode?:
+  string;
 }
 
 async function setAlignment(
@@ -1037,17 +1058,16 @@ function separator(): string {
 function createAmountRow(
   label: string,
   amount: number,
+  currencyCode: string,
 ): string {
-  const formattedAmount =
-    amount < 0
-      ? `-$${Math.abs(
-        amount,
-      ).toFixed(2)}`
-      : `$${amount.toFixed(2)}`;
-
   return createTextRow(
     label,
-    formattedAmount,
+    sanitizeTicketText(
+      formatCurrency(
+        amount,
+        currencyCode,
+      ),
+    ),
   );
 }
 
@@ -1114,6 +1134,10 @@ function sanitizeTicketText(
     .replace(
       /Ñ/g,
       'N',
+    )
+    .replace(
+      /\u00A0/g,
+      ' ',
     );
 }
 

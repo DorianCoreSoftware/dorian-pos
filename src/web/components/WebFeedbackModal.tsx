@@ -14,12 +14,17 @@ import {
 } from 'react-native';
 
 import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
   submitWebFeedback,
   WebFeedbackType,
 } from '../services/webFeedbackService';
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './WebFeedbackModal.styles';
 
 interface WebFeedbackModalProps {
@@ -53,6 +58,17 @@ export function WebFeedbackModal({
   visible,
   onClose,
 }: WebFeedbackModalProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    business,
+  } = useBusiness();
+
+  const businessName =
+    business?.identity.businessName ??
+    'Dorian POS';
+
   const [
     type,
     setType,
@@ -229,7 +245,7 @@ export function WebFeedbackModal({
                   styles.title
                 }
               >
-                💬 Buzón Burger Kong
+                💬 Buzón {businessName}
               </Text>
 
               <Text

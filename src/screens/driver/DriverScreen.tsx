@@ -24,6 +24,10 @@ import {
 } from '../../context/AuthContext';
 
 import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
   completeDriverDelivery,
   DriverOrder,
   getDriverOrders,
@@ -47,11 +51,28 @@ import {
   getOrderTrackingCode,
 } from '../../Utils/orderTracking';
 
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
+
 export function DriverScreen() {
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   const {
     user,
     logout,
   } = useAuth();
+
+  const {
+    business,
+    theme: businessTheme,
+  } = useBusiness();
+
+  const businessName =
+    business?.identity.businessName ??
+    'Dorian POS';
 
   const [
     orders,
@@ -519,25 +540,6 @@ export function DriverScreen() {
    * DINERO
    * ==========================================================
    */
-  const formatMoney =
-    (
-      amount:
-        number,
-    ): string => {
-      return new Intl.NumberFormat(
-        'es-MX',
-        {
-          style:
-            'currency',
-
-          currency:
-            'MXN',
-        },
-      ).format(
-        amount,
-      );
-    };
-
   /*
    * ==========================================================
    * FECHA
@@ -634,7 +636,7 @@ export function DriverScreen() {
         >
           <ActivityIndicator
             size="large"
-            color="#FFBF00"
+            color={businessTheme.primary}
           />
 
           <Text
@@ -730,7 +732,7 @@ export function DriverScreen() {
               <Text
                 style={{
                   color:
-                    '#FFBF00',
+                    businessTheme.primary,
 
                   fontSize:
                     22,
@@ -739,7 +741,7 @@ export function DriverScreen() {
                     '900',
                 }}
               >
-                Burger Kong
+                {businessName}
               </Text>
 
               <Text
@@ -849,7 +851,7 @@ export function DriverScreen() {
               onRefresh={
                 handleRefresh
               }
-              tintColor="#FFBF00"
+              tintColor={businessTheme.primary}
             />
           }
         >
@@ -943,7 +945,7 @@ export function DriverScreen() {
                     8,
 
                   backgroundColor:
-                    '#FFBF00',
+                    businessTheme.primary,
 
                   alignItems:
                     'center',
@@ -977,7 +979,7 @@ export function DriverScreen() {
               <Text
                 style={{
                   color:
-                    '#FFBF00',
+                    businessTheme.primary,
 
                   fontSize:
                     16,
@@ -1006,7 +1008,7 @@ export function DriverScreen() {
                   )
                 }
                 formattedTotal={
-                  formatMoney(
+                  formatCurrency(
                     activeDelivery.total,
                   )
                 }
@@ -1076,7 +1078,7 @@ export function DriverScreen() {
                       )
                     }
                     formattedTotal={
-                      formatMoney(
+                      formatCurrency(
                         order.total,
                       )
                     }
@@ -1249,6 +1251,7 @@ function DriverOrderCard({
   formattedTime,
   onAction,
 }: DriverOrderCardProps) {
+  const { theme: businessTheme } = useBusiness();
   const isOnTheWay =
     order.status ===
     'on_the_way';
@@ -1269,7 +1272,7 @@ function DriverOrderCard({
 
         borderColor:
           isOnTheWay
-            ? '#FFBF00'
+            ? businessTheme.primary
             : '#3B3B3B',
 
         borderRadius:
@@ -1321,7 +1324,7 @@ function DriverOrderCard({
           <Text
             style={{
               color:
-                '#FFBF00',
+                businessTheme.primary,
 
               fontSize:
                 14,
@@ -1365,7 +1368,7 @@ function DriverOrderCard({
 
             backgroundColor:
               isOnTheWay
-                ? '#FFBF00'
+                ? businessTheme.primary
                 : '#333333',
           }}
         >
@@ -1463,7 +1466,7 @@ function DriverOrderCard({
         <Text
           style={{
             color:
-              '#FFBF00',
+              businessTheme.primary,
 
             fontSize:
               28,
@@ -1501,7 +1504,7 @@ function DriverOrderCard({
               ? '#555555'
               : isOnTheWay
                 ? '#44C767'
-                : '#FFBF00',
+                : businessTheme.primary,
 
           alignItems:
             'center',

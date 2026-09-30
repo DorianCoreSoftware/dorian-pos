@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     selectButton: {
       minHeight: 42,
@@ -34,7 +41,7 @@ export const styles =
     },
 
     selectChevron: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 12,
       fontWeight: '900',
     },
@@ -79,7 +86,7 @@ export const styles =
     },
 
     calendarArrow: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 28,
       lineHeight: 30,
       fontWeight: '700',
@@ -120,7 +127,7 @@ export const styles =
     },
 
     calendarDayCellSelected: {
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     calendarDayText: {
@@ -139,13 +146,13 @@ export const styles =
       marginTop: 12,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#FFBF00',
+      borderColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
     },
 
     todayButtonText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 12,
       fontWeight: '900',
     },
@@ -212,9 +219,9 @@ export const styles =
     },
 
     timeOptionSelected: {
-      backgroundColor: '#302800',
+      backgroundColor: withAlpha(primaryColor, 0.14),
       borderWidth: 1,
-      borderColor: '#FFBF00',
+      borderColor: primaryColor,
     },
 
     timeOptionText: {
@@ -224,7 +231,7 @@ export const styles =
     },
 
     timeOptionTextSelected: {
-      color: '#FFBF00',
+      color: primaryColor,
     },
 
     timeOption24h: {
@@ -259,8 +266,8 @@ export const styles =
       height: 44,
       borderRadius: 9,
       borderWidth: 1,
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
       opacity: 0.75,
     },
 
@@ -295,7 +302,7 @@ export const styles =
     },
 
     wheelItemTextSelected: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 23,
       fontWeight: '900',
     },
@@ -318,7 +325,7 @@ export const styles =
       marginHorizontal: 14,
       marginBottom: 14,
       borderRadius: 10,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -330,3 +337,17 @@ export const styles =
     },
 
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

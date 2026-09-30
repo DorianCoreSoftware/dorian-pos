@@ -1,7 +1,12 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, { useRef } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Text, View, LayoutChangeEvent } from 'react-native';
 import { Category } from '../../types';
-import { styles } from './CategoryTabs.styles';
+import {
+  styles,
+  setBrandPrimaryColor,
+} from './CategoryTabs.styles';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 
 interface CategoryTabsProps {
@@ -15,6 +20,9 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   categoriaSeleccionada,
   onSelectCategoria,
 }) => {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
   const {
     isPhone,
   } = useResponsiveLayout();

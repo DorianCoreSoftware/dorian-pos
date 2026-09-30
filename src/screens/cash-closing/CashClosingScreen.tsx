@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useCallback,
   useEffect,
@@ -38,12 +40,14 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './CashClosingScreen.styles';
 
 import {
   useAuth,
 } from '../../context/AuthContext';
 import { PromoReward } from '../../repositories/PromoRepository';
+import { useCurrency } from '../../hooks/useCurrency';
 import { PROMO_REWARD_OPTIONS, redeemDorian, redeemKongs } from '../../services/promoService';
 import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefundService';
 import {
@@ -91,6 +95,27 @@ export function CashClosingScreen({
   fetchCashSession,
   pendingOrdersCount,
 }: CashClosingScreenProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    formatCurrency,
+  } = useCurrency();
+
+  const formatMoney =
+    formatCurrency;
+
+  const formatDifference =
+    (
+      difference: number,
+    ): string =>
+      `${difference > 0
+        ? '+'
+        : ''
+      }${formatCurrency(
+        difference,
+      )}`;
+
   const {
     user,
   } = useAuth();
@@ -929,8 +954,8 @@ export function CashClosingScreen({
 
         Alert.alert(
           'Caja abierta',
-          `Fondo inicial: $${session.openingAmount.toFixed(
-            2,
+          `Fondo inicial: ${formatMoney(
+            session.openingAmount,
           )}`,
         );
       } catch (error) {
@@ -988,21 +1013,21 @@ export function CashClosingScreen({
       Alert.alert(
         'Cerrar caja',
         [
-          `Efectivo esperado: $${expectedCash.toFixed(
-            2,
+          `Efectivo esperado: ${formatMoney(
+            expectedCash,
           )}`,
 
-          `Reembolsos Dorian en efectivo: -$${refundSummary.cash.toFixed(
-            2,
+          `Reembolsos Dorian en efectivo: ${formatMoney(
+            -refundSummary.cash,
           )}`,
 
-          `Efectivo contado: $${countedCash.toFixed(
-            2,
+          `Efectivo contado: ${formatMoney(
+            countedCash,
           )}`,
 
-          `Diferencia: $${(
-            difference ?? 0
-          ).toFixed(2)}`,
+          `Diferencia: ${formatDifference(
+            difference ?? 0,
+          )}`,
 
           '',
 
@@ -1106,17 +1131,17 @@ export function CashClosingScreen({
         Alert.alert(
           'Caja cerrada',
           [
-            `Total vendido: $${(
+            `Total vendido: ${formatMoney(
               closedSession
                 .totalSales ??
-              0
-            ).toFixed(2)}`,
+              0,
+            )}`,
 
-            `Diferencia: $${(
+            `Diferencia: ${formatDifference(
               closedSession
                 .differenceAmount ??
-              0
-            ).toFixed(2)}`,
+              0,
+            )}`,
           ].join('\n'),
         );
 
@@ -1490,18 +1515,18 @@ export function CashClosingScreen({
             ? [
               '',
               '💵 REEMBOLSO A ENTREGAR',
-              `$${result.amount.toFixed(
-                2,
-              )}`,
+              formatMoney(
+                result.amount,
+              ),
               '',
               'Entrega este monto al cliente en efectivo.',
             ].join('\n')
             : [
               '',
               '💳 REEMBOLSO',
-              `$${result.amount.toFixed(
-                2,
-              )}`,
+              formatMoney(
+                result.amount,
+              ),
               '',
               'Realiza la devolución por tarjeta.',
             ].join('\n');
@@ -1511,8 +1536,8 @@ export function CashClosingScreen({
           [
             'Código válido y canjeado correctamente.',
             '',
-            `Compra original: $${result.amount.toFixed(
-              2,
+            `Compra original: ${formatMoney(
+              result.amount,
             )}`,
             `Forma de pago: ${paymentMethodLabel}`,
             refundInstruction,
@@ -1552,7 +1577,7 @@ export function CashClosingScreen({
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text
@@ -1927,7 +1952,7 @@ export function CashClosingScreen({
           >
             <ActivityIndicator
               size="large"
-              color="#FFBF00"
+              color={businessTheme.primary}
             />
 
             <Text
@@ -2182,18 +2207,18 @@ export function CashClosingScreen({
 
                         <HistoryMetric
                           label="💵 Efectivo"
-                          value={`$${(
+                          value={formatMoney(
                             session.totalCashSales ??
-                            0
-                          ).toFixed(2)}`}
+                            0,
+                          )}
                         />
 
                         <HistoryMetric
                           label="💳 Tarjeta"
-                          value={`$${(
+                          value={formatMoney(
                             session.totalCardSales ??
-                            0
-                          ).toFixed(2)}`}
+                            0,
+                          )}
                         />
 
                         <View
@@ -2214,11 +2239,10 @@ export function CashClosingScreen({
                               styles.historyTotalValue
                             }
                           >
-                            $
-                            {(
+                            {formatMoney(
                               session.totalSales ??
-                              0
-                            ).toFixed(2)}
+                              0,
+                            )}
                           </Text>
                         </View>
                       </View>
@@ -2239,6 +2263,9 @@ export function CashClosingScreen({
                           value={
                             session.openingAmount
                           }
+                        formatValue={
+                            formatMoney
+                          }
                         />
 
                         <HistoryCashValue
@@ -2247,6 +2274,9 @@ export function CashClosingScreen({
                             session.expectedCash ??
                             0
                           }
+                        formatValue={
+                            formatMoney
+                          }
                         />
 
                         <HistoryCashValue
@@ -2254,6 +2284,9 @@ export function CashClosingScreen({
                           value={
                             session.countedCash ??
                             0
+                          }
+                        formatValue={
+                            formatMoney
                           }
                         />
 
@@ -2534,30 +2567,30 @@ export function CashClosingScreen({
                   <DetailRow
                     label="Reembolsos en efectivo"
                     value={
-                      `-${formatMoney(
-                        session.totalCashRefunds ??
-                        0,
-                      )}`
+                      formatMoney(
+                        -(session.totalCashRefunds ??
+                        0),
+                      )
                     }
                   />
 
                   <DetailRow
                     label="Reembolsos en tarjeta"
                     value={
-                      `-${formatMoney(
-                        session.totalCardRefunds ??
-                        0,
-                      )}`
+                      formatMoney(
+                        -(session.totalCardRefunds ??
+                        0),
+                      )
                     }
                   />
 
                   <DetailRow
                     label="Total reembolsado"
                     value={
-                      `-${formatMoney(
-                        session.totalRefunds ??
-                        0,
-                      )}`
+                      formatMoney(
+                        -(session.totalRefunds ??
+                        0),
+                      )
                     }
                     highlighted
                   />
@@ -3298,10 +3331,10 @@ export function CashClosingScreen({
                 styles.summaryValue
               }
             >
-              $
-              {cashSession
-                .openingAmount
-                .toFixed(2)}
+              {formatMoney(
+                cashSession
+                  .openingAmount,
+              )}
             </Text>
           </View>
 
@@ -3326,9 +3359,8 @@ export function CashClosingScreen({
                 styles.summaryValue
               }
             >
-              $
-              {summary.cash.toFixed(
-                2,
+              {formatMoney(
+                summary.cash,
               )}
             </Text>
           </View>
@@ -3354,9 +3386,8 @@ export function CashClosingScreen({
                 styles.summaryValue
               }
             >
-              $
-              {summary.card.toFixed(
-                2,
+              {formatMoney(
+                summary.card,
               )}
             </Text>
           </View>
@@ -3445,10 +3476,10 @@ export function CashClosingScreen({
                   styles.calculationValue
                 }
               >
-                $
-                {cashSession
-                  .openingAmount
-                  .toFixed(2)}
+                {formatMoney(
+                  cashSession
+                    .openingAmount,
+                )}
               </Text>
             </View>
 
@@ -3470,9 +3501,8 @@ export function CashClosingScreen({
                   styles.calculationValue
                 }
               >
-                $
-                {summary.cash.toFixed(
-                  2,
+                {formatMoney(
+                  summary.cash,
                 )}
               </Text>
             </View>
@@ -3499,9 +3529,8 @@ export function CashClosingScreen({
                       styles.calculationValue
                     }
                   >
-                    -$
-                    {refundSummary.cash.toFixed(
-                      2,
+                    {formatMoney(
+                      -refundSummary.cash,
                     )}
                   </Text>
                 </View>
@@ -3527,9 +3556,8 @@ export function CashClosingScreen({
                         styles.calculationValue
                       }
                     >
-                      -$
-                      {refundSummary.card.toFixed(
-                        2,
+                      {formatMoney(
+                        -refundSummary.card,
                       )}
                     </Text>
                   </View>
@@ -3561,9 +3589,8 @@ export function CashClosingScreen({
                   styles.expectedValue
                 }
               >
-                $
-                {expectedCash.toFixed(
-                  2,
+                {formatMoney(
+                  expectedCash,
                 )}
               </Text>
             </View>
@@ -3680,11 +3707,15 @@ export function CashClosingScreen({
 interface HistoryCashValueProps {
   label: string;
   value: number;
+  formatValue: (
+    value: number,
+  ) => string;
 }
 
 function HistoryCashValue({
   label,
   value,
+  formatValue,
 }: HistoryCashValueProps) {
   return (
     <View
@@ -3705,7 +3736,7 @@ function HistoryCashValue({
           styles.historyCashValue
         }
       >
-        {formatMoney(
+        {formatValue(
           value,
         )}
       </Text>
@@ -3899,25 +3930,6 @@ function formatDateOnly(
       year: 'numeric',
     },
   );
-}
-
-function formatMoney(
-  amount: number,
-): string {
-  return `$${Number(
-    amount,
-  ).toFixed(2)}`;
-}
-
-function formatDifference(
-  difference: number,
-): string {
-  return `${difference > 0
-    ? '+'
-    : ''
-    }$${difference.toFixed(
-      2,
-    )}`;
 }
 
 function startOfDay(

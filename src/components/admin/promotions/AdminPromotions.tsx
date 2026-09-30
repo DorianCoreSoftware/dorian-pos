@@ -34,6 +34,10 @@ import {
 } from '../../../context/BusinessContext';
 
 import {
+  useCurrency,
+} from '../../../hooks/useCurrency';
+
+import {
   DateCalendarSelect,
 } from '../business-hours/AdminBusinessHoursSelectors';
 
@@ -139,10 +143,10 @@ export function AdminPromotions() {
       .promotionsEnabled ??
     false;
 
-  const currencyCode =
-    business?.identity
-      .currencyCode ??
-    'MXN';
+  const {
+    currencyCode,
+    formatCurrency,
+  } = useCurrency();
 
   const defaultDates =
     useMemo(
@@ -1393,7 +1397,7 @@ export function AdminPromotions() {
                   },
                 ]}
               >
-                $
+                {currencyCode}
               </Text>
 
               <TextInput
@@ -1432,17 +1436,6 @@ export function AdminPromotions() {
                 ]}
               />
 
-              <Text
-                style={[
-                  styles.inlineSuffix,
-                  {
-                    color:
-                      theme.primary,
-                  },
-                ]}
-              >
-                {currencyCode}
-              </Text>
             </View>
 
             <Text
@@ -1582,12 +1575,12 @@ export function AdminPromotions() {
                     },
                   ]}
                 >
-                  El cliente recibe $
-                  {Number(
-                    modifierPromotionDiscount ||
-                    0,
-                  ).toFixed(
-                    2,
+                  El cliente recibe{' '}
+                  {formatCurrency(
+                    Number(
+                      modifierPromotionDiscount ||
+                      0,
+                    ),
                   )}{' '}
                   de descuento al elegir este modificador.
                 </Text>

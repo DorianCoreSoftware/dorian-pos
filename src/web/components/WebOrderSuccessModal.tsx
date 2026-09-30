@@ -10,6 +10,10 @@ import {
 import styles from './WebOrderSuccessModal.styles';
 
 import {
+  useBusiness,
+} from '../../context/BusinessContext';
+
+import {
   getOrderTrackingCode,
 } from '../../Utils/orderTracking';
 
@@ -31,6 +35,14 @@ export default function WebOrderSuccessModal({
   onClose,
   onTrackOrder,
 }: WebOrderSuccessModalProps) {
+  const {
+    business,
+  } = useBusiness();
+
+  const businessName =
+    business?.identity.businessName ??
+    'Dorian POS';
+
   const shortId =
     orderId
       ? getOrderTrackingCode(
@@ -86,7 +98,7 @@ export default function WebOrderSuccessModal({
               styles.message
             }
           >
-            Tu pedido ya fue enviado a Burger Kong.
+            Tu pedido ya fue enviado a {businessName}.
           </Text>
 
           {!!shortId && (

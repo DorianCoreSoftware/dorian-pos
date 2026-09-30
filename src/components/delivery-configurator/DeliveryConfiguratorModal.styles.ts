@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     overlay: {
       flex:
@@ -147,7 +151,7 @@ export const styles =
 
     sectionTitle: {
       color:
-        '#FFBF00',
+        primaryColor,
 
       fontSize:
         15,
@@ -351,7 +355,7 @@ export const styles =
         8,
 
       backgroundColor:
-        '#FFBF00',
+        primaryColor,
     },
 
     confirmButtonDisabled: {
@@ -552,3 +556,17 @@ export const styles =
         18,
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

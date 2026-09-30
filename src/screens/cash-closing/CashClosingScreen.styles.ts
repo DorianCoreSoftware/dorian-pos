@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -60,7 +67,7 @@ export const styles =
       paddingHorizontal: 18,
       paddingVertical: 10,
       borderRadius: 8,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     retryButtonText: {
@@ -106,7 +113,7 @@ export const styles =
       borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     primaryButtonText: {
@@ -188,7 +195,7 @@ export const styles =
     },
 
     totalSales: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 16,
       fontWeight: '900',
     },
@@ -231,7 +238,7 @@ export const styles =
     },
 
     expectedValue: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 20,
       fontWeight: '900',
     },
@@ -303,7 +310,7 @@ export const styles =
     },
 
     cashTabActive: {
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     cashTabText: {
@@ -423,7 +430,7 @@ export const styles =
     },
 
     historyTotalValue: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 16,
       fontWeight: '900',
       marginTop: 5,
@@ -480,8 +487,8 @@ export const styles =
     },
 
     historyFilterButtonActive: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
     },
 
     historyFilterText: {
@@ -491,7 +498,7 @@ export const styles =
     },
 
     historyFilterTextActive: {
-      color: '#FFBF00',
+      color: primaryColor,
     },
 
     historyDateRange: {
@@ -527,7 +534,7 @@ export const styles =
     },
 
     historyDateSeparator: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 18,
       fontWeight: '900',
     },
@@ -556,7 +563,7 @@ export const styles =
     },
 
     historyDetailHint: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 10,
       fontWeight: '700',
     },
@@ -639,7 +646,7 @@ export const styles =
     },
 
     historyModalSectionTitle: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 12,
       fontWeight: '900',
       marginBottom: 7,
@@ -676,7 +683,7 @@ export const styles =
     },
 
     historyModalDetailValueHighlighted: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 14,
       fontWeight: '900',
       textAlign: 'right',
@@ -707,7 +714,7 @@ export const styles =
       borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
     },
 
     historyModalDoneButtonText: {
@@ -997,10 +1004,10 @@ rewardButtonPhone: {
 
 rewardButtonActive: {
   borderColor:
-    '#FFBF00',
+    primaryColor,
 
   backgroundColor:
-    '#302800',
+    withAlpha(primaryColor, 0.14),
 },
 
 rewardButtonText: {
@@ -1019,7 +1026,7 @@ rewardButtonText: {
 
 rewardButtonTextActive: {
   color:
-    '#FFBF00',
+    primaryColor,
 },
 
 promoWarning: {
@@ -1070,7 +1077,7 @@ promoPrimaryButton: {
     'center',
 
   backgroundColor:
-    '#FFBF00',
+    primaryColor,
 },
 
 promoPrimaryButtonText: {
@@ -1140,3 +1147,17 @@ dorianNoticeText: {
     'center',
 },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

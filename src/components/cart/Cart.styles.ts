@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     cartSection: {
       flex: 0.3,
@@ -32,7 +39,7 @@ export const styles =
     },
 
     cartHeaderDelivery: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 11,
       fontWeight: '700',
       marginTop: 3,
@@ -112,7 +119,7 @@ export const styles =
     },
 
     collapsedCartTotal: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 16,
       fontWeight: '900',
     },
@@ -139,8 +146,8 @@ export const styles =
     },
 
     deliveryContainerActive: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
     },
 
     deliveryToggle: {
@@ -166,8 +173,8 @@ export const styles =
     },
 
     deliveryCheckboxActive: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#FFBF00',
+      borderColor: primaryColor,
+      backgroundColor: primaryColor,
     },
 
     deliveryCheck: {
@@ -232,12 +239,12 @@ export const styles =
       paddingHorizontal: 12,
       borderRadius: 7,
       borderWidth: 1,
-      borderColor: '#FFBF00',
-      backgroundColor: '#292300',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.11),
     },
 
     editDeliveryText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 12,
       fontWeight: '700',
     },
@@ -297,7 +304,7 @@ export const styles =
     },
 
     cartItemPrice: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 14,
       fontWeight: '600',
       marginTop: 5,
@@ -354,7 +361,7 @@ export const styles =
     },
 
     comboModifierText: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 11,
       marginTop: 1,
     },
@@ -466,13 +473,13 @@ export const styles =
     },
 
     totalVal: {
-      color: '#FFBF00',
+      color: primaryColor,
       fontSize: 24,
       fontWeight: 'bold',
     },
 
     checkoutBtn: {
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       paddingVertical: 16,
       borderRadius: 12,
       alignItems: 'center',
@@ -511,3 +518,17 @@ export const styles =
       justifyContent: 'flex-end',
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

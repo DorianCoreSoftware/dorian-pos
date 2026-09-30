@@ -1,8 +1,15 @@
 import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
+
+import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     backdrop: {
       flex: 1,
@@ -100,8 +107,8 @@ export const styles =
     },
 
     typeButtonSelected: {
-      borderColor: '#FFBF00',
-      backgroundColor: '#302800',
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
     },
 
     typeButtonText: {
@@ -111,7 +118,7 @@ export const styles =
     },
 
     typeButtonTextSelected: {
-      color: '#FFBF00',
+      color: primaryColor,
     },
 
     input: {
@@ -150,7 +157,7 @@ export const styles =
     primaryButton: {
       minHeight: 46,
       borderRadius: 9,
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 16,
@@ -185,3 +192,18 @@ export const styles =
       lineHeight: 18,
     },
   });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+

@@ -1,3 +1,7 @@
+import { withAlpha } from '../../../theme/brandStyles';
+
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
     useCallback,
     useEffect,
@@ -37,8 +41,10 @@ import {
 
 import {
     styles,
+  setBrandPrimaryColor,
 } from './AdminProducts.styles';
 import { uploadProductImage } from '../../../services/productImageService';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 import {
     getAllModifiers,
@@ -101,6 +107,13 @@ const INITIAL_FORM: ProductFormState = {
 export function AdminProducts({
     onProductsChanged,
 }: AdminProductsProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+    const {
+        formatCurrency,
+    } = useCurrency();
+
     const [
         products,
         setProducts,
@@ -1765,10 +1778,11 @@ export function AdminProducts({
                                 styles.priceText
                             }
                         >
-                            $
-                            {Number(
-                                item.price,
-                            ).toFixed(2)}
+                            {formatCurrency(
+                                Number(
+                                    item.price,
+                                ),
+                            )}
                         </Text>
 
                         <Text
@@ -1850,7 +1864,7 @@ export function AdminProducts({
             >
                 <ActivityIndicator
                     size="large"
-                    color="#FFBF00"
+                    color={businessTheme.primary}
                 />
 
                 <Text
@@ -2029,11 +2043,11 @@ export function AdminProducts({
                                                 1,
                                             borderColor:
                                                 usesAll
-                                                    ? '#FFBF00'
+                                                    ? businessTheme.primary
                                                     : '#555555',
                                             backgroundColor:
                                                 usesAll
-                                                    ? '#302800'
+                                                    ? withAlpha(businessTheme.primary, 0.14)
                                                     : '#292929',
                                             marginBottom:
                                                 8,
@@ -2043,7 +2057,7 @@ export function AdminProducts({
                                             style={{
                                                 color:
                                                     usesAll
-                                                        ? '#FFBF00'
+                                                        ? businessTheme.primary
                                                         : '#FFFFFF',
                                                 fontWeight:
                                                     '800',
@@ -2090,11 +2104,11 @@ export function AdminProducts({
                                                                 1,
                                                             borderColor:
                                                                 selected
-                                                                    ? '#FFBF00'
+                                                                    ? businessTheme.primary
                                                                     : '#444444',
                                                             backgroundColor:
                                                                 selected
-                                                                    ? '#302800'
+                                                                    ? withAlpha(businessTheme.primary, 0.14)
                                                                     : '#292929',
                                                             marginBottom:
                                                                 8,
@@ -2104,7 +2118,7 @@ export function AdminProducts({
                                                             style={{
                                                                 color:
                                                                     selected
-                                                                        ? '#FFBF00'
+                                                                        ? businessTheme.primary
                                                                         : '#FFFFFF',
                                                                 fontWeight:
                                                                     selected
@@ -2135,7 +2149,7 @@ export function AdminProducts({
                                             borderRadius:
                                                 8,
                                             backgroundColor:
-                                                '#FFBF00',
+                                                businessTheme.primary,
                                             alignItems:
                                                 'center',
                                         }}
@@ -2656,7 +2670,7 @@ export function AdminProducts({
                             >
                                 <ActivityIndicator
                                     size="small"
-                                    color="#FFBF00"
+                                    color={businessTheme.primary}
                                 />
 
                                 <Text
@@ -2765,7 +2779,7 @@ export function AdminProducts({
                                 >
                                     <ActivityIndicator
                                         size="small"
-                                        color="#FFBF00"
+                                        color={businessTheme.primary}
                                     />
                                 </View>
                             ) : (
@@ -2803,12 +2817,12 @@ export function AdminProducts({
 
                                                     borderColor:
                                                         selected
-                                                            ? '#FFBF00'
+                                                            ? businessTheme.primary
                                                             : '#444444',
 
                                                     backgroundColor:
                                                         selected
-                                                            ? '#302800'
+                                                            ? withAlpha(businessTheme.primary, 0.14)
                                                             : '#252525',
                                                 }}
                                             >
@@ -2848,7 +2862,7 @@ export function AdminProducts({
                                                                 style={{
                                                                     color:
                                                                         selected
-                                                                            ? '#FFBF00'
+                                                                            ? businessTheme.primary
                                                                             : '#FFFFFF',
 
                                                                     fontSize:
@@ -3062,7 +3076,7 @@ export function AdminProducts({
                                                                 <Text
                                                                     style={{
                                                                         color:
-                                                                            '#FFBF00',
+                                                                            businessTheme.primary,
                                                                         fontSize:
                                                                             12,
                                                                     }}

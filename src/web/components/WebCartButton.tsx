@@ -8,22 +8,14 @@ import {
 
 import styles from './WebCartButton.styles';
 
+import {
+  useCurrency,
+} from '../../hooks/useCurrency';
+
 interface WebCartButtonProps {
   totalItems: number;
   total: number;
   onPress: () => void;
-}
-
-function formatPrice(
-  value: number,
-): string {
-  return new Intl.NumberFormat(
-    'es-MX',
-    {
-      style: 'currency',
-      currency: 'MXN',
-    },
-  ).format(value);
 }
 
 export default function WebCartButton({
@@ -31,6 +23,10 @@ export default function WebCartButton({
   total,
   onPress,
 }: WebCartButtonProps) {
+  const {
+    formatCurrency,
+  } = useCurrency();
+
   if (
     totalItems <= 0
   ) {
@@ -60,7 +56,7 @@ export default function WebCartButton({
       </View>
 
       <Text style={styles.total}>
-        {formatPrice(total)}
+        {formatCurrency(total)}
       </Text>
     </Pressable>
   );

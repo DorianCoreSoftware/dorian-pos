@@ -1,3 +1,5 @@
+import { useBusiness } from '../../context/BusinessContext';
+
 import React, {
   useCallback,
   useEffect,
@@ -28,10 +30,12 @@ import {
 
 import {
   styles,
+  setBrandPrimaryColor,
 } from './SalesScreen.styles';
 import { printOrderTicket } from '../../services/printerService';
 import { getExistingOrderPromoCoupon } from '../../services/promoService';
 import { getOrderById } from '../../services/orderService';
+import { useCurrency } from '../../hooks/useCurrency';
 
 type SalesFilter =
   | 'today'
@@ -40,6 +44,14 @@ type SalesFilter =
   | 'custom';
 
 export function SalesScreen() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+  const {
+    currencyCode,
+    formatCurrency,
+  } = useCurrency();
+
   const [
     salesFilter,
     setSalesFilter,
@@ -432,6 +444,8 @@ export function SalesScreen() {
 
           isReprint:
             true,
+
+          currencyCode,
         });
 
         setReprintMessage({
@@ -511,9 +525,8 @@ export function SalesScreen() {
               styles.saleAmount
             }
           >
-            $
-            {item.totalAmount.toFixed(
-              2,
+            {formatCurrency(
+              item.totalAmount,
             )}
           </Text>
         </View>
@@ -582,12 +595,11 @@ export function SalesScreen() {
                   styles.detailValue
                 }
               >
-                $
-                {(
+                {formatCurrency(
                   item.payment
                     .amountReceived ??
-                  0
-                ).toFixed(2)}
+                  0,
+                )}
               </Text>
             </View>
 
@@ -609,12 +621,11 @@ export function SalesScreen() {
                   styles.changeValue
                 }
               >
-                $
-                {(
+                {formatCurrency(
                   item.payment
                     .changeAmount ??
-                  0
-                ).toFixed(2)}
+                  0,
+                )}
               </Text>
             </View>
           </View>
@@ -697,7 +708,7 @@ export function SalesScreen() {
       >
         <ActivityIndicator
           size="large"
-          color="#FFBF00"
+          color={businessTheme.primary}
         />
 
         <Text
@@ -1024,9 +1035,8 @@ export function SalesScreen() {
               styles.totalValue
             }
           >
-            $
-            {summary.total.toFixed(
-              2,
+            {formatCurrency(
+              summary.total,
             )}
           </Text>
         </View>
@@ -1049,9 +1059,8 @@ export function SalesScreen() {
               styles.summaryValue
             }
           >
-            $
-            {summary.cash.toFixed(
-              2,
+            {formatCurrency(
+              summary.cash,
             )}
           </Text>
         </View>
@@ -1074,9 +1083,8 @@ export function SalesScreen() {
               styles.summaryValue
             }
           >
-            $
-            {summary.card.toFixed(
-              2,
+            {formatCurrency(
+              summary.card,
             )}
           </Text>
         </View>

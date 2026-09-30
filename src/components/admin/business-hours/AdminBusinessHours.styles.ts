@@ -1,6 +1,11 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
+
 import { StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+const createStyles = (
+  primaryColor: string,
+) =>
+  StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
     loadingText: { marginTop: 12, color: '#AAAAAA', fontSize: 13 },
@@ -9,7 +14,7 @@ export const styles = StyleSheet.create({
     subtitle: { color: '#999999', fontSize: 12, lineHeight: 18, marginTop: 5 },
     timezoneCard: { padding: 12, marginBottom: 12, borderRadius: 9, borderWidth: 1, borderColor: '#343434', backgroundColor: '#1D1D1D' },
     timezoneLabel: { color: '#888888', fontSize: 10, fontWeight: '700' },
-    timezoneValue: { color: '#FFBF00', fontSize: 13, fontWeight: '900', marginTop: 3 },
+    timezoneValue: { color: primaryColor, fontSize: 13, fontWeight: '900', marginTop: 3 },
     content: { paddingBottom: 28 },
     dayCard: { padding: 14, marginBottom: 9, borderRadius: 11, borderWidth: 1, borderColor: '#343434', backgroundColor: '#1D1D1D' },
     dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
@@ -22,7 +27,7 @@ export const styles = StyleSheet.create({
     timeInput: { minHeight: 42, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#444444', backgroundColor: '#252525', color: '#FFFFFF', fontSize: 15, fontWeight: '800', textAlign: 'center' },
     arrow: { color: '#777777', fontSize: 18, marginTop: 14 },
     hint: { color: '#777777', fontSize: 10, marginTop: 7 },
-    saveButton: { minHeight: 46, marginTop: 8, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFBF00' },
+    saveButton: { minHeight: 46, marginTop: 8, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: primaryColor },
     saveButtonDisabled: { opacity: 0.5 },
     saveButtonText: { color: '#171717', fontSize: 13, fontWeight: '900' },
     errorText: { color: '#FF6B6B', fontSize: 12, textAlign: 'center', marginBottom: 12 },
@@ -106,7 +111,7 @@ export const styles = StyleSheet.create({
     },
 
     groupTitle: {
-  color: '#FFBF00',
+  color: primaryColor,
   fontSize: 12,
   fontWeight: '900',
   letterSpacing: 0.5,
@@ -215,7 +220,7 @@ exceptionSaveButton: {
   minHeight: 40,
   paddingHorizontal: 16,
   borderRadius: 8,
-  backgroundColor: '#FFBF00',
+  backgroundColor: primaryColor,
   alignItems: 'center',
   justifyContent: 'center',
 },
@@ -293,7 +298,7 @@ exceptionEditButton: {
 },
 
 exceptionEditText: {
-  color: '#FFBF00',
+  color: primaryColor,
   fontSize: 10,
   fontWeight: '800',
 },
@@ -312,3 +317,18 @@ exceptionDeleteText: {
 },
 
 });
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+

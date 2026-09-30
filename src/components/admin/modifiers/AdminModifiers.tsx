@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
     useCallback,
     useEffect,
@@ -35,7 +37,12 @@ import {
 
 import {
     styles,
+  setBrandPrimaryColor,
 } from './AdminModifiers.styles';
+
+import {
+    useCurrency,
+} from '../../../hooks/useCurrency';
 
 type ModifierFilter =
     | 'all'
@@ -79,6 +86,13 @@ interface AdminModifiersProps {
 export function AdminModifiers({
     onModifiersChanged,
 }: AdminModifiersProps) {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
+    const {
+        formatCurrency,
+    } = useCurrency();
+
     const [
         modifiers,
         setModifiers,
@@ -962,10 +976,12 @@ export function AdminModifiers({
                             styles.extraPriceText
                         }
                     >
-                        Precio extra: $
-                        {Number(
-                            item.extra_price,
-                        ).toFixed(2)}
+                        Precio extra:{' '}
+                        {formatCurrency(
+                            Number(
+                                item.extra_price,
+                            ),
+                        )}
                     </Text>
                 </View>
 
@@ -1034,7 +1050,7 @@ export function AdminModifiers({
             >
                 <ActivityIndicator
                     size="large"
-                    color="#FFBF00"
+                    color={businessTheme.primary}
                 />
 
                 <Text

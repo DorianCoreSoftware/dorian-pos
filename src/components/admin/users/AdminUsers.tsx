@@ -1,3 +1,5 @@
+import { useBusiness } from '../../../context/BusinessContext';
+
 import React, {
     useCallback,
     useEffect,
@@ -36,6 +38,7 @@ import {
 
 import {
     styles,
+  setBrandPrimaryColor,
 } from './AdminUsers.styles';
 
 interface UserFormState {
@@ -83,6 +86,9 @@ const ROLE_OPTIONS: Array<{
 ];
 
 export function AdminUsers() {
+  const { theme: businessTheme } = useBusiness();
+    setBrandPrimaryColor(businessTheme.primary);
+
     const {
         user:
             currentUser,
@@ -785,7 +791,7 @@ export function AdminUsers() {
             >
                 <ActivityIndicator
                     size="large"
-                    color="#FFBF00"
+                    color={businessTheme.primary}
                 />
 
                 <Text

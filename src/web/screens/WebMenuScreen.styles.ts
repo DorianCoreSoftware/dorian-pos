@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     screen: {
       flex: 1,
@@ -270,7 +274,7 @@ const styles =
       justifyContent: 'center',
       borderWidth: 1,
       borderColor: '#5A4A00',
-      backgroundColor: '#FFBF00',
+      backgroundColor: primaryColor,
       zIndex: 50,
       elevation: 8,
     },
@@ -287,4 +291,19 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+
+export { styles as default };
