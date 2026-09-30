@@ -16,6 +16,7 @@ export interface BusinessIdentity {
   shortName: string;
   currencyCode: string;
   phone: string;
+  address: string;
   logoUrl: string;
   primaryColor: string;
   secondaryColor: string;
@@ -33,10 +34,15 @@ export interface WebOrderSettings {
   webOrdersPauseMessage: string;
 }
 
+export interface BusinessTicketSettings {
+  footerText: string;
+}
+
 export interface BusinessSettings {
   identity: BusinessIdentity;
   features: BusinessFeatures;
   timezone: string;
+  ticketSettings: BusinessTicketSettings;
   webOrderSettings: WebOrderSettings;
 }
 
@@ -44,6 +50,7 @@ export interface SaveBusinessSettingsInput {
   identity: BusinessIdentity;
   features: BusinessFeatures;
   timezone: string;
+  ticketSettings: BusinessTicketSettings;
 }
 
 export interface BusinessHourException {
@@ -77,6 +84,7 @@ interface BusinessSettingsRow {
   short_name: string | null;
   currency_code: string | null;
   phone: string | null;
+  address: string | null;
   logo_url: string | null;
   primary_color: string | null;
   secondary_color: string | null;
@@ -87,6 +95,7 @@ interface BusinessSettingsRow {
   timezone: string;
   web_orders_enabled: boolean;
   web_orders_pause_message: string | null;
+  ticket_footer: string | null;
 }
 
 interface BusinessHourExceptionRow {
@@ -261,6 +270,7 @@ export async function getBusinessSettings(): Promise<
           short_name,
           currency_code,
           phone,
+          address,
           logo_url,
           primary_color,
           secondary_color,
@@ -270,7 +280,8 @@ export async function getBusinessSettings(): Promise<
           kitchen_enabled,
           timezone,
           web_orders_enabled,
-          web_orders_pause_message
+          web_orders_pause_message,
+          ticket_footer
         `,
       )
       .eq(
@@ -312,6 +323,11 @@ export async function getBusinessSettings(): Promise<
           ?.trim() ??
         '',
 
+      address:
+        row.address
+          ?.trim() ??
+        '',
+
       logoUrl:
         row.logo_url
           ?.trim() ??
@@ -350,6 +366,13 @@ export async function getBusinessSettings(): Promise<
       row.timezone ??
       DEFAULT_TIMEZONE,
 
+    ticketSettings: {
+      footerText:
+        row.ticket_footer
+          ?.trim() ||
+        'Gracias por tu compra',
+    },
+
     webOrderSettings: {
       webOrdersEnabled:
         row.web_orders_enabled ??
@@ -379,6 +402,9 @@ export async function saveBusinessSettings(
   const phone =
     input.identity.phone.trim();
 
+  const address =
+    input.identity.address.trim();
+
   const logoUrl =
     input.identity.logoUrl.trim();
 
@@ -394,6 +420,9 @@ export async function saveBusinessSettings(
 
   const timezone =
     input.timezone.trim();
+
+  const ticketFooter =
+    input.ticketSettings.footerText.trim();
 
   if (!businessName) {
     throw new Error(
@@ -416,6 +445,18 @@ export async function saveBusinessSettings(
   if (!/^[A-Z]{3}$/.test(currencyCode)) {
     throw new Error(
       'La moneda debe usar un código ISO de 3 letras, por ejemplo MXN o USD.',
+    );
+  }
+
+  if (address.length > 180) {
+    throw new Error(
+      'La dirección no puede superar 180 caracteres.',
+    );
+  }
+
+  if (ticketFooter.length > 180) {
+    throw new Error(
+      'El pie del ticket no puede superar 180 caracteres.',
     );
   }
 
@@ -472,6 +513,9 @@ export async function saveBusinessSettings(
         phone:
           phone || null,
 
+        address:
+          address || null,
+
         logo_url:
           logoUrl || null,
 
@@ -494,6 +538,10 @@ export async function saveBusinessSettings(
           input.features.kitchenEnabled,
 
         timezone,
+
+        ticket_footer:
+          ticketFooter ||
+          'Gracias por tu compra',
 
         updated_at:
           new Date().toISOString(),

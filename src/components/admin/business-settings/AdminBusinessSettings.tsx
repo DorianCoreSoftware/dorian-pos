@@ -38,7 +38,9 @@ interface BusinessSettingsForm {
   shortName: string;
   currencyCode: string;
   phone: string;
+  address: string;
   logoUrl: string;
+  ticketFooter: string;
   primaryColor: string;
   secondaryColor: string;
   timezone: string;
@@ -55,7 +57,9 @@ const EMPTY_FORM:
   currencyCode:
     DEFAULT_CURRENCY_CODE,
   phone: '',
+  address: '',
   logoUrl: '',
+  ticketFooter: 'Gracias por tu compra',
   primaryColor: DEFAULT_BRAND_PRIMARY,
   secondaryColor: '#000000',
   timezone: 'America/Mexico_City',
@@ -112,6 +116,9 @@ export function AdminBusinessSettings() {
       phone:
         business.identity.phone,
 
+      address:
+        business.identity.address,
+
       logoUrl:
         business.identity.logoUrl,
 
@@ -120,6 +127,9 @@ export function AdminBusinessSettings() {
 
       secondaryColor:
         business.identity.secondaryColor,
+
+      ticketFooter:
+        business.ticketSettings.footerText,
 
       timezone:
         business.timezone,
@@ -170,6 +180,9 @@ export function AdminBusinessSettings() {
             phone:
               form.phone,
 
+            address:
+              form.address,
+
             logoUrl:
               form.logoUrl,
 
@@ -196,6 +209,11 @@ export function AdminBusinessSettings() {
 
           timezone:
             form.timezone,
+
+          ticketSettings: {
+            footerText:
+              form.ticketFooter,
+          },
         });
 
         await refreshBusiness();
@@ -330,6 +348,20 @@ export function AdminBusinessSettings() {
           }
           placeholder="Ej. 4451234567"
           keyboardType="phone-pad"
+          theme={theme}
+        />
+
+        <Field
+          label="Dirección para tickets"
+          value={form.address}
+          onChangeText={value =>
+            updateField(
+              'address',
+              value,
+            )
+          }
+          placeholder="Ej. Av. Principal 123, Centro"
+          maxLength={180}
           theme={theme}
         />
 
@@ -481,6 +513,26 @@ export function AdminBusinessSettings() {
           }
           placeholder="America/Mexico_City"
           autoCapitalize="none"
+          theme={theme}
+        />
+      </SettingsCard>
+
+      <SettingsCard
+        title="Ticket"
+        subtitle="Información que se imprime en los comprobantes de venta."
+        theme={theme}
+      >
+        <Field
+          label="Mensaje al pie del ticket"
+          value={form.ticketFooter}
+          onChangeText={value =>
+            updateField(
+              'ticketFooter',
+              value,
+            )
+          }
+          placeholder="Gracias por tu compra"
+          maxLength={180}
           theme={theme}
         />
       </SettingsCard>

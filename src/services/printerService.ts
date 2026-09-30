@@ -12,11 +12,9 @@ import {
 } from './printerSettingsService';
 import { KitchenOrder, PaymentMethod } from '../types';
 
-import {
-  BURGER_KONG_LOGO,
-} from '../generated/printerAssets';
 import { PromoCoupon } from './promoService';
 import { getPromotionPrograms } from './promotionService';
+import { getBusinessSettings } from './businessHoursService';
 import { fetchOrderModifierPromotionDiscounts } from '../repositories/OrderRepository';
 
 import {
@@ -239,22 +237,18 @@ export async function printTestTicket(): Promise<void> {
   const printer =
     await connectPrinter();
 
+  const business =
+    await getBusinessSettings();
+
   await printer.write(
     '\x1B\x40',
   );
 
-  await setAlignment(
+  await printBusinessHeader(
     printer,
-    'center',
-  );
-
-  await printRasterImage(
-    printer,
-    BURGER_KONG_LOGO,
-  );
-
-  await printer.write(
-    '\n',
+    business.identity.businessName,
+    business.identity.phone,
+    business.identity.address,
   );
 
   await setBold(
@@ -271,6 +265,11 @@ export async function printTestTicket(): Promise<void> {
     false,
   );
 
+  await printTicketFooter(
+    printer,
+    business.ticketSettings.footerText,
+  );
+
   await feedPaper(
     printer,
     3,
@@ -278,39 +277,6 @@ export async function printTestTicket(): Promise<void> {
 
   await cutPaper(
     printer,
-  );
-}
-
-async function printRasterImage(
-  printer: BluetoothDevice,
-  image: {
-    width: number;
-    height: number;
-    base64: string;
-  },
-): Promise<void> {
-  /*
-   * printerAssets.ts ya contiene:
-   *
-   * GS v 0
-   * + encabezado raster
-   * + bitmap monocromático
-   *
-   * Por eso NO agregamos otro
-   * encabezado ESC/POS aquí.
-   */
-
-  await printer.write(
-    image.base64,
-    'base64',
-  );
-
-  /*
-   * Dejamos una pequeña separación
-   * después de la imagen.
-   */
-  await printer.write(
-    '\n',
   );
 }
 
@@ -326,6 +292,9 @@ export async function printOrderTicket({
 }: PrintOrderTicketParams): Promise<void> {
   const printer =
     await connectPrinter();
+
+  const business =
+    await getBusinessSettings();
 
   const resolvedCurrencyCode =
     normalizeCurrencyCode(
@@ -399,14 +368,11 @@ export async function printOrderTicket({
  * ============================
  */
 
-  await setAlignment(
+  await printBusinessHeader(
     printer,
-    'center',
-  );
-
-  await printRasterImage(
-    printer,
-    BURGER_KONG_LOGO,
+    business.identity.businessName,
+    business.identity.phone,
+    business.identity.address,
   );
 
   await setBold(
@@ -871,18 +837,9 @@ export async function printOrderTicket({
     'center',
   );
 
-  await setBold(
+  await printTicketFooter(
     printer,
-    true,
-  );
-
-  await printer.write(
-    'GRACIAS POR TU COMPRA\n',
-  );
-
-  await setBold(
-    printer,
-    false,
+    business.ticketSettings.footerText,
   );
 
   if (
@@ -932,6 +889,180 @@ export async function printRawText(
   await cutPaper(
     printer,
   );
+}
+
+async function printBusinessHeader(
+  printer: BluetoothDevice,
+  businessName: string,
+  phone: string,
+  address: string,
+): Promise<void> {
+  await setAlignment(
+    printer,
+    'center',
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await setTextSize(
+    printer,
+    'double',
+  );
+
+  for (
+    const line of wrapTicketText(
+      businessName,
+      16,
+    )
+  ) {
+    await printer.write(
+      `${sanitizeTicketText(
+        line,
+      )}\n`,
+    );
+  }
+
+  await setTextSize(
+    printer,
+    'normal',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  if (address.trim()) {
+    for (
+      const line of wrapTicketText(
+        address,
+        32,
+      )
+    ) {
+      await printer.write(
+        `${sanitizeTicketText(
+          line,
+        )}\n`,
+      );
+    }
+  }
+
+  if (phone.trim()) {
+    await printer.write(
+      `Tel: ${sanitizeTicketText(
+        phone.trim(),
+      )}\n`,
+    );
+  }
+
+  await printer.write(
+    '\n',
+  );
+}
+
+async function printTicketFooter(
+  printer: BluetoothDevice,
+  footerText: string,
+): Promise<void> {
+  const cleanFooter =
+    footerText.trim();
+
+  if (!cleanFooter) {
+    return;
+  }
+
+  await setAlignment(
+    printer,
+    'center',
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  for (
+    const line of wrapTicketText(
+      cleanFooter,
+      32,
+    )
+  ) {
+    await printer.write(
+      `${sanitizeTicketText(
+        line,
+      )}\n`,
+    );
+  }
+
+  await setBold(
+    printer,
+    false,
+  );
+}
+
+function wrapTicketText(
+  value: string,
+  maxWidth: number,
+): string[] {
+  const words =
+    value
+      .trim()
+      .replace(/\s+/g, ' ')
+      .split(' ')
+      .filter(Boolean);
+
+  if (words.length === 0) {
+    return [];
+  }
+
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    if (word.length > maxWidth) {
+      if (current) {
+        lines.push(current);
+        current = '';
+      }
+
+      for (
+        let index = 0;
+        index < word.length;
+        index += maxWidth
+      ) {
+        lines.push(
+          word.slice(
+            index,
+            index + maxWidth,
+          ),
+        );
+      }
+
+      continue;
+    }
+
+    const next =
+      current
+        ? `${current} ${word}`
+        : word;
+
+    if (next.length <= maxWidth) {
+      current = next;
+      continue;
+    }
+
+    lines.push(current);
+    current = word;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
 }
 
 async function feedPaper(
