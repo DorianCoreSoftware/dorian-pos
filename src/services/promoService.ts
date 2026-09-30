@@ -1,335 +1,166 @@
 import {
   createOrGetOrderPromoCoupon,
   fetchOrderPromoCoupon,
-  LuckyDorianRefundResult,
   PromoCouponRecord,
-  PromoCouponType,
-  PromoReward,
-  redeemKongCoupons,
-  redeemLuckyDorian,
+  PromotionProgramRecord,
+  PromotionRefundResult,
+  PromotionRewardRecord,
+  redeemCollectPromotion,
+  redeemOrderRefundPromotion,
 } from '../repositories/PromoRepository';
-import { getPromotionSettings } from './promotionService';
+
+export interface PromotionReward {
+  id: string;
+  productId: string | null;
+  displayName: string;
+  position: number;
+  isActive: boolean;
+}
+
+export interface PromotionProgram {
+  id: string;
+  code: string;
+  displayName: string;
+  programType: 'collect_reward' | 'order_refund';
+  codePrefix: string;
+  isEnabled: boolean;
+  issueChanceDenominator: number;
+  requiredCoupons: number | null;
+  priority: number;
+  rewards: PromotionReward[];
+}
 
 export interface PromoCoupon {
   id: string;
   orderId: string;
   code: string;
-  couponType:
-    PromoCouponType;
+  programId: string;
+  programCode: string;
+  programName: string;
+  programType: 'collect_reward' | 'order_refund';
+  codePrefix: string;
+  requiredCoupons: number | null;
   redeemed: boolean;
-  redeemedAt:
-    string | null;
+  redeemedAt: string | null;
   createdAt: string;
+}
+
+function mapReward(record: PromotionRewardRecord): PromotionReward {
+  return {
+    id: record.id,
+    productId: record.product_id,
+    displayName: record.display_name,
+    position: Number(record.position ?? 0),
+    isActive: Boolean(record.is_active),
+  };
+}
+
+export function mapPromotionProgram(record: PromotionProgramRecord): PromotionProgram {
+  return {
+    id: record.id,
+    code: record.code,
+    displayName: record.display_name,
+    programType: record.program_type,
+    codePrefix: record.code_prefix,
+    isEnabled: Boolean(record.is_enabled),
+    issueChanceDenominator: Number(record.issue_chance_denominator ?? 1),
+    requiredCoupons:
+      record.required_coupons === null
+        ? null
+        : Number(record.required_coupons),
+    priority: Number(record.priority ?? 100),
+    rewards: (record.rewards ?? [])
+      .map(mapReward)
+      .filter(reward => reward.isActive)
+      .sort((a, b) => a.position - b.position),
+  };
+}
+
+function mapCoupon(record: PromoCouponRecord): PromoCoupon {
+  return {
+    id: record.id,
+    orderId: record.order_id,
+    code: record.code,
+    programId: record.program_id,
+    programCode: record.program_code,
+    programName: record.program_name,
+    programType: record.program_type,
+    codePrefix: record.code_prefix,
+    requiredCoupons: record.required_coupons,
+    redeemed: record.redeemed,
+    redeemedAt: record.redeemed_at,
+    createdAt: record.created_at,
+  };
 }
 
 export async function getOrCreateOrderPromoCoupon(
   orderId: string,
 ): Promise<PromoCoupon | null> {
-  validateOrderId(
-    orderId,
-  );
-
-  const record =
-    await createOrGetOrderPromoCoupon(
-      orderId,
-    );
-
-  if (!record) {
-    return null;
+  if (!orderId?.trim()) {
+    throw new Error('El identificador de la orden es obligatorio.');
   }
 
-  return {
-    id:
-      record.id,
-
-    orderId:
-      record.order_id,
-
-    code:
-      record.code,
-
-    couponType:
-      record.coupon_type,
-
-    redeemed:
-      record.redeemed,
-
-    redeemedAt:
-      record.redeemed_at,
-
-    createdAt:
-      record.created_at,
-  };
-}
-
-export interface RedeemKongsInput {
-  codes: string[];
-  reward:
-    PromoReward;
-}
-
-export interface PromoRewardOption {
-  value:
-    PromoReward;
-
-  label: string;
-}
-
-export const PROMO_REWARD_OPTIONS:
-  PromoRewardOption[] = [
-    {
-      value:
-        'special_burger',
-
-      label:
-        'Hamburguesa especial',
-    },
-    {
-      value:
-        'boneless_150',
-
-      label:
-        'Boneless 150 g',
-    },
-    {
-      value:
-        'wings_6',
-
-      label:
-        'Alitas 6 piezas',
-    },
-    {
-      value:
-        'large_fries',
-
-      label:
-        'Papas grandes',
-    },
-    {
-      value:
-        'kong_shake',
-
-      label:
-        'Malteada Kong',
-    },
-  ];
-
-export async function redeemKongs(
-  input:
-    RedeemKongsInput,
-): Promise<string> {
-  const normalizedCodes =
-    normalizeKongCodes(
-      input.codes,
-    );
-
-  const settings =
-    await getPromotionSettings();
-
-  validateKongCodes(
-    normalizedCodes,
-    settings.required_kongs,
-  );
-
-  validateReward(
-    input.reward,
-  );
-
-  return redeemKongCoupons(
-    normalizedCodes,
-    input.reward,
-  );
-}
-
-export async function redeemDorian(
-  code: string,
-): Promise<LuckyDorianRefundResult> {
-  const normalizedCode =
-    normalizePromoCode(
-      code,
-    );
-
-  if (!normalizedCode) {
-    throw new Error(
-      'Ingresa el código del Dorian de la Suerte.',
-    );
-  }
-
-  if (
-    !normalizedCode.startsWith(
-      'BK-D',
-    )
-  ) {
-    throw new Error(
-      'El código no tiene el formato de un Dorian de la Suerte.',
-    );
-  }
-
-  return redeemLuckyDorian(
-    normalizedCode,
-  );
-}
-
-function normalizeKongCodes(
-  codes: string[],
-): string[] {
-  return codes.map(
-    normalizePromoCode,
-  );
-}
-
-function normalizePromoCode(
-  code: string,
-): string {
-  return (
-    code ??
-    ''
-  )
-    .trim()
-    .toUpperCase();
-}
-
-function validateKongCodes(
-  codes: string[],
-  requiredKongs: number,
-): void {
-  if (
-    !Number.isInteger(
-      requiredKongs,
-    ) ||
-    requiredKongs <
-    1
-  ) {
-    throw new Error(
-      'La configuración de Kongs no es válida.',
-    );
-  }
-
-  if (
-    !Array.isArray(
-      codes,
-    ) ||
-    codes.length !==
-    requiredKongs
-  ) {
-    throw new Error(
-      `Se necesitan exactamente ${requiredKongs} códigos Kong.`,
-    );
-  }
-
-  if (
-    codes.some(
-      (
-        code,
-      ) =>
-        !code,
-    )
-  ) {
-    throw new Error(
-      `Ingresa los ${requiredKongs} códigos Kong.`,
-    );
-  }
-
-  if (
-    codes.some(
-      (
-        code,
-      ) =>
-        !code.startsWith(
-          'BK-K',
-        ),
-    )
-  ) {
-    throw new Error(
-      'Uno o más códigos no tienen el formato de un Kong.',
-    );
-  }
-
-  const uniqueCodes =
-    new Set(
-      codes,
-    );
-
-  if (
-    uniqueCodes.size !==
-    requiredKongs
-  ) {
-    throw new Error(
-      `Los ${requiredKongs} códigos Kong deben ser diferentes.`,
-    );
-  }
-}
-
-function validateReward(
-  reward:
-    PromoReward,
-): void {
-  const validReward =
-    PROMO_REWARD_OPTIONS.some(
-      (
-        option,
-      ) =>
-        option.value ===
-        reward,
-    );
-
-  if (!validReward) {
-    throw new Error(
-      'Selecciona un premio válido.',
-    );
-  }
-}
-
-function validateOrderId(
-  orderId: string,
-): void {
-  if (
-    !orderId?.trim()
-  ) {
-    throw new Error(
-      'El identificador de la orden es obligatorio.',
-    );
-  }
+  const record = await createOrGetOrderPromoCoupon(orderId);
+  return record ? mapCoupon(record) : null;
 }
 
 export async function getExistingOrderPromoCoupon(
   orderId: string,
 ): Promise<PromoCoupon | null> {
   if (!orderId?.trim()) {
-    throw new Error(
-      'La orden no es válida.',
-    );
+    throw new Error('La orden no es válida.');
   }
 
-  const coupon =
-    await fetchOrderPromoCoupon(
-      orderId,
-    );
+  const record = await fetchOrderPromoCoupon(orderId);
+  return record ? mapCoupon(record) : null;
+}
 
-  if (!coupon) {
-    return null;
+export async function redeemPromotionCodes(input: {
+  program: PromotionProgram;
+  codes: string[];
+  rewardId: string;
+}): Promise<string> {
+  const { program } = input;
+
+  if (program.programType !== 'collect_reward') {
+    throw new Error('La promoción seleccionada no admite acumulación de códigos.');
   }
 
-  return {
-    id:
-      coupon.id,
+  const required = program.requiredCoupons ?? 0;
+  const codes = input.codes.map(code => (code ?? '').trim().toUpperCase());
 
-    orderId:
-      coupon.order_id,
+  if (!Number.isInteger(required) || required < 1) {
+    throw new Error('La cantidad requerida de cupones no es válida.');
+  }
 
-    code:
-      coupon.code,
+  if (codes.length !== required || codes.some(code => !code)) {
+    throw new Error(`Ingresa exactamente ${required} códigos.`);
+  }
 
-    couponType:
-      coupon.coupon_type,
+  if (new Set(codes).size !== required) {
+    throw new Error('Todos los códigos deben ser diferentes.');
+  }
 
-    redeemed:
-      coupon.redeemed,
+  if (!program.rewards.some(reward => reward.id === input.rewardId)) {
+    throw new Error('Selecciona un premio válido.');
+  }
 
-    redeemedAt:
-      coupon.redeemed_at,
+  return redeemCollectPromotion(program.id, codes, input.rewardId);
+}
 
-    createdAt:
-      coupon.created_at,
-  };
+export async function redeemRefundPromotion(
+  program: PromotionProgram,
+  code: string,
+): Promise<PromotionRefundResult> {
+  const normalizedCode = (code ?? '').trim().toUpperCase();
+
+  if (program.programType !== 'order_refund') {
+    throw new Error('La promoción seleccionada no corresponde a un reembolso.');
+  }
+
+  if (!normalizedCode) {
+    throw new Error('Ingresa el código promocional.');
+  }
+
+  return redeemOrderRefundPromotion(normalizedCode);
 }

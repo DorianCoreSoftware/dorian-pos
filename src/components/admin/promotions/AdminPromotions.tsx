@@ -1,9 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,1784 +11,519 @@ import {
   View,
 } from 'react-native';
 
+import { useBusiness } from '../../../context/BusinessContext';
+import { useCurrency } from '../../../hooks/useCurrency';
+import { getAllProducts } from '../../../services/products';
 import {
-  getPromotionSettings,
-  PromotionSettings,
-  updatePromotionSettings,
+  deletePromotionProgram,
+  deletePromotionReward,
+  getPromotionPrograms,
+  savePromotionProgram,
+  savePromotionReward,
 } from '../../../services/promotionService';
-
+import { PromotionProgram } from '../../../services/promoService';
 import {
   getAvailablePromotionModifiers,
   getModifierPromotionSettings,
   ModifierPromotionOption,
   saveModifierPromotionSettings,
 } from '../../../services/modifierPromotionService';
+import { Product } from '../../../types';
 
-import {
-  useBusiness,
-} from '../../../context/BusinessContext';
-
-import {
-  useCurrency,
-} from '../../../hooks/useCurrency';
-
-import {
-  DateCalendarSelect,
-} from '../business-hours/AdminBusinessHoursSelectors';
-
-import {
-  styles,
-} from './AdminPromotions.styles';
-
-function formatLocalDate(
-  date: Date,
-): string {
-  const year =
-    date.getFullYear();
-
-  const month =
-    String(
-      date.getMonth() + 1,
-    ).padStart(
-      2,
-      '0',
-    );
-
-  const day =
-    String(
-      date.getDate(),
-    ).padStart(
-      2,
-      '0',
-    );
-
-  return `${year}-${month}-${day}`;
+interface ProgramDraft {
+  id?: string;
+  code: string;
+  displayName: string;
+  programType: 'collect_reward' | 'order_refund';
+  codePrefix: string;
+  isEnabled: boolean;
+  issueChanceDenominator: string;
+  requiredCoupons: string;
+  priority: string;
 }
 
-function getDefaultModifierPromotionDates() {
-  const start =
-    new Date();
+const emptyProgram = (): ProgramDraft => ({
+  code: '',
+  displayName: '',
+  programType: 'collect_reward',
+  codePrefix: '',
+  isEnabled: true,
+  issueChanceDenominator: '1',
+  requiredCoupons: '5',
+  priority: '100',
+});
 
-  const end =
-    new Date(start);
-
-  end.setDate(
-    end.getDate() + 6,
-  );
-
+function draftFromProgram(program: PromotionProgram): ProgramDraft {
   return {
-    startsAt:
-      formatLocalDate(
-        start,
-      ),
-
-    endsAt:
-      formatLocalDate(
-        end,
-      ),
+    id: program.id,
+    code: program.code,
+    displayName: program.displayName,
+    programType: program.programType,
+    codePrefix: program.codePrefix,
+    isEnabled: program.isEnabled,
+    issueChanceDenominator: String(program.issueChanceDenominator),
+    requiredCoupons: String(program.requiredCoupons ?? 1),
+    priority: String(program.priority),
   };
 }
 
-function isValidDateInput(
-  value: string,
-): boolean {
-  if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(
-      value,
-    )
-  ) {
-    return false;
-  }
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
-  const [
-    year,
-    month,
-    day,
-  ] =
-    value
-      .split('-')
-      .map(Number);
-
-  const date =
-    new Date(
-      year,
-      month - 1,
-      day,
-    );
-
-  return (
-    date.getFullYear() ===
-      year &&
-    date.getMonth() ===
-      month - 1 &&
-    date.getDate() ===
-      day
-  );
+function plusDays(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 export function AdminPromotions() {
-  const {
-    business,
-    theme,
-  } =
-    useBusiness();
+  const { business, theme } = useBusiness();
+  const { formatCurrency } = useCurrency();
+  const promotionsEnabled = business?.features.promotionsEnabled ?? false;
 
-  const promotionsEnabled =
-    business?.features
-      .promotionsEnabled ??
-    false;
+  const [programs, setPrograms] = useState<PromotionProgram[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ProgramDraft>(emptyProgram());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [productSelectorVisible, setProductSelectorVisible] = useState(false);
 
-  const {
-    currencyCode,
-    formatCurrency,
-  } = useCurrency();
+  const [modifierOptions, setModifierOptions] = useState<ModifierPromotionOption[]>([]);
+  const [modifierSelectorVisible, setModifierSelectorVisible] = useState(false);
+  const [modifierSettingsId, setModifierSettingsId] = useState<string | null>(null);
+  const [modifierName, setModifierName] = useState('Promoción de modificador');
+  const [modifierEnabled, setModifierEnabled] = useState(false);
+  const [modifierId, setModifierId] = useState<string | null>(null);
+  const [modifierDiscount, setModifierDiscount] = useState('5.00');
+  const [modifierStartsAt, setModifierStartsAt] = useState(today());
+  const [modifierEndsAt, setModifierEndsAt] = useState(plusDays(6));
 
-  const defaultDates =
-    useMemo(
-      () =>
-        getDefaultModifierPromotionDates(),
-      [],
-    );
+  const selectedProgram = useMemo(
+    () => programs.find(program => program.id === selectedProgramId) ?? null,
+    [programs, selectedProgramId],
+  );
 
-  const [
-    settings,
-    setSettings,
-  ] =
-    useState<
-      PromotionSettings | null
-    >(null);
+  const selectedModifier = useMemo(
+    () => modifierOptions.find(option => option.id === modifierId) ?? null,
+    [modifierId, modifierOptions],
+  );
 
-  const [
-    kongEnabled,
-    setKongEnabled,
-  ] =
-    useState(true);
-
-  const [
-    requiredKongs,
-    setRequiredKongs,
-  ] =
-    useState('5');
-
-  const [
-    luckyDorianEnabled,
-    setLuckyDorianEnabled,
-  ] =
-    useState(true);
-
-  const [
-    luckyDorianChance,
-    setLuckyDorianChance,
-  ] =
-    useState('100');
-
-  const [
-    modifierPromotionSettingsId,
-    setModifierPromotionSettingsId,
-  ] =
-    useState<
-      string | null
-    >(null);
-
-  const [
-    modifierPromotionName,
-    setModifierPromotionName,
-  ] =
-    useState('Salsa de la Semana');
-
-  const [
-    modifierPromotionEnabled,
-    setModifierPromotionEnabled,
-  ] =
-    useState(false);
-
-  const [
-    modifierPromotionModifierId,
-    setModifierPromotionModifierId,
-  ] =
-    useState<
-      string | null
-    >(null);
-
-  const [
-    modifierPromotionDiscount,
-    setModifierPromotionDiscount,
-  ] =
-    useState('5.00');
-
-  const [
-    modifierPromotionStartsAt,
-    setModifierPromotionStartsAt,
-  ] =
-    useState(
-      defaultDates.startsAt,
-    );
-
-  const [
-    modifierPromotionEndsAt,
-    setModifierPromotionEndsAt,
-  ] =
-    useState(
-      defaultDates.endsAt,
-    );
-
-  const [
-    promotionModifiers,
-    setPromotionModifiers,
-  ] =
-    useState<
-      ModifierPromotionOption[]
-    >([]);
-
-  const [
-    modifierSelectorVisible,
-    setModifierSelectorVisible,
-  ] =
-    useState(false);
-
-  const [
-    isLoading,
-    setIsLoading,
-  ] =
-    useState(true);
-
-  const [
-    isSaving,
-    setIsSaving,
-  ] =
-    useState(false);
-
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] =
-    useState<
-      string | null
-    >(null);
-
-  const selectedPromotionModifier =
-    useMemo(
-      () =>
-        promotionModifiers.find(
-          modifier =>
-            modifier.id ===
-            modifierPromotionModifierId,
-        ) ?? null,
-      [
-        promotionModifiers,
-        modifierPromotionModifierId,
-      ],
-    );
-
-  useEffect(() => {
-    if (
-      !promotionsEnabled
-    ) {
-      setIsLoading(
-        false,
-      );
-
-      setErrorMessage(
-        null,
-      );
-
-      setModifierSelectorVisible(
-        false,
-      );
-
+  const load = useCallback(async (preferredProgramId?: string) => {
+    if (!promotionsEnabled) {
+      setIsLoading(false);
       return;
     }
 
-    const loadSettings =
-      async (): Promise<void> => {
-        try {
-          setIsLoading(
-            true,
-          );
+    try {
+      setIsLoading(true);
+      const [programData, productData, modifierData, modifierOptionData] = await Promise.all([
+        getPromotionPrograms(),
+        getAllProducts(),
+        getModifierPromotionSettings(),
+        getAvailablePromotionModifiers(),
+      ]);
 
-          setErrorMessage(
-            null,
-          );
+      setPrograms(programData);
+      setProducts(productData.filter(product => product.is_active !== false));
+      setModifierOptions(modifierOptionData);
 
-          const [
-            promotionData,
-            modifierPromotionData,
-            promotionModifierOptions,
-          ] =
-            await Promise.all([
-              getPromotionSettings(),
-              getModifierPromotionSettings(),
-              getAvailablePromotionModifiers(),
-            ]);
+      if (programData.length > 0) {
+        const preferredProgram =
+          programData.find(program => program.id === preferredProgramId) ??
+          programData[0];
 
-          setSettings(
-            promotionData,
-          );
-
-          setKongEnabled(
-            promotionData
-              .kong_enabled,
-          );
-
-          setRequiredKongs(
-            String(
-              promotionData
-                .required_kongs,
-            ),
-          );
-
-          setLuckyDorianEnabled(
-            promotionData
-              .lucky_dorian_enabled,
-          );
-
-          setLuckyDorianChance(
-            String(
-              promotionData
-                .lucky_dorian_chance,
-            ),
-          );
-
-          setPromotionModifiers(
-            promotionModifierOptions,
-          );
-
-          if (
-            modifierPromotionData
-          ) {
-            setModifierPromotionSettingsId(
-              modifierPromotionData.id,
-            );
-
-            setModifierPromotionName(
-              modifierPromotionData
-                .display_name,
-            );
-
-            setModifierPromotionEnabled(
-              modifierPromotionData
-                .is_enabled,
-            );
-
-            setModifierPromotionModifierId(
-              modifierPromotionData
-                .modifier_id,
-            );
-
-            setModifierPromotionDiscount(
-              Number(
-                modifierPromotionData
-                  .discount_amount ??
-                5,
-              ).toFixed(
-                2,
-              ),
-            );
-
-            setModifierPromotionStartsAt(
-              modifierPromotionData
-                .starts_at ??
-              defaultDates
-                .startsAt,
-            );
-
-            setModifierPromotionEndsAt(
-              modifierPromotionData
-                .ends_at ??
-              defaultDates
-                .endsAt,
-            );
-          }
-        } catch (error) {
-          console.error(
-            'Error loading promotion settings:',
-            error,
-          );
-
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'No se pudo cargar la configuración de promociones.',
-          );
-        } finally {
-          setIsLoading(
-            false,
-          );
-        }
-      };
-
-    void loadSettings();
-  }, [
-    defaultDates.endsAt,
-    defaultDates.startsAt,
-    promotionsEnabled,
-  ]);
-
-  const handleSave =
-    async (): Promise<void> => {
-      if (
-        !promotionsEnabled ||
-        !settings
-      ) {
-        return;
+        setSelectedProgramId(preferredProgram.id);
+        setDraft(draftFromProgram(preferredProgram));
+      } else {
+        setSelectedProgramId(null);
+        setDraft(emptyProgram());
       }
 
-      const parsedRequiredKongs =
-        Number(
-          requiredKongs,
-        );
-
-      const parsedDorianChance =
-        Number(
-          luckyDorianChance,
-        );
-
-      const parsedModifierPromotionDiscount =
-        Number(
-          modifierPromotionDiscount,
-        );
-
-      if (
-        !Number.isInteger(
-          parsedRequiredKongs,
-        ) ||
-        parsedRequiredKongs <
-          1
-      ) {
-        Alert.alert(
-          'Dato inválido',
-          'La cantidad de Kongs requeridos debe ser un número entero mayor a 0.',
-        );
-
-        return;
+      if (modifierData) {
+        setModifierSettingsId(modifierData.id);
+        setModifierName(modifierData.display_name);
+        setModifierEnabled(modifierData.is_enabled);
+        setModifierId(modifierData.modifier_id);
+        setModifierDiscount(Number(modifierData.discount_amount ?? 0).toFixed(2));
+        setModifierStartsAt(modifierData.starts_at ?? today());
+        setModifierEndsAt(modifierData.ends_at ?? plusDays(6));
       }
+    } catch (error) {
+      Alert.alert(
+        'Promociones',
+        error instanceof Error ? error.message : 'No se pudieron cargar las promociones.',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [promotionsEnabled]);
 
-      if (
-        luckyDorianEnabled &&
-        (
-          !Number.isInteger(
-            parsedDorianChance,
-          ) ||
-          parsedDorianChance <
-            1 ||
-          parsedDorianChance >
-            100
-        )
-      ) {
-        Alert.alert(
-          'Dato inválido',
-          'Dorian debe usar un valor entero entre 1 y 100. Ejemplo: 1 = siempre, 10 = 1 de cada 10 ventas, 100 = 1 de cada 100 ventas.',
-        );
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-        return;
-      }
+  const selectProgram = (program: PromotionProgram) => {
+    setSelectedProgramId(program.id);
+    setDraft(draftFromProgram(program));
+  };
 
-      if (
-        modifierPromotionEnabled &&
-        !modifierPromotionName.trim()
-      ) {
-        Alert.alert(
-          'Nombre requerido',
-          'Ingresa un nombre visible para la promoción.',
-        );
+  const startNewProgram = () => {
+    setSelectedProgramId(null);
+    setDraft(emptyProgram());
+  };
 
-        return;
-      }
+  const handleSaveProgram = async () => {
+    const chance = Number(draft.issueChanceDenominator);
+    const required = draft.programType === 'collect_reward' ? Number(draft.requiredCoupons) : null;
+    const priority = Number(draft.priority);
 
-      if (
-        modifierPromotionEnabled &&
-        !modifierPromotionModifierId
-      ) {
-        Alert.alert(
-          'Modificador requerido',
-          'Selecciona el modificador que recibirá la promoción.',
-        );
+    try {
+      setIsSaving(true);
+      const id = await savePromotionProgram({
+        id: draft.id,
+        code: draft.code,
+        displayName: draft.displayName,
+        programType: draft.programType,
+        codePrefix: draft.codePrefix,
+        isEnabled: draft.isEnabled,
+        issueChanceDenominator: chance,
+        requiredCoupons: required,
+        priority,
+      });
 
-        return;
-      }
+      await load(id);
+      Alert.alert('Promociones', 'Programa guardado correctamente.');
+    } catch (error) {
+      Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Error desconocido.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-      if (
-        !Number.isFinite(
-          parsedModifierPromotionDiscount,
-        ) ||
-        parsedModifierPromotionDiscount <
-          0
-      ) {
-        Alert.alert(
-          'Descuento inválido',
-          'El descuento de la promoción debe ser mayor o igual a 0.',
-        );
+  const handleDeleteProgram = () => {
+    if (!selectedProgram) return;
 
-        return;
-      }
-
-      if (
-        modifierPromotionEnabled &&
-        !isValidDateInput(
-          modifierPromotionStartsAt,
-        )
-      ) {
-        Alert.alert(
-          'Fecha inválida',
-          'La fecha de inicio debe tener el formato AAAA-MM-DD.',
-        );
-
-        return;
-      }
-
-      if (
-        modifierPromotionEnabled &&
-        !isValidDateInput(
-          modifierPromotionEndsAt,
-        )
-      ) {
-        Alert.alert(
-          'Fecha inválida',
-          'La fecha de fin debe tener el formato AAAA-MM-DD.',
-        );
-
-        return;
-      }
-
-      if (
-        modifierPromotionEnabled &&
-        modifierPromotionEndsAt <
-          modifierPromotionStartsAt
-      ) {
-        Alert.alert(
-          'Vigencia inválida',
-          'La fecha de fin no puede ser anterior a la fecha de inicio.',
-        );
-
-        return;
-      }
-
-      try {
-        setIsSaving(
-          true,
-        );
-
-        await updatePromotionSettings(
-          settings.id,
-          {
-            kong_enabled:
-              kongEnabled,
-
-            required_kongs:
-              parsedRequiredKongs,
-
-            lucky_dorian_enabled:
-              luckyDorianEnabled,
-
-            lucky_dorian_chance:
-              parsedDorianChance,
+    Alert.alert(
+      'Eliminar promoción',
+      `¿Eliminar "${selectedProgram.displayName}"? Si ya tiene historial, el sistema te pedirá desactivarla en lugar de eliminarla.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await deletePromotionProgram(selectedProgram.id);
+                await load();
+              } catch (error) {
+                Alert.alert('No se pudo eliminar', error instanceof Error ? error.message : 'Error desconocido.');
+              }
+            })();
           },
-        );
+        },
+      ],
+    );
+  };
 
-        const modifierPromotionId =
-          await saveModifierPromotionSettings(
-            modifierPromotionSettingsId,
-            {
-              display_name:
-                modifierPromotionName.trim(),
+  const addRewardForProduct = async (product: Product) => {
+    if (!selectedProgram || selectedProgram.programType !== 'collect_reward') {
+      Alert.alert('Guarda primero', 'Guarda el programa antes de agregar premios.');
+      return;
+    }
 
-              modifier_id:
-                modifierPromotionModifierId,
+    try {
+      await savePromotionReward({
+        programId: selectedProgram.id,
+        productId: product.id,
+        displayName: product.name,
+        position: selectedProgram.rewards.length * 10 + 10,
+        isActive: true,
+      });
+      setProductSelectorVisible(false);
+      await load(selectedProgram.id);
+    } catch (error) {
+      Alert.alert('Premio', error instanceof Error ? error.message : 'No se pudo agregar el premio.');
+    }
+  };
 
-              discount_amount:
-                parsedModifierPromotionDiscount,
+  const removeReward = (rewardId: string, name: string) => {
+    Alert.alert('Eliminar premio', `¿Eliminar "${name}" de esta promoción?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await deletePromotionReward(rewardId);
+              await load(selectedProgram?.id);
+            } catch (error) {
+              Alert.alert('Premio', error instanceof Error ? error.message : 'No se pudo eliminar.');
+            }
+          })();
+        },
+      },
+    ]);
+  };
 
-              is_enabled:
-                modifierPromotionEnabled,
+  const handleSaveModifierPromotion = async () => {
+    const discount = Number(modifierDiscount);
 
-              starts_at:
-                modifierPromotionStartsAt ||
-                null,
+    if (modifierEnabled && !modifierId) {
+      Alert.alert('Promoción', 'Selecciona un modificador.');
+      return;
+    }
 
-              ends_at:
-                modifierPromotionEndsAt ||
-                null,
-            },
-          );
+    if (!Number.isFinite(discount) || discount < 0) {
+      Alert.alert('Promoción', 'El descuento no es válido.');
+      return;
+    }
 
-        setModifierPromotionSettingsId(
-          modifierPromotionId,
-        );
+    try {
+      const id = await saveModifierPromotionSettings(modifierSettingsId, {
+        display_name: modifierName.trim() || 'Promoción de modificador',
+        modifier_id: modifierId,
+        discount_amount: discount,
+        is_enabled: modifierEnabled,
+        starts_at: modifierStartsAt || null,
+        ends_at: modifierEndsAt || null,
+      });
+      setModifierSettingsId(id);
+      Alert.alert('Promociones', 'Promoción de modificador guardada.');
+    } catch (error) {
+      Alert.alert('Promociones', error instanceof Error ? error.message : 'No se pudo guardar.');
+    }
+  };
 
-        setSettings({
-          ...settings,
-
-          kong_enabled:
-            kongEnabled,
-
-          required_kongs:
-            parsedRequiredKongs,
-
-          lucky_dorian_enabled:
-            luckyDorianEnabled,
-
-          lucky_dorian_chance:
-            parsedDorianChance,
-        });
-
-        Alert.alert(
-          'Promociones',
-          'La configuración se guardó correctamente.',
-        );
-      } catch (error) {
-        console.error(
-          'Error saving promotion settings:',
-          error,
-        );
-
-        Alert.alert(
-          'Error',
-          error instanceof Error
-            ? error.message
-            : 'No se pudo guardar la configuración de promociones.',
-        );
-      } finally {
-        setIsSaving(
-          false,
-        );
-      }
-    };
-
-  if (
-    !promotionsEnabled
-  ) {
+  if (!promotionsEnabled) {
     return (
-      <View
-        style={[
-          styles.errorContainer,
-          {
-            backgroundColor:
-              theme.background,
-          },
-        ]}
-      >
-        <Text
-          style={{
-            fontSize:
-              46,
-
-            marginBottom:
-              12,
-          }}
-        >
-          🎟️
-        </Text>
-
-        <Text
-          style={[
-            styles.title,
-            {
-              color:
-                theme.text,
-
-              textAlign:
-                'center',
-            },
-          ]}
-        >
-          Promociones deshabilitadas
-        </Text>
-
-        <Text
-          style={[
-            styles.errorText,
-            {
-              color:
-                theme.textMuted,
-
-              marginTop:
-                8,
-
-              maxWidth:
-                420,
-            },
-          ]}
-        >
-          Este negocio no tiene
-          habilitado el módulo de
-          promociones.
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: theme.background }}>
+        <Text style={{ color: theme.text, fontSize: 22, fontWeight: '700' }}>Promociones deshabilitadas</Text>
+        <Text style={{ color: theme.textMuted, marginTop: 8, textAlign: 'center' }}>
+          Activa el módulo desde Admin → Negocio para configurar promociones.
         </Text>
       </View>
     );
   }
 
-  if (
-    isLoading
-  ) {
+  if (isLoading) {
     return (
-      <View
-        style={[
-          styles.loadingContainer,
-          {
-            backgroundColor:
-              theme.background,
-          },
-        ]}
-      >
-        <ActivityIndicator
-          size="large"
-          color={
-            theme.primary
-          }
-        />
-
-        <Text
-          style={[
-            styles.loadingText,
-            {
-              color:
-                theme.textMuted,
-            },
-          ]}
-        >
-          Cargando promociones...
-        </Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={{ color: theme.textMuted, marginTop: 12 }}>Cargando promociones...</Text>
       </View>
     );
   }
 
-  if (
-    errorMessage ||
-    !settings
-  ) {
-    return (
-      <View
-        style={[
-          styles.errorContainer,
-          {
-            backgroundColor:
-              theme.background,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.errorTitle,
-            {
-              color:
-                theme.danger,
-            },
-          ]}
-        >
-          No se pudieron cargar
-          las promociones
-        </Text>
+  const cardStyle = {
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+  } as const;
 
-        <Text
-          style={[
-            styles.errorText,
-            {
-              color:
-                theme.textMuted,
-            },
-          ]}
-        >
-          {errorMessage ??
-            'No existe una configuración activa.'}
-        </Text>
-      </View>
-    );
-  }
+  const inputStyle = {
+    color: theme.text,
+    backgroundColor: theme.surfaceAlt,
+    borderColor: theme.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+  } as const;
+
+  const labelStyle = { color: theme.text, fontWeight: '600' as const, marginTop: 12 };
 
   return (
     <>
-      <ScrollView
-        style={[
-          styles.container,
-          {
-            backgroundColor:
-              theme.background,
-          },
-        ]}
-        contentContainerStyle={
-          styles.scrollContent
-        }
-        showsVerticalScrollIndicator
-        keyboardShouldPersistTaps="handled"
-      >
-        <View
-          style={
-            styles.header
-          }
-        >
-          <Text
-            style={[
-              styles.title,
-              {
-                color:
-                  theme.text,
-              },
-            ]}
-          >
-            Promociones
-          </Text>
+      <ScrollView style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18 }}>
+        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '800' }}>Promociones</Text>
+        <Text style={{ color: theme.textMuted, marginTop: 4, marginBottom: 18 }}>
+          Los programas, nombres, prefijos, probabilidades y premios se configuran aquí; el código ya no conoce promociones específicas del negocio.
+        </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                color:
-                  theme.textMuted,
-              },
-            ]}
-          >
-            Activa, desactiva y configura
-            las promociones del punto de venta.
-          </Text>
-        </View>
-
-        {/* KONGS */}
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor:
-                theme.surface,
-
-              borderColor:
-                theme.border,
-            },
-          ]}
-        >
-          <View
-            style={
-              styles.cardHeader
-            }
-          >
-            <View
-              style={
-                styles.cardHeaderText
-              }
-            >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  {
-                    color:
-                      theme.text,
-                  },
-                ]}
-              >
-                Kongs
-              </Text>
-
-              <Text
-                style={[
-                  styles.cardDescription,
-                  {
-                    color:
-                      theme.textMuted,
-                  },
-                ]}
-              >
-                Controla la acumulación y canje
-                de cupones Kong.
-              </Text>
-            </View>
-
-            <Switch
-              value={
-                kongEnabled
-              }
-              onValueChange={
-                setKongEnabled
-              }
-              trackColor={{
-                false:
-                  theme.border,
-
-                true:
-                  theme.primary,
-              }}
-              thumbColor={
-                kongEnabled
-                  ? theme.onPrimary
-                  : theme.textMuted
-              }
-            />
-          </View>
-
-          <View
-            style={[
-              styles.fieldContainer,
-              {
-                borderTopColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.fieldLabel,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              Kongs necesarios para premio
-            </Text>
-
-            <TextInput
-              value={
-                requiredKongs
-              }
-              onChangeText={
-                setRequiredKongs
-              }
-              keyboardType="number-pad"
-              editable={
-                kongEnabled
-              }
-              maxLength={2}
-              style={[
-                styles.input,
-                {
-                  borderColor:
-                    theme.border,
-
-                  backgroundColor:
-                    theme.surfaceAlt,
-
-                  color:
-                    theme.text,
-                },
-
-                !kongEnabled &&
-                styles.inputDisabled,
-              ]}
-            />
-
-            <Text
-              style={[
-                styles.fieldHelp,
-                {
-                  color:
-                    theme.textMuted,
-                },
-              ]}
-            >
-              Actualmente el cliente necesita
-              {` ${requiredKongs || '0'} `}
-              cupones Kong para completar la promoción.
-            </Text>
-          </View>
-        </View>
-
-        {/* DORIAN */}
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor:
-                theme.surface,
-
-              borderColor:
-                theme.border,
-            },
-          ]}
-        >
-          <View
-            style={
-              styles.cardHeader
-            }
-          >
-            <View
-              style={
-                styles.cardHeaderText
-              }
-            >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  {
-                    color:
-                      theme.text,
-                  },
-                ]}
-              >
-                Dorian de la Suerte
-              </Text>
-
-              <Text
-                style={[
-                  styles.cardDescription,
-                  {
-                    color:
-                      theme.textMuted,
-                  },
-                ]}
-              >
-                Controla si las ventas pueden
-                generar un Dorian de la Suerte.
-              </Text>
-            </View>
-
-            <Switch
-              value={
-                luckyDorianEnabled
-              }
-              onValueChange={
-                setLuckyDorianEnabled
-              }
-              trackColor={{
-                false:
-                  theme.border,
-
-                true:
-                  theme.primary,
-              }}
-              thumbColor={
-                luckyDorianEnabled
-                  ? theme.onPrimary
-                  : theme.textMuted
-              }
-            />
-          </View>
-
-          <View
-            style={[
-              styles.fieldContainer,
-              {
-                borderTopColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.fieldLabel,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              1 oportunidad entre
-            </Text>
-
-            <View
-              style={
-                styles.inlineFieldRow
-              }
-            >
-              <TextInput
-                value={
-                  luckyDorianChance
-                }
-                onChangeText={
-                  setLuckyDorianChance
-                }
-                keyboardType="number-pad"
-                editable={
-                  luckyDorianEnabled
-                }
-                maxLength={3}
-                style={[
-                  styles.input,
-                  styles.compactInput,
-                  {
-                    borderColor:
-                      theme.border,
-
-                    backgroundColor:
-                      theme.surfaceAlt,
-
-                    color:
-                      theme.text,
-                  },
-
-                  !luckyDorianEnabled &&
-                  styles.inputDisabled,
-                ]}
-              />
-
-              <Text
-                style={[
-                  styles.inlineSuffix,
-                  {
-                    color:
-                      theme.primary,
-                  },
-                ]}
-              >
-                ventas
-              </Text>
-            </View>
-
-            <Text
-              style={[
-                styles.fieldHelp,
-                {
-                  color:
-                    theme.textMuted,
-                },
-              ]}
-            >
-              1 = 100%, 2 = 50%, 10 = 10% y
-              100 = 1% de probabilidad.
-            </Text>
-          </View>
-        </View>
-
-        {/* PROMOCIÓN DE MODIFICADOR */}
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor:
-                theme.surface,
-
-              borderColor:
-                theme.border,
-            },
-          ]}
-        >
-          <View
-            style={
-              styles.cardHeader
-            }
-          >
-            <View
-              style={
-                styles.cardHeaderText
-              }
-            >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  {
-                    color:
-                      theme.text,
-                  },
-                ]}
-              >
-                🏷️ Promoción de modificador
-              </Text>
-
-              <Text
-                style={[
-                  styles.cardDescription,
-                  {
-                    color:
-                      theme.textMuted,
-                  },
-                ]}
-              >
-                Configura cualquier modificador del catálogo y ofrece un descuento cuando el cliente lo elija.
-              </Text>
-            </View>
-
-            <Switch
-              value={
-                modifierPromotionEnabled
-              }
-              onValueChange={
-                setModifierPromotionEnabled
-              }
-              trackColor={{
-                false:
-                  theme.border,
-
-                true:
-                  theme.primary,
-              }}
-              thumbColor={
-                modifierPromotionEnabled
-                  ? theme.onPrimary
-                  : theme.textMuted
-              }
-            />
-          </View>
-
-          <View
-            style={[
-              styles.fieldContainer,
-              {
-                borderTopColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.fieldLabel,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              Nombre visible
-            </Text>
-
-            <TextInput
-              value={
-                modifierPromotionName
-              }
-              onChangeText={
-                setModifierPromotionName
-              }
-              editable={
-                modifierPromotionEnabled
-              }
-              placeholder="Ej: Salsa de la Semana"
-              placeholderTextColor={
-                theme.textMuted
-              }
-              style={[
-                styles.input,
-                {
-                  width: '100%',
-                  borderColor:
-                    theme.border,
-                  backgroundColor:
-                    theme.surfaceAlt,
-                  color:
-                    theme.text,
-                },
-                !modifierPromotionEnabled &&
-                styles.inputDisabled,
-              ]}
-            />
-
-            <Text
-              style={[
-                styles.fieldHelp,
-                {
-                  color:
-                    theme.textMuted,
-                },
-              ]}
-            >
-              Este texto se mostrará al cliente, en el carrito y en el ticket.
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.fieldContainer,
-              {
-                borderTopColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.fieldLabel,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              Modificador
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.selector,
-                {
-                  borderColor:
-                    theme.border,
-
-                  backgroundColor:
-                    theme.surfaceAlt,
-                },
-
-                !modifierPromotionEnabled &&
-                styles.inputDisabled,
-              ]}
-              disabled={
-                !modifierPromotionEnabled
-              }
-              onPress={() =>
-                setModifierSelectorVisible(
-                  true,
-                )
-              }
-            >
-              <Text
-                style={[
-                  styles.selectorText,
-                  {
-                    color:
-                      theme.text,
-                  },
-
-                  !selectedPromotionModifier &&
-                  styles.selectorPlaceholder,
-                ]}
-              >
-                {selectedPromotionModifier
-                  ? `${selectedPromotionModifier.group_name} · ${selectedPromotionModifier.name}`
-                  : 'Seleccionar modificador'}
-              </Text>
-
-              <Text
-                style={[
-                  styles.selectorArrow,
-                  {
-                    color:
-                      theme.primary,
-                  },
-                ]}
-              >
-                ▼
-              </Text>
-            </TouchableOpacity>
-
-            <Text
-              style={[
-                styles.fieldHelp,
-                {
-                  color:
-                    theme.textMuted,
-                },
-              ]}
-            >
-              Se muestran modificadores disponibles pertenecientes a grupos activos.
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.fieldContainer,
-              {
-                borderTopColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.fieldLabel,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              Descuento
-            </Text>
-
-            <View
-              style={
-                styles.inlineFieldRow
-              }
-            >
-              <Text
-                style={[
-                  styles.currencySymbol,
-                  {
-                    color:
-                      theme.primary,
-                  },
-                ]}
-              >
-                {currencyCode}
-              </Text>
-
-              <TextInput
-                value={
-                  modifierPromotionDiscount
-                }
-                onChangeText={
-                  value =>
-                    setModifierPromotionDiscount(
-                      value.replace(
-                        ',',
-                        '.',
-                      ),
-                    )
-                }
-                keyboardType="decimal-pad"
-                editable={
-                  modifierPromotionEnabled
-                }
-                style={[
-                  styles.input,
-                  styles.discountInput,
-                  {
-                    borderColor:
-                      theme.border,
-
-                    backgroundColor:
-                      theme.surfaceAlt,
-
-                    color:
-                      theme.text,
-                  },
-
-                  !modifierPromotionEnabled &&
-                  styles.inputDisabled,
-                ]}
-              />
-
-            </View>
-
-            <Text
-              style={[
-                styles.fieldHelp,
-                {
-                  color:
-                    theme.textMuted,
-                },
-              ]}
-            >
-              Este descuento se aplicará una sola
-              vez por producto elegible.
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.fieldContainer,
-              {
-                borderTopColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.fieldLabel,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              Vigencia
-            </Text>
-
-            <View
-              style={
-                styles.dateRow
-              }
-            >
-              <View
-                style={
-                  styles.dateField
-                }
-              >
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    {
-                      color:
-                        theme.textMuted,
-                    },
-                  ]}
-                >
-                  Inicio
-                </Text>
-
-                <DateCalendarSelect
-                  value={
-                    modifierPromotionStartsAt
-                  }
-                  disabled={
-                    !modifierPromotionEnabled
-                  }
-                  onChange={
-                    setModifierPromotionStartsAt
-                  }
-                />
-              </View>
-
-              <View
-                style={
-                  styles.dateField
-                }
-              >
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    {
-                      color:
-                        theme.textMuted,
-                    },
-                  ]}
-                >
-                  Fin
-                </Text>
-
-                <DateCalendarSelect
-                  value={
-                    modifierPromotionEndsAt
-                  }
-                  disabled={
-                    !modifierPromotionEnabled
-                  }
-                  onChange={
-                    setModifierPromotionEndsAt
-                  }
-                />
-              </View>
-            </View>
-          </View>
-
-          {modifierPromotionEnabled &&
-            selectedPromotionModifier && (
-              <View
-                style={[
-                  styles.modifierPromotionPreview,
-                  {
-                    borderColor:
-                      theme.primary,
-
-                    backgroundColor:
-                      theme.surfaceAlt,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.modifierPromotionPreviewTitle,
-                    {
-                      color:
-                        theme.primary,
-                    },
-                  ]}
-                >
-                  🏷️ {modifierPromotionName.trim() || 'Promoción'}: {selectedPromotionModifier.name}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.modifierPromotionPreviewText,
-                    {
-                      color:
-                        theme.textMuted,
-                    },
-                  ]}
-                >
-                  El cliente recibe{' '}
-                  {formatCurrency(
-                    Number(
-                      modifierPromotionDiscount ||
-                      0,
-                    ),
-                  )}{' '}
-                  de descuento al elegir este modificador.
-                </Text>
-              </View>
-            )}
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            {
-              backgroundColor:
-                theme.primary,
-            },
-
-            isSaving &&
-            styles.saveButtonDisabled,
-          ]}
-          disabled={
-            isSaving
-          }
-          onPress={
-            handleSave
-          }
-        >
-          <Text
-            style={[
-              styles.saveButtonText,
-              {
-                color:
-                  theme.onPrimary,
-              },
-            ]}
-          >
-            {isSaving
-              ? 'GUARDANDO...'
-              : 'GUARDAR CONFIGURACIÓN'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      <Modal
-        visible={
-          modifierSelectorVisible
-        }
-        transparent
-        animationType="fade"
-        onRequestClose={() =>
-          setModifierSelectorVisible(
-            false,
-          )
-        }
-      >
-        <View
-          style={
-            styles.modalBackdrop
-          }
-        >
-          <View
-            style={[
-              styles.modalCard,
-              {
-                borderColor:
-                  theme.border,
-
-                backgroundColor:
-                  theme.surface,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.modalHeader,
-                {
-                  borderBottomColor:
-                    theme.border,
-                },
-              ]}
-            >
-              <View
-                style={
-                  styles.modalHeaderText
-                }
-              >
-                <Text
-                  style={[
-                    styles.modalTitle,
-                    {
-                      color:
-                        theme.text,
-                    },
-                  ]}
-                >
-                  Seleccionar modificador
-                </Text>
-
-                <Text
-                  style={[
-                    styles.modalSubtitle,
-                    {
-                      color:
-                        theme.textMuted,
-                    },
-                  ]}
-                >
-                  Elige cualquier modificador disponible para esta promoción.
-                </Text>
-              </View>
-
+        <View style={cardStyle}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {programs.map(program => (
               <TouchableOpacity
-                style={[
-                  styles.modalCloseButton,
-                  {
-                    backgroundColor:
-                      theme.surfaceAlt,
-                  },
-                ]}
-                onPress={() =>
-                  setModifierSelectorVisible(
-                    false,
-                  )
-                }
+                key={program.id}
+                onPress={() => selectProgram(program)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: selectedProgramId === program.id ? theme.primary : theme.surfaceAlt,
+                  borderWidth: 1,
+                  borderColor: selectedProgramId === program.id ? theme.primary : theme.border,
+                }}
               >
-                <Text
-                  style={[
-                    styles.modalCloseText,
-                    {
-                      color:
-                        theme.text,
-                    },
-                  ]}
-                >
-                  ✕
+                <Text style={{ color: selectedProgramId === program.id ? theme.onPrimary : theme.text }}>
+                  {program.displayName}
                 </Text>
               </TouchableOpacity>
-            </View>
+            ))}
 
-            <ScrollView
-              style={
-                styles.modifierList
-              }
-              contentContainerStyle={
-                styles.modifierListContent
-              }
-              keyboardShouldPersistTaps="handled"
+            <TouchableOpacity
+              onPress={startNewProgram}
+              style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: theme.primary }}
             >
-              {promotionModifiers.map(
-                modifier => {
-                  const selected =
-                    modifier.id ===
-                    modifierPromotionModifierId;
+              <Text style={{ color: theme.primary }}>＋ Nueva</Text>
+            </TouchableOpacity>
+          </View>
 
-                  return (
-                    <TouchableOpacity
-                      key={
-                        modifier.id
-                      }
-                      style={[
-                        styles.modifierOption,
-                        {
-                          borderColor:
-                            selected
-                              ? theme.primary
-                              : theme.border,
+          <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>
+            {draft.id ? 'Editar programa' : 'Nuevo programa'}
+          </Text>
 
-                          backgroundColor:
-                            selected
-                              ? theme.surfaceAlt
-                              : theme.surfaceAlt,
-                        },
-                      ]}
-                      onPress={() => {
-                        setModifierPromotionModifierId(
-                          modifier.id,
-                        );
+          <Text style={labelStyle}>Nombre visible</Text>
+          <TextInput value={draft.displayName} onChangeText={displayName => setDraft(current => ({ ...current, displayName }))} style={inputStyle} placeholder="Programa de cliente frecuente" placeholderTextColor={theme.textMuted} />
 
-                        setModifierSelectorVisible(
-                          false,
-                        );
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.modifierOptionText,
-                          {
-                            color:
-                              selected
-                                ? theme.primary
-                                : theme.text,
-                          },
-                        ]}
-                      >
-                        {modifier.group_name} · {modifier.name}
-                      </Text>
+          <Text style={labelStyle}>Código interno</Text>
+          <TextInput value={draft.code} onChangeText={code => setDraft(current => ({ ...current, code }))} style={inputStyle} autoCapitalize="none" placeholder="cliente_frecuente" placeholderTextColor={theme.textMuted} />
 
-                      {selected && (
-                        <Text
-                          style={[
-                            styles.modifierOptionCheck,
-                            {
-                              color:
-                                theme.primary,
-                            },
-                          ]}
-                        >
-                          ✓
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                },
-              )}
+          <Text style={labelStyle}>Tipo</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            {([
+              ['collect_reward', 'Acumular cupones'],
+              ['order_refund', 'Reembolso de compra'],
+            ] as const).map(([value, label]) => (
+              <TouchableOpacity
+                key={value}
+                onPress={() => setDraft(current => ({ ...current, programType: value }))}
+                style={{ flex: 1, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: draft.programType === value ? theme.primary : theme.border, backgroundColor: draft.programType === value ? theme.primary : theme.surfaceAlt }}
+              >
+                <Text style={{ textAlign: 'center', color: draft.programType === value ? theme.onPrimary : theme.text }}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={labelStyle}>Prefijo de códigos</Text>
+          <TextInput value={draft.codePrefix} onChangeText={codePrefix => setDraft(current => ({ ...current, codePrefix: codePrefix.toUpperCase().replace(/\s/g, '') }))} style={inputStyle} autoCapitalize="characters" placeholder="PROMO-" placeholderTextColor={theme.textMuted} />
+
+          <Text style={labelStyle}>1 cupón entre</Text>
+          <TextInput value={draft.issueChanceDenominator} onChangeText={issueChanceDenominator => setDraft(current => ({ ...current, issueChanceDenominator }))} style={inputStyle} keyboardType="number-pad" />
+          <Text style={{ color: theme.textMuted, marginTop: 5 }}>1 = siempre, 10 = 10%, 100 = 1%.</Text>
+
+          {draft.programType === 'collect_reward' && (
+            <>
+              <Text style={labelStyle}>Cupones necesarios para canjear</Text>
+              <TextInput value={draft.requiredCoupons} onChangeText={requiredCoupons => setDraft(current => ({ ...current, requiredCoupons }))} style={inputStyle} keyboardType="number-pad" />
+            </>
+          )}
+
+          <Text style={labelStyle}>Prioridad</Text>
+          <TextInput value={draft.priority} onChangeText={priority => setDraft(current => ({ ...current, priority }))} style={inputStyle} keyboardType="number-pad" />
+          <Text style={{ color: theme.textMuted, marginTop: 5 }}>Menor número = se evalúa primero al terminar una orden.</Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+            <Text style={{ color: theme.text, fontWeight: '600' }}>Programa activo</Text>
+            <Switch value={draft.isEnabled} onValueChange={isEnabled => setDraft(current => ({ ...current, isEnabled }))} trackColor={{ false: theme.border, true: theme.primary }} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+            <TouchableOpacity disabled={isSaving} onPress={() => void handleSaveProgram()} style={{ flex: 1, backgroundColor: theme.primary, borderRadius: 10, padding: 12 }}>
+              <Text style={{ color: theme.onPrimary, textAlign: 'center', fontWeight: '700' }}>{isSaving ? 'GUARDANDO...' : 'GUARDAR PROGRAMA'}</Text>
+            </TouchableOpacity>
+            {selectedProgram && (
+              <TouchableOpacity onPress={handleDeleteProgram} style={{ padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.danger }}>
+                <Text style={{ color: theme.danger }}>Eliminar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {selectedProgram?.programType === 'collect_reward' && (
+          <View style={cardStyle}>
+            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>Premios</Text>
+            <Text style={{ color: theme.textMuted, marginTop: 4, marginBottom: 12 }}>Los premios salen del catálogo del negocio.</Text>
+
+            {selectedProgram.rewards.map(reward => (
+              <View key={reward.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: theme.border, paddingVertical: 10 }}>
+                <Text style={{ color: theme.text, flex: 1 }}>{reward.displayName}</Text>
+                <TouchableOpacity onPress={() => removeReward(reward.id, reward.displayName)}>
+                  <Text style={{ color: theme.danger }}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <TouchableOpacity onPress={() => setProductSelectorVisible(true)} style={{ borderRadius: 10, borderWidth: 1, borderColor: theme.primary, padding: 12, marginTop: 12 }}>
+              <Text style={{ color: theme.primary, textAlign: 'center', fontWeight: '700' }}>＋ AGREGAR PRODUCTO COMO PREMIO</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={cardStyle}>
+          <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>Promoción de modificador</Text>
+          <Text style={{ color: theme.textMuted, marginTop: 4 }}>Esta promoción sigue siendo genérica y puede usar cualquier modificador activo.</Text>
+
+          <Text style={labelStyle}>Nombre visible</Text>
+          <TextInput value={modifierName} onChangeText={setModifierName} style={inputStyle} />
+
+          <Text style={labelStyle}>Modificador</Text>
+          <TouchableOpacity onPress={() => setModifierSelectorVisible(true)} style={inputStyle}>
+            <Text style={{ color: selectedModifier ? theme.text : theme.textMuted }}>
+              {selectedModifier ? `${selectedModifier.group_name} · ${selectedModifier.name}` : 'Seleccionar modificador'}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={labelStyle}>Descuento</Text>
+          <TextInput value={modifierDiscount} onChangeText={setModifierDiscount} style={inputStyle} keyboardType="decimal-pad" />
+          <Text style={{ color: theme.textMuted, marginTop: 5 }}>Actual: {formatCurrency(Number(modifierDiscount) || 0)}</Text>
+
+          <Text style={labelStyle}>Inicio (AAAA-MM-DD)</Text>
+          <TextInput value={modifierStartsAt} onChangeText={setModifierStartsAt} style={inputStyle} />
+          <Text style={labelStyle}>Fin (AAAA-MM-DD)</Text>
+          <TextInput value={modifierEndsAt} onChangeText={setModifierEndsAt} style={inputStyle} />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+            <Text style={{ color: theme.text, fontWeight: '600' }}>Promoción activa</Text>
+            <Switch value={modifierEnabled} onValueChange={setModifierEnabled} trackColor={{ false: theme.border, true: theme.primary }} />
+          </View>
+
+          <TouchableOpacity onPress={() => void handleSaveModifierPromotion()} style={{ backgroundColor: theme.primary, borderRadius: 10, padding: 12, marginTop: 18 }}>
+            <Text style={{ color: theme.onPrimary, textAlign: 'center', fontWeight: '700' }}>GUARDAR PROMOCIÓN DE MODIFICADOR</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <Modal visible={productSelectorVisible} transparent animationType="fade" onRequestClose={() => setProductSelectorVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ maxHeight: '80%', backgroundColor: theme.surface, borderRadius: 14, padding: 16 }}>
+            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700', marginBottom: 12 }}>Seleccionar producto</Text>
+            <ScrollView>
+              {products.map(product => (
+                <TouchableOpacity key={product.id} onPress={() => void addRewardForProduct(product)} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                  <Text style={{ color: theme.text }}>{product.name}</Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
+            <TouchableOpacity onPress={() => setProductSelectorVisible(false)} style={{ marginTop: 12, padding: 10 }}>
+              <Text style={{ color: theme.primary, textAlign: 'center' }}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modifierSelectorVisible} transparent animationType="fade" onRequestClose={() => setModifierSelectorVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ maxHeight: '80%', backgroundColor: theme.surface, borderRadius: 14, padding: 16 }}>
+            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700', marginBottom: 12 }}>Seleccionar modificador</Text>
+            <ScrollView>
+              {modifierOptions.map(option => (
+                <TouchableOpacity key={option.id} onPress={() => { setModifierId(option.id); setModifierSelectorVisible(false); }} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                  <Text style={{ color: theme.text }}>{option.group_name} · {option.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity onPress={() => setModifierSelectorVisible(false)} style={{ marginTop: 12, padding: 10 }}>
+              <Text style={{ color: theme.primary, textAlign: 'center' }}>Cerrar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

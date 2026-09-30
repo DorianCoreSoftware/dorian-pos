@@ -46,14 +46,11 @@ import {
 import {
   useAuth,
 } from '../../context/AuthContext';
-import { PromoReward } from '../../repositories/PromoRepository';
 import { useCurrency } from '../../hooks/useCurrency';
-import { PROMO_REWARD_OPTIONS, redeemDorian, redeemKongs } from '../../services/promoService';
+import { PromotionProgram } from '../../services/promoService';
 import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefundService';
-import {
-  getPromotionSettings,
-  PromotionSettings,
-} from '../../services/promotionService';
+import { getPromotionPrograms } from '../../services/promotionService';
+import { PromotionRedemptionPanel } from '../../components/promotions/PromotionRedemptionPanel';
 
 interface CashClosingScreenProps {
   cashSession:
@@ -74,8 +71,7 @@ interface CashClosingScreenProps {
 type CashView =
   | 'current'
   | 'history'
-  | 'kongs'
-  | 'dorian';
+  | 'promotions';
 
 type HistoryFilter =
   | 'today'
@@ -240,35 +236,9 @@ export function CashClosingScreen({
   );
 
   const [
-    kongCodes,
-    setKongCodes,
-  ] = useState<string[]>(
-    [],
-  );
-
-  const [
-    promotionSettings,
-    setPromotionSettings,
-  ] = useState<
-    PromotionSettings | null
-  >(null);
-
-  const [
-    selectedReward,
-    setSelectedReward,
-  ] = useState<PromoReward>(
-    'special_burger',
-  );
-
-  const [
-    dorianCode,
-    setDorianCode,
-  ] = useState('');
-
-  const [
-    isPromoProcessing,
-    setIsPromoProcessing,
-  ] = useState(false);
+    promotionPrograms,
+    setPromotionPrograms,
+  ] = useState<PromotionProgram[]>([]);
 
   const [
     refundSummary,
@@ -287,24 +257,24 @@ export function CashClosingScreen({
    * ============================
    */
 
-  const loadPromotionSettings =
+  const loadPromotionPrograms =
     useCallback(
       async (): Promise<void> => {
         try {
-          const settings =
-            await getPromotionSettings();
+          const programs =
+            await getPromotionPrograms();
 
-          setPromotionSettings(
-            settings,
+          setPromotionPrograms(
+            programs,
           );
         } catch (error) {
           console.error(
-            'Error loading promotion settings:',
+            'Error loading promotion programs:',
             error,
           );
 
-          setPromotionSettings(
-            null,
+          setPromotionPrograms(
+            [],
           );
         }
       },
@@ -437,68 +407,19 @@ export function CashClosingScreen({
   }, [loadSales]);
 
   useEffect(() => {
-    void loadPromotionSettings();
+    void loadPromotionPrograms();
   }, [
-    loadPromotionSettings,
-  ]);
-
-  useEffect(() => {
-    const requiredKongs =
-      promotionSettings
-        ?.required_kongs ??
-      0;
-
-    if (
-      requiredKongs <= 0
-    ) {
-      setKongCodes(
-        [],
-      );
-
-      return;
-    }
-
-    setKongCodes(
-      currentCodes =>
-        Array.from(
-          {
-            length:
-              requiredKongs,
-          },
-          (
-            _,
-            index,
-          ) =>
-            currentCodes[
-              index
-            ] ??
-            '',
-        ),
-    );
-  }, [
-    promotionSettings
-      ?.required_kongs,
+    loadPromotionPrograms,
   ]);
 
   useEffect(() => {
     if (
       activeView ===
-        'kongs' &&
-      promotionSettings &&
-      !promotionSettings
-        .kong_enabled
-    ) {
-      setActiveView(
-        'current',
-      );
-    }
-
-    if (
-      activeView ===
-        'dorian' &&
-      promotionSettings &&
-      !promotionSettings
-        .lucky_dorian_enabled
+        'promotions' &&
+      !promotionPrograms.some(
+        program =>
+          program.isEnabled,
+      )
     ) {
       setActiveView(
         'current',
@@ -506,7 +427,7 @@ export function CashClosingScreen({
     }
   }, [
     activeView,
-    promotionSettings,
+    promotionPrograms,
   ]);
 
   useEffect(() => {
@@ -1017,7 +938,7 @@ export function CashClosingScreen({
             expectedCash,
           )}`,
 
-          `Reembolsos Dorian en efectivo: ${formatMoney(
+          `Reembolsos promocionales en efectivo: ${formatMoney(
             -refundSummary.cash,
           )}`,
 
@@ -1177,7 +1098,7 @@ export function CashClosingScreen({
           fetchCashSession(),
           loadSales(),
           loadRefunds(),
-          loadPromotionSettings(),
+          loadPromotionPrograms(),
         ]);
       } finally {
         setIsProcessing(false);
@@ -1220,347 +1141,6 @@ export function CashClosingScreen({
       sanitized,
     );
   };
-
-  /*
- * ============================
- * PROMOCIONES
- * ============================
- */
-
-  const handleKongCodeChange = (
-    index: number,
-    value: string,
-  ): void => {
-    const normalizedValue =
-      value
-        .toUpperCase()
-        .replace(
-          /\s/g,
-          '',
-        );
-
-    setKongCodes(
-      (
-        currentCodes,
-      ) => {
-        const updatedCodes =
-          [
-            ...currentCodes,
-          ];
-
-        updatedCodes[
-          index
-        ] =
-          normalizedValue;
-
-        return updatedCodes;
-      },
-    );
-  };
-
-  const clearKongRedemption =
-    (): void => {
-      const requiredKongs =
-        promotionSettings
-          ?.required_kongs ??
-        0;
-
-      setKongCodes(
-        Array.from(
-          {
-            length:
-              requiredKongs,
-          },
-          () => '',
-        ),
-      );
-
-      setSelectedReward(
-        'special_burger',
-      );
-    };
-
-  const handleRedeemKongs =
-    (): void => {
-      if (
-        isPromoProcessing
-      ) {
-        return;
-      }
-
-      const reward =
-        PROMO_REWARD_OPTIONS.find(
-          (
-            option,
-          ) =>
-            option.value ===
-            selectedReward,
-        );
-
-      Alert.alert(
-        'Canjear Kongs',
-        [
-          `Se utilizarán los ${
-            promotionSettings
-              ?.required_kongs ??
-            kongCodes.length
-          } códigos ingresados.`,
-          '',
-          `Premio: ${reward?.label ??
-          'Premio'
-          }`,
-          '',
-          'Los códigos quedarán marcados como canjeados y no podrán volver a utilizarse.',
-        ].join(
-          '\n',
-        ),
-        [
-          {
-            text:
-              'Cancelar',
-
-            style:
-              'cancel',
-          },
-          {
-            text:
-              'Confirmar canje',
-
-            onPress:
-              () => {
-                void executeRedeemKongs();
-              },
-          },
-        ],
-      );
-    };
-
-  const executeRedeemKongs =
-    async (): Promise<void> => {
-      if (
-        isPromoProcessing
-      ) {
-        return;
-      }
-
-      try {
-        setIsPromoProcessing(
-          true,
-        );
-
-        await redeemKongs({
-          codes:
-            kongCodes,
-
-          reward:
-            selectedReward,
-        });
-
-        const reward =
-          PROMO_REWARD_OPTIONS.find(
-            (
-              option,
-            ) =>
-              option.value ===
-              selectedReward,
-          );
-
-        clearKongRedemption();
-
-        Alert.alert(
-          '✅ Canje realizado',
-          `Los ${
-            promotionSettings
-              ?.required_kongs ??
-            kongCodes.length
-          } Kongs fueron canjeados correctamente por:\n\n${reward?.label ??
-          'Premio'
-          }`,
-        );
-      } catch (error) {
-        console.error(
-          'Error al canjear Kongs:',
-          error,
-        );
-
-        Alert.alert(
-          'No se pudo realizar el canje',
-          error instanceof Error
-            ? error.message
-            : 'Ocurrió un error al validar los Kongs.',
-        );
-      } finally {
-        setIsPromoProcessing(
-          false,
-        );
-      }
-    };
-
-  const handleRedeemDorian =
-    (): void => {
-      if (
-        isPromoProcessing
-      ) {
-        return;
-      }
-
-      const normalizedCode =
-        dorianCode
-          .trim()
-          .toUpperCase();
-
-      if (
-        !normalizedCode
-      ) {
-        Alert.alert(
-          'Código requerido',
-          'Ingresa el código del Dorian de la Suerte.',
-        );
-
-        return;
-      }
-
-      if (
-        !normalizedCode.startsWith(
-          'BK-D',
-        )
-      ) {
-        Alert.alert(
-          'Código inválido',
-          'El código no corresponde a un Dorian de la Suerte.',
-        );
-
-        return;
-      }
-
-      Alert.alert(
-        'Validar Dorian',
-        [
-          `Código: ${normalizedCode}`,
-          '',
-          'Este cupón quedará marcado como canjeado.',
-          '',
-          '¿Deseas continuar?',
-        ].join(
-          '\n',
-        ),
-        [
-          {
-            text:
-              'Cancelar',
-
-            style:
-              'cancel',
-          },
-          {
-            text:
-              'Confirmar',
-
-            onPress:
-              () => {
-                void executeRedeemDorian();
-              },
-          },
-        ],
-      );
-    };
-
-  const executeRedeemDorian =
-    async (): Promise<void> => {
-      if (
-        isPromoProcessing
-      ) {
-        return;
-      }
-
-      try {
-        setIsPromoProcessing(
-          true,
-        );
-
-        const normalizedCode =
-          dorianCode
-            .trim()
-            .toUpperCase();
-
-        const result =
-          await redeemDorian(
-            normalizedCode,
-          );
-
-        setDorianCode(
-          '',
-        );
-
-        /*
-         * La RPC ya registró el
-         * reembolso dentro de la
-         * sesión de caja actual.
-         *
-         * Refrescamos el resumen para
-         * actualizar inmediatamente
-         * el efectivo esperado.
-         */
-        await loadRefunds();
-
-        const paymentMethodLabel =
-          result.paymentMethod ===
-            'cash'
-            ? 'EFECTIVO'
-            : 'TARJETA';
-
-        const refundInstruction =
-          result.paymentMethod ===
-            'cash'
-            ? [
-              '',
-              '💵 REEMBOLSO A ENTREGAR',
-              formatMoney(
-                result.amount,
-              ),
-              '',
-              'Entrega este monto al cliente en efectivo.',
-            ].join('\n')
-            : [
-              '',
-              '💳 REEMBOLSO',
-              formatMoney(
-                result.amount,
-              ),
-              '',
-              'Realiza la devolución por tarjeta.',
-            ].join('\n');
-
-        Alert.alert(
-          '🍀 Dorian de la Suerte',
-          [
-            'Código válido y canjeado correctamente.',
-            '',
-            `Compra original: ${formatMoney(
-              result.amount,
-            )}`,
-            `Forma de pago: ${paymentMethodLabel}`,
-            refundInstruction,
-          ].join('\n'),
-        );
-      } catch (error) {
-        console.error(
-          'Error al canjear Dorian:',
-          error,
-        );
-
-        Alert.alert(
-          'No se pudo canjear Dorian',
-          error instanceof Error
-            ? error.message
-            : 'Ocurrió un error al validar el código.',
-        );
-      } finally {
-        setIsPromoProcessing(
-          false,
-        );
-      }
-    };
 
   /*
    * ============================
@@ -1658,30 +1238,17 @@ export function CashClosingScreen({
             label:
               'HISTORIAL',
           },
-
           ...(
-            promotionSettings
-              ?.kong_enabled
+            promotionPrograms.some(
+              program =>
+                program.isEnabled,
+            )
               ? [
                 {
                   value:
-                    'kongs' as CashView,
+                    'promotions' as CashView,
                   label:
-                    'CANJEAR KONGS',
-                },
-              ]
-              : []
-          ),
-
-          ...(
-            promotionSettings
-              ?.lucky_dorian_enabled
-              ? [
-                {
-                  value:
-                    'dorian' as CashView,
-                  label:
-                    'DORIAN',
+                    'PROMOCIONES',
                 },
               ]
               : []
@@ -2562,7 +2129,7 @@ export function CashClosingScreen({
                 </DetailSection>
 
                 <DetailSection
-                  title="Reembolsos Dorian"
+                  title="Reembolsos promocionales"
                 >
                   <DetailRow
                     label="Reembolsos en efectivo"
@@ -2685,385 +2252,6 @@ export function CashClosingScreen({
     };
 
   /*
-* ============================
-* CANJE DE KONGS
-* ============================
-*/
-
-  const renderKongRedemption =
-    () => {
-      return (
-        <ScrollView
-          style={{
-            flex:
-              1,
-          }}
-          contentContainerStyle={
-            styles.promoScrollContent
-          }
-          showsVerticalScrollIndicator={
-            false
-          }
-          keyboardShouldPersistTaps="handled"
-        >
-          <View
-            style={[
-              styles.promoCard,
-
-              isPhone &&
-              styles.promoCardPhone,
-            ]}
-          >
-            <Text
-              style={
-                styles.promoTitle
-              }
-            >
-              🐾 Canjear Kongs
-            </Text>
-
-            <Text
-              style={
-                styles.promoSubtitle
-              }
-            >
-              Ingresa los{' '}
-              {promotionSettings
-                ?.required_kongs ??
-                0}{' '}
-              códigos impresos en los Kongs
-              del cliente.
-            </Text>
-
-            <View
-              style={[
-                styles.kongInputsGrid,
-
-                isPhone &&
-                styles.kongInputsGridPhone,
-              ]}
-            >
-              {kongCodes.map(
-                (
-                  code,
-                  index,
-                ) => (
-                  <View
-                    key={
-                      index
-                    }
-                    style={[
-                      styles.kongInputContainer,
-
-                      isPhone &&
-                      styles.kongInputContainerPhone,
-                    ]}
-                  >
-                    <Text
-                      style={
-                        styles.promoInputLabel
-                      }
-                    >
-                      Kong{' '}
-                      {index +
-                        1}
-                    </Text>
-
-                    <TextInput
-                      value={
-                        code
-                      }
-                      onChangeText={(
-                        value,
-                      ) =>
-                        handleKongCodeChange(
-                          index,
-                          value,
-                        )
-                      }
-                      editable={
-                        !isPromoProcessing
-                      }
-                      autoCapitalize="characters"
-                      autoCorrect={
-                        false
-                      }
-                      style={
-                        styles.promoInput
-                      }
-                      placeholder="BK-K..."
-                      placeholderTextColor="#666666"
-                    />
-                  </View>
-                ),
-              )}
-            </View>
-
-            <Text
-              style={
-                styles.promoSectionTitle
-              }
-            >
-              Selecciona el premio
-            </Text>
-
-            <View
-              style={[
-                styles.rewardGrid,
-
-                isPhone &&
-                styles.rewardGridPhone,
-              ]}
-            >
-              {PROMO_REWARD_OPTIONS.map(
-                (
-                  option,
-                ) => {
-                  const selected =
-                    option.value ===
-                    selectedReward;
-
-                  return (
-                    <TouchableOpacity
-                      key={
-                        option.value
-                      }
-                      style={[
-                        styles.rewardButton,
-
-                        isPhone &&
-                        styles.rewardButtonPhone,
-
-                        selected &&
-                        styles.rewardButtonActive,
-                      ]}
-                      disabled={
-                        isPromoProcessing
-                      }
-                      onPress={() =>
-                        setSelectedReward(
-                          option.value,
-                        )
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.rewardButtonText,
-
-                          selected &&
-                          styles.rewardButtonTextActive,
-                        ]}
-                      >
-                        {
-                          option.label
-                        }
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                },
-              )}
-            </View>
-
-            <View
-              style={
-                styles.promoWarning
-              }
-            >
-              <Text
-                style={
-                  styles.promoWarningText
-                }
-              >
-                Los{' '}
-                {promotionSettings
-                  ?.required_kongs ??
-                  0}{' '}
-                códigos deben ser diferentes,
-                válidos y no haber sido
-                utilizados anteriormente.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.promoPrimaryButton,
-
-                isPromoProcessing &&
-                styles.buttonDisabled,
-              ]}
-              disabled={
-                isPromoProcessing
-              }
-              onPress={
-                handleRedeemKongs
-              }
-            >
-              <Text
-                style={
-                  styles.promoPrimaryButtonText
-                }
-              >
-                {isPromoProcessing
-                  ? 'VALIDANDO...'
-                  : 'VALIDAR Y CANJEAR'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      );
-    };
-
-  /*
- * ============================
- * DORIAN DE LA SUERTE
- * ============================
- */
-
-  const renderDorianRedemption =
-    () => {
-      return (
-        <ScrollView
-          style={{
-            flex:
-              1,
-          }}
-          contentContainerStyle={
-            styles.promoScrollContent
-          }
-          keyboardShouldPersistTaps="handled"
-        >
-          <View
-            style={[
-              styles.promoCard,
-              styles.dorianCard,
-
-              isPhone &&
-              styles.promoCardPhone,
-            ]}
-          >
-            <Text
-              style={
-                styles.promoTitle
-              }
-            >
-              🍀 Dorian de la Suerte
-            </Text>
-
-            <Text
-              style={
-                styles.promoSubtitle
-              }
-            >
-              Ingresa el código impreso
-              en el Dorian presentado por
-              el cliente.
-            </Text>
-
-            <Text
-              style={
-                styles.promoInputLabel
-              }
-            >
-              Código Dorian
-            </Text>
-
-            <TextInput
-              value={
-                dorianCode
-              }
-              onChangeText={(
-                value,
-              ) =>
-                setDorianCode(
-                  value
-                    .toUpperCase()
-                    .replace(
-                      /\s/g,
-                      '',
-                    ),
-                )
-              }
-              autoCapitalize="characters"
-              autoCorrect={
-                false
-              }
-              style={
-                styles.promoInput
-              }
-              placeholder="BK-D..."
-              placeholderTextColor="#666666"
-            />
-
-            <View
-              style={
-                styles.dorianNotice
-              }
-            >
-              <Text
-                style={
-                  styles.dorianNoticeTitle
-                }
-              >
-                🎉 TU COMPRA ES GRATIS
-              </Text>
-
-              <Text
-                style={
-                  styles.dorianNoticeText
-                }
-              >
-                Al validar el Dorian, el
-                sistema consultará la compra
-                original y te indicará el
-                monto exacto a devolver y
-                su forma de pago.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.promoPrimaryButton,
-
-                (
-                  !dorianCode
-                    .trim()
-                    .toUpperCase()
-                    .startsWith(
-                      'BK-D',
-                    ) ||
-                  isPromoProcessing
-                ) &&
-                styles.buttonDisabled,
-              ]}
-              disabled={
-                !dorianCode
-                  .trim()
-                  .toUpperCase()
-                  .startsWith(
-                    'BK-D',
-                  ) ||
-                isPromoProcessing
-              }
-              onPress={
-                handleRedeemDorian
-              }
-            >
-              <Text
-                style={
-                  styles.promoPrimaryButtonText
-                }
-              >
-                {isPromoProcessing
-                  ? 'VALIDANDO...'
-                  : 'VALIDAR DORIAN'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      );
-    };
-
-  /*
    * ============================
    * VISTA HISTORIAL
    * ============================
@@ -3071,9 +2259,7 @@ export function CashClosingScreen({
 
   if (
     activeView ===
-      'kongs' &&
-    promotionSettings
-      ?.kong_enabled
+      'promotions'
   ) {
     return (
       <View
@@ -3086,32 +2272,18 @@ export function CashClosingScreen({
       >
         {renderNavigation()}
 
-        {renderKongRedemption()}
+        <PromotionRedemptionPanel
+          programs={
+            promotionPrograms
+          }
+          onRefundRedeemed={
+            loadRefunds
+          }
+        />
       </View>
     );
   }
 
-  if (
-    activeView ===
-      'dorian' &&
-    promotionSettings
-      ?.lucky_dorian_enabled
-  ) {
-    return (
-      <View
-        style={[
-          styles.container,
-
-          isPhone &&
-          styles.containerPhone,
-        ]}
-      >
-        {renderNavigation()}
-
-        {renderDorianRedemption()}
-      </View>
-    );
-  }
   if (
     activeView ===
     'history'
@@ -3446,9 +2618,8 @@ export function CashClosingScreen({
                 styles.totalSales
               }
             >
-              Total vendido: $
-              {summary.total.toFixed(
-                2,
+              Total vendido: {formatMoney(
+                summary.total,
               )}
             </Text>
           </View>
@@ -3520,7 +2691,7 @@ export function CashClosingScreen({
                       styles.calculationLabel
                     }
                   >
-                    - Reembolsos Dorian
+                    - Reembolsos promocionales
                     en efectivo
                   </Text>
 
@@ -3547,7 +2718,7 @@ export function CashClosingScreen({
                         styles.calculationLabel
                       }
                     >
-                      - Reembolsos Dorian
+                      - Reembolsos promocionales
                       en tarjeta
                     </Text>
 

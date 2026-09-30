@@ -14,10 +14,9 @@ import { KitchenOrder, PaymentMethod } from '../types';
 
 import {
   BURGER_KONG_LOGO,
-  BURGER_KONG_PROMO,
-  LUCKY_DORIAN,
 } from '../generated/printerAssets';
 import { PromoCoupon } from './promoService';
+import { getPromotionPrograms } from './promotionService';
 import { fetchOrderModifierPromotionDiscounts } from '../repositories/OrderRepository';
 
 import {
@@ -1160,10 +1159,6 @@ async function printPromoCoupon(
   promoCoupon:
     PromoCoupon,
 ): Promise<void> {
-  /*
-   * Una sola línea de separación
-   * entre el ticket y el cupón.
-   */
   await printer.write(
     '\n',
   );
@@ -1177,176 +1172,80 @@ async function printPromoCoupon(
     separator(),
   );
 
-  if (
-    promoCoupon.couponType ===
-    'lucky_dorian'
-  ) {
-    await printLuckyDorianCoupon(
-      printer,
-      promoCoupon,
+  const programs =
+    await getPromotionPrograms();
+
+  const program =
+    programs.find(
+      item =>
+        item.id ===
+        promoCoupon.programId,
     );
 
-    return;
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    `${promoCoupon.programName.toUpperCase()}\n`,
+  );
+
+  await printer.write(
+    `${promoCoupon.code}\n`,
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  if (
+    promoCoupon.programType ===
+    'collect_reward'
+  ) {
+    const required =
+      promoCoupon.requiredCoupons ??
+      program?.requiredCoupons ??
+      1;
+
+    await printer.write(
+      `JUNTA ${required} CUPONES Y CANJEA POR:\n`,
+    );
+
+    for (
+      const reward of
+      program?.rewards ?? []
+    ) {
+      await printer.write(
+        `${reward.displayName.toUpperCase()}\n`,
+      );
+    }
+
+    await printer.write(
+      'CONSERVA TUS CUPONES Y CODIGOS\n',
+    );
+
+    await printer.write(
+      'CODIGOS REPETIDOS NO APLICAN\n',
+    );
+  } else {
+    await printer.write(
+      'PRESENTA ESTE CUPON EN CAJA\n',
+    );
+
+    await printer.write(
+      'BENEFICIO: REEMBOLSO DE COMPRA\n',
+    );
+
+    await printer.write(
+      'CONSERVA EL CUPON Y SU CODIGO\n',
+    );
+
+    await printer.write(
+      'NO ACUMULABLE CON OTRAS PROMOS\n',
+    );
   }
-
-  await printKongCoupon(
-    printer,
-    promoCoupon,
-  );
-}
-
-async function printKongCoupon(
-  printer:
-    BluetoothDevice,
-  promoCoupon:
-    PromoCoupon,
-): Promise<void> {
-  await setAlignment(
-    printer,
-    'center',
-  );
-
-  await setBold(
-    printer,
-    true,
-  );
-
-  await printer.write(
-    'RECORTA TU KONG\n',
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
-  /*
-   * BURGER_KONG_PROMO se genera
-   * ahora a un ancho menor desde
-   * generatePrinterAssets.js.
-   */
-  await printRasterImage(
-    printer,
-    BURGER_KONG_PROMO,
-  );
-
-  /*
-   * El código sustituye a los
-   * textos separados "KONG" y
-   * "CODIGO" del formato anterior.
-   */
-  await setBold(
-    printer,
-    true,
-  );
-
-  await printer.write(
-    `${promoCoupon.code}\n`,
-  );
-
-  await printer.write(
-    'JUNTA 5 KONGS Y CANJEA POR:\n',
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
-  await printer.write(
-    'HAMBURGUESA ESPECIAL\n',
-  );
-
-  await printer.write(
-    'BONELESS 150 G | ALITAS 6 PZAS\n',
-  );
-
-  await printer.write(
-    'PAPAS GRANDES | MALTEADA KONG\n',
-  );
-
-  await printer.write(
-    'CONSERVA TU KONG Y SU CODIGO\n',
-  );
-
-  await printer.write(
-    'CODIGOS REPETIDOS NO APLICAN\n',
-  );
-
-  await printer.write(
-    separator(),
-  );
-}
-
-async function printLuckyDorianCoupon(
-  printer: BluetoothDevice,
-  promoCoupon: PromoCoupon,
-): Promise<void> {
-  await setAlignment(
-    printer,
-    'center',
-  );
-
-  await setBold(
-    printer,
-    true,
-  );
-
-  await printer.write(
-    'DORIAN DE LA SUERTE\n',
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
-  await printRasterImage(
-    printer,
-    LUCKY_DORIAN,
-  );
-
-  await setBold(
-    printer,
-    true,
-  );
-
-  await printer.write(
-    'FELICIDADES!\n',
-  );
-
-  await printer.write(
-    'TU COMPRA ES GRATIS\n',
-  );
-
-  /*
-   * El código reemplaza
-   * el bloque "CODIGO".
-   */
-  await printer.write(
-    `${promoCoupon.code}\n`,
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
-  await printer.write(
-    'PRESENTA ESTE CUPON EN CAJA\n',
-  );
-
-  await printer.write(
-    'CONSERVA EL CUPON Y SU CODIGO\n',
-  );
-
-  await printer.write(
-    'CODIGOS REPETIDOS NO APLICAN\n',
-  );
-
-  await printer.write(
-    'NO ACUMULABLE CON OTRAS PROMOS\n',
-  );
 
   await printer.write(
     separator(),

@@ -302,7 +302,7 @@ export function AdminBusinessSettings() {
               value,
             )
           }
-          placeholder="Ej. Burger Kong"
+          placeholder="Ej. Mi negocio"
           theme={theme}
         />
 

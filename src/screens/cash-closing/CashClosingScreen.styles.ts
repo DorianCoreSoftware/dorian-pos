@@ -854,35 +854,6 @@ promoSubtitle: {
     20,
 },
 
-kongInputsGrid: {
-  flexDirection:
-    'row',
-
-  flexWrap:
-    'wrap',
-
-  gap:
-    12,
-},
-
-kongInputsGridPhone: {
-  flexDirection:
-    'column',
-
-  gap:
-    8,
-},
-
-kongInputContainer: {
-  width:
-    '48%',
-},
-
-kongInputContainerPhone: {
-  width:
-    '100%',
-},
-
 promoInputLabel: {
   color:
     '#CCCCCC',
@@ -1091,61 +1062,6 @@ promoPrimaryButtonText: {
     '900',
 },
 
-dorianCard: {
-  maxWidth:
-    650,
-},
-
-dorianNotice: {
-  marginTop:
-    18,
-
-  padding:
-    16,
-
-  borderRadius:
-    10,
-
-  borderWidth:
-    1,
-
-  borderColor:
-    '#4CAF50',
-
-  backgroundColor:
-    '#172A18',
-},
-
-dorianNoticeTitle: {
-  color:
-    '#4CAF50',
-
-  fontSize:
-    18,
-
-  fontWeight:
-    '900',
-
-  textAlign:
-    'center',
-},
-
-dorianNoticeText: {
-  color:
-    '#CCCCCC',
-
-  fontSize:
-    12,
-
-  lineHeight:
-    18,
-
-  marginTop:
-    8,
-
-  textAlign:
-    'center',
-},
   });
 
 export let styles =
