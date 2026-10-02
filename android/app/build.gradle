@@ -88,13 +88,18 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.burgerkong.pos'
+    namespace 'com.doriancore.pos'
 
 def isDevBuild = System.getenv("APP_VARIANT") == "development"
+def configuredApplicationId = (System.getenv("DORIAN_ANDROID_APPLICATION_ID") ?: "com.burgerkong.pos").trim()
+
+if (!(configuredApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
+    throw new GradleException("DORIAN_ANDROID_APPLICATION_ID no es un applicationId Android válido: ${configuredApplicationId}")
+}
 
 defaultConfig {
 
-    applicationId 'com.burgerkong.pos'
+    applicationId configuredApplicationId
 
     if (isDevBuild) {
         applicationIdSuffix '.dev'

@@ -1,8 +1,24 @@
+import {
+  DORIAN_STORAGE_KEYS,
+  LEGACY_STORAGE_KEYS,
+  getMigratedStorageItem,
+  removeMigratedStorageItem,
+  setMigratedStorageItem,
+} from '../../Utils/storageMigration';
+
 const RECENT_WEB_ORDER_TRACKING_CODES_KEY =
-  'burger-kong:recent-web-order-tracking-codes';
+  DORIAN_STORAGE_KEYS.recentWebOrderTrackingCodes;
 
 const LAST_WEB_ORDER_TRACKING_CODE_KEY =
-  'burger-kong:last-web-order-tracking-code';
+  DORIAN_STORAGE_KEYS.lastWebOrderTrackingCode;
+
+const LEGACY_RECENT_KEYS = [
+  LEGACY_STORAGE_KEYS.recentWebOrderTrackingCodes,
+] as const;
+
+const LEGACY_LAST_KEYS = [
+  LEGACY_STORAGE_KEYS.lastWebOrderTrackingCode,
+] as const;
 
 const MAX_RECENT_ORDERS =
   3;
@@ -39,7 +55,8 @@ function saveRecentCodes(
   }
 
   try {
-    window.localStorage.setItem(
+    setMigratedStorageItem(
+      window.localStorage,
       RECENT_WEB_ORDER_TRACKING_CODES_KEY,
       JSON.stringify(
         trackingCodes.slice(
@@ -47,6 +64,7 @@ function saveRecentCodes(
           MAX_RECENT_ORDERS,
         ),
       ),
+      LEGACY_RECENT_KEYS,
     );
   } catch {
     // El navegador puede bloquear localStorage.
@@ -64,8 +82,10 @@ export function getRecentWebOrderTrackingCodes():
 
   try {
     const value =
-      window.localStorage.getItem(
+      getMigratedStorageItem(
+        window.localStorage,
         RECENT_WEB_ORDER_TRACKING_CODES_KEY,
+        LEGACY_RECENT_KEYS,
       );
 
     if (value) {
@@ -112,8 +132,10 @@ export function getRecentWebOrderTrackingCodes():
      * el sistema anterior de un solo pedido.
      */
     const previousValue =
-      window.localStorage.getItem(
+      getMigratedStorageItem(
+        window.localStorage,
         LAST_WEB_ORDER_TRACKING_CODE_KEY,
+        LEGACY_LAST_KEYS,
       );
 
     const previousCode =
@@ -173,18 +195,16 @@ export function saveWebOrderTrackingCode(
     next,
   );
 
-  /*
-   * Conservamos también la clave antigua
-   * por compatibilidad.
-   */
   try {
     if (
       typeof window !==
       'undefined'
     ) {
-      window.localStorage.setItem(
+      setMigratedStorageItem(
+        window.localStorage,
         LAST_WEB_ORDER_TRACKING_CODE_KEY,
         normalized,
+        LEGACY_LAST_KEYS,
       );
     }
   } catch {
@@ -225,12 +245,16 @@ export function clearLastWebOrderTrackingCode():
   }
 
   try {
-    window.localStorage.removeItem(
+    removeMigratedStorageItem(
+      window.localStorage,
       LAST_WEB_ORDER_TRACKING_CODE_KEY,
+      LEGACY_LAST_KEYS,
     );
 
-    window.localStorage.removeItem(
+    removeMigratedStorageItem(
+      window.localStorage,
       RECENT_WEB_ORDER_TRACKING_CODES_KEY,
+      LEGACY_RECENT_KEYS,
     );
   } catch {
     // Sin acción.

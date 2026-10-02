@@ -1,4 +1,4 @@
-package com.burgerkong.pos
+package com.doriancore.pos
 
 import android.os.Build
 import android.os.Bundle

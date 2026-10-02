@@ -10,6 +10,9 @@ import {
   AppState,
   AppStateStatus,
 } from 'react-native';
+import { DORIAN_STORAGE_KEYS, LEGACY_STORAGE_KEYS, setMigratedStorageItem, removeMigratedStorageItem, getMigratedStorageItem } from '../Utils/storageMigration';
+
+
 
 const INACTIVITY_LIMIT_MS =
   2 * 60 * 60 * 1000;
@@ -18,10 +21,18 @@ const CHECK_INTERVAL_MS =
   60 * 1000;
 
 const LAST_ACTIVITY_KEY =
-  'burger-kong-last-activity';
+  DORIAN_STORAGE_KEYS.sessionLastActivity;
 
 const ACTIVE_USER_KEY =
-  'burger-kong-active-user';
+  DORIAN_STORAGE_KEYS.sessionActiveUser;
+
+const LEGACY_LAST_ACTIVITY_KEYS = [
+  LEGACY_STORAGE_KEYS.sessionLastActivity,
+] as const;
+
+const LEGACY_ACTIVE_USER_KEYS = [
+  LEGACY_STORAGE_KEYS.sessionActiveUser,
+] as const;
 
 interface UseSessionInactivityParams {
   userId: string | null;
@@ -44,14 +55,18 @@ export function useSessionInactivity({
       const now =
         Date.now().toString();
 
-      globalThis.localStorage.setItem(
+      setMigratedStorageItem(
+        globalThis.localStorage,
         LAST_ACTIVITY_KEY,
         now,
+        LEGACY_LAST_ACTIVITY_KEYS,
       );
 
-      globalThis.localStorage.setItem(
+      setMigratedStorageItem(
+        globalThis.localStorage,
         ACTIVE_USER_KEY,
         userId,
+        LEGACY_ACTIVE_USER_KEYS,
       );
     }, [
       userId,
@@ -59,12 +74,16 @@ export function useSessionInactivity({
 
   const clearActivity =
     useCallback((): void => {
-      globalThis.localStorage.removeItem(
+      removeMigratedStorageItem(
+        globalThis.localStorage,
         LAST_ACTIVITY_KEY,
+        LEGACY_LAST_ACTIVITY_KEYS,
       );
 
-      globalThis.localStorage.removeItem(
+      removeMigratedStorageItem(
+        globalThis.localStorage,
         ACTIVE_USER_KEY,
+        LEGACY_ACTIVE_USER_KEYS,
       );
     }, []);
 
@@ -79,18 +98,22 @@ export function useSessionInactivity({
         }
 
         const storedUserId =
-          globalThis.localStorage.getItem(
+          getMigratedStorageItem(
+            globalThis.localStorage,
             ACTIVE_USER_KEY,
+            LEGACY_ACTIVE_USER_KEYS,
           );
 
         const lastActivityValue =
-          globalThis.localStorage.getItem(
+          getMigratedStorageItem(
+            globalThis.localStorage,
             LAST_ACTIVITY_KEY,
+            LEGACY_LAST_ACTIVITY_KEYS,
           );
 
         if (
           storedUserId !==
-            userId ||
+          userId ||
           !lastActivityValue
         ) {
           registerActivity();
@@ -158,8 +181,10 @@ export function useSessionInactivity({
     }
 
     const storedUserId =
-      globalThis.localStorage.getItem(
+      getMigratedStorageItem(
+        globalThis.localStorage,
         ACTIVE_USER_KEY,
+        LEGACY_ACTIVE_USER_KEYS,
       );
 
     if (
