@@ -19,6 +19,71 @@ const createStyles = (
             paddingBottom: 40,
         },
 
+
+        pageHeader: {
+            marginBottom: 18,
+        },
+
+        pageTitle: {
+            color: '#FFFFFF',
+            fontSize: 24,
+            fontWeight: '900',
+        },
+
+        pageSubtitle: {
+            color: '#8D8D8D',
+            fontSize: 12,
+            lineHeight: 18,
+            marginTop: 5,
+            maxWidth: 720,
+        },
+
+        controlsGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginBottom: 16,
+        },
+
+        activeReportHeader: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 14,
+            paddingVertical: 12,
+            marginBottom: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#292929',
+        },
+
+        activeReportTitle: {
+            color: '#FFFFFF',
+            fontSize: 18,
+            fontWeight: '900',
+        },
+
+        activeReportDescription: {
+            color: '#858585',
+            fontSize: 11,
+            lineHeight: 16,
+            marginTop: 4,
+        },
+
+        activeReportPeriod: {
+            color: primaryColor,
+            fontSize: 11,
+            fontWeight: '900',
+            paddingTop: 3,
+        },
+
+        sectionHint: {
+            color: '#858585',
+            fontSize: 11,
+            lineHeight: 16,
+            marginTop: -5,
+            marginBottom: 10,
+        },
+
         loadingContainer: {
             flex: 1,
             alignItems: 'center',
@@ -585,6 +650,136 @@ const createStyles = (
             height: '100%',
             borderRadius: 4,
             backgroundColor: primaryColor,
+        },
+
+        promotionSummaryGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginBottom: 18,
+        },
+
+        promotionReportSubtitle: {
+            color: '#8C8C8C',
+            fontSize: 11,
+            lineHeight: 16,
+            marginTop: -4,
+            marginBottom: 14,
+        },
+
+        promotionList: {
+            gap: 12,
+        },
+
+        promotionEventCard: {
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: '#343434',
+            backgroundColor: '#202020',
+            padding: 14,
+        },
+
+        promotionEventHeader: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 10,
+            marginBottom: 12,
+        },
+
+        promotionEventName: {
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: '900',
+        },
+
+        promotionEventDate: {
+            color: '#888888',
+            fontSize: 10,
+            marginTop: 3,
+        },
+
+        promotionTypeBadge: {
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: primaryColor,
+            paddingHorizontal: 9,
+            paddingVertical: 5,
+            backgroundColor: '#262626',
+        },
+
+        promotionTypeText: {
+            color: primaryColor,
+            fontSize: 9,
+            fontWeight: '900',
+        },
+
+        promotionDetailRow: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            paddingVertical: 7,
+            borderTopWidth: 1,
+            borderTopColor: '#2D2D2D',
+            gap: 12,
+        },
+
+        promotionDetailLabel: {
+            width: 80,
+            color: '#888888',
+            fontSize: 10,
+            fontWeight: '800',
+        },
+
+        promotionDetailValue: {
+            flex: 1,
+            color: '#EAEAEA',
+            fontSize: 11,
+            fontWeight: '700',
+            lineHeight: 16,
+        },
+
+        promotionEventFooter: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 10,
+            paddingTop: 10,
+            borderTopWidth: 1,
+            borderTopColor: '#343434',
+        },
+
+        promotionEventApplications: {
+            color: '#9A9A9A',
+            fontSize: 10,
+            fontWeight: '700',
+        },
+
+        promotionEventAmount: {
+            color: primaryColor,
+            fontSize: 11,
+            fontWeight: '900',
+            textAlign: 'right',
+        },
+
+        promotionEmpty: {
+            alignItems: 'center',
+            paddingVertical: 28,
+            paddingHorizontal: 16,
+        },
+
+        promotionEmptyTitle: {
+            color: '#DDDDDD',
+            fontSize: 13,
+            fontWeight: '900',
+        },
+
+        promotionEmptyText: {
+            color: '#777777',
+            fontSize: 11,
+            lineHeight: 16,
+            textAlign: 'center',
+            marginTop: 5,
+            maxWidth: 420,
         },
     });
 

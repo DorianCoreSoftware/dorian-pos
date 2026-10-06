@@ -366,3 +366,83 @@ export async function getDailySalesReport(
     }),
   );
 }
+/**
+ * Evento genérico de promoción para reportes administrativos.
+ * Incluye canjes de programas configurables y descuentos de
+ * promociones de modificadores.
+ */
+export interface PromotionActivityReport {
+  event_id: string;
+  event_at: string;
+  promotion_id: string | null;
+  promotion_name: string;
+  promotion_type:
+    | 'collect_reward'
+    | 'order_refund'
+    | 'modifier_discount'
+    | string;
+  benefit_name: string | null;
+  codes: string | null;
+  order_references: string | null;
+  amount: number;
+  applications_count: number;
+  user_name: string | null;
+}
+
+interface PromotionActivityReportRow {
+  event_id: string;
+  event_at: string;
+  promotion_id: string | null;
+  promotion_name: string;
+  promotion_type: string;
+  benefit_name: string | null;
+  codes: string | null;
+  order_references: string | null;
+  amount: string | number | null;
+  applications_count: string | number | null;
+  user_name: string | null;
+}
+
+/**
+ * Obtiene el historial unificado de promociones dentro del rango.
+ */
+export async function getPromotionActivityReport(
+  from: Date,
+  to: Date,
+): Promise<PromotionActivityReport[]> {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'get_promotion_activity_report',
+    {
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    },
+  );
+
+  if (error) {
+    console.error(
+      'Error fetching promotion activity report:',
+      error,
+    );
+
+    throw error;
+  }
+
+  return ((data ?? []) as PromotionActivityReportRow[]).map(
+    row => ({
+      event_id: row.event_id,
+      event_at: row.event_at,
+      promotion_id: row.promotion_id,
+      promotion_name: row.promotion_name,
+      promotion_type: row.promotion_type,
+      benefit_name: row.benefit_name,
+      codes: row.codes,
+      order_references: row.order_references,
+      amount: Number(row.amount ?? 0),
+      applications_count: Number(row.applications_count ?? 0),
+      user_name: row.user_name,
+    }),
+  );
+}

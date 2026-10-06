@@ -23,9 +23,11 @@ import {
     getDailySalesReport,
     getModifierSalesReport,
     getProductSalesReport,
+    getPromotionActivityReport,
     getSalesReportSummary,
     ModifierSalesReport,
     ProductSalesReport,
+    PromotionActivityReport,
     SalesReportSummary,
 } from '../../../services/reportService';
 
@@ -38,6 +40,11 @@ import {
     styles,
   setBrandPrimaryColor,
 } from './AdminReports.styles';
+
+import {
+    AdminReportSelect,
+    AdminReportSelectOption,
+} from './AdminReportSelect';
 
 import {
     useCurrency,
@@ -98,7 +105,7 @@ export function AdminReports() {
         activeSection,
         setActiveSection,
     ] = useState<ReportSection>(
-        'products',
+        'overview',
     );
 
     const [
@@ -126,6 +133,11 @@ export function AdminReports() {
     ] = useState<
         Record<string, ModifierSalesReport[]>
     >({});
+
+    const [
+        promotionActivities,
+        setPromotionActivities,
+    ] = useState<PromotionActivityReport[]>([]);
 
     const [
         isLoading,
@@ -226,6 +238,7 @@ export function AdminReports() {
                         summaryData,
                         productData,
                         dailySalesData,
+                        promotionActivityData,
                         modifierReportEntries,
                     ] =
                         await Promise.all([
@@ -241,6 +254,11 @@ export function AdminReports() {
                             ),
 
                             getDailySalesReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getPromotionActivityReport(
                                 dateRange.from,
                                 dateRange.to,
                             ),
@@ -270,6 +288,10 @@ export function AdminReports() {
 
                     setDailySales(
                         dailySalesData,
+                    );
+
+                    setPromotionActivities(
+                        promotionActivityData,
                     );
 
                     setModifierGroups(
@@ -350,76 +372,139 @@ export function AdminReports() {
             ],
         );
 
-    const renderFilterButton = (
-        filter: DateFilter,
-        label: string,
-    ) => {
-        const active =
-            dateFilter === filter;
+    const promotionSummary =
+        useMemo(
+            () => {
+                let collectRedemptions = 0;
+                let refundRedemptions = 0;
+                let refundAmount = 0;
+                let modifierDiscountAmount = 0;
 
-        return (
-            <TouchableOpacity
-                style={[
-                    styles.filterButton,
+                promotionActivities.forEach(
+                    event => {
+                        if (
+                            event.promotion_type ===
+                            'collect_reward'
+                        ) {
+                            collectRedemptions += 1;
+                        } else if (
+                            event.promotion_type ===
+                            'order_refund'
+                        ) {
+                            refundRedemptions += 1;
+                            refundAmount +=
+                                event.amount;
+                        } else if (
+                            event.promotion_type ===
+                            'modifier_discount'
+                        ) {
+                            modifierDiscountAmount +=
+                                event.amount;
+                        }
+                    },
+                );
 
-                    active &&
-                    styles.filterButtonActive,
-                ]}
-                onPress={() =>
-                    setDateFilter(
-                        filter,
-                    )
-                }
-            >
-                <Text
-                    style={[
-                        styles.filterButtonText,
-
-                        active &&
-                        styles.filterButtonTextActive,
-                    ]}
-                >
-                    {label}
-                </Text>
-            </TouchableOpacity>
+                return {
+                    collectRedemptions,
+                    refundRedemptions,
+                    refundAmount,
+                    modifierDiscountAmount,
+                };
+            },
+            [promotionActivities],
         );
-    };
 
-    const renderSectionButton = (
-        section: ReportSection,
-        label: string,
-    ) => {
-        const active =
-            activeSection ===
-            section;
 
-        return (
-            <TouchableOpacity
-                style={[
-                    styles.sectionButton,
-
-                    active &&
-                    styles.sectionButtonActive,
-                ]}
-                onPress={() =>
-                    setActiveSection(
-                        section,
-                    )
-                }
-            >
-                <Text
-                    style={[
-                        styles.sectionButtonText,
-
-                        active &&
-                        styles.sectionButtonTextActive,
-                    ]}
-                >
-                    {label}
-                </Text>
-            </TouchableOpacity>
+    const dateOptions =
+        useMemo<AdminReportSelectOption[]>(
+            () => [
+                {
+                    value: 'today',
+                    label: 'Hoy',
+                    description: 'Ventas y actividad de hoy.',
+                },
+                {
+                    value: 'week',
+                    label: 'Últimos 7 días',
+                    description: 'Incluye hoy y los seis días anteriores.',
+                },
+                {
+                    value: 'month',
+                    label: 'Este mes',
+                    description: 'Desde el primer día del mes actual.',
+                },
+                {
+                    value: 'year',
+                    label: 'Este año',
+                    description: 'Desde el 1 de enero hasta hoy.',
+                },
+                {
+                    value: 'custom',
+                    label: 'Personalizado',
+                    description: 'Selecciona una fecha inicial y final.',
+                },
+            ],
+            [],
         );
-    };
+
+    const reportOptions =
+        useMemo<AdminReportSelectOption[]>(
+            () => [
+                {
+                    value: 'overview',
+                    label: 'Resumen general',
+                    description: 'Indicadores principales y tendencia de ventas.',
+                },
+                {
+                    value: 'products',
+                    label: 'Productos',
+                    description: 'Más vendidos y productos con mayor ingreso.',
+                },
+                {
+                    value: 'promotions',
+                    label: 'Promociones',
+                    description: 'Canjes, reembolsos y descuentos promocionales.',
+                },
+                ...modifierGroups.map(
+                    group => ({
+                        value: group.code,
+                        label: group.name,
+                        description: `Uso de opciones del grupo ${group.name}.`,
+                    }),
+                ),
+            ],
+            [modifierGroups],
+        );
+
+    const activeReportTitle =
+        useMemo(
+            () =>
+                reportOptions.find(
+                    option =>
+                        option.value ===
+                        activeSection,
+                )?.label ??
+                'Reporte',
+            [
+                activeSection,
+                reportOptions,
+            ],
+        );
+
+    const activeReportDescription =
+        useMemo(
+            () =>
+                reportOptions.find(
+                    option =>
+                        option.value ===
+                        activeSection,
+                )?.description ??
+                '',
+            [
+                activeSection,
+                reportOptions,
+            ],
+        );
 
     const handleStartDateChange = (
         event:
@@ -536,50 +621,54 @@ export function AdminReports() {
                     false
                 }
             >
-                {/* FILTROS DE FECHA */}
                 <View
-                    style={
-                        styles.filtersContainer
-                    }
+                    style={styles.pageHeader}
                 >
-                    {renderFilterButton(
-                        'today',
-                        'HOY',
-                    )}
+                    <Text
+                        style={styles.pageTitle}
+                    >
+                        Reportes
+                    </Text>
 
-                    {renderFilterButton(
-                        'week',
-                        'SEMANA',
-                    )}
-
-                    {renderFilterButton(
-                        'month',
-                        'MES',
-                    )}
-
-                    {renderFilterButton(
-                        'year',
-                        'AÑO',
-                    )}
-
-                    {renderFilterButton(
-                        'custom',
-                        'PERSONALIZADO',
-                    )}
+                    <Text
+                        style={styles.pageSubtitle}
+                    >
+                        Consulta solo la información que necesitas y cambia de reporte sin recorrer una pantalla interminable.
+                    </Text>
                 </View>
 
-                {/* RANGO PERSONALIZADO */}
-                {dateFilter ===
-                    'custom' ? (
-                    <View
-                        style={
-                            styles.customDateContainer
+                <View
+                    style={styles.controlsGrid}
+                >
+                    <AdminReportSelect
+                        label="Periodo"
+                        value={dateFilter}
+                        options={dateOptions}
+                        onChange={value =>
+                            setDateFilter(
+                                value as DateFilter,
+                            )
                         }
+                        modalTitle="Seleccionar periodo"
+                        modalSubtitle="Elige el rango de tiempo que quieres analizar."
+                    />
+
+                    <AdminReportSelect
+                        label="Reporte"
+                        value={activeSection}
+                        options={reportOptions}
+                        onChange={setActiveSection}
+                        modalTitle="Seleccionar reporte"
+                        modalSubtitle="Solo se mostrará el contenido del reporte elegido."
+                    />
+                </View>
+
+                {dateFilter === 'custom' ? (
+                    <View
+                        style={styles.customDateContainer}
                     >
                         <TouchableOpacity
-                            style={
-                                styles.dateButton
-                            }
+                            style={styles.dateButton}
                             onPress={() =>
                                 setShowStartDatePicker(
                                     true,
@@ -587,17 +676,13 @@ export function AdminReports() {
                             }
                         >
                             <Text
-                                style={
-                                    styles.dateButtonLabel
-                                }
+                                style={styles.dateButtonLabel}
                             >
                                 Desde
                             </Text>
 
                             <Text
-                                style={
-                                    styles.dateButtonValue
-                                }
+                                style={styles.dateButtonValue}
                             >
                                 {formatDate(
                                     customStartDate,
@@ -606,9 +691,7 @@ export function AdminReports() {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={
-                                styles.dateButton
-                            }
+                            style={styles.dateButton}
                             onPress={() =>
                                 setShowEndDatePicker(
                                     true,
@@ -616,17 +699,13 @@ export function AdminReports() {
                             }
                         >
                             <Text
-                                style={
-                                    styles.dateButtonLabel
-                                }
+                                style={styles.dateButtonLabel}
                             >
                                 Hasta
                             </Text>
 
                             <Text
-                                style={
-                                    styles.dateButtonValue
-                                }
+                                style={styles.dateButtonValue}
                             >
                                 {formatDate(
                                     customEndDate,
@@ -636,144 +715,109 @@ export function AdminReports() {
                     </View>
                 ) : null}
 
-                {/* RESUMEN */}
                 <View
-                    style={
-                        styles.summaryGrid
-                    }
+                    style={styles.activeReportHeader}
                 >
-                    <SummaryCard
-                        label="Ventas"
-                        value={
-                            formatCurrency(
-                                summary.total_revenue,
-                            )
-                        }
-                    />
+                    <View style={{ flex: 1 }}>
+                        <Text
+                            style={styles.activeReportTitle}
+                        >
+                            {activeReportTitle}
+                        </Text>
 
-                    <SummaryCard
-                        label="Órdenes"
-                        value={
-                            String(
-                                summary.orders_count,
-                            )
-                        }
-                    />
-
-                    <SummaryCard
-                        label="Ticket promedio"
-                        value={
-                            formatCurrency(
-                                summary.average_ticket,
-                            )
-                        }
-                    />
-
-                    <SummaryCard
-                        label="Artículos"
-                        value={
-                            String(
-                                summary.items_sold,
-                            )
-                        }
-                    />
-                </View>
-
-                {/* GRÁFICAS */}
-                <DailySalesChart
-                    data={
-                        dailySales
-                    }
-                    formatCompactCurrency={
-                        formatCompactCurrency
-                    }
-                />
-
-                <TopProductsChart
-                    data={
-                        products
-                    }
-                    metric={
-                        productChartMetric
-                    }
-                    onMetricChange={
-                        setProductChartMetric
-                    }
-                    formatCurrency={
-                        formatCurrency
-                    }
-                />
-
-                <ModifierGroupsChart
-                    groups={
-                        modifierGroups
-                    }
-                    reportsByGroup={
-                        modifierReports
-                    }
-                />
-
-                {/* SECCIONES */}
-                <View
-                    style={
-                        styles.sectionsContainer
-                    }
-                >
-                    {renderSectionButton(
-                        'products',
-                        'PRODUCTOS',
-                    )}
-
-                    {modifierGroups.map(
-                        group => (
-                            <React.Fragment
-                                key={
-                                    group.id
-                                }
+                        {activeReportDescription ? (
+                            <Text
+                                style={styles.activeReportDescription}
                             >
-                                {renderSectionButton(
-                                    group.code,
-                                    group.name.toUpperCase(),
-                                )}
-                            </React.Fragment>
-                        ),
-                    )}
+                                {activeReportDescription}
+                            </Text>
+                        ) : null}
+                    </View>
+
+                    <Text
+                        style={styles.activeReportPeriod}
+                    >
+                        {dateOptions.find(
+                            option =>
+                                option.value ===
+                                dateFilter,
+                        )?.label ?? ''}
+                    </Text>
                 </View>
 
-                {/* RANKINGS */}
-                {activeSection ===
-                    'products' ? (
+                {activeSection === 'overview' ? (
                     <>
                         <View
-                            style={
-                                styles.reportCard
+                            style={styles.summaryGrid}
+                        >
+                            <SummaryCard
+                                label="Ventas"
+                                value={formatCurrency(
+                                    summary.total_revenue,
+                                )}
+                            />
+
+                            <SummaryCard
+                                label="Órdenes"
+                                value={String(
+                                    summary.orders_count,
+                                )}
+                            />
+
+                            <SummaryCard
+                                label="Ticket promedio"
+                                value={formatCurrency(
+                                    summary.average_ticket,
+                                )}
+                            />
+
+                            <SummaryCard
+                                label="Artículos"
+                                value={String(
+                                    summary.items_sold,
+                                )}
+                            />
+                        </View>
+
+                        <DailySalesChart
+                            data={dailySales}
+                            formatCompactCurrency={
+                                formatCompactCurrency
                             }
+                        />
+                    </>
+                ) : activeSection === 'products' ? (
+                    <>
+                        <TopProductsChart
+                            data={products}
+                            metric={productChartMetric}
+                            onMetricChange={
+                                setProductChartMetric
+                            }
+                            formatCurrency={
+                                formatCurrency
+                            }
+                        />
+
+                        <View
+                            style={styles.reportCard}
                         >
                             <Text
-                                style={
-                                    styles.reportTitle
-                                }
+                                style={styles.reportTitle}
                             >
                                 Más vendidos
                             </Text>
 
-                            {products.length >
-                                0 ? (
+                            {products.length > 0 ? (
                                 products.map(
                                     (
                                         product,
                                         index,
                                     ) => (
                                         <RankingRow
-                                            key={
-                                                product.id
-                                            }
-                                            index={
-                                                index
-                                            }
-                                            name={
-                                                product.name
-                                            }
+                                            key={product.id}
+                                            index={index}
+                                            name={product.name}
                                             value={`${product.units_sold} u.`}
                                         />
                                     ),
@@ -784,40 +828,27 @@ export function AdminReports() {
                         </View>
 
                         <View
-                            style={
-                                styles.reportCard
-                            }
+                            style={styles.reportCard}
                         >
                             <Text
-                                style={
-                                    styles.reportTitle
-                                }
+                                style={styles.reportTitle}
                             >
                                 Mayor ingreso
                             </Text>
 
-                            {productsByRevenue.length >
-                                0 ? (
+                            {productsByRevenue.length > 0 ? (
                                 productsByRevenue.map(
                                     (
                                         product,
                                         index,
                                     ) => (
                                         <RankingRow
-                                            key={
-                                                product.id
-                                            }
-                                            index={
-                                                index
-                                            }
-                                            name={
-                                                product.name
-                                            }
-                                            value={
-                                                formatCurrency(
-                                                    product.revenue,
-                                                )
-                                            }
+                                            key={product.id}
+                                            index={index}
+                                            name={product.name}
+                                            value={formatCurrency(
+                                                product.revenue,
+                                            )}
                                         />
                                     ),
                                 )
@@ -826,39 +857,104 @@ export function AdminReports() {
                             )}
                         </View>
                     </>
+                ) : activeSection === 'promotions' ? (
+                    <>
+                        <View
+                            style={styles.promotionSummaryGrid}
+                        >
+                            <SummaryCard
+                                label="Canjes"
+                                value={String(
+                                    promotionSummary.collectRedemptions,
+                                )}
+                            />
+
+                            <SummaryCard
+                                label="Reembolsos"
+                                value={String(
+                                    promotionSummary.refundRedemptions,
+                                )}
+                            />
+
+                            <SummaryCard
+                                label="Importe reembolsado"
+                                value={formatCurrency(
+                                    promotionSummary.refundAmount,
+                                )}
+                            />
+
+                            <SummaryCard
+                                label="Descuentos"
+                                value={formatCurrency(
+                                    promotionSummary.modifierDiscountAmount,
+                                )}
+                            />
+                        </View>
+
+                        <View
+                            style={styles.reportCard}
+                        >
+                            <Text
+                                style={styles.reportTitle}
+                            >
+                                Historial de promociones
+                            </Text>
+
+                            <Text
+                                style={styles.promotionReportSubtitle}
+                            >
+                                Canjes, reembolsos y promociones de modificadores del periodo seleccionado.
+                            </Text>
+
+                            {promotionActivities.length > 0 ? (
+                                <View
+                                    style={styles.promotionList}
+                                >
+                                    {promotionActivities.map(
+                                        event => (
+                                            <PromotionActivityCard
+                                                key={event.event_id}
+                                                event={event}
+                                                formatCurrency={
+                                                    formatCurrency
+                                                }
+                                            />
+                                        ),
+                                    )}
+                                </View>
+                            ) : (
+                                <EmptyPromotionReport />
+                            )}
+                        </View>
+                    </>
                 ) : (
                     <View
-                        style={
-                            styles.reportCard
-                        }
+                        style={styles.reportCard}
                     >
                         <Text
-                            style={
-                                styles.reportTitle
-                            }
+                            style={styles.reportTitle}
                         >
                             {getSectionTitle(
                                 activeModifierGroup,
                             )}
                         </Text>
 
-                        {reportRows.length >
-                            0 ? (
+                        <Text
+                            style={styles.sectionHint}
+                        >
+                            Ranking por cantidad utilizada durante el periodo seleccionado.
+                        </Text>
+
+                        {reportRows.length > 0 ? (
                             reportRows.map(
                                 (
                                     row,
                                     index,
                                 ) => (
                                     <RankingRow
-                                        key={
-                                            row.id
-                                        }
-                                        index={
-                                            index
-                                        }
-                                        name={
-                                            row.name
-                                        }
+                                        key={row.id}
+                                        index={index}
+                                        name={row.name}
                                         value={`${row.units_sold} u.`}
                                         dimmed={
                                             row.units_sold ===
@@ -995,6 +1091,235 @@ function RankingRow({
                 {value}
             </Text>
         </View>
+    );
+}
+
+interface PromotionActivityCardProps {
+    event: PromotionActivityReport;
+    formatCurrency: (value: number) => string;
+}
+
+function PromotionActivityCard({
+    event,
+    formatCurrency,
+}: PromotionActivityCardProps) {
+    const typeLabel =
+        getPromotionTypeLabel(
+            event.promotion_type,
+        );
+
+    return (
+        <View
+            style={
+                styles.promotionEventCard
+            }
+        >
+            <View
+                style={
+                    styles.promotionEventHeader
+                }
+            >
+                <View
+                    style={{ flex: 1 }}
+                >
+                    <Text
+                        style={
+                            styles.promotionEventName
+                        }
+                    >
+                        {event.promotion_name}
+                    </Text>
+
+                    <Text
+                        style={
+                            styles.promotionEventDate
+                        }
+                    >
+                        {formatReportDateTime(
+                            event.event_at,
+                        )}
+                    </Text>
+                </View>
+
+                <View
+                    style={
+                        styles.promotionTypeBadge
+                    }
+                >
+                    <Text
+                        style={
+                            styles.promotionTypeText
+                        }
+                    >
+                        {typeLabel}
+                    </Text>
+                </View>
+            </View>
+
+            {event.benefit_name ? (
+                <PromotionDetailRow
+                    label="Beneficio"
+                    value={
+                        event.benefit_name
+                    }
+                />
+            ) : null}
+
+            {event.codes ? (
+                <PromotionDetailRow
+                    label="Código(s)"
+                    value={event.codes}
+                />
+            ) : null}
+
+            {event.order_references ? (
+                <PromotionDetailRow
+                    label="Orden(es)"
+                    value={
+                        event.order_references
+                    }
+                />
+            ) : null}
+
+            {event.user_name ? (
+                <PromotionDetailRow
+                    label="Canjeó"
+                    value={event.user_name}
+                />
+            ) : null}
+
+            <View
+                style={
+                    styles.promotionEventFooter
+                }
+            >
+                <Text
+                    style={
+                        styles.promotionEventApplications
+                    }
+                >
+                    {event.promotion_type ===
+                    'collect_reward'
+                        ? `${event.applications_count} código${event.applications_count === 1 ? '' : 's'}`
+                        : `${event.applications_count} aplicación${event.applications_count === 1 ? '' : 'es'}`}
+                </Text>
+
+                {event.amount > 0 ? (
+                    <Text
+                        style={
+                            styles.promotionEventAmount
+                        }
+                    >
+                        {event.promotion_type ===
+                        'order_refund'
+                            ? `Reembolso ${formatCurrency(event.amount)}`
+                            : `Descuento ${formatCurrency(event.amount)}`}
+                    </Text>
+                ) : null}
+            </View>
+        </View>
+    );
+}
+
+interface PromotionDetailRowProps {
+    label: string;
+    value: string;
+}
+
+function PromotionDetailRow({
+    label,
+    value,
+}: PromotionDetailRowProps) {
+    return (
+        <View
+            style={
+                styles.promotionDetailRow
+            }
+        >
+            <Text
+                style={
+                    styles.promotionDetailLabel
+                }
+            >
+                {label}
+            </Text>
+
+            <Text
+                style={
+                    styles.promotionDetailValue
+                }
+                selectable
+            >
+                {value}
+            </Text>
+        </View>
+    );
+}
+
+function EmptyPromotionReport() {
+    return (
+        <View
+            style={
+                styles.promotionEmpty
+            }
+        >
+            <Text
+                style={
+                    styles.promotionEmptyTitle
+                }
+            >
+                Sin actividad promocional
+            </Text>
+
+            <Text
+                style={
+                    styles.promotionEmptyText
+                }
+            >
+                No hubo canjes, reembolsos ni descuentos promocionales en este periodo.
+            </Text>
+        </View>
+    );
+}
+
+function getPromotionTypeLabel(
+    type: string,
+): string {
+    if (type === 'collect_reward') {
+        return 'CANJE';
+    }
+
+    if (type === 'order_refund') {
+        return 'REEMBOLSO';
+    }
+
+    if (type === 'modifier_discount') {
+        return 'DESCUENTO';
+    }
+
+    return type
+        .replace(/_/g, ' ')
+        .toUpperCase();
+}
+
+function formatReportDateTime(
+    value: string,
+): string {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString(
+        'es-MX',
+        {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        },
     );
 }
 
