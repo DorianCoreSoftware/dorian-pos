@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "android:validate-identity": "node scripts/validateAndroidIdentity.js",
-    "android:prepare-firebase": "node scripts/prepareAndroidFirebase.js"
+    "android:prepare-firebase": "node scripts/prepareAndroidFirebase.js",
+    "audit:preflight": "node scripts/preflightAudit.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

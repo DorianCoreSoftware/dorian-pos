@@ -28,6 +28,17 @@ const baseApplicationId =
     'com.burgerkong.pos'
   ).trim();
 
+if (
+  !/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(
+    baseApplicationId,
+  )
+) {
+  console.error(
+    `DORIAN_ANDROID_APPLICATION_ID no es válido: ${baseApplicationId}`,
+  );
+  process.exit(1);
+}
+
 const effectiveApplicationId =
   variant === 'development'
     ? `${baseApplicationId}.dev`
@@ -57,13 +68,63 @@ if (
 ) {
   console.error(
     [
-      'No se copió Firebase porque el package no coincide.',
+      'No se preparó la identidad Android porque el package no coincide con Firebase.',
       `Build: ${effectiveApplicationId}`,
       `Firebase: ${configuredPackages.join(', ') || 'sin package_name'}`,
     ].join('\n'),
   );
   process.exit(1);
 }
+
+/*
+ * Expo necesita encontrar un applicationId literal en build.gradle cuando
+ * existe un proyecto Android nativo. Por eso no lo hacemos dinámico dentro
+ * de Gradle: este script reescribe el literal ANTES del build white-label.
+ */
+const gradlePath = path.join(
+  'android',
+  'app',
+  'build.gradle',
+);
+
+if (!fs.existsSync(gradlePath)) {
+  console.error(
+    `No existe el archivo Gradle esperado: ${gradlePath}`,
+  );
+  process.exit(1);
+}
+
+const originalGradle =
+  fs.readFileSync(
+    gradlePath,
+    'utf8',
+  );
+
+const applicationIdPattern =
+  /applicationId\s+["'][^"']+["']/;
+
+if (
+  !applicationIdPattern.test(
+    originalGradle,
+  )
+) {
+  console.error(
+    'No se encontró un applicationId literal en android/app/build.gradle.',
+  );
+  process.exit(1);
+}
+
+const preparedGradle =
+  originalGradle.replace(
+    applicationIdPattern,
+    `applicationId "${baseApplicationId}"`,
+  );
+
+fs.writeFileSync(
+  gradlePath,
+  preparedGradle,
+  'utf8',
+);
 
 const destination =
   variant === 'development'
@@ -97,5 +158,9 @@ fs.copyFileSync(
 );
 
 console.log(
-  `Firebase preparado para ${effectiveApplicationId}: ${destination}`,
+  [
+    `Identidad Android preparada: ${effectiveApplicationId}`,
+    `Gradle base: ${baseApplicationId}`,
+    `Firebase: ${destination}`,
+  ].join('\n'),
 );

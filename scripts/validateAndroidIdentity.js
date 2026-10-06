@@ -16,6 +16,52 @@ const effectiveApplicationId =
     ? `${baseApplicationId}.dev`
     : baseApplicationId;
 
+const gradlePath = path.join(
+  'android',
+  'app',
+  'build.gradle',
+);
+
+if (!fs.existsSync(gradlePath)) {
+  console.error(
+    `No existe el archivo Gradle esperado: ${gradlePath}`,
+  );
+  process.exit(1);
+}
+
+const gradleText = fs.readFileSync(
+  gradlePath,
+  'utf8',
+);
+
+const gradleApplicationId =
+  gradleText.match(
+    /applicationId\s+["']([^"']+)["']/,
+  )?.[1];
+
+if (!gradleApplicationId) {
+  console.error(
+    'No se encontró un applicationId literal en android/app/build.gradle.',
+  );
+  process.exit(1);
+}
+
+if (
+  gradleApplicationId !==
+  baseApplicationId
+) {
+  console.error(
+    [
+      'El applicationId nativo no coincide con la identidad solicitada.',
+      `Gradle: ${gradleApplicationId}`,
+      `Esperado: ${baseApplicationId}`,
+      '',
+      'Ejecuta primero npm run android:prepare-firebase con las variables del cliente.',
+    ].join('\n'),
+  );
+  process.exit(1);
+}
+
 const defaultGoogleServicesPath =
   variant === 'development'
     ? path.join(

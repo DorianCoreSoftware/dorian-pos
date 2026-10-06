@@ -56,6 +56,11 @@ import {
     useCurrency,
 } from '../../../hooks/useCurrency';
 
+import {
+    formatBusinessDateTime,
+    getBusinessReportRange,
+} from '../../../Utils/businessTime';
+
 type DateFilter =
     | 'today'
     | 'week'
@@ -87,7 +92,7 @@ const EMPTY_FINANCIAL: FinancialBalanceReport = {
 };
 
 export function AdminReports() {
-  const { theme: businessTheme } = useBusiness();
+  const { business, theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
 
     const {
@@ -208,15 +213,17 @@ export function AdminReports() {
     const dateRange =
         useMemo(
             () =>
-                getDateRange(
+                getBusinessReportRange(
                     dateFilter,
                     customStartDate,
                     customEndDate,
+                    business?.timezone,
                 ),
             [
                 dateFilter,
                 customStartDate,
                 customEndDate,
+                business?.timezone,
             ],
         );
 
@@ -1494,6 +1501,7 @@ function getPromotionTypeLabel(
 
 function formatReportDateTime(
     value: string,
+    timeZone?: string | null,
 ): string {
     const date = new Date(value);
 
@@ -1501,15 +1509,9 @@ function formatReportDateTime(
         return value;
     }
 
-    return date.toLocaleString(
-        'es-MX',
-        {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        },
+    return formatBusinessDateTime(
+        date,
+        timeZone,
     );
 }
 

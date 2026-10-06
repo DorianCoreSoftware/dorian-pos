@@ -57,6 +57,11 @@ import {
   PeriodFilterValue,
 } from '../../components/period-filter/PeriodFilter';
 
+import {
+  formatBusinessDateTime,
+  getBusinessPeriodRange,
+} from '../../Utils/businessTime';
+
 interface CashClosingScreenProps {
   cashSession:
   CashSession | null;
@@ -92,8 +97,15 @@ export function CashClosingScreen({
   fetchCashSession,
   pendingOrdersCount,
 }: CashClosingScreenProps) {
-  const { theme: businessTheme } = useBusiness();
+  const { business, theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
+
+  const formatCashDateTime =
+    (dateValue: string): string =>
+      formatBusinessDateTime(
+        dateValue,
+        business?.timezone,
+      );
 
   const {
     formatCurrency,
@@ -597,92 +609,18 @@ export function CashClosingScreen({
   const filteredCashHistory =
     useMemo(() => {
       if (
-        historyFilter ===
-        'all'
+        historyFilter === 'all'
       ) {
         return cashHistory;
       }
 
-      const now =
-        new Date();
-
-      let fromDate:
-        Date | null = null;
-
-      let toDate:
-        Date | null = null;
-
-      if (
-        historyFilter ===
-        'today'
-      ) {
-        fromDate =
-          startOfDay(now);
-
-        toDate =
-          endOfDay(now);
-      }
-
-      if (
-        historyFilter ===
-        '7days'
-      ) {
-        const sevenDaysAgo =
-          new Date(now);
-
-        sevenDaysAgo.setDate(
-          now.getDate() - 6,
+      const range =
+        getBusinessPeriodRange(
+          historyFilter,
+          historyFrom,
+          historyTo,
+          business?.timezone,
         );
-
-        fromDate =
-          startOfDay(
-            sevenDaysAgo,
-          );
-
-        toDate =
-          endOfDay(now);
-      }
-
-      if (
-        historyFilter ===
-        'month'
-      ) {
-        fromDate =
-          new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            1,
-            0,
-            0,
-            0,
-            0,
-          );
-
-        toDate =
-          endOfDay(now);
-      }
-
-      if (
-        historyFilter ===
-        'custom'
-      ) {
-        fromDate =
-          startOfDay(
-            historyFrom,
-          );
-
-        toDate =
-          endOfDay(
-            historyTo,
-          );
-      }
-
-      if (
-        !fromDate ||
-        !toDate
-      ) {
-        return cashHistory;
-      }
 
       return cashHistory.filter(
         (session) => {
@@ -698,9 +636,9 @@ export function CashClosingScreen({
 
           return (
             referenceDate >=
-            fromDate &&
+            range.from &&
             referenceDate <=
-            toDate
+            range.to
           );
         },
       );
@@ -709,6 +647,7 @@ export function CashClosingScreen({
       historyFilter,
       historyFrom,
       historyTo,
+      business?.timezone,
     ]);
 
   const handleHistoryFilter =
@@ -1606,7 +1545,7 @@ export function CashClosingScreen({
                             }
                           >
                             {session.closedAt
-                              ? formatDateTime(
+                              ? formatCashDateTime(
                                 session.closedAt,
                               )
                               : 'Sin fecha de cierre'}
@@ -1618,7 +1557,7 @@ export function CashClosingScreen({
                             }
                           >
                             Apertura:{' '}
-                            {formatDateTime(
+                            {formatCashDateTime(
                               session.openedAt,
                             )}
                           </Text>
@@ -1878,7 +1817,7 @@ export function CashClosingScreen({
                     }
                   >
                     {session.closedAt
-                      ? formatDateTime(
+                      ? formatCashDateTime(
                         session.closedAt,
                       )
                       : 'Sin fecha de cierre'}
@@ -1951,7 +1890,7 @@ export function CashClosingScreen({
                   <DetailRow
                     label="Fecha y hora"
                     value={
-                      formatDateTime(
+                      formatCashDateTime(
                         session.openedAt,
                       )
                     }
@@ -1983,7 +1922,7 @@ export function CashClosingScreen({
                     label="Fecha y hora"
                     value={
                       session.closedAt
-                        ? formatDateTime(
+                        ? formatCashDateTime(
                           session.closedAt,
                         )
                         : 'No registrado'
@@ -2367,7 +2306,7 @@ export function CashClosingScreen({
               }
             >
               Desde{' '}
-              {formatDateTime(
+              {formatCashDateTime(
                 cashSession.openedAt,
               )}
             </Text>

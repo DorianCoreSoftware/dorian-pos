@@ -41,6 +41,11 @@ import {
 } from '../../../services/reportService';
 
 import {
+  formatPickerDate,
+  getBusinessPeriodRange,
+} from '../../../Utils/businessTime';
+
+import {
   styles,
 } from './AdminDashboard.styles';
 
@@ -62,6 +67,7 @@ const EMPTY_SALES: SalesReportSummary = {
 
 export function AdminDashboard() {
   const {
+    business,
     theme,
   } = useBusiness();
 
@@ -126,15 +132,18 @@ export function AdminDashboard() {
   ] = useState<string | null>(null);
 
   const dateRange = useMemo(
-    () => getDashboardDateRange(
+    () => getBusinessPeriodRange(
       period,
       customStartDate,
       customEndDate,
+      business?.timezone,
+      2020,
     ),
     [
       period,
       customStartDate,
       customEndDate,
+      business?.timezone,
     ],
   );
 
@@ -394,7 +403,7 @@ export function AdminDashboard() {
                 },
               ]}
             >
-              {formatDate(customStartDate)}
+              {formatPickerDate(customStartDate)}
             </Text>
           </TouchableOpacity>
 
@@ -433,7 +442,7 @@ export function AdminDashboard() {
                 },
               ]}
             >
-              {formatDate(customEndDate)}
+              {formatPickerDate(customEndDate)}
             </Text>
           </TouchableOpacity>
         </View>

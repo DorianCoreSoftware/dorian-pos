@@ -92,6 +92,7 @@ android {
 
 def isDevBuild = System.getenv("APP_VARIANT") == "development"
 def configuredApplicationId = (System.getenv("DORIAN_ANDROID_APPLICATION_ID") ?: "com.burgerkong.pos").trim()
+def configuredAppName = (System.getenv("DORIAN_APP_NAME") ?: "Dorian POS").trim()
 
 if (!(configuredApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
     throw new GradleException("DORIAN_ANDROID_APPLICATION_ID no es un applicationId Android válido: ${configuredApplicationId}")
@@ -114,8 +115,8 @@ defaultConfig {
     resValue "string",
         "app_name",
         isDevBuild
-            ? "Dorian POS DEV"
-            : "Dorian POS"
+            ? "${configuredAppName} DEV"
+            : configuredAppName
 
     buildConfigField "String",
         "REACT_NATIVE_RELEASE_LEVEL",

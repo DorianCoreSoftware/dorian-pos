@@ -25,6 +25,14 @@ import {
   saveExpenseCategory,
   setExpenseCategoryActive,
 } from '../../../services/expenseService';
+import {
+  businessInstantToPickerDate,
+  formatBusinessDateTime,
+  formatPickerDate,
+  getBusinessPeriodRange,
+  pickerDateTimeToBusinessUtc,
+} from '../../../Utils/businessTime';
+
 import { styles } from './AdminExpenses.styles';
 
 interface ExpenseDraft {
@@ -101,7 +109,7 @@ function paymentLabel(method: ExpensePaymentMethod): string {
 }
 
 export function AdminExpenses() {
-  const { theme } = useBusiness();
+  const { business, theme } = useBusiness();
   const { formatCurrency } = useCurrency();
 
   const [period, setPeriod] = useState<PeriodFilterValue>('month');
@@ -121,8 +129,18 @@ export function AdminExpenses() {
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const dateRange = useMemo(
-    () => getPeriodRange(period, customStart, customEnd),
-    [period, customStart, customEnd],
+    () => getBusinessPeriodRange(
+      period,
+      customStart,
+      customEnd,
+      business?.timezone,
+    ),
+    [
+      period,
+      customStart,
+      customEnd,
+      business?.timezone,
+    ],
   );
 
   const totalExpenses = useMemo(
@@ -164,7 +182,7 @@ export function AdminExpenses() {
       amount: expense.amount.toFixed(2),
       description: expense.description,
       paymentMethod: expense.paymentMethod,
-      expenseAt: new Date(expense.expenseAt),
+      expenseAt: businessInstantToPickerDate(expense.expenseAt, business?.timezone),
     });
     setExpenseModalVisible(true);
   };
@@ -178,7 +196,7 @@ export function AdminExpenses() {
         amount: Number(draft.amount.replace(',', '.')),
         description: draft.description,
         paymentMethod: draft.paymentMethod,
-        expenseAt: draft.expenseAt,
+        expenseAt: pickerDateTimeToBusinessUtc(draft.expenseAt, business?.timezone),
       });
       setExpenseModalVisible(false);
       await load();
@@ -265,11 +283,11 @@ export function AdminExpenses() {
           <View style={styles.customDateRow}>
             <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border, backgroundColor: theme.surface }]} onPress={() => setShowStartPicker(true)}>
               <Text style={[styles.dateLabel, { color: theme.textMuted }]}>Desde</Text>
-              <Text style={[styles.dateValue, { color: theme.text }]}>{formatDate(customStart)}</Text>
+              <Text style={[styles.dateValue, { color: theme.text }]}>{formatPickerDate(customStart)}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border, backgroundColor: theme.surface }]} onPress={() => setShowEndPicker(true)}>
               <Text style={[styles.dateLabel, { color: theme.textMuted }]}>Hasta</Text>
-              <Text style={[styles.dateValue, { color: theme.text }]}>{formatDate(customEnd)}</Text>
+              <Text style={[styles.dateValue, { color: theme.text }]}>{formatPickerDate(customEnd)}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -307,7 +325,7 @@ export function AdminExpenses() {
                   <View style={styles.expenseInfo}>
                     <Text style={[styles.expenseDescription, { color: theme.text }]}>{expense.description}</Text>
                     <Text style={[styles.expenseMeta, { color: theme.textMuted }]}>
-                      {expense.categoryName} · {new Date(expense.expenseAt).toLocaleString('es-MX')} · {paymentLabel(expense.paymentMethod)}
+                      {expense.categoryName} · {formatBusinessDateTime(expense.expenseAt, business?.timezone)} · {paymentLabel(expense.paymentMethod)}
                     </Text>
                   </View>
                   <Text style={[styles.expenseAmount, { color: theme.danger }]}>{formatCurrency(expense.amount)}</Text>
@@ -367,7 +385,7 @@ export function AdminExpenses() {
 
               <Text style={[styles.label, { color: theme.textMuted }]}>Fecha</Text>
               <TouchableOpacity style={[styles.selector, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={() => setShowStartPicker(true)}>
-                <Text style={[styles.selectorText, { color: theme.text }]}>{draft.expenseAt.toLocaleString('es-MX')}</Text>
+                <Text style={[styles.selectorText, { color: theme.text }]}>{formatBusinessDateTime(pickerDateTimeToBusinessUtc(draft.expenseAt, business?.timezone), business?.timezone)}</Text>
                 <Text style={{ color: theme.primary }}>▾</Text>
               </TouchableOpacity>
 

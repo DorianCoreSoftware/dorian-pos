@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const getLocalDb = async () => {
-  return await SQLite.openDatabaseAsync('burger_kong_local.db');
+  return await SQLite.openDatabaseAsync('dorian_pos_local.db');
 };
 
 export const initLocalDatabase = async () => {
@@ -62,7 +62,7 @@ export const initLocalDatabase = async () => {
       order_item_id TEXT NOT NULL,
       modifier_id TEXT NOT NULL,
       extra_price_applied REAL NOT NULL,
-      FOREIGN KEY (_item_id) REFERENCES sale_items (id) ON DELETE CASCADE,
+      FOREIGN KEY (order_item_id) REFERENCES sale_items (id) ON DELETE CASCADE,
       FOREIGN KEY (modifier_id) REFERENCES modifiers (id)
     );
 

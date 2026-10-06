@@ -42,6 +42,11 @@ import {
   PeriodFilterValue,
 } from '../../components/period-filter/PeriodFilter';
 
+import {
+  formatBusinessDateTime,
+  getBusinessPeriodRange,
+} from '../../Utils/businessTime';
+
 type SalesFilter =
   PeriodFilterValue;
 
@@ -51,8 +56,15 @@ type DatePickerField =
   | null;
 
 export function SalesScreen() {
-  const { theme: businessTheme } = useBusiness();
+  const { business, theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
+
+  const formatSaleDateTime =
+    (dateValue: string): string =>
+      formatBusinessDateTime(
+        dateValue,
+        business?.timezone,
+      );
 
   const {
     currencyCode,
@@ -193,69 +205,25 @@ export function SalesScreen() {
         return sales;
       }
 
-      const now = new Date();
-
-      if (
-        salesFilter === 'today'
-      ) {
-        return filterSalesByRange(
-          sales,
-          startOfDay(now),
-          endOfDay(now),
+      const range =
+        getBusinessPeriodRange(
+          salesFilter,
+          customStartDate,
+          customEndDate,
+          business?.timezone,
         );
-      }
-
-      if (
-        salesFilter === '7days'
-      ) {
-        const sevenDaysAgo =
-          new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate() - 6,
-          );
-
-        return filterSalesByRange(
-          sales,
-          startOfDay(
-            sevenDaysAgo,
-          ),
-          endOfDay(now),
-        );
-      }
-
-      if (
-        salesFilter === 'month'
-      ) {
-        return filterSalesByRange(
-          sales,
-          new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            1,
-            0,
-            0,
-            0,
-            0,
-          ),
-          endOfDay(now),
-        );
-      }
 
       return filterSalesByRange(
         sales,
-        startOfDay(
-          customStartDate,
-        ),
-        endOfDay(
-          customEndDate,
-        ),
+        range.from,
+        range.to,
       );
     }, [
       sales,
       salesFilter,
       customStartDate,
       customEndDate,
+      business?.timezone,
     ]);
 
   const summary =
@@ -484,7 +452,7 @@ export function SalesScreen() {
                 styles.saleDate
               }
             >
-              {formatDateTime(
+              {formatSaleDateTime(
                 item.payment
                   .createdAt,
               )}

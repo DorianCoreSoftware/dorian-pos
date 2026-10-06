@@ -333,7 +333,7 @@ export function AdminBusinessSettings() {
               value,
             )
           }
-          placeholder="Ej. BK"
+          placeholder="Ej. MN"
           theme={theme}
         />
 

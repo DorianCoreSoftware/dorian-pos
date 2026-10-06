@@ -107,8 +107,28 @@ const INITIAL_FORM: ProductFormState = {
 export function AdminProducts({
     onProductsChanged,
 }: AdminProductsProps) {
-  const { theme: businessTheme } = useBusiness();
-    setBrandPrimaryColor(businessTheme.primary);
+  const {
+        business,
+        theme: businessTheme,
+    } = useBusiness();
+
+    setBrandPrimaryColor(
+        businessTheme.primary,
+    );
+
+    const productImagePlaceholder =
+        (
+            business?.identity.shortName ||
+            business?.identity.businessName ||
+            'Dorian POS'
+        )
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(part => part[0]?.toUpperCase() ?? '')
+            .join('') ||
+        'DP';
 
     const {
         formatCurrency,
@@ -1697,7 +1717,7 @@ export function AdminProducts({
                                 styles.productThumbnailPlaceholder
                             }
                         >
-                            BK
+                            {productImagePlaceholder}
                         </Text>
                     )}
                 </View>
@@ -2534,7 +2554,7 @@ export function AdminProducts({
                                             styles.imagePreviewPlaceholder
                                         }
                                     >
-                                        BK
+                                        {productImagePlaceholder}
                                     </Text>
                                 )}
                             </View>

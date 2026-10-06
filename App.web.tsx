@@ -26,16 +26,27 @@ function shouldUseAdminWeb(): boolean {
     window.location.pathname
       .toLowerCase();
 
-  return (
+  const isAdminHost =
     hostname ===
-      'app.doriancore.com' ||
-    hostname.startsWith(
-      'app.',
-    ) ||
+      'app.doriancore.com';
+
+  const isLocalDevelopment =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0';
+
+  const isAdminPath =
     pathname ===
       '/admin' ||
     pathname.startsWith(
       '/admin/',
+    );
+
+  return (
+    isAdminHost ||
+    (
+      isLocalDevelopment &&
+      isAdminPath
     )
   );
 }
