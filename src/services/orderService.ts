@@ -7,6 +7,7 @@ import {
   FulfillmentType,
   OrderSource,
   PendingOrderRecord,
+  setOrderItemPreparedById,
   updateOrderStatusById,
 } from '../repositories/OrderRepository';
 
@@ -373,6 +374,15 @@ function mapOrderToKitchenOrder(
 
         notes:
           item.notes,
+
+        is_prepared:
+          item.is_prepared ?? false,
+
+        prepared_at:
+          item.prepared_at ?? null,
+
+        prepared_by:
+          item.prepared_by ?? null,
 
         products:
           item.products
@@ -1004,5 +1014,24 @@ export async function markOrderOnTheWay(
   return updateOrderStatusById(
     orderId,
     'on_the_way',
+  );
+}
+
+/**
+ * Marca o desmarca una línea de cocina como preparada.
+ */
+export async function setOrderItemPrepared(
+  orderItemId: string,
+  isPrepared: boolean,
+): Promise<void> {
+  if (!orderItemId?.trim()) {
+    throw new Error(
+      'El producto de la orden es obligatorio.',
+    );
+  }
+
+  await setOrderItemPreparedById(
+    orderItemId,
+    isPrepared,
   );
 }

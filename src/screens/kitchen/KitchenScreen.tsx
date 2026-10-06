@@ -27,6 +27,7 @@ import {
   cancelOrder,
   deliverOrder,
   markOrderReady,
+  setOrderItemPrepared,
   startPreparingOrder,
 } from '../../services/orderService';
 
@@ -133,6 +134,105 @@ export function KitchenScreen({
   ] =
     useState(false);
 
+  const [
+    preparationItemIds,
+    setPreparationItemIds,
+  ] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const isOrderFullyPrepared = (
+    order: KitchenOrder,
+  ): boolean =>
+    order.order_items.length > 0 &&
+    order.order_items.every(
+      line => line.is_prepared,
+    );
+
+  const handleToggleOrderItemPrepared =
+    async (
+      line: KitchenOrderItem,
+    ): Promise<void> => {
+      if (
+        preparationItemIds.has(
+          line.id,
+        )
+      ) {
+        return;
+      }
+
+      const nextPrepared =
+        !line.is_prepared;
+
+      setPreparationItemIds(
+        current => {
+          const next =
+            new Set(current);
+          next.add(line.id);
+          return next;
+        },
+      );
+
+      try {
+        await setOrderItemPrepared(
+          line.id,
+          nextPrepared,
+        );
+
+        setPendingOrders(
+          currentOrders =>
+            currentOrders.map(
+              order =>
+                order.id ===
+                line.order_id
+                  ? {
+                      ...order,
+                      order_items:
+                        order.order_items.map(
+                          item =>
+                            item.id ===
+                            line.id
+                              ? {
+                                  ...item,
+                                  is_prepared:
+                                    nextPrepared,
+                                  prepared_at:
+                                    nextPrepared
+                                      ? new Date().toISOString()
+                                      : null,
+                                  prepared_by:
+                                    null,
+                                }
+                              : item,
+                        ),
+                    }
+                  : order,
+            ),
+        );
+      } catch (error) {
+        console.error(
+          'Error al actualizar preparación:',
+          error,
+        );
+
+        Alert.alert(
+          'No se pudo actualizar',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo actualizar la preparación del producto.',
+        );
+      } finally {
+        setPreparationItemIds(
+          current => {
+            const next =
+              new Set(current);
+            next.delete(line.id);
+            return next;
+          },
+        );
+      }
+    };
+
   const handleDeliverPaidOrder =
     async (
       order: KitchenOrder,
@@ -171,6 +271,18 @@ export function KitchenScreen({
     async (
       order: KitchenOrder,
     ): Promise<void> => {
+      if (
+        !isOrderFullyPrepared(
+          order,
+        )
+      ) {
+        Alert.alert(
+          'Pedido incompleto',
+          'Marca todos los productos como preparados antes de cobrar la orden.',
+        );
+        return;
+      }
+
       try {
         const existingPayment =
           await fetchOrderPaymentByOrderId(
@@ -1020,17 +1132,90 @@ Cambio: ${formatCurrency(
           styles.itemRow
         }
       >
-        <Text
-          style={
-            styles.itemText
-          }
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+          }}
         >
-          {line.quantity}
-          x{' '}
-          {line.products
-            ?.name ??
-            'Producto'}
-        </Text>
+          <TouchableOpacity
+            accessibilityRole="checkbox"
+            accessibilityState={{
+              checked:
+                line.is_prepared,
+              disabled:
+                preparationItemIds.has(
+                  line.id,
+                ),
+            }}
+            accessibilityLabel={`Marcar ${line.products?.name ?? 'producto'} como preparado`}
+            disabled={
+              preparationItemIds.has(
+                line.id,
+              )
+            }
+            onPress={() => {
+              void handleToggleOrderItemPrepared(
+                line,
+              );
+            }}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 7,
+              borderWidth: 2,
+              borderColor:
+                line.is_prepared
+                  ? businessTheme.primary
+                  : '#686868',
+              backgroundColor:
+                line.is_prepared
+                  ? businessTheme.primary
+                  : '#1C1C1C',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity:
+                preparationItemIds.has(
+                  line.id,
+                )
+                  ? 0.5
+                  : 1,
+            }}
+          >
+            {line.is_prepared ? (
+              <Text
+                style={{
+                  color:
+                    businessTheme.onPrimary,
+                  fontSize: 17,
+                  fontWeight: '900',
+                }}
+              >
+                ✓
+              </Text>
+            ) : null}
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.itemText,
+              {
+                flex: 1,
+                opacity:
+                  line.is_prepared
+                    ? 0.72
+                    : 1,
+              },
+            ]}
+          >
+            {line.quantity}
+            x{' '}
+            {line.products
+              ?.name ??
+              'Producto'}
+          </Text>
+        </View>
 
         {modifiers.length >
           0 && (
@@ -1579,6 +1764,23 @@ Cambio: ${formatCurrency(
           styles.actionBlock
         }
       >
+        {item.status !== 'pending' &&
+        !isOrderFullyPrepared(
+          item,
+        ) ? (
+          <Text
+            style={{
+              color: '#FFB74D',
+              fontSize: 12,
+              fontWeight: '700',
+              marginBottom: 9,
+              textAlign: 'center',
+            }}
+          >
+            ⏳ Marca todos los productos como preparados para continuar.
+          </Text>
+        ) : null}
+
         <View
           style={
             styles.actionButtonsRow
@@ -1604,8 +1806,20 @@ Cambio: ${formatCurrency(
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={
-              styles.deliverButton
+            style={[
+              styles.deliverButton,
+              item.status !== 'pending' &&
+              !isOrderFullyPrepared(
+                item,
+              )
+                ? { opacity: 0.4 }
+                : null,
+            ]}
+            disabled={
+              item.status !== 'pending' &&
+              !isOrderFullyPrepared(
+                item,
+              )
             }
             onPress={() => {
               if (

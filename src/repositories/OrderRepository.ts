@@ -79,6 +79,9 @@ export interface OrderItemRecord {
   quantity: number;
   price_at_purchase: string | number;
   notes: string | null;
+  is_prepared: boolean;
+  prepared_at: string | null;
+  prepared_by: string | null;
 }
 
 export interface OrderItemComponentRecord {
@@ -427,6 +430,26 @@ export async function fetchOrderById(
     data ??
     null
   ) as PendingOrderRecord | null;
+}
+
+
+export async function setOrderItemPreparedById(
+  orderItemId: string,
+  isPrepared: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    'set_order_item_prepared',
+    {
+      p_order_item_id: orderItemId,
+      p_is_prepared: isPrepared,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      `No se pudo actualizar la preparación: ${error.message}`,
+    );
+  }
 }
 
 /**
