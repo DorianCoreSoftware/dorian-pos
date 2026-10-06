@@ -119,20 +119,24 @@ export const styles =
 
     modalBackdrop: {
       flex: 1,
-      justifyContent: 'flex-end',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 28,
       backgroundColor:
         'rgba(0, 0, 0, 0.72)',
     },
 
     modalDismissArea: {
-      flex: 1,
+      ...StyleSheet.absoluteFillObject,
     },
 
     mobileMenuCard: {
       width: '100%',
+      maxWidth: 520,
       maxHeight: '82%',
-      borderTopLeftRadius: 22,
-      borderTopRightRadius: 22,
+      alignSelf: 'center',
+      borderRadius: 22,
       borderWidth: 1,
       overflow: 'hidden',
     },
@@ -181,7 +185,7 @@ export const styles =
 
     mobileMenuListContent: {
       padding: 12,
-      paddingBottom: 18,
+      paddingBottom: 28,
     },
 
     mobileMenuOption: {

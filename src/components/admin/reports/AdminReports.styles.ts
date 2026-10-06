@@ -781,6 +781,144 @@ const createStyles = (
             marginTop: 5,
             maxWidth: 420,
         },
+
+        financialSummaryGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginBottom: 16,
+        },
+
+        financialBalanceCard: {
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#343434',
+            backgroundColor: '#1D1D1D',
+            padding: 18,
+            marginBottom: 18,
+        },
+
+        financialBalanceLabel: {
+            color: '#8A8A8A',
+            fontSize: 10,
+            fontWeight: '900',
+            letterSpacing: 0.5,
+        },
+
+        financialBalanceValue: {
+            fontSize: 28,
+            fontWeight: '900',
+            marginTop: 6,
+        },
+
+        financialBalancePositive: {
+            color: '#66BB6A',
+        },
+
+        financialBalanceNegative: {
+            color: '#FF6B6B',
+        },
+
+        financialBalanceHint: {
+            color: '#858585',
+            fontSize: 10,
+            lineHeight: 15,
+            marginTop: 6,
+        },
+
+        financialDailyList: {
+            gap: 14,
+            marginTop: 14,
+        },
+
+        financialDailyRow: {
+            borderTopWidth: 1,
+            borderTopColor: '#2D2D2D',
+            paddingTop: 12,
+        },
+
+        financialDailyHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 7,
+        },
+
+        financialDailyDate: {
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '900',
+            textTransform: 'uppercase',
+        },
+
+        financialDailyBalance: {
+            color: primaryColor,
+            fontSize: 11,
+            fontWeight: '900',
+        },
+
+        financialLegendText: {
+            color: '#8A8A8A',
+            fontSize: 9,
+            fontWeight: '700',
+            marginBottom: 4,
+            marginTop: 4,
+        },
+
+        financialBarTrack: {
+            height: 8,
+            borderRadius: 4,
+            overflow: 'hidden',
+            backgroundColor: '#303030',
+        },
+
+        financialSalesBar: {
+            height: '100%',
+            borderRadius: 4,
+            backgroundColor: primaryColor,
+        },
+
+        financialExpenseBar: {
+            height: '100%',
+            borderRadius: 4,
+            backgroundColor: '#FF6B6B',
+        },
+
+        financialCategoryList: {
+            gap: 13,
+            marginTop: 14,
+        },
+
+        financialCategoryRow: {
+            gap: 5,
+        },
+
+        financialCategoryHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+        },
+
+        financialCategoryName: {
+            flex: 1,
+            color: '#EAEAEA',
+            fontSize: 11,
+            fontWeight: '800',
+        },
+
+        financialCategoryAmount: {
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '900',
+        },
+
+        financialCategoryCount: {
+            color: '#747474',
+            fontSize: 9,
+            fontWeight: '700',
+        },
     });
 
 export let styles =

@@ -19,8 +19,14 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 
 import {
+    DailyFinancialReport,
     DailySalesReport,
+    ExpenseCategoryReport,
+    FinancialBalanceReport,
+    getDailyFinancialReport,
     getDailySalesReport,
+    getExpenseCategoryReport,
+    getFinancialBalanceReport,
     getModifierSalesReport,
     getProductSalesReport,
     getPromotionActivityReport,
@@ -69,6 +75,15 @@ const EMPTY_SUMMARY:
     orders_count: 0,
     average_ticket: 0,
     items_sold: 0,
+};
+
+const EMPTY_FINANCIAL: FinancialBalanceReport = {
+    gross_sales: 0,
+    refunds: 0,
+    net_sales: 0,
+    expenses: 0,
+    balance: 0,
+    expense_count: 0,
 };
 
 export function AdminReports() {
@@ -138,6 +153,21 @@ export function AdminReports() {
         promotionActivities,
         setPromotionActivities,
     ] = useState<PromotionActivityReport[]>([]);
+
+    const [
+        financialBalance,
+        setFinancialBalance,
+    ] = useState<FinancialBalanceReport>(EMPTY_FINANCIAL);
+
+    const [
+        expenseCategories,
+        setExpenseCategories,
+    ] = useState<ExpenseCategoryReport[]>([]);
+
+    const [
+        dailyFinancial,
+        setDailyFinancial,
+    ] = useState<DailyFinancialReport[]>([]);
 
     const [
         isLoading,
@@ -239,6 +269,9 @@ export function AdminReports() {
                         productData,
                         dailySalesData,
                         promotionActivityData,
+                        financialBalanceData,
+                        expenseCategoryData,
+                        dailyFinancialData,
                         modifierReportEntries,
                     ] =
                         await Promise.all([
@@ -259,6 +292,21 @@ export function AdminReports() {
                             ),
 
                             getPromotionActivityReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getFinancialBalanceReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getExpenseCategoryReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getDailyFinancialReport(
                                 dateRange.from,
                                 dateRange.to,
                             ),
@@ -292,6 +340,18 @@ export function AdminReports() {
 
                     setPromotionActivities(
                         promotionActivityData,
+                    );
+
+                    setFinancialBalance(
+                        financialBalanceData,
+                    );
+
+                    setExpenseCategories(
+                        expenseCategoryData,
+                    );
+
+                    setDailyFinancial(
+                        dailyFinancialData,
                     );
 
                     setModifierGroups(
@@ -464,6 +524,11 @@ export function AdminReports() {
                     value: 'promotions',
                     label: 'Promociones',
                     description: 'Canjes, reembolsos y descuentos promocionales.',
+                },
+                {
+                    value: 'financial',
+                    label: 'Balance financiero',
+                    description: 'Ventas netas contra egresos registrados.',
                 },
                 ...modifierGroups.map(
                     group => ({
@@ -857,6 +922,13 @@ export function AdminReports() {
                             )}
                         </View>
                     </>
+                ) : activeSection === 'financial' ? (
+                    <FinancialReportPanel
+                        summary={financialBalance}
+                        categories={expenseCategories}
+                        daily={dailyFinancial}
+                        formatCurrency={formatCurrency}
+                    />
                 ) : activeSection === 'promotions' ? (
                     <>
                         <View
@@ -1006,6 +1078,124 @@ export function AdminReports() {
             ) : null}
         </>
     );
+}
+
+
+interface FinancialReportPanelProps {
+    summary: FinancialBalanceReport;
+    categories: ExpenseCategoryReport[];
+    daily: DailyFinancialReport[];
+    formatCurrency: (value: number) => string;
+}
+
+function FinancialReportPanel({
+    summary,
+    categories,
+    daily,
+    formatCurrency,
+}: FinancialReportPanelProps) {
+    const maximumCategory = categories.reduce(
+        (maximum, category) => Math.max(maximum, category.amount),
+        0,
+    );
+
+    const maximumDaily = daily.reduce(
+        (maximum, day) => Math.max(maximum, day.net_sales, day.expenses),
+        0,
+    );
+
+    return (
+        <>
+            <View style={styles.financialSummaryGrid}>
+                <SummaryCard label="Ventas brutas" value={formatCurrency(summary.gross_sales)} />
+                <SummaryCard label="Reembolsos" value={formatCurrency(summary.refunds)} />
+                <SummaryCard label="Ventas netas" value={formatCurrency(summary.net_sales)} />
+                <SummaryCard label="Egresos" value={formatCurrency(summary.expenses)} />
+            </View>
+
+            <View style={styles.financialBalanceCard}>
+                <Text style={styles.financialBalanceLabel}>BALANCE DEL PERIODO</Text>
+                <Text
+                    style={[
+                        styles.financialBalanceValue,
+                        summary.balance >= 0
+                            ? styles.financialBalancePositive
+                            : styles.financialBalanceNegative,
+                    ]}
+                >
+                    {formatCurrency(summary.balance)}
+                </Text>
+                <Text style={styles.financialBalanceHint}>
+                    Ventas cobradas menos reembolsos y egresos registrados. No sustituye una utilidad contable.
+                </Text>
+            </View>
+
+            <View style={styles.reportCard}>
+                <Text style={styles.reportTitle}>Ingresos vs egresos por día</Text>
+                <Text style={styles.sectionHint}>Comparación diaria de ventas netas y gastos registrados.</Text>
+                {daily.length === 0 ? (
+                    <EmptyReport />
+                ) : (
+                    <View style={styles.financialDailyList}>
+                        {daily.map(day => {
+                            const salesWidth = maximumDaily > 0 ? (day.net_sales / maximumDaily) * 100 : 0;
+                            const expenseWidth = maximumDaily > 0 ? (day.expenses / maximumDaily) * 100 : 0;
+                            return (
+                                <View key={day.report_date} style={styles.financialDailyRow}>
+                                    <View style={styles.financialDailyHeader}>
+                                        <Text style={styles.financialDailyDate}>{formatShortReportDate(day.report_date)}</Text>
+                                        <Text style={styles.financialDailyBalance}>{formatCurrency(day.balance)}</Text>
+                                    </View>
+                                    <Text style={styles.financialLegendText}>Ventas netas · {formatCurrency(day.net_sales)}</Text>
+                                    <View style={styles.financialBarTrack}>
+                                        <View style={[styles.financialSalesBar, { width: `${salesWidth}%` }]} />
+                                    </View>
+                                    <Text style={styles.financialLegendText}>Egresos · {formatCurrency(day.expenses)}</Text>
+                                    <View style={styles.financialBarTrack}>
+                                        <View style={[styles.financialExpenseBar, { width: `${expenseWidth}%` }]} />
+                                    </View>
+                                </View>
+                            );
+                        })}
+                    </View>
+                )}
+            </View>
+
+            <View style={styles.reportCard}>
+                <Text style={styles.reportTitle}>Egresos por categoría</Text>
+                <Text style={styles.sectionHint}>{summary.expense_count} movimientos registrados en el periodo.</Text>
+                {categories.length === 0 ? (
+                    <EmptyReport />
+                ) : (
+                    <View style={styles.financialCategoryList}>
+                        {categories.map(category => {
+                            const width = maximumCategory > 0 ? (category.amount / maximumCategory) * 100 : 0;
+                            return (
+                                <View key={category.category_id} style={styles.financialCategoryRow}>
+                                    <View style={styles.financialCategoryHeader}>
+                                        <Text style={styles.financialCategoryName}>{category.category_name}</Text>
+                                        <Text style={styles.financialCategoryAmount}>{formatCurrency(category.amount)}</Text>
+                                    </View>
+                                    <View style={styles.financialBarTrack}>
+                                        <View style={[styles.financialExpenseBar, { width: `${width}%` }]} />
+                                    </View>
+                                    <Text style={styles.financialCategoryCount}>{category.expense_count} movimiento(s)</Text>
+                                </View>
+                            );
+                        })}
+                    </View>
+                )}
+            </View>
+        </>
+    );
+}
+
+function formatShortReportDate(value: string): string {
+    const date = new Date(`${value}T12:00:00`);
+    return date.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+    });
 }
 
 interface SummaryCardProps {

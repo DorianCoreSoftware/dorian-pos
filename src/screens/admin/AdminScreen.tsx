@@ -7,6 +7,7 @@ import React, {
 import {
   Modal,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -62,6 +63,10 @@ import {
 } from '../../components/admin/business-settings/AdminBusinessSettings';
 
 import {
+  AdminExpenses,
+} from '../../components/admin/expenses/AdminExpenses';
+
+import {
   useBusiness,
 } from '../../context/BusinessContext';
 
@@ -76,6 +81,7 @@ type AdminSection =
   | 'modifiers'
   | 'users'
   | 'reports'
+  | 'expenses'
   | 'printer'
   | 'promotions'
   | 'loyalty'
@@ -193,6 +199,14 @@ export function AdminScreen({
             },
             {
               key:
+                'expenses',
+              label:
+                'EGRESOS',
+              icon:
+                '💸',
+            },
+            {
+              key:
                 'printer',
               label:
                 'IMPRESORA',
@@ -299,7 +313,7 @@ export function AdminScreen({
     if (
       !activeSectionExists &&
       availableSections.length >
-        0
+      0
     ) {
       setActiveSection(
         availableSections[0].key,
@@ -389,6 +403,15 @@ export function AdminScreen({
       ) {
         return (
           <AdminReports />
+        );
+      }
+
+      if (
+        activeSection ===
+        'expenses'
+      ) {
+        return (
+          <AdminExpenses />
         );
       }
 
@@ -526,7 +549,7 @@ export function AdminScreen({
       style={[
         styles.container,
         isPhone &&
-          styles.containerPhone,
+        styles.containerPhone,
         {
           backgroundColor:
             theme.background,
@@ -537,14 +560,14 @@ export function AdminScreen({
         style={[
           styles.header,
           isPhone &&
-            styles.headerPhone,
+          styles.headerPhone,
         ]}
       >
         <Text
           style={[
             styles.title,
             isPhone &&
-              styles.titlePhone,
+            styles.titlePhone,
             {
               color:
                 theme.text,
@@ -558,7 +581,7 @@ export function AdminScreen({
           style={[
             styles.subtitle,
             isPhone &&
-              styles.subtitlePhone,
+            styles.subtitlePhone,
             {
               color:
                 theme.textMuted,
@@ -681,17 +704,25 @@ export function AdminScreen({
         }
       >
         <View
-          style={
-            styles.modalBackdrop
-          }
+          style={[
+            styles.modalBackdrop,
+            {
+              alignItems:
+                'center',
+              justifyContent:
+                'center',
+              paddingHorizontal:
+                14,
+              paddingVertical:
+                28,
+            },
+          ]}
         >
           <TouchableOpacity
             style={
-              styles.modalDismissArea
+              StyleSheet.absoluteFillObject
             }
-            activeOpacity={
-              1
-            }
+            activeOpacity={1}
             onPress={() =>
               setSectionSelectorVisible(
                 false,
@@ -703,9 +734,18 @@ export function AdminScreen({
             style={[
               styles.mobileMenuCard,
               {
+                width:
+                  '100%',
+                maxWidth:
+                  520,
+                maxHeight:
+                  '82%',
+                alignSelf:
+                  'center',
+                borderRadius:
+                  22,
                 backgroundColor:
                   theme.surface,
-
                 borderColor:
                   theme.border,
               },

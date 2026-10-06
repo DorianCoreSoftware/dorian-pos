@@ -446,3 +446,118 @@ export async function getPromotionActivityReport(
     }),
   );
 }
+
+export interface FinancialBalanceReport {
+  gross_sales: number;
+  refunds: number;
+  net_sales: number;
+  expenses: number;
+  balance: number;
+  expense_count: number;
+}
+
+export interface ExpenseCategoryReport {
+  category_id: string;
+  category_name: string;
+  expense_count: number;
+  amount: number;
+}
+
+export interface DailyFinancialReport {
+  report_date: string;
+  net_sales: number;
+  expenses: number;
+  balance: number;
+}
+
+interface FinancialBalanceReportRow {
+  gross_sales: string | number | null;
+  refunds: string | number | null;
+  net_sales: string | number | null;
+  expenses: string | number | null;
+  balance: string | number | null;
+  expense_count: string | number | null;
+}
+
+interface ExpenseCategoryReportRow {
+  category_id: string;
+  category_name: string;
+  expense_count: string | number | null;
+  amount: string | number | null;
+}
+
+interface DailyFinancialReportRow {
+  report_date: string;
+  net_sales: string | number | null;
+  expenses: string | number | null;
+  balance: string | number | null;
+}
+
+export async function getFinancialBalanceReport(
+  from: Date,
+  to: Date,
+): Promise<FinancialBalanceReport> {
+  const { data, error } = await supabase.rpc(
+    'get_financial_balance_report',
+    {
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    },
+  );
+
+  if (error) throw error;
+
+  const row = ((data ?? []) as FinancialBalanceReportRow[])[0];
+  return {
+    gross_sales: Number(row?.gross_sales ?? 0),
+    refunds: Number(row?.refunds ?? 0),
+    net_sales: Number(row?.net_sales ?? 0),
+    expenses: Number(row?.expenses ?? 0),
+    balance: Number(row?.balance ?? 0),
+    expense_count: Number(row?.expense_count ?? 0),
+  };
+}
+
+export async function getExpenseCategoryReport(
+  from: Date,
+  to: Date,
+): Promise<ExpenseCategoryReport[]> {
+  const { data, error } = await supabase.rpc(
+    'get_expense_category_report',
+    {
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    },
+  );
+
+  if (error) throw error;
+
+  return ((data ?? []) as ExpenseCategoryReportRow[]).map(row => ({
+    category_id: row.category_id,
+    category_name: row.category_name,
+    expense_count: Number(row.expense_count ?? 0),
+    amount: Number(row.amount ?? 0),
+  }));
+}
+
+export async function getDailyFinancialReport(
+  from: Date,
+  to: Date,
+): Promise<DailyFinancialReport[]> {
+  const { data, error } = await supabase.rpc(
+    'get_daily_financial_report',
+    {
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    },
+  );
+
+  if (error) throw error;
+
+  return ((data ?? []) as DailyFinancialReportRow[]).map(row => ({
+    report_date: row.report_date,
+    net_sales: Number(row.net_sales ?? 0),
+    expenses: Number(row.expenses ?? 0),
+    balance: Number(row.balance ?? 0),
+  }));
+}
