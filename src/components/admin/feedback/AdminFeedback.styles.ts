@@ -81,7 +81,7 @@ const createStyles = (
       paddingVertical: 6,
       backgroundColor: withAlpha(primaryColor, 0.14),
       borderWidth: 1,
-      borderColor: '#5A4A00',
+      borderColor: withAlpha(primaryColor, 0.53),
     },
 
     counterBadgeText: {
@@ -113,8 +113,8 @@ const createStyles = (
     },
 
     cardNew: {
-      borderColor: '#5A4A00',
-      backgroundColor: '#211C0B',
+      borderColor: withAlpha(primaryColor, 0.53),
+      backgroundColor: withAlpha(primaryColor, 0.10),
     },
 
     cardTop: {

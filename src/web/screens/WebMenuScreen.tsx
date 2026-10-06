@@ -1023,7 +1023,7 @@ export default function WebMenuScreen({
                 true,
               )
             }
-            tintColor="#FFB000"
+            tintColor={businessTheme.primary}
           />
         }
       >
@@ -1246,7 +1246,7 @@ export default function WebMenuScreen({
             >
               <ActivityIndicator
                 size="large"
-                color="#FFB000"
+                color={businessTheme.primary}
               />
               <Text
                 style={

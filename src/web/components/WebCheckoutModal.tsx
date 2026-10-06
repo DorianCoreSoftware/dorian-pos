@@ -904,7 +904,7 @@ export default function WebCheckoutModal({
                     >
                       <ActivityIndicator
                         size="small"
-                        color="#FFB000"
+                        color={businessTheme.primary}
                       />
 
                       <Text
@@ -996,7 +996,7 @@ export default function WebCheckoutModal({
                         >
                           <ActivityIndicator
                             size="small"
-                            color="#FFB000"
+                            color={businessTheme.primary}
                           />
 
                           <Text

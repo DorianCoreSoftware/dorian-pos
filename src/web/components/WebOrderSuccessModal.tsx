@@ -7,7 +7,9 @@ import {
   View,
 } from 'react-native';
 
-import styles from './WebOrderSuccessModal.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebOrderSuccessModal.styles';
 
 import {
   useBusiness,
@@ -37,7 +39,12 @@ export default function WebOrderSuccessModal({
 }: WebOrderSuccessModalProps) {
   const {
     business,
+    theme,
   } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
 
   const businessName =
     business?.identity.businessName ??
@@ -164,7 +171,7 @@ export default function WebOrderSuccessModal({
               minHeight: 46,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: '#FFB000',
+              borderColor: theme.primary,
               alignItems: 'center',
               justifyContent: 'center',
               paddingHorizontal: 16,
@@ -176,7 +183,7 @@ export default function WebOrderSuccessModal({
           >
             <Text
               style={{
-                color: '#FFB000',
+                color: theme.primary,
                 fontWeight: '900',
                 fontSize: 15,
               }}

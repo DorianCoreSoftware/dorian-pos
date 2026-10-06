@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-export const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
@@ -148,7 +152,7 @@ export const styles =
       justifyContent:
         'center',
       backgroundColor:
-        '#FFB000',
+        primaryColor,
     },
 
     searchButtonDisabled: {
@@ -212,7 +216,7 @@ export const styles =
 
     orderCode: {
       color:
-        '#FFB000',
+        primaryColor,
       fontSize:
         22,
       fontWeight:
@@ -273,14 +277,14 @@ export const styles =
 
     stepDotComplete: {
       borderColor:
-        '#FFB000',
+        primaryColor,
       backgroundColor:
-        '#FFB000',
+        primaryColor,
     },
 
     stepDotCurrent: {
       borderColor:
-        '#FFB000',
+        primaryColor,
       backgroundColor:
         '#151515',
     },
@@ -296,7 +300,7 @@ export const styles =
 
     stepLineComplete: {
       backgroundColor:
-        '#FFB000',
+        primaryColor,
     },
 
     stepTextContainer: {
@@ -324,7 +328,7 @@ export const styles =
 
     currentLabel: {
       color:
-        '#FFB000',
+        primaryColor,
       marginTop:
         4,
       fontSize:
@@ -376,15 +380,30 @@ export const styles =
       borderWidth:
         1,
       borderColor:
-        '#FFB000',
+        primaryColor,
       paddingHorizontal:
         16,
     },
 
     refreshButtonText: {
       color:
-        '#FFB000',
+        primaryColor,
       fontWeight:
         '900',
     },
   });
+
+
+export let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}

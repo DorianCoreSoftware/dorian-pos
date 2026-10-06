@@ -12,6 +12,10 @@ import {
 import { useState } from 'react';
 
 import {
+  AccountRecoveryModal,
+} from '../../components/account-recovery/AccountRecoveryModal';
+
+import {
   signInWithIdentifier,
 } from '../../services/authService';
 
@@ -37,6 +41,11 @@ export const LoginScreen = () => {
   const [
     isLoading,
     setIsLoading,
+  ] = useState(false);
+
+  const [
+    showRecovery,
+    setShowRecovery,
   ] = useState(false);
 
   const {
@@ -215,6 +224,29 @@ export const LoginScreen = () => {
         />
 
         <TouchableOpacity
+          onPress={() => {
+            setShowRecovery(true);
+          }}
+          disabled={isLoading}
+          style={{
+            alignSelf: 'flex-end',
+            marginTop: 10,
+            marginBottom: 4,
+            paddingVertical: 6,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.primary,
+              fontSize: 13,
+              fontWeight: '700',
+            }}
+          >
+            ¿Olvidaste tu contraseña?
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[
             styles.button,
             {
@@ -254,6 +286,15 @@ export const LoginScreen = () => {
           )}
         </TouchableOpacity>
       </View>
+
+      <AccountRecoveryModal
+        visible={showRecovery}
+        type="pos_password"
+        initialIdentifier={identifier}
+        onClose={() => {
+          setShowRecovery(false);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 };

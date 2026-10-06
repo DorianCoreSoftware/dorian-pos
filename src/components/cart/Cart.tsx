@@ -750,7 +750,7 @@ export const Cart: React.FC<
                           borderRadius: 6,
                           borderWidth: 1,
                           borderColor:
-                            '#5A4A00',
+                            withAlpha(businessTheme.primary, 0.53),
                           backgroundColor:
                             withAlpha(businessTheme.primary, 0.14),
                         }}

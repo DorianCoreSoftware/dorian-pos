@@ -12,7 +12,9 @@ import {
   Product,
 } from '../../types';
 
-import styles from './WebProductCard.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebProductCard.styles';
 
 import {
   useBusiness,
@@ -39,7 +41,12 @@ export default function WebProductCard({
 }: WebProductCardProps) {
   const {
     business,
+    theme,
   } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
 
   const {
     formatCurrency,

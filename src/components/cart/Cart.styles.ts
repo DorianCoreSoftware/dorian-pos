@@ -203,7 +203,7 @@ const createStyles = (
       marginTop: 12,
       paddingTop: 12,
       borderTopWidth: 1,
-      borderTopColor: '#5A4A00',
+      borderTopColor: withAlpha(primaryColor, 0.53),
     },
 
     deliveryCustomer: {

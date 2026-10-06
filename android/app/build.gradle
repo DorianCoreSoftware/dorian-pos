@@ -99,7 +99,7 @@ if (!(configuredApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*
 
 defaultConfig {
 
-    applicationId configuredApplicationId
+    applicationId "com.burgerkong.pos"
 
     if (isDevBuild) {
         applicationIdSuffix '.dev'

@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     wrapper: {
       width: '100%',
@@ -57,10 +61,10 @@ const styles =
 
     tabSelected: {
       backgroundColor:
-        '#FFB000',
+        primaryColor,
 
       borderColor:
-        '#FFB000',
+        primaryColor,
     },
 
     tabPressed: {
@@ -81,4 +85,18 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+export { styles as default };

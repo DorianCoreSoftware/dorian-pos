@@ -33,6 +33,10 @@ import {
     useBusiness,
 } from '../../context/BusinessContext';
 
+import {
+    AccountRecoveryModal,
+} from '../../components/account-recovery/AccountRecoveryModal';
+
 import styles from './WebLoyaltyScreen.styles';
 
 interface Props {
@@ -212,6 +216,12 @@ export default function WebLoyaltyScreen({
         useState<string | null>(
             null,
         );
+
+    const [
+        showPinRecovery,
+        setShowPinRecovery,
+    ] =
+        useState(false);
 
     const generateQr =
         async (
@@ -1337,6 +1347,26 @@ export default function WebLoyaltyScreen({
                                     maxLength={6}
                                 />
 
+                                <Pressable
+                                    onPress={() => {
+                                        setShowPinRecovery(true);
+                                    }}
+                                    style={{
+                                        alignSelf: 'flex-end',
+                                        paddingVertical: 8,
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: theme.primary,
+                                            fontSize: 13,
+                                            fontWeight: '700',
+                                        }}
+                                    >
+                                        ¿Olvidaste tu PIN?
+                                    </Text>
+                                </Pressable>
+
                                 {errorMessage ? (
                                     <Text
                                         style={[
@@ -2070,6 +2100,15 @@ export default function WebLoyaltyScreen({
                     </Pressable>
                 </>
             )}
+
+            <AccountRecoveryModal
+                visible={showPinRecovery}
+                type="rewards_pin"
+                initialIdentifier={phone}
+                onClose={() => {
+                    setShowPinRecovery(false);
+                }}
+            />
         </ScrollView>
     );
 }

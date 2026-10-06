@@ -488,7 +488,7 @@ const createStyles = (
 
     deliveryExtraText: {
       color:
-        '#FFB000',
+        primaryColor,
 
       fontSize:
         13,

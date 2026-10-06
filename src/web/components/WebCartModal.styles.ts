@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     backdrop: {
       flex: 1,
@@ -111,7 +115,7 @@ const styles =
     },
 
     itemPrice: {
-      color: '#FFB000',
+      color: primaryColor,
       fontSize: 15,
       fontWeight: '900',
       marginTop: 4,
@@ -250,7 +254,7 @@ const styles =
     },
 
     totalValue: {
-      color: '#FFB000',
+      color: primaryColor,
       fontSize: 21,
       fontWeight: '900',
     },
@@ -295,7 +299,7 @@ const styles =
 
     checkoutButton: {
       backgroundColor:
-        '#FFB000',
+        primaryColor,
       borderRadius: 12,
       alignItems: 'center',
       paddingVertical: 14,
@@ -324,4 +328,18 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+export { styles as default };

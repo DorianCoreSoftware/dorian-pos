@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     card: {
       overflow:
@@ -65,7 +69,7 @@ const styles =
 
     placeholderText: {
       color:
-        '#FFB000',
+        primaryColor,
 
       fontWeight:
         '900',
@@ -148,7 +152,7 @@ const styles =
 
     price: {
       color:
-        '#FFB000',
+        primaryColor,
 
       fontSize:
         20,
@@ -162,7 +166,7 @@ const styles =
         10,
 
       backgroundColor:
-        '#FFB000',
+        primaryColor,
 
       paddingHorizontal:
         13,
@@ -189,4 +193,18 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+export { styles as default };

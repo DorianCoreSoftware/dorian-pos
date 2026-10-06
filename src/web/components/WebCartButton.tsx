@@ -6,7 +6,13 @@ import {
   View,
 } from 'react-native';
 
-import styles from './WebCartButton.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebCartButton.styles';
+
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
 
 import {
   useCurrency,
@@ -26,6 +32,14 @@ export default function WebCartButton({
   const {
     formatCurrency,
   } = useCurrency();
+
+  const {
+    theme,
+  } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
 
   if (
     totalItems <= 0

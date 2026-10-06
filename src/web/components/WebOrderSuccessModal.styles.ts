@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     backdrop: {
       flex: 1,
@@ -32,7 +36,7 @@ const styles =
       height: 68,
       borderRadius: 34,
       backgroundColor:
-        '#FFB000',
+        primaryColor,
       alignItems: 'center',
       justifyContent:
         'center',
@@ -79,7 +83,7 @@ const styles =
     },
 
     orderId: {
-      color: '#FFB000',
+      color: primaryColor,
       fontSize: 24,
       fontWeight: '900',
       marginTop: 3,
@@ -96,7 +100,7 @@ const styles =
     button: {
       width: '100%',
       backgroundColor:
-        '#FFB000',
+        primaryColor,
       borderRadius: 12,
       paddingVertical: 14,
       alignItems: 'center',
@@ -114,4 +118,18 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+export { styles as default };

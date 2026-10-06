@@ -1,4 +1,7 @@
-import { DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
+import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../../theme/brandStyles';
 
 import { StyleSheet } from 'react-native';
 
@@ -36,8 +39,8 @@ const createStyles = (
         marginBottom: 12,
         borderRadius: 11,
         borderWidth: 1,
-        borderColor: '#4A3B00',
-        backgroundColor: '#211C0B',
+        borderColor: withAlpha(primaryColor, 0.45),
+        backgroundColor: withAlpha(primaryColor, 0.10),
     },
 
     webOrdersHeader: {

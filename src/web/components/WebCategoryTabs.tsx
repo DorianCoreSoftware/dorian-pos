@@ -11,7 +11,13 @@ import {
   Category,
 } from '../../types';
 
-import styles from './WebCategoryTabs.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebCategoryTabs.styles';
+
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
 
 interface WebCategoryTabsProps {
   categories: Category[];
@@ -28,6 +34,14 @@ export default function WebCategoryTabs({
   selectedCategoryId,
   onSelectCategory,
 }: WebCategoryTabsProps) {
+  const {
+    theme,
+  } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
+
   return (
     <View
       style={

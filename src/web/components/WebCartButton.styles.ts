@@ -1,8 +1,12 @@
+import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+
 import {
   StyleSheet,
 } from 'react-native';
 
-const styles =
+const createStyles = (
+  primaryColor: string,
+) =>
   StyleSheet.create({
     button: {
       position: 'absolute',
@@ -10,7 +14,7 @@ const styles =
       bottom: 20,
       minWidth: 245,
       backgroundColor:
-        '#FFB000',
+        primaryColor,
       borderRadius: 16,
       paddingHorizontal: 18,
       paddingVertical: 14,
@@ -58,4 +62,18 @@ const styles =
     },
   });
 
-export default styles;
+let styles =
+  createStyles(
+    DEFAULT_BRAND_PRIMARY,
+  );
+
+export function setBrandPrimaryColor(
+  primaryColor: string,
+): void {
+  styles =
+    createStyles(
+      primaryColor,
+    );
+}
+
+export { styles as default };

@@ -24,8 +24,13 @@ import {
 } from '../services/webOrderTrackingService';
 
 import {
+  setBrandPrimaryColor,
   styles,
 } from './WebOrderTrackingModal.styles';
+
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
 
 interface WebOrderTrackingModalProps {
   visible: boolean;
@@ -44,6 +49,14 @@ export function WebOrderTrackingModal({
   initialTrackingCode = null,
   onClose,
 }: WebOrderTrackingModalProps) {
+  const {
+    theme,
+  } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
+
   const [
     trackingCode,
     setTrackingCode,

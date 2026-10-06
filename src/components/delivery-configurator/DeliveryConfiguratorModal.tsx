@@ -859,7 +859,7 @@ export function DeliveryConfiguratorModal({
               >
                 <ActivityIndicator
                   size="small"
-                  color="#FFB000"
+                  color={businessTheme.primary}
                 />
 
                 <Text

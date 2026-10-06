@@ -1,4 +1,7 @@
-import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+import {
+  DEFAULT_BRAND_PRIMARY,
+  withAlpha,
+} from '../../theme/brandStyles';
 
 import {
   StyleSheet,
@@ -91,7 +94,7 @@ const createStyles = (
       paddingHorizontal: 13,
       borderRadius: 9,
       borderWidth: 1,
-      borderColor: '#FFB000',
+      borderColor: primaryColor,
       backgroundColor: '#151515',
       alignItems: 'center',
       justifyContent: 'center',
@@ -113,7 +116,7 @@ const createStyles = (
     },
 
     topActionPrimaryText: {
-      color: '#FFB000',
+      color: primaryColor,
       fontSize: 12,
       fontWeight: '900',
     },
@@ -273,7 +276,7 @@ const createStyles = (
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-      borderColor: '#5A4A00',
+      borderColor: withAlpha(primaryColor, 0.53),
       backgroundColor: primaryColor,
       zIndex: 50,
       elevation: 8,

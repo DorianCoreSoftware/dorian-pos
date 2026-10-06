@@ -186,7 +186,7 @@ const createStyles = (
 
     choiceButtonSelected: {
       borderColor:
-        '#FFB000',
+        primaryColor,
 
       backgroundColor:
         withAlpha(primaryColor, 0.12),
@@ -210,7 +210,7 @@ const createStyles = (
 
     choiceTitleSelected: {
       color:
-        '#FFB000',
+        primaryColor,
     },
 
     choiceSubtitle: {
@@ -459,7 +459,7 @@ const createStyles = (
 
     deliveryExtraText: {
       color:
-        '#FFB000',
+        primaryColor,
 
       fontSize:
         13,
@@ -609,7 +609,7 @@ const createStyles = (
 
     totalValue: {
       color:
-        '#FFB000',
+        primaryColor,
 
       fontSize:
         19,
@@ -685,7 +685,7 @@ const createStyles = (
         12,
 
       backgroundColor:
-        '#FFB000',
+        primaryColor,
 
       alignItems:
         'center',

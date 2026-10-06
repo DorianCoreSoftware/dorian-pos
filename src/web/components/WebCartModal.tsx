@@ -12,7 +12,13 @@ import {
   Cart,
 } from '../../types';
 
-import styles from './WebCartModal.styles';
+import styles, {
+  setBrandPrimaryColor,
+} from './WebCartModal.styles';
+
+import {
+  useBusiness,
+} from '../../context/BusinessContext';
 
 import {
   useCurrency,
@@ -66,6 +72,14 @@ export default function WebCartModal({
   const {
     formatCurrency,
   } = useCurrency();
+
+  const {
+    theme,
+  } = useBusiness();
+
+  setBrandPrimaryColor(
+    theme.primary,
+  );
 
   return (
     <Modal

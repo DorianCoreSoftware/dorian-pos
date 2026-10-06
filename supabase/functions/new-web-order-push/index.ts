@@ -59,6 +59,8 @@ function getTotalText(
     | string
     | null
     | undefined,
+  currencyCode:
+    string,
 ): string {
   const numericTotal =
     Number(
@@ -73,9 +75,20 @@ function getTotalText(
     return '';
   }
 
-  return `$${numericTotal.toFixed(
-    2,
-  )}`;
+  try {
+    return new Intl.NumberFormat(
+      'es-MX',
+      {
+        style: 'currency',
+        currency:
+          currencyCode,
+      },
+    ).format(
+      numericTotal,
+    );
+  } catch {
+    return `${currencyCode} ${numericTotal.toFixed(2)}`;
+  }
 }
 
 Deno.serve(
@@ -188,6 +201,41 @@ Deno.serve(
         );
 
       const {
+        data: businessSettings,
+        error: businessSettingsError,
+      } =
+        await supabase
+          .from(
+            'business_settings',
+          )
+          .select(
+            'short_name, business_name, currency_code',
+          )
+          .eq(
+            'id',
+            1,
+          )
+          .maybeSingle();
+
+      if (
+        businessSettingsError
+      ) {
+        console.error(
+          'Could not load business settings for push:',
+          businessSettingsError,
+        );
+      }
+
+      const businessName =
+        businessSettings?.short_name?.trim() ||
+        businessSettings?.business_name?.trim() ||
+        'Dorian POS';
+
+      const currencyCode =
+        businessSettings?.currency_code?.trim().toUpperCase() ||
+        'MXN';
+
+      const {
         data: devices,
         error: devicesError,
       } =
@@ -251,6 +299,7 @@ Deno.serve(
       const totalText =
         getTotalText(
           order.total,
+          currencyCode,
         );
 
       const bodyParts = [
@@ -274,7 +323,7 @@ Deno.serve(
               'default',
 
             title:
-              '🍔 Nuevo pedido web',
+              `🛍️ Nuevo pedido web · ${businessName}`,
 
             body:
               bodyParts.join(

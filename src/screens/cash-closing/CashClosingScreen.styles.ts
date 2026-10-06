@@ -1014,10 +1014,10 @@ promoWarning: {
     1,
 
   borderColor:
-    '#5A4A00',
+    withAlpha(primaryColor, 0.53),
 
   backgroundColor:
-    '#2B260D',
+    withAlpha(primaryColor, 0.12),
 },
 
 promoWarningText: {

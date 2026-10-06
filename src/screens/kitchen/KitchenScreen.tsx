@@ -1160,13 +1160,13 @@ Cambio: ${formatCurrency(
             '#202020',
           borderWidth: 1,
           borderColor:
-            '#FFB000',
+            businessTheme.primary,
         }}
       >
         <Text
           style={{
             color:
-              '#FFB000',
+              businessTheme.primary,
             fontWeight:
               'bold',
             fontSize:
@@ -1465,7 +1465,7 @@ Cambio: ${formatCurrency(
           borderColor:
             item.orderSource ===
               'web'
-              ? '#FFB000'
+              ? businessTheme.primary
               : '#454545',
 
           borderRadius: 8,
@@ -1482,7 +1482,7 @@ Cambio: ${formatCurrency(
             color:
               item.orderSource ===
                 'web'
-                ? '#FFB000'
+                ? businessTheme.primary
                 : '#D0D0D0',
 
             fontSize: 12,

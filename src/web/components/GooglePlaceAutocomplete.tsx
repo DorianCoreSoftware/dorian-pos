@@ -11,6 +11,10 @@ import {
 } from 'react-native';
 
 import {
+    useBusiness,
+} from '../../context/BusinessContext';
+
+import {
     loadPlacesLibrary,
 } from '../services/googleMapsService';
 
@@ -62,6 +66,7 @@ export default function GooglePlaceAutocomplete({
     disabled = false,
     onPlaceSelected,
 }: GooglePlaceAutocompleteProps) {
+  const { theme: businessTheme } = useBusiness();
     const containerRef =
         useRef<HTMLDivElement | null>(
             null,
@@ -319,7 +324,7 @@ export default function GooglePlaceAutocomplete({
                     }}
                 >
                     <ActivityIndicator
-                        color="#FFB000"
+                        color={businessTheme.primary}
                     />
                 </View>
             )}
