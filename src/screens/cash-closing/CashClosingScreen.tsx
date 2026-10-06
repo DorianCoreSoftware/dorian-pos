@@ -52,6 +52,11 @@ import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefu
 import { getPromotionPrograms } from '../../services/promotionService';
 import { PromotionRedemptionPanel } from '../../components/promotions/PromotionRedemptionPanel';
 
+import {
+  PeriodFilter,
+  PeriodFilterValue,
+} from '../../components/period-filter/PeriodFilter';
+
 interface CashClosingScreenProps {
   cashSession:
   CashSession | null;
@@ -74,11 +79,7 @@ type CashView =
   | 'promotions';
 
 type HistoryFilter =
-  | 'today'
-  | 'week'
-  | 'month'
-  | 'all'
-  | 'custom';
+  PeriodFilterValue;
 
 type DatePickerField =
   | 'from'
@@ -624,7 +625,7 @@ export function CashClosingScreen({
 
       if (
         historyFilter ===
-        'week'
+        '7days'
       ) {
         const sevenDaysAgo =
           new Date(now);
@@ -718,26 +719,6 @@ export function CashClosingScreen({
       setHistoryFilter(
         filter,
       );
-
-      if (
-        filter ===
-        'custom'
-      ) {
-        const today =
-          new Date();
-
-        setHistoryFrom(
-          startOfDay(
-            today,
-          ),
-        );
-
-        setHistoryTo(
-          endOfDay(
-            today,
-          ),
-        );
-      }
     };
 
   const handleDateChange =
@@ -1321,87 +1302,14 @@ export function CashClosingScreen({
 
   const renderHistoryFilters =
     () => {
-      const filters: Array<{
-        value:
-        HistoryFilter;
-
-        label: string;
-      }> = [
-          {
-            value: 'today',
-            label: 'Hoy',
-          },
-
-          {
-            value: 'week',
-            label:
-              'Últimos 7 días',
-          },
-
-          {
-            value: 'month',
-            label: 'Este mes',
-          },
-
-          {
-            value: 'all',
-            label: 'Todo',
-          },
-
-          {
-            value: 'custom',
-            label:
-              'Personalizado',
-          },
-        ];
-
       return (
         <>
-          <View
-            style={
-              styles.historyFilters
+          <PeriodFilter
+            value={historyFilter}
+            onChange={
+              handleHistoryFilter
             }
-          >
-            {filters.map(
-              (filter) => {
-                const isActive =
-                  historyFilter ===
-                  filter.value;
-
-                return (
-                  <TouchableOpacity
-                    key={
-                      filter.value
-                    }
-                    style={[
-                      styles.historyFilterButton,
-
-                      isActive &&
-                      styles.historyFilterButtonActive,
-                    ]}
-                    onPress={() =>
-                      handleHistoryFilter(
-                        filter.value,
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.historyFilterText,
-
-                        isActive &&
-                        styles.historyFilterTextActive,
-                      ]}
-                    >
-                      {
-                        filter.label
-                      }
-                    </Text>
-                  </TouchableOpacity>
-                );
-              },
-            )}
-          </View>
+          />
 
           {historyFilter ===
             'custom' ? (
@@ -1488,6 +1396,12 @@ export function CashClosingScreen({
               }
               mode="date"
               display="default"
+              minimumDate={
+                datePickerField ===
+                  'to'
+                  ? historyFrom
+                  : undefined
+              }
               maximumDate={
                 new Date()
               }

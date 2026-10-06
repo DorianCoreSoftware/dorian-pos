@@ -104,6 +104,10 @@ const createStyles = (
       marginBottom: 18,
     },
 
+    customDateContainerSmall: {
+      gap: 8,
+    },
+
     dateField: {
       flex: 1,
       minHeight: 64,
@@ -141,6 +145,11 @@ const createStyles = (
       marginBottom: 22,
     },
 
+    summaryContainerPhone: {
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+
     summaryCard: {
       flex: 1,
       minHeight: 95,
@@ -151,6 +160,15 @@ const createStyles = (
       borderWidth: 1,
       borderColor: '#353535',
       backgroundColor: '#1D1D1D',
+    },
+
+    summaryCardPhone: {
+      flexGrow: 1,
+      flexBasis: '47%',
+      minWidth: '47%',
+      maxWidth: '49%',
+      minHeight: 92,
+      padding: 12,
     },
 
     totalCard: {
@@ -174,6 +192,10 @@ const createStyles = (
       color: '#FFFFFF',
       fontSize: 23,
       fontWeight: '800',
+    },
+
+    summaryValueSmall: {
+      fontSize: 20,
     },
 
     listHeader: {

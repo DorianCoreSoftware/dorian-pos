@@ -10,9 +10,9 @@ import React, {
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -37,11 +37,18 @@ import { getExistingOrderPromoCoupon } from '../../services/promoService';
 import { getOrderById } from '../../services/orderService';
 import { useCurrency } from '../../hooks/useCurrency';
 
+import {
+  PeriodFilter,
+  PeriodFilterValue,
+} from '../../components/period-filter/PeriodFilter';
+
 type SalesFilter =
-  | 'today'
-  | '7days'
-  | 'all'
-  | 'custom';
+  PeriodFilterValue;
+
+type DatePickerField =
+  | 'from'
+  | 'to'
+  | null;
 
 export function SalesScreen() {
   const { theme: businessTheme } = useBusiness();
@@ -51,6 +58,16 @@ export function SalesScreen() {
     currencyCode,
     formatCurrency,
   } = useCurrency();
+
+  const {
+    width,
+  } = useWindowDimensions();
+
+  const isPhone =
+    width < 700;
+
+  const isSmallPhone =
+    width < 430;
 
   const [
     salesFilter,
@@ -119,32 +136,11 @@ export function SalesScreen() {
   });
 
   const [
-    pendingStartDate,
-    setPendingStartDate,
-  ] = useState<Date>(() => {
-    const today = new Date();
-
-    return startOfDay(today);
-  });
-
-  const [
-    pendingEndDate,
-    setPendingEndDate,
-  ] = useState<Date>(() => {
-    const today = new Date();
-
-    return startOfDay(today);
-  });
-
-  const [
-    showStartDatePicker,
-    setShowStartDatePicker,
-  ] = useState(false);
-
-  const [
-    showEndDatePicker,
-    setShowEndDatePicker,
-  ] = useState(false);
+    datePickerField,
+    setDatePickerField,
+  ] = useState<DatePickerField>(
+    null,
+  );
 
   const loadSales =
     useCallback(
@@ -228,6 +224,24 @@ export function SalesScreen() {
         );
       }
 
+      if (
+        salesFilter === 'month'
+      ) {
+        return filterSalesByRange(
+          sales,
+          new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1,
+            0,
+            0,
+            0,
+            0,
+          ),
+          endOfDay(now),
+        );
+      }
+
       return filterSalesByRange(
         sales,
         startOfDay(
@@ -282,71 +296,37 @@ export function SalesScreen() {
       );
     }, [filteredSales]);
 
-  const handleStartDateChange = (
+  const handleSalesFilter = (
+    filter: SalesFilter,
+  ): void => {
+    setSalesFilter(filter);
+  };
+
+  const handleDateChange = (
     event: DateTimePickerEvent,
     selectedDate?: Date,
   ): void => {
+    const field =
+      datePickerField;
+
+    setDatePickerField(
+      null,
+    );
+
     if (
       event.type === 'dismissed' ||
-      !selectedDate
+      !selectedDate ||
+      !field
     ) {
       return;
     }
 
-    setPendingStartDate(
+    const normalizedDate =
       startOfDay(
         selectedDate,
-      ),
-    );
-  };
-
-  const handleEndDateChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ): void => {
-    if (
-      event.type === 'dismissed' ||
-      !selectedDate
-    ) {
-      return;
-    }
-
-    setPendingEndDate(
-      startOfDay(
-        selectedDate,
-      ),
-    );
-  };
-
-  const openStartDatePicker =
-    (): void => {
-      setPendingStartDate(
-        customStartDate,
       );
 
-      setShowStartDatePicker(
-        true,
-      );
-    };
-
-  const openEndDatePicker =
-    (): void => {
-      setPendingEndDate(
-        customEndDate,
-      );
-
-      setShowEndDatePicker(
-        true,
-      );
-    };
-
-  const confirmStartDate =
-    (): void => {
-      const normalizedDate =
-        startOfDay(
-          pendingStartDate,
-        );
-
+    if (field === 'from') {
       setCustomStartDate(
         normalizedDate,
       );
@@ -360,33 +340,24 @@ export function SalesScreen() {
         );
       }
 
-      setShowStartDatePicker(
-        false,
-      );
-    };
+      return;
+    }
 
-  const confirmEndDate =
-    (): void => {
-      const normalizedDate =
-        startOfDay(
-          pendingEndDate,
-        );
-
-      if (
-        normalizedDate <
-        customStartDate
-      ) {
-        return;
-      }
-
+    if (
+      normalizedDate <
+      customStartDate
+    ) {
       setCustomEndDate(
-        normalizedDate,
+        customStartDate,
       );
 
-      setShowEndDatePicker(
-        false,
-      );
-    };
+      return;
+    }
+
+    setCustomEndDate(
+      normalizedDate,
+    );
+  };
 
   const handleReprintTicket =
     async (
@@ -822,134 +793,31 @@ export function SalesScreen() {
         </TouchableOpacity>
       </View>
 
-      <View
-        style={
-          styles.filtersContainer
+      <PeriodFilter
+        value={salesFilter}
+        onChange={
+          handleSalesFilter
         }
-      >
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-
-            salesFilter ===
-            'today' &&
-            styles.filterButtonActive,
-          ]}
-          onPress={() =>
-            setSalesFilter(
-              'today',
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-
-              salesFilter ===
-              'today' &&
-              styles.filterButtonTextActive,
-            ]}
-          >
-            Hoy
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-
-            salesFilter ===
-            '7days' &&
-            styles.filterButtonActive,
-          ]}
-          onPress={() =>
-            setSalesFilter(
-              '7days',
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-
-              salesFilter ===
-              '7days' &&
-              styles.filterButtonTextActive,
-            ]}
-          >
-            Últimos 7 días
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-
-            salesFilter ===
-            'all' &&
-            styles.filterButtonActive,
-          ]}
-          onPress={() =>
-            setSalesFilter(
-              'all',
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-
-              salesFilter ===
-              'all' &&
-              styles.filterButtonTextActive,
-            ]}
-          >
-            Todo
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-
-            salesFilter ===
-            'custom' &&
-            styles.filterButtonActive,
-          ]}
-          onPress={() =>
-            setSalesFilter(
-              'custom',
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-
-              salesFilter ===
-              'custom' &&
-              styles.filterButtonTextActive,
-            ]}
-          >
-            Personalizado
-          </Text>
-        </TouchableOpacity>
-      </View>
+      />
 
       {salesFilter ===
         'custom' ? (
         <View
-          style={
-            styles.customDateContainer
-          }
+          style={[
+            styles.customDateContainer,
+            isSmallPhone &&
+            styles.customDateContainerSmall,
+          ]}
         >
           <TouchableOpacity
             style={
               styles.dateField
             }
             activeOpacity={0.8}
-            onPress={
-              openStartDatePicker
+            onPress={() =>
+              setDatePickerField(
+                'from',
+              )
             }
           >
             <Text
@@ -985,8 +853,10 @@ export function SalesScreen() {
               styles.dateField
             }
             activeOpacity={0.8}
-            onPress={
-              openEndDatePicker
+            onPress={() =>
+              setDatePickerField(
+                'to',
+              )
             }
           >
             <Text
@@ -1012,13 +882,17 @@ export function SalesScreen() {
       ) : null}
 
       <View
-        style={
-          styles.summaryContainer
-        }
+        style={[
+          styles.summaryContainer,
+          isPhone &&
+          styles.summaryContainerPhone,
+        ]}
       >
         <View
           style={[
             styles.summaryCard,
+            isPhone &&
+            styles.summaryCardPhone,
             styles.totalCard,
           ]}
         >
@@ -1031,9 +905,14 @@ export function SalesScreen() {
           </Text>
 
           <Text
-            style={
-              styles.totalValue
-            }
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.totalValue,
+              isSmallPhone &&
+              styles.summaryValueSmall,
+            ]}
           >
             {formatCurrency(
               summary.total,
@@ -1042,9 +921,11 @@ export function SalesScreen() {
         </View>
 
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -1055,9 +936,14 @@ export function SalesScreen() {
           </Text>
 
           <Text
-            style={
-              styles.summaryValue
-            }
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.summaryValue,
+              isSmallPhone &&
+              styles.summaryValueSmall,
+            ]}
           >
             {formatCurrency(
               summary.cash,
@@ -1066,9 +952,11 @@ export function SalesScreen() {
         </View>
 
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -1079,9 +967,14 @@ export function SalesScreen() {
           </Text>
 
           <Text
-            style={
-              styles.summaryValue
-            }
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.summaryValue,
+              isSmallPhone &&
+              styles.summaryValueSmall,
+            ]}
           >
             {formatCurrency(
               summary.card,
@@ -1090,9 +983,11 @@ export function SalesScreen() {
         </View>
 
         <View
-          style={
-            styles.summaryCard
-          }
+          style={[
+            styles.summaryCard,
+            isPhone &&
+            styles.summaryCardPhone,
+          ]}
         >
           <Text
             style={
@@ -1103,9 +998,14 @@ export function SalesScreen() {
           </Text>
 
           <Text
-            style={
-              styles.summaryValue
-            }
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.summaryValue,
+              isSmallPhone &&
+              styles.summaryValueSmall,
+            ]}
           >
             {
               filteredSales.length
@@ -1210,188 +1110,30 @@ export function SalesScreen() {
         />
       )}
 
-      <Modal
-        visible={
-          showStartDatePicker
-        }
-        transparent
-        animationType="fade"
-        onRequestClose={() =>
-          setShowStartDatePicker(
-            false,
-          )
-        }
-      >
-        <View
-          style={
-            styles.datePickerOverlay
+      {datePickerField ? (
+        <DateTimePicker
+          value={
+            datePickerField ===
+              'from'
+              ? customStartDate
+              : customEndDate
           }
-        >
-          <View
-            style={
-              styles.datePickerModal
-            }
-          >
-            <Text
-              style={
-                styles.datePickerTitle
-              }
-            >
-              Seleccionar fecha
-              inicial
-            </Text>
-
-            <DateTimePicker
-              value={
-                pendingStartDate
-              }
-              mode="date"
-              display="spinner"
-              maximumDate={
-                new Date()
-              }
-              onChange={
-                handleStartDateChange
-              }
-            />
-
-            <View
-              style={
-                styles.datePickerActions
-              }
-            >
-              <TouchableOpacity
-                style={
-                  styles.datePickerCancelButton
-                }
-                onPress={() =>
-                  setShowStartDatePicker(
-                    false,
-                  )
-                }
-              >
-                <Text
-                  style={
-                    styles.datePickerCancelText
-                  }
-                >
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={
-                  styles.datePickerConfirmButton
-                }
-                onPress={
-                  confirmStartDate
-                }
-              >
-                <Text
-                  style={
-                    styles.datePickerConfirmText
-                  }
-                >
-                  Listo
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={
-          showEndDatePicker
-        }
-        transparent
-        animationType="fade"
-        onRequestClose={() =>
-          setShowEndDatePicker(
-            false,
-          )
-        }
-      >
-        <View
-          style={
-            styles.datePickerOverlay
+          mode="date"
+          display="default"
+          minimumDate={
+            datePickerField ===
+              'to'
+              ? customStartDate
+              : undefined
           }
-        >
-          <View
-            style={
-              styles.datePickerModal
-            }
-          >
-            <Text
-              style={
-                styles.datePickerTitle
-              }
-            >
-              Seleccionar fecha
-              final
-            </Text>
-
-            <DateTimePicker
-              value={
-                pendingEndDate
-              }
-              mode="date"
-              display="spinner"
-              minimumDate={
-                customStartDate
-              }
-              maximumDate={
-                new Date()
-              }
-              onChange={
-                handleEndDateChange
-              }
-            />
-
-            <View
-              style={
-                styles.datePickerActions
-              }
-            >
-              <TouchableOpacity
-                style={
-                  styles.datePickerCancelButton
-                }
-                onPress={() =>
-                  setShowEndDatePicker(
-                    false,
-                  )
-                }
-              >
-                <Text
-                  style={
-                    styles.datePickerCancelText
-                  }
-                >
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={
-                  styles.datePickerConfirmButton
-                }
-                onPress={
-                  confirmEndDate
-                }
-              >
-                <Text
-                  style={
-                    styles.datePickerConfirmText
-                  }
-                >
-                  Listo
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+          maximumDate={
+            new Date()
+          }
+          onChange={
+            handleDateChange
+          }
+        />
+      ) : null}
     </View>
   );
 }
