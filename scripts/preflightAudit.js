@@ -111,7 +111,11 @@ const appWeb = fs.readFileSync(
   'utf8',
 );
 
-if (!appWeb.includes("hostname ===\n      'app.doriancore.com'")) {
+if (
+  !/hostname\s*===\s*['"]app\.doriancore\.com['"]/.test(
+    appWeb,
+  )
+) {
   failures.push(
     'App.web.tsx no contiene el host administrativo esperado app.doriancore.com.',
   );
