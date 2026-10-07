@@ -9,7 +9,12 @@
     "web": "expo start --web",
     "android:validate-identity": "node scripts/validateAndroidIdentity.js",
     "android:prepare-firebase": "node scripts/prepareAndroidFirebase.js",
-    "audit:preflight": "node scripts/preflightAudit.js"
+    "audit:preflight": "node scripts/preflightAudit.js",
+    "web:preflight": "node scripts/validateWebDeployment.js",
+    "web:build": "npm run web:preflight && npx expo export --platform web",
+    "web:serve": "npx expo serve",
+    "vercel:preview": "npx vercel",
+    "vercel:prod": "npx vercel --prod"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

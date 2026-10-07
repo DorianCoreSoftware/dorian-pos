@@ -35,6 +35,11 @@ function shouldUseAdminWeb(): boolean {
     hostname === '127.0.0.1' ||
     hostname === '0.0.0.0';
 
+  const isVercelPreview =
+    hostname.endsWith(
+      '.vercel.app',
+    );
+
   const isAdminPath =
     pathname ===
       '/admin' ||
@@ -45,8 +50,11 @@ function shouldUseAdminWeb(): boolean {
   return (
     isAdminHost ||
     (
-      isLocalDevelopment &&
-      isAdminPath
+      isAdminPath &&
+      (
+        isLocalDevelopment ||
+        isVercelPreview
+      )
     )
   );
 }

@@ -31,7 +31,9 @@
       "package": "com.burgerkong.pos"
     },
     "web": {
-      "favicon": "./assets/app-icon.png"
+      "favicon": "./assets/app-icon.png",
+      "bundler": "metro",
+      "output": "single"
     },
     "plugins": [
       "expo-sqlite",
