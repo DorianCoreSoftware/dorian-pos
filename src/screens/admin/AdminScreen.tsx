@@ -28,6 +28,11 @@ import {
 
 } from 'react-native';
 
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from 'react-native-safe-area-context';
+
 
 
 import {
@@ -1435,6 +1440,7 @@ export function AdminScreen({
 
         animationType="fade"
 
+
         onRequestClose={() =>
 
           setSectionSelectorVisible(
@@ -1447,21 +1453,16 @@ export function AdminScreen({
 
       >
 
-        <View
-          style={[
-            styles.modalBackdrop,
-            {
-              alignItems:
-                'center',
-              justifyContent:
-                'center',
-              paddingHorizontal:
-                14,
-              paddingVertical:
-                28,
-            },
-          ]}
-        >
+        <SafeAreaProvider>
+          <SafeAreaView
+            edges={[
+              'top',
+              'bottom',
+            ]}
+            style={
+              styles.modalBackdrop
+            }
+          >
           <TouchableOpacity
             style={
               StyleSheet.absoluteFillObject
@@ -1644,11 +1645,9 @@ export function AdminScreen({
 
               }
 
-              showsVerticalScrollIndicator={
+              showsVerticalScrollIndicator
 
-                false
-
-              }
+              persistentScrollbar
 
             >
 
@@ -1796,7 +1795,8 @@ export function AdminScreen({
 
           </View>
 
-        </View>
+          </SafeAreaView>
+        </SafeAreaProvider>
 
       </Modal>
 

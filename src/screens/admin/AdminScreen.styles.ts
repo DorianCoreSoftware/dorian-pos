@@ -122,7 +122,6 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 14,
-      paddingVertical: 28,
       backgroundColor:
         'rgba(0, 0, 0, 0.72)',
     },
@@ -181,11 +180,12 @@ export const styles =
 
     mobileMenuList: {
       flexGrow: 0,
+      flexShrink: 1,
     },
 
     mobileMenuListContent: {
       padding: 12,
-      paddingBottom: 28,
+      paddingBottom: 42,
     },
 
     mobileMenuOption: {

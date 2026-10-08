@@ -3,13 +3,20 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   ScrollView,
   Switch,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from 'react-native-safe-area-context';
 
 import { useBusiness } from '../../../context/BusinessContext';
 import { useCurrency } from '../../../hooks/useCurrency';
@@ -29,6 +36,13 @@ import {
   saveModifierPromotionSettings,
 } from '../../../services/modifierPromotionService';
 import { Product } from '../../../types';
+
+declare const require: (moduleName: string) => { default: React.ComponentType<any> };
+
+const NativeDateTimePicker =
+  Platform.OS === 'web'
+    ? null
+    : require('@react-native-community/datetimepicker').default;
 
 interface ProgramDraft {
   id?: string;
@@ -77,9 +91,38 @@ function plusDays(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+function parseLocalDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+
+  if (!year || !month || !day) {
+    return new Date();
+  }
+
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+function toDateString(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDate(value: string): string {
+  const [year, month, day] = value.split('-');
+
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return `${day}/${month}/${year}`;
+}
+
 export function AdminPromotions() {
   const { business, theme } = useBusiness();
   const { formatCurrency } = useCurrency();
+  const { height: windowHeight } = useWindowDimensions();
   const promotionsEnabled = business?.features.promotionsEnabled ?? false;
 
   const [programs, setPrograms] = useState<PromotionProgram[]>([]);
@@ -99,6 +142,7 @@ export function AdminPromotions() {
   const [modifierDiscount, setModifierDiscount] = useState('5.00');
   const [modifierStartsAt, setModifierStartsAt] = useState(today());
   const [modifierEndsAt, setModifierEndsAt] = useState(plusDays(6));
+  const [datePickerTarget, setDatePickerTarget] = useState<'start' | 'end' | null>(null);
 
   const selectedProgram = useMemo(
     () => programs.find(program => program.id === selectedProgramId) ?? null,
@@ -109,6 +153,36 @@ export function AdminPromotions() {
     () => modifierOptions.find(option => option.id === modifierId) ?? null,
     [modifierId, modifierOptions],
   );
+
+  const openDatePicker = (target: 'start' | 'end') => {
+    setDatePickerTarget(target);
+  };
+
+  const closeDatePicker = () => {
+    setDatePickerTarget(null);
+  };
+
+  const handleNativeDateChange = (event: { type?: string }, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      closeDatePicker();
+    }
+
+    if (event.type === 'dismissed' || !selectedDate || !datePickerTarget) {
+      return;
+    }
+
+    const value = toDateString(selectedDate);
+
+    if (datePickerTarget === 'start') {
+      setModifierStartsAt(value);
+
+      if (parseLocalDate(modifierEndsAt) < selectedDate) {
+        setModifierEndsAt(value);
+      }
+    } else {
+      setModifierEndsAt(value);
+    }
+  };
 
   const load = useCallback(async (preferredProgramId?: string) => {
     if (!promotionsEnabled) {
@@ -476,10 +550,72 @@ export function AdminPromotions() {
           <TextInput value={modifierDiscount} onChangeText={setModifierDiscount} style={inputStyle} keyboardType="decimal-pad" />
           <Text style={{ color: theme.textMuted, marginTop: 5 }}>Actual: {formatCurrency(Number(modifierDiscount) || 0)}</Text>
 
-          <Text style={labelStyle}>Inicio (AAAA-MM-DD)</Text>
-          <TextInput value={modifierStartsAt} onChangeText={setModifierStartsAt} style={inputStyle} />
-          <Text style={labelStyle}>Fin (AAAA-MM-DD)</Text>
-          <TextInput value={modifierEndsAt} onChangeText={setModifierEndsAt} style={inputStyle} />
+          <Text style={labelStyle}>Inicio</Text>
+          {Platform.OS === 'web' ? (
+            React.createElement('input', {
+              type: 'date',
+              value: modifierStartsAt,
+              onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                setModifierStartsAt(event.target.value),
+              style: {
+                color: theme.text,
+                backgroundColor: theme.surfaceAlt,
+                borderColor: theme.border,
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderRadius: 10,
+                padding: 10,
+                marginTop: 6,
+                fontWeight: 600,
+                boxSizing: 'border-box',
+                width: '100%',
+              },
+            })
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => openDatePicker('start')}
+              style={inputStyle}
+            >
+              <Text style={{ color: theme.text, fontWeight: '600' }}>
+                📅 {formatDisplayDate(modifierStartsAt)}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <Text style={labelStyle}>Fin</Text>
+          {Platform.OS === 'web' ? (
+            React.createElement('input', {
+              type: 'date',
+              value: modifierEndsAt,
+              min: modifierStartsAt,
+              onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                setModifierEndsAt(event.target.value),
+              style: {
+                color: theme.text,
+                backgroundColor: theme.surfaceAlt,
+                borderColor: theme.border,
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderRadius: 10,
+                padding: 10,
+                marginTop: 6,
+                fontWeight: 600,
+                boxSizing: 'border-box',
+                width: '100%',
+              },
+            })
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => openDatePicker('end')}
+              style={inputStyle}
+            >
+              <Text style={{ color: theme.text, fontWeight: '600' }}>
+                📅 {formatDisplayDate(modifierEndsAt)}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <Text style={{ color: theme.text, fontWeight: '600' }}>Promoción activa</Text>
@@ -492,41 +628,262 @@ export function AdminPromotions() {
         </View>
       </ScrollView>
 
-      <Modal visible={productSelectorVisible} transparent animationType="fade" onRequestClose={() => setProductSelectorVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 }}>
-          <View style={{ maxHeight: '80%', backgroundColor: theme.surface, borderRadius: 14, padding: 16 }}>
-            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700', marginBottom: 12 }}>Seleccionar producto</Text>
-            <ScrollView>
-              {products.map(product => (
-                <TouchableOpacity key={product.id} onPress={() => void addRewardForProduct(product)} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                  <Text style={{ color: theme.text }}>{product.name}</Text>
+      <Modal
+        visible={productSelectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProductSelectorVisible(false)}
+      >
+        <SafeAreaProvider>
+          <SafeAreaView
+            edges={['top', 'bottom']}
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              justifyContent: 'center',
+              paddingHorizontal: 16,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 520,
+                maxHeight: Math.max(280, windowHeight - 48),
+                alignSelf: 'center',
+                backgroundColor: theme.surface,
+                borderRadius: 16,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingTop: 16,
+                  paddingBottom: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.border,
+                }}
+              >
+                <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>
+                  Seleccionar producto
+                </Text>
+                <Text style={{ color: theme.textMuted, marginTop: 4, fontSize: 12 }}>
+                  Desliza para ver todos los productos.
+                </Text>
+              </View>
+
+              <ScrollView
+                style={{ flexShrink: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 18 }}
+                showsVerticalScrollIndicator
+                persistentScrollbar
+                nestedScrollEnabled
+              >
+                {products.map(product => (
+                  <TouchableOpacity
+                    key={product.id}
+                    onPress={() => void addRewardForProduct(product)}
+                    style={{
+                      minHeight: 50,
+                      justifyContent: 'center',
+                      paddingVertical: 12,
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.border,
+                    }}
+                  >
+                    <Text style={{ color: theme.text }}>{product.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderTopColor: theme.border,
+                  padding: 12,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => setProductSelectorVisible(false)}
+                  style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: theme.primary, fontWeight: '700' }}>Cerrar</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity onPress={() => setProductSelectorVisible(false)} style={{ marginTop: 12, padding: 10 }}>
-              <Text style={{ color: theme.primary, textAlign: 'center' }}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              </View>
+            </View>
+          </SafeAreaView>
+        </SafeAreaProvider>
       </Modal>
 
-      <Modal visible={modifierSelectorVisible} transparent animationType="fade" onRequestClose={() => setModifierSelectorVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 }}>
-          <View style={{ maxHeight: '80%', backgroundColor: theme.surface, borderRadius: 14, padding: 16 }}>
-            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700', marginBottom: 12 }}>Seleccionar modificador</Text>
-            <ScrollView>
-              {modifierOptions.map(option => (
-                <TouchableOpacity key={option.id} onPress={() => { setModifierId(option.id); setModifierSelectorVisible(false); }} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                  <Text style={{ color: theme.text }}>{option.group_name} · {option.name}</Text>
+      <Modal
+        visible={modifierSelectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModifierSelectorVisible(false)}
+      >
+        <SafeAreaProvider>
+          <SafeAreaView
+            edges={['top', 'bottom']}
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              justifyContent: 'center',
+              paddingHorizontal: 16,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 520,
+                maxHeight: Math.max(280, windowHeight - 48),
+                alignSelf: 'center',
+                backgroundColor: theme.surface,
+                borderRadius: 16,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingTop: 16,
+                  paddingBottom: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.border,
+                }}
+              >
+                <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>
+                  Seleccionar modificador
+                </Text>
+                <Text style={{ color: theme.textMuted, marginTop: 4, fontSize: 12 }}>
+                  Desliza para ver todos los modificadores.
+                </Text>
+              </View>
+
+              <ScrollView
+                style={{ flexShrink: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 18 }}
+                showsVerticalScrollIndicator
+                persistentScrollbar
+                nestedScrollEnabled
+              >
+                {modifierOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.id}
+                    onPress={() => {
+                      setModifierId(option.id);
+                      setModifierSelectorVisible(false);
+                    }}
+                    style={{
+                      minHeight: 50,
+                      justifyContent: 'center',
+                      paddingVertical: 12,
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.border,
+                    }}
+                  >
+                    <Text style={{ color: theme.text }}>
+                      {option.group_name} · {option.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderTopColor: theme.border,
+                  padding: 12,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => setModifierSelectorVisible(false)}
+                  style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: theme.primary, fontWeight: '700' }}>Cerrar</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity onPress={() => setModifierSelectorVisible(false)} style={{ marginTop: 12, padding: 10 }}>
-              <Text style={{ color: theme.primary, textAlign: 'center' }}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              </View>
+            </View>
+          </SafeAreaView>
+        </SafeAreaProvider>
       </Modal>
+
+      {datePickerTarget && NativeDateTimePicker ? (
+        Platform.OS === 'ios' ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            onRequestClose={closeDatePicker}
+          >
+            <SafeAreaProvider>
+              <SafeAreaView
+                edges={['top', 'bottom']}
+                style={{
+                  flex: 1,
+                  justifyContent: 'flex-end',
+                  backgroundColor: 'rgba(0,0,0,0.45)',
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: theme.surface,
+                    borderTopLeftRadius: 18,
+                    borderTopRightRadius: 18,
+                    padding: 16,
+                  }}
+                >
+                  <Text style={{ color: theme.text, fontSize: 17, fontWeight: '700' }}>
+                    {datePickerTarget === 'start' ? 'Fecha de inicio' : 'Fecha de fin'}
+                  </Text>
+
+                  <NativeDateTimePicker
+                    value={parseLocalDate(
+                      datePickerTarget === 'start' ? modifierStartsAt : modifierEndsAt,
+                    )}
+                    mode="date"
+                    display="inline"
+                    minimumDate={
+                      datePickerTarget === 'end' ? parseLocalDate(modifierStartsAt) : undefined
+                    }
+                    onChange={handleNativeDateChange}
+                  />
+
+                  <TouchableOpacity
+                    onPress={closeDatePicker}
+                    style={{
+                      minHeight: 46,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: 8,
+                      borderRadius: 10,
+                      backgroundColor: theme.primary,
+                    }}
+                  >
+                    <Text style={{ color: theme.onPrimary, fontWeight: '700' }}>LISTO</Text>
+                  </TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            </SafeAreaProvider>
+          </Modal>
+        ) : (
+          <NativeDateTimePicker
+            value={parseLocalDate(
+              datePickerTarget === 'start' ? modifierStartsAt : modifierEndsAt,
+            )}
+            mode="date"
+            display="default"
+            minimumDate={
+              datePickerTarget === 'end' ? parseLocalDate(modifierStartsAt) : undefined
+            }
+            onChange={handleNativeDateChange}
+          />
+        )
+      ) : null}
+
     </>
   );
 }
