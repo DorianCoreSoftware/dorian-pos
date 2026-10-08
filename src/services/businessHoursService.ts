@@ -38,12 +38,21 @@ export interface BusinessTicketSettings {
   footerText: string;
 }
 
+export interface BusinessSocialLinks {
+  facebookUrl: string;
+  instagramUrl: string;
+  tiktokUrl: string;
+  whatsapp: string;
+  websiteUrl: string;
+}
+
 export interface BusinessSettings {
   identity: BusinessIdentity;
   features: BusinessFeatures;
   timezone: string;
   ticketSettings: BusinessTicketSettings;
   webOrderSettings: WebOrderSettings;
+  socialLinks: BusinessSocialLinks;
 }
 
 export interface SaveBusinessSettingsInput {
@@ -51,6 +60,7 @@ export interface SaveBusinessSettingsInput {
   features: BusinessFeatures;
   timezone: string;
   ticketSettings: BusinessTicketSettings;
+  socialLinks: BusinessSocialLinks;
 }
 
 export interface BusinessHourException {
@@ -96,6 +106,11 @@ interface BusinessSettingsRow {
   web_orders_enabled: boolean;
   web_orders_pause_message: string | null;
   ticket_footer: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  whatsapp: string | null;
+  website_url: string | null;
 }
 
 interface BusinessHourExceptionRow {
@@ -266,23 +281,28 @@ export async function getBusinessSettings(): Promise<
       )
       .select(
         `
-          business_name,
-          short_name,
-          currency_code,
-          phone,
-          address,
-          logo_url,
-          primary_color,
-          secondary_color,
-          loyalty_enabled,
-          delivery_enabled,
-          promotions_enabled,
-          kitchen_enabled,
-          timezone,
-          web_orders_enabled,
-          web_orders_pause_message,
-          ticket_footer
-        `,
+    business_name,
+    short_name,
+    currency_code,
+    phone,
+    address,
+    logo_url,
+    primary_color,
+    secondary_color,
+    loyalty_enabled,
+    delivery_enabled,
+    promotions_enabled,
+    kitchen_enabled,
+    timezone,
+    web_orders_enabled,
+    web_orders_pause_message,
+    ticket_footer,
+    facebook_url,
+    instagram_url,
+    tiktok_url,
+    whatsapp,
+    website_url
+  `,
       )
       .eq(
         'id',
@@ -382,7 +402,105 @@ export async function getBusinessSettings(): Promise<
         row.web_orders_pause_message ??
         '',
     },
+
+    socialLinks: {
+      facebookUrl:
+        row.facebook_url
+          ?.trim() ??
+        '',
+
+      instagramUrl:
+        row.instagram_url
+          ?.trim() ??
+        '',
+
+      tiktokUrl:
+        row.tiktok_url
+          ?.trim() ??
+        '',
+
+      whatsapp:
+        row.whatsapp
+          ?.trim() ??
+        '',
+
+      websiteUrl:
+        row.website_url
+          ?.trim() ??
+        '',
+    },
   };
+}
+
+
+function normalizeHttpUrl(
+  value: string,
+  label: string,
+): string {
+  const normalized =
+    value.trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  const withProtocol =
+    /^https?:\/\//i.test(
+      normalized,
+    )
+      ? normalized
+      : `https://${normalized}`;
+
+  if (
+    !/^https?:\/\/[^\s]+$/i.test(
+      withProtocol,
+    )
+  ) {
+    throw new Error(
+      `${label} no es una URL válida.`,
+    );
+  }
+
+  return withProtocol;
+}
+
+function normalizeWhatsapp(
+  value: string,
+): string {
+  const normalized =
+    value.trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  if (
+    /^https?:\/\//i.test(
+      normalized,
+    )
+  ) {
+    return normalizeHttpUrl(
+      normalized,
+      'WhatsApp',
+    );
+  }
+
+  const digits =
+    normalized.replace(
+      /\D/g,
+      '',
+    );
+
+  if (
+    digits.length < 10 ||
+    digits.length > 15
+  ) {
+    throw new Error(
+      'WhatsApp debe contener un número válido con lada y código de país.',
+    );
+  }
+
+  return `https://wa.me/${digits}`;
 }
 
 export async function saveBusinessSettings(
@@ -423,6 +541,35 @@ export async function saveBusinessSettings(
 
   const ticketFooter =
     input.ticketSettings.footerText.trim();
+
+  const facebookUrl =
+    normalizeHttpUrl(
+      input.socialLinks.facebookUrl,
+      'Facebook',
+    );
+
+  const instagramUrl =
+    normalizeHttpUrl(
+      input.socialLinks.instagramUrl,
+      'Instagram',
+    );
+
+  const tiktokUrl =
+    normalizeHttpUrl(
+      input.socialLinks.tiktokUrl,
+      'TikTok',
+    );
+
+  const whatsapp =
+    normalizeWhatsapp(
+      input.socialLinks.whatsapp,
+    );
+
+  const websiteUrl =
+    normalizeHttpUrl(
+      input.socialLinks.websiteUrl,
+      'Sitio web',
+    );
 
   if (!businessName) {
     throw new Error(
@@ -472,6 +619,25 @@ export async function saveBusinessSettings(
   ) {
     throw new Error(
       'El logo debe usar una URL http o https.',
+    );
+  }
+
+  const socialValues = [
+    facebookUrl,
+    instagramUrl,
+    tiktokUrl,
+    whatsapp,
+    websiteUrl,
+  ];
+
+  if (
+    socialValues.some(
+      value =>
+        value.length > 220,
+    )
+  ) {
+    throw new Error(
+      'Las URLs de redes sociales no pueden superar 220 caracteres.',
     );
   }
 
@@ -542,6 +708,21 @@ export async function saveBusinessSettings(
         ticket_footer:
           ticketFooter ||
           'Gracias por tu compra',
+
+        facebook_url:
+          facebookUrl || null,
+
+        instagram_url:
+          instagramUrl || null,
+
+        tiktok_url:
+          tiktokUrl || null,
+
+        whatsapp:
+          whatsapp || null,
+
+        website_url:
+          websiteUrl || null,
 
         updated_at:
           new Date().toISOString(),
@@ -633,7 +814,7 @@ export async function saveWebOrderSettings(
 }
 
 export async function getBusinessHourExceptions():
-Promise<BusinessHourException[]> {
+  Promise<BusinessHourException[]> {
   const {
     data,
     error,
@@ -861,7 +1042,7 @@ function validateExceptionDate(
         0,
         10,
       ) !==
-      value
+    value
   ) {
     throw new Error(
       'La fecha no es válida.',

@@ -48,6 +48,11 @@ interface BusinessSettingsForm {
   deliveryEnabled: boolean;
   promotionsEnabled: boolean;
   kitchenEnabled: boolean;
+  facebookUrl: string;
+  instagramUrl: string;
+  tiktokUrl: string;
+  whatsapp: string;
+  websiteUrl: string;
 }
 
 const EMPTY_FORM:
@@ -67,6 +72,11 @@ const EMPTY_FORM:
   deliveryEnabled: true,
   promotionsEnabled: true,
   kitchenEnabled: true,
+  facebookUrl: '',
+  instagramUrl: '',
+  tiktokUrl: '',
+  whatsapp: '',
+  websiteUrl: '',
 };
 
 export function AdminBusinessSettings() {
@@ -145,6 +155,21 @@ export function AdminBusinessSettings() {
 
       kitchenEnabled:
         business.features.kitchenEnabled,
+
+      facebookUrl:
+        business.socialLinks.facebookUrl,
+
+      instagramUrl:
+        business.socialLinks.instagramUrl,
+
+      tiktokUrl:
+        business.socialLinks.tiktokUrl,
+
+      whatsapp:
+        business.socialLinks.whatsapp,
+
+      websiteUrl:
+        business.socialLinks.websiteUrl,
     });
   }, [business]);
 
@@ -213,6 +238,23 @@ export function AdminBusinessSettings() {
           ticketSettings: {
             footerText:
               form.ticketFooter,
+          },
+
+          socialLinks: {
+            facebookUrl:
+              form.facebookUrl,
+
+            instagramUrl:
+              form.instagramUrl,
+
+            tiktokUrl:
+              form.tiktokUrl,
+
+            whatsapp:
+              form.whatsapp,
+
+            websiteUrl:
+              form.websiteUrl,
           },
         });
 
@@ -533,6 +575,88 @@ export function AdminBusinessSettings() {
           }
           placeholder="Gracias por tu compra"
           maxLength={180}
+          theme={theme}
+        />
+      </SettingsCard>
+
+
+      <SettingsCard
+        title="Redes sociales"
+        subtitle="Configura solo las redes que quieras mostrar en el menú web. Los campos vacíos permanecerán ocultos."
+        theme={theme}
+      >
+        <Field
+          label="Facebook"
+          value={form.facebookUrl}
+          onChangeText={value =>
+            updateField(
+              'facebookUrl',
+              value,
+            )
+          }
+          placeholder="https://facebook.com/tu-negocio"
+          autoCapitalize="none"
+          maxLength={220}
+          theme={theme}
+        />
+
+        <Field
+          label="Instagram"
+          value={form.instagramUrl}
+          onChangeText={value =>
+            updateField(
+              'instagramUrl',
+              value,
+            )
+          }
+          placeholder="https://instagram.com/tu-negocio"
+          autoCapitalize="none"
+          maxLength={220}
+          theme={theme}
+        />
+
+        <Field
+          label="TikTok"
+          value={form.tiktokUrl}
+          onChangeText={value =>
+            updateField(
+              'tiktokUrl',
+              value,
+            )
+          }
+          placeholder="https://tiktok.com/@tu-negocio"
+          autoCapitalize="none"
+          maxLength={220}
+          theme={theme}
+        />
+
+        <Field
+          label="WhatsApp"
+          value={form.whatsapp}
+          onChangeText={value =>
+            updateField(
+              'whatsapp',
+              value,
+            )
+          }
+          placeholder="Ej. 524611234567 o https://wa.me/..."
+          autoCapitalize="none"
+          maxLength={220}
+          theme={theme}
+        />
+
+        <Field
+          label="Sitio web"
+          value={form.websiteUrl}
+          onChangeText={value =>
+            updateField(
+              'websiteUrl',
+              value,
+            )
+          }
+          placeholder="https://tu-negocio.com"
+          autoCapitalize="none"
+          maxLength={220}
           theme={theme}
         />
       </SettingsCard>

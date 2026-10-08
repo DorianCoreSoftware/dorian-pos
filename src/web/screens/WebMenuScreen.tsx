@@ -236,10 +236,38 @@ function getBusinessAvailabilityText(
   }
   return schedule;
 }
+
+interface SocialLinkItem {
+  key: string;
+  label: string;
+  icon: string;
+  url: string;
+}
+
+function openExternalUrl(
+  url: string,
+): void {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return;
+  }
+
+  window.open(
+    url,
+    '_blank',
+    'noopener,noreferrer',
+  );
+}
+
 export default function WebMenuScreen({
   onRewardsPress,
 }: WebMenuScreenProps) {
-  const { theme: businessTheme } = useBusiness();
+  const {
+    business,
+    theme: businessTheme,
+  } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
 
   const [
@@ -366,6 +394,55 @@ export default function WebMenuScreen({
       id: string;
       fingerprint: string;
     } | null>(null);
+
+  const socialLinks =
+    useMemo<SocialLinkItem[]>(
+      () => {
+        const links =
+          business?.socialLinks;
+
+        if (!links) {
+          return [];
+        }
+
+        return [
+          {
+            key: 'facebook',
+            label: 'Facebook',
+            icon: 'f',
+            url: links.facebookUrl,
+          },
+          {
+            key: 'instagram',
+            label: 'Instagram',
+            icon: '◎',
+            url: links.instagramUrl,
+          },
+          {
+            key: 'tiktok',
+            label: 'TikTok',
+            icon: '♪',
+            url: links.tiktokUrl,
+          },
+          {
+            key: 'whatsapp',
+            label: 'WhatsApp',
+            icon: '◉',
+            url: links.whatsapp,
+          },
+          {
+            key: 'website',
+            label: 'Sitio web',
+            icon: '↗',
+            url: links.websiteUrl,
+          },
+        ].filter(
+          link =>
+            !!link.url.trim(),
+        );
+      },
+      [business?.socialLinks],
+    );
   const visibleCategories =
     useMemo(() => {
       const hiddenCategoryNames =
@@ -1359,6 +1436,93 @@ export default function WebMenuScreen({
             </>
           )}
         </View>
+
+        {socialLinks.length > 0 && (
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 1180,
+              alignSelf: 'center',
+              marginTop: 28,
+              marginBottom: 12,
+              paddingHorizontal: 20,
+              paddingTop: 22,
+              paddingBottom: 24,
+              borderTopWidth: 1,
+              borderTopColor: businessTheme.border,
+            }}
+          >
+            <Text
+              style={{
+                color: businessTheme.text,
+                textAlign: 'center',
+                fontSize: 15,
+                fontWeight: '800',
+              }}
+            >
+              Síguenos en nuestras redes sociales
+            </Text>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 10,
+                marginTop: 14,
+              }}
+            >
+              {socialLinks.map(
+                link => (
+                  <Pressable
+                    key={link.key}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Abrir ${link.label}`}
+                    onPress={() =>
+                      openExternalUrl(
+                        link.url,
+                      )
+                    }
+                    style={({
+                      pressed,
+                    }) => ({
+                      minHeight: 42,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: businessTheme.border,
+                      backgroundColor: businessTheme.surface,
+                      opacity: pressed ? 0.72 : 1,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: businessTheme.primary,
+                        fontSize: 16,
+                        fontWeight: '900',
+                      }}
+                    >
+                      {link.icon}
+                    </Text>
+
+                    <Text
+                      style={{
+                        color: businessTheme.text,
+                        fontSize: 12,
+                        fontWeight: '800',
+                      }}
+                    >
+                      {link.label}
+                    </Text>
+                  </Pressable>
+                ),
+              )}
+            </View>
+          </View>
+        )}
       </ScrollView>
       <WebCartButton
         totalItems={
