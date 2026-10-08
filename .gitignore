@@ -53,3 +53,4 @@ burger-kong-dev-firebase-adminsdk-fbsvc-3d056ea96d.json
 
 *.jks
 *.keystore
+backups/
