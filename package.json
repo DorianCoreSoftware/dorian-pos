@@ -14,7 +14,11 @@
     "web:build": "npm run web:preflight && npx expo export --platform web",
     "web:serve": "npx expo serve",
     "vercel:preview": "npx vercel",
-    "vercel:prod": "npx vercel --prod"
+    "vercel:prod": "npx vercel --prod",
+    "branding:setup": "node scripts/setupClientBranding.js",
+    "branding:generate": "node scripts/generateRuntimeBranding.js",
+    "branding:apply": "node scripts/applyWhiteLabelPatches.js",
+    "apk": "node scripts/buildClient.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

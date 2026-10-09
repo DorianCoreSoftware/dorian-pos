@@ -29,6 +29,10 @@ import {
   useBusiness,
 } from '../../context/BusinessContext';
 
+import {
+  runtimeBranding,
+} from '../../generated/runtimeClientBranding';
+
 export type MainTab =
   | 'pos'
   | 'kitchen'
@@ -103,7 +107,13 @@ export function GlobalHeader({
   );
 
   const logoUrl =
-    business?.identity.logoUrl;
+    business?.identity.logoUrl?.trim() ||
+    null;
+
+  const logoSource =
+    logoUrl
+      ? { uri: logoUrl }
+      : runtimeBranding.headerLogoSource;
 
   const businessName =
     business?.identity.shortName ??
@@ -195,11 +205,9 @@ export function GlobalHeader({
             styles.headerBrandContainer
           }
         >
-          {logoUrl ? (
+          {logoSource ? (
             <Image
-              source={{
-                uri: logoUrl,
-              }}
+              source={logoSource}
               style={[
                 styles.headerLogoLetters,
                 isPhone &&
@@ -222,8 +230,7 @@ export function GlobalHeader({
             </Text>
           )}
 
-          {!logoUrl &&
-            !businessName ? (
+          {!logoSource && !businessName ? (
             <Text
               style={{
                 color:

@@ -12,6 +12,16 @@
         "APP_VARIANT": "development"
       }
     },
+    "development-apk": {
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "APP_VARIANT": "development"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "environment": "preview",

@@ -27,6 +27,12 @@ import {
   normalizeCurrencyCode,
 } from '../Utils/currency';
 
+import {
+  getPromotionImageForProgram,
+  PrinterRasterImage,
+  runtimeBranding,
+} from '../generated/runtimeClientBranding';
+
 let connectedPrinter:
   BluetoothDevice | null = null;
 
@@ -249,6 +255,7 @@ export async function printTestTicket(): Promise<void> {
     business.identity.businessName,
     business.identity.phone,
     business.identity.address,
+    runtimeBranding.printer.ticketLogo,
   );
 
   await setBold(
@@ -288,7 +295,7 @@ export async function printOrderTicket({
   ticketDate,
   isReprint = false,
   currencyCode =
-    DEFAULT_CURRENCY_CODE,
+  DEFAULT_CURRENCY_CODE,
 }: PrintOrderTicketParams): Promise<void> {
   const printer =
     await connectPrinter();
@@ -373,6 +380,7 @@ export async function printOrderTicket({
     business.identity.businessName,
     business.identity.phone,
     business.identity.address,
+    runtimeBranding.printer.ticketLogo,
   );
 
   await setBold(
@@ -423,14 +431,12 @@ export async function printOrderTicket({
   );
 
   await printer.write(
-    `Origen: ${
-      order.orderSource === 'web'
-        ? 'WEB'
-        : 'POS'
-    } - ${
-      order.fulfillmentType === 'delivery'
-        ? 'DOMICILIO'
-        : 'RECOGER'
+    `Origen: ${order.orderSource === 'web'
+      ? 'WEB'
+      : 'POS'
+    } - ${order.fulfillmentType === 'delivery'
+      ? 'DOMICILIO'
+      : 'RECOGER'
     }\n`,
   );
 
@@ -588,7 +594,7 @@ export async function printOrderTicket({
       order.customerPhone
     ) {
       await printer.write(
-        `Tel: ${sanitizeTicketText(
+        `Tel: ${maskCustomerPhone(
           order.customerPhone,
         )}\n`,
       );
@@ -632,7 +638,7 @@ export async function printOrderTicket({
     );
 
     await printer.write(
-      `Tel: ${sanitizeTicketText(
+      `Tel: ${maskCustomerPhone(
         delivery.phone,
       )}\n`,
     );
@@ -891,76 +897,84 @@ export async function printRawText(
   );
 }
 
+async function printRasterImage(
+  printer: BluetoothDevice,
+  image: PrinterRasterImage,
+): Promise<void> {
+  await printer.write(
+    image.base64,
+    'base64',
+  );
+
+  await printer.write('\n');
+}
+
 async function printBusinessHeader(
   printer: BluetoothDevice,
   businessName: string,
   phone: string,
   address: string,
+  ticketLogo: PrinterRasterImage | null,
 ): Promise<void> {
   await setAlignment(
     printer,
     'center',
   );
 
-  await setBold(
-    printer,
-    true,
-  );
+  if (ticketLogo) {
+    await printRasterImage(
+      printer,
+      ticketLogo,
+    );
+  } else {
+    await setBold(
+      printer,
+      true,
+    );
 
-  await setTextSize(
-    printer,
-    'double',
-  );
+    await setTextSize(
+      printer,
+      'double',
+    );
 
-  for (
-    const line of wrapTicketText(
+    for (const line of wrapTicketText(
       businessName,
       16,
-    )
-  ) {
-    await printer.write(
-      `${sanitizeTicketText(
-        line,
-      )}\n`,
+    )) {
+      await printer.write(
+        `${sanitizeTicketText(line)}\n`,
+      );
+    }
+
+    await setTextSize(
+      printer,
+      'normal',
+    );
+
+    await setBold(
+      printer,
+      false,
     );
   }
 
-  await setTextSize(
-    printer,
-    'normal',
-  );
-
-  await setBold(
-    printer,
-    false,
-  );
-
   if (address.trim()) {
-    for (
-      const line of wrapTicketText(
-        address,
-        32,
-      )
-    ) {
+    for (const line of wrapTicketText(
+      address,
+      32,
+    )) {
       await printer.write(
-        `${sanitizeTicketText(
-          line,
-        )}\n`,
+        `${sanitizeTicketText(line)}\n`,
       );
     }
   }
 
   if (phone.trim()) {
     await printer.write(
-      `Tel: ${sanitizeTicketText(
-        phone.trim(),
-      )}\n`,
+      `Tel: ${sanitizeTicketText(phone.trim())}\n`,
     );
   }
 
-  await printer.write(
-    '\n',
-  );
+  await printer.write('\n');
 }
 
 async function printTicketFooter(
@@ -1248,6 +1262,37 @@ function formatTicketDate(
   );
 }
 
+function maskCustomerPhone(
+  phone: string,
+): string {
+  const cleanPhone =
+    phone.trim();
+
+  if (!cleanPhone) {
+    return '';
+  }
+
+  const digits =
+    cleanPhone.replace(
+      /\D/g,
+      '',
+    );
+
+  if (digits.length <= 4) {
+    return digits;
+  }
+
+  const visible =
+    digits.slice(-4);
+
+  return (
+    '*'.repeat(
+      digits.length - 4,
+    ) +
+    visible
+  );
+}
+
 function sanitizeTicketText(
   value: string,
 ): string {
@@ -1303,6 +1348,18 @@ async function printPromoCoupon(
     separator(),
   );
 
+  const promotionImage =
+    getPromotionImageForProgram(
+      promoCoupon.programName,
+    );
+
+  if (promotionImage) {
+    await printRasterImage(
+      printer,
+      promotionImage,
+    );
+  }
+
   const programs =
     await getPromotionPrograms();
 
@@ -1318,9 +1375,11 @@ async function printPromoCoupon(
     true,
   );
 
-  await printer.write(
-    `${promoCoupon.programName.toUpperCase()}\n`,
-  );
+  if (!promotionImage) {
+    await printer.write(
+      `${promoCoupon.programName.toUpperCase()}\n`,
+    );
+  }
 
   await printer.write(
     `${promoCoupon.code}\n`,

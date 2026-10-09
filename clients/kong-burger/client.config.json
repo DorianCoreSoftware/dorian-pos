@@ -1,0 +1,43 @@
+{
+  "clientId": "kong-burger",
+  "businessName": "Burger Kong",
+  "expoSlug": "burger-kong",
+  "easProjectId": "14f8bcc3-9327-4987-b505-899cc734c274",
+  "development": {
+    "appName": "Burger Kong DEV",
+    "androidPackage": "com.burgerkong.pos.dev",
+    "icon": "./assets/app-icon.png",
+    "splash": "./assets/splash.png",
+    "easEnvironment": "development",
+    "supabaseProjectRef": "lzkcqrelwynecsyvhhsy",
+    "supabaseUrl": "https://lzkcqrelwynecsyvhhsy.supabase.co"
+  },
+  "production": {
+    "appName": "Burger Kong",
+    "androidPackage": "com.burgerkong.pos",
+    "icon": "./clients/kong-burger/assets/app-icon.png",
+    "splash": "./assets/splash.png",
+    "easEnvironment": "production",
+    "supabaseProjectRef": "keqmsnnffrtowkbthwqk",
+    "supabaseUrl": "https://keqmsnnffrtowkbthwqk.supabase.co"
+  },
+  "runtimeBranding": {
+    "headerLogo": "./clients/kong-burger/assets/header-logo.png",
+    "ticketLogoSource": "./clients/kong-burger/assets/header-logo.png",
+    "ticketLogoMaxWidth": 320,
+    "promotionImages": [
+      {
+        "match": "kong",
+        "export": "BURGER_KONG_PROMO"
+      },
+      {
+        "match": "dorian",
+        "export": "LUCKY_DORIAN"
+      }
+    ]
+  },
+  "legacy": {
+    "supabaseProjectRef": "eclnyvbsbyqnqrhkhkxv",
+    "status": "rollback-read-only"
+  }
+}
