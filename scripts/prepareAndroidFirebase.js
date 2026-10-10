@@ -18,38 +18,49 @@ if (!fs.existsSync(sourcePath)) {
   process.exit(1);
 }
 
-const variant =
-  process.env.APP_VARIANT ||
-  'production';
-
-const baseApplicationId =
+/*
+ * IMPORTANTE:
+ *
+ * DORIAN_ANDROID_APPLICATION_ID ya representa
+ * el applicationId FINAL del build.
+ *
+ * Ejemplos:
+ * PROD -> com.burgerkong.pos
+ * DEV  -> com.burgerkong.pos.dev
+ *
+ * Aquí NO debemos agregar ".dev".
+ */
+const applicationId =
   (
     process.env.DORIAN_ANDROID_APPLICATION_ID ||
-    'com.burgerkong.pos'
+    ''
   ).trim();
 
-if (
-  !/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(
-    baseApplicationId,
-  )
-) {
+if (!applicationId) {
   console.error(
-    `DORIAN_ANDROID_APPLICATION_ID no es válido: ${baseApplicationId}`,
+    'DORIAN_ANDROID_APPLICATION_ID no está definido.',
   );
   process.exit(1);
 }
 
-const effectiveApplicationId =
-  variant === 'development'
-    ? `${baseApplicationId}.dev`
-    : baseApplicationId;
+if (
+  !/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(
+    applicationId,
+  )
+) {
+  console.error(
+    `DORIAN_ANDROID_APPLICATION_ID no es válido: ${applicationId}`,
+  );
+  process.exit(1);
+}
 
-const firebaseConfig = JSON.parse(
-  fs.readFileSync(
-    sourcePath,
-    'utf8',
-  ),
-);
+const firebaseConfig =
+  JSON.parse(
+    fs.readFileSync(
+      sourcePath,
+      'utf8',
+    ),
+  );
 
 const configuredPackages =
   (firebaseConfig.client || [])
@@ -63,29 +74,33 @@ const configuredPackages =
 
 if (
   !configuredPackages.includes(
-    effectiveApplicationId,
+    applicationId,
   )
 ) {
   console.error(
     [
       'No se preparó la identidad Android porque el package no coincide con Firebase.',
-      `Build: ${effectiveApplicationId}`,
+      `Build: ${applicationId}`,
       `Firebase: ${configuredPackages.join(', ') || 'sin package_name'}`,
     ].join('\n'),
   );
+
   process.exit(1);
 }
 
 /*
- * Expo necesita encontrar un applicationId literal en build.gradle cuando
- * existe un proyecto Android nativo. Por eso no lo hacemos dinámico dentro
- * de Gradle: este script reescribe el literal ANTES del build white-label.
+ * Como existe /android, Expo no puede cambiar
+ * android.package dinámicamente.
+ *
+ * Por eso reescribimos applicationId directamente
+ * antes de enviar el proyecto a EAS.
  */
-const gradlePath = path.join(
-  'android',
-  'app',
-  'build.gradle',
-);
+const gradlePath =
+  path.join(
+    'android',
+    'app',
+    'build.gradle',
+  );
 
 if (!fs.existsSync(gradlePath)) {
   console.error(
@@ -117,7 +132,7 @@ if (
 const preparedGradle =
   originalGradle.replace(
     applicationIdPattern,
-    `applicationId "${baseApplicationId}"`,
+    `applicationId "${applicationId}"`,
   );
 
 fs.writeFileSync(
@@ -126,41 +141,54 @@ fs.writeFileSync(
   'utf8',
 );
 
-const destination =
-  variant === 'development'
-    ? path.join(
-        'android',
-        'app',
-        'src',
-        'debug',
-        'google-services.json',
-      )
-    : path.join(
-        'android',
-        'app',
-        'src',
-        'release',
-        'google-services.json',
-      );
-
-fs.mkdirSync(
-  path.dirname(
-    destination,
+/*
+ * Dejamos el mismo google-services.json disponible
+ * para Gradle en cualquier variante.
+ *
+ * El archivo contiene tanto:
+ * - com.burgerkong.pos
+ * - com.burgerkong.pos.dev
+ */
+const destinations = [
+  path.join(
+    'android',
+    'app',
+    'google-services.json',
   ),
-  {
-    recursive: true,
-  },
-);
+  path.join(
+    'android',
+    'app',
+    'src',
+    'debug',
+    'google-services.json',
+  ),
+  path.join(
+    'android',
+    'app',
+    'src',
+    'release',
+    'google-services.json',
+  ),
+];
 
-fs.copyFileSync(
-  sourcePath,
-  destination,
-);
+for (const destination of destinations) {
+  fs.mkdirSync(
+    path.dirname(destination),
+    {
+      recursive: true,
+    },
+  );
+
+  fs.copyFileSync(
+    sourcePath,
+    destination,
+  );
+}
 
 console.log(
   [
-    `Identidad Android preparada: ${effectiveApplicationId}`,
-    `Gradle base: ${baseApplicationId}`,
-    `Firebase: ${destination}`,
+    `Identidad Android preparada: ${applicationId}`,
+    `Firebase source: ${sourcePath}`,
+    'Firebase preparado para debug y release.',
   ].join('\n'),
 );

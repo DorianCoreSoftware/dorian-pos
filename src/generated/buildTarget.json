@@ -1,9 +1,9 @@
 {
   "clientId": "kong-burger",
-  "buildEnv": "development",
-  "appName": "Burger Kong DEV",
-  "androidApplicationId": "com.burgerkong.pos.dev",
-  "icon": "./assets/app-icon.png",
+  "buildEnv": "production",
+  "appName": "Burger Kong",
+  "androidApplicationId": "com.burgerkong.pos",
+  "icon": "./clients/kong-burger/assets/app-icon.png",
   "splashImage": "./assets/splash.png",
   "slug": "burger-kong",
   "projectId": "14f8bcc3-9327-4987-b505-899cc734c274"

@@ -112,6 +112,22 @@ const client = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const target = client[buildEnv];
 const profile = buildEnv === 'production' ? 'production-apk' : 'development-apk';
 
+const firebaseFile =
+  path.join(
+    root,
+    'clients',
+    clientId,
+    'firebase',
+    'google-services.json',
+  );
+
+if (!fs.existsSync(firebaseFile)) {
+  console.error(
+    `No existe Firebase config para ${clientId}: ${firebaseFile}`,
+  );
+  process.exit(1);
+}
+
 if (!target) {
   console.error(`El cliente ${clientId} no tiene configuración ${buildEnv}.`);
   process.exit(1);
@@ -129,6 +145,7 @@ const env = {
   DORIAN_SPLASH_IMAGE: target.splash,
   DORIAN_EXPO_SLUG: client.expoSlug,
   DORIAN_EAS_PROJECT_ID: client.easProjectId,
+  DORIAN_GOOGLE_SERVICES_FILE: firebaseFile,
 };
 
 console.log('========================================');
@@ -148,6 +165,11 @@ console.log('========================================');
 run('node', ['scripts/setupClientBranding.js'], env);
 run('node', ['scripts/generateRuntimeBranding.js'], env);
 run('node', ['scripts/applyWhiteLabelPatches.js'], env);
+run(
+  'node',
+  ['scripts/prepareAndroidFirebase.js'],
+  env,
+);
 validateEasEnvironment(root, client, target, buildEnv, env);
 
 console.log('BUILD VALIDATED');
