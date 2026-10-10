@@ -20,11 +20,15 @@ function loadClientConfig(clientId) {
 }
 
 module.exports = ({ config }) => {
-  // buildTarget.json queda dentro del source bundle y permite que EAS remoto
-  // resuelva exactamente el mismo cliente/entorno elegido localmente.
   const buildTarget = loadJson(
     path.join(__dirname, 'src', 'generated', 'buildTarget.json'),
   );
+
+  const versionConfig =
+    loadJson(path.join(__dirname, 'config', 'dorian-version.json')) ?? {
+      version: '1.3.1',
+      androidVersionCode: 9,
+    };
 
   const clientId =
     normalize(process.env.DORIAN_CLIENT_ID) ??
@@ -37,34 +41,37 @@ module.exports = ({ config }) => {
     'development';
 
   const client = loadClientConfig(clientId);
-  const target = buildEnv === 'production' ? client.production : client.development;
+  const target =
+    buildEnv === 'production'
+      ? client.production
+      : client.development;
 
   const appName =
     normalize(process.env.DORIAN_APP_NAME) ??
-    buildTarget?.appName ??
     target.appName ??
+    buildTarget?.appName ??
     client.businessName ??
     config.name ??
     'Dorian POS';
 
   const androidApplicationId =
     normalize(process.env.DORIAN_ANDROID_APPLICATION_ID) ??
-    buildTarget?.androidApplicationId ??
     target.androidPackage ??
+    buildTarget?.androidApplicationId ??
     config.android?.package ??
     'com.doriancore.pos';
 
   const icon =
     normalize(process.env.DORIAN_APP_ICON) ??
-    buildTarget?.icon ??
     target.icon ??
+    buildTarget?.icon ??
     config.icon ??
     './assets/app-icon.png';
 
   const splashImage =
     normalize(process.env.DORIAN_SPLASH_IMAGE) ??
-    buildTarget?.splashImage ??
     target.splash ??
+    buildTarget?.splashImage ??
     config.splash?.image ??
     './assets/splash.png';
 
@@ -82,10 +89,31 @@ module.exports = ({ config }) => {
     config.extra?.eas?.projectId ??
     null;
 
+  const appVersion =
+    normalize(process.env.DORIAN_APP_VERSION) ??
+    buildTarget?.version ??
+    versionConfig.version;
+
+  const androidVersionCode =
+    Number(
+      process.env.DORIAN_ANDROID_VERSION_CODE ??
+      buildTarget?.androidVersionCode ??
+      versionConfig.androidVersionCode,
+    );
+
+  if (!/^\d+\.\d+\.\d+$/.test(appVersion)) {
+    throw new Error(`Versión Dorian inválida: ${appVersion}`);
+  }
+
+  if (!Number.isInteger(androidVersionCode) || androidVersionCode <= 0) {
+    throw new Error(`Android versionCode inválido: ${androidVersionCode}`);
+  }
+
   return {
     ...config,
     name: appName,
     slug,
+    version: appVersion,
     icon,
     splash: {
       ...config.splash,
@@ -94,6 +122,7 @@ module.exports = ({ config }) => {
     android: {
       ...config.android,
       package: androidApplicationId,
+      versionCode: androidVersionCode,
       adaptiveIcon: {
         ...config.android?.adaptiveIcon,
         foregroundImage: icon,
@@ -109,14 +138,16 @@ module.exports = ({ config }) => {
         clientId,
         buildEnv,
         businessName: client.businessName,
+        version: appVersion,
+        androidVersionCode,
       },
       ...(projectId
         ? {
-            eas: {
-              ...config.extra?.eas,
-              projectId,
-            },
-          }
+          eas: {
+            ...config.extra?.eas,
+            projectId,
+          },
+        }
         : {}),
     },
   };
