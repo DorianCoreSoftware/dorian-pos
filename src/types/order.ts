@@ -36,6 +36,8 @@ export interface KitchenOrderItem {
   price_at_purchase: string | number;
   notes: string | null;
 
+  reward_source?: 'promotion' | 'loyalty' | null;
+
   is_prepared: boolean;
   prepared_at: string | null;
   prepared_by: string | null;

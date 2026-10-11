@@ -1,9 +1,9 @@
-import { Product } from './product';
-import { SelectedModifier } from './modifier';
+import { Product } from '../product';
+import { SelectedModifier } from '../modifier';
 import {
   ComboComponentSelection,
-} from './combo';
-import { DeliveryDetails } from './delivery';
+} from '../combo';
+import { DeliveryDetails } from '../delivery';
 
 export interface CartItem {
   id: string;

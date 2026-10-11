@@ -200,7 +200,7 @@ export function AdminPromotions() {
       ]);
 
       setPrograms(programData);
-      setProducts(productData.filter(product => product.is_active !== false));
+      setProducts(productData);
       setModifierOptions(modifierOptionData);
 
       if (programData.length > 0) {

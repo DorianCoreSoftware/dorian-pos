@@ -7,6 +7,7 @@ export interface LoyaltyReward {
   id: string;
   name: string;
   description: string | null;
+  productId: string | null;
   requiredVisits: number;
   status: LoyaltyRewardStatus;
   visitsRemaining: number;
@@ -40,6 +41,9 @@ export interface RedeemLoyaltyRewardResult {
   customerId: string;
   rewardId: string;
   rewardName: string;
+  productId: string;
+  orderId: string;
+  orderItemId: string;
   status: 'redeemed';
 }
 

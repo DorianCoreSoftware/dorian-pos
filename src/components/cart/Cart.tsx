@@ -16,7 +16,7 @@ import {
 
 import {
   CartItem,
-} from '../../types/cart-item';
+} from '../../types/cart/cart-item';
 
 import {
   styles,
@@ -33,32 +33,7 @@ import {
 } from '../../services/modifierPromotionService';
 import { getModifierGroupLabel } from '../../Utils/modifierGroup';
 import { useCurrency } from '../../hooks/useCurrency';
-
-
-interface CartProps {
-  cart: CartItem[];
-
-  onUpdateQuantity: (
-    itemId: string,
-    change: number,
-  ) => void;
-
-  onRemoveItem: (
-    itemId: string,
-  ) => void;
-
-  onClearCart: () => void;
-
-  onCheckout: (
-    totalAmount: number,
-  ) => void;
-
-  onToggleDelivery: () => void;
-
-  onEditDelivery: () => void;
-
-  isMobile?: boolean;
-}
+import { CartProps } from '../../types/cart/cart-props';
 
 export const Cart: React.FC<
   CartProps
@@ -72,7 +47,7 @@ export const Cart: React.FC<
   onEditDelivery,
   isMobile = false,
 }) => {
-  const { theme: businessTheme } = useBusiness();
+    const { theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
 
     const {
@@ -192,28 +167,16 @@ export const Cart: React.FC<
       };
     }, []);
 
-    /*
-     * Si el carrito queda completamente
-     * vacío, lo dejamos expandido para que
-     * la próxima orden comience normal.
-     */
     useEffect(() => {
       if (cart.length === 0) {
         setIsCollapsed(false);
       }
     }, [cart.length]);
 
-    /*
-     * Carrito vacío:
-     * no renderizamos absolutamente nada.
-     */
     if (cart.length === 0) {
       return null;
     }
 
-    /*
-     * Vista compacta.
-     */
     if (
       isCollapsed &&
       !isMobile
@@ -730,7 +693,7 @@ export const Cart: React.FC<
                           item.product
                             .price,
                         ) *
-                          item.quantity,
+                        item.quantity,
                       )}
                     </Text>
 

@@ -23,6 +23,9 @@ export interface LoyaltyAdminReward {
   description:
     string | null;
 
+  productId:
+    string | null;
+
   requiredVisits:
     number;
 
@@ -61,6 +64,8 @@ export interface SaveLoyaltySettingsInput {
 }
 
 export interface SaveLoyaltyRewardInput {
+  productId: string;
+
   name: string;
 
   description:
@@ -139,6 +144,9 @@ export async function createLoyaltyReward(
     await supabase.rpc(
       'create_loyalty_reward',
       {
+        p_product_id:
+          input.productId,
+
         p_name:
           input.name,
 
@@ -180,6 +188,9 @@ export async function updateLoyaltyReward(
         p_reward_id:
           id,
 
+        p_product_id:
+          input.productId,
+
         p_name:
           input.name,
 
@@ -215,6 +226,9 @@ export async function setLoyaltyRewardActive(
   await updateLoyaltyReward(
     reward.id,
     {
+      productId:
+        reward.productId ?? '',
+
       name:
         reward.name,
 

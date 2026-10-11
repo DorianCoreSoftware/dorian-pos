@@ -30,6 +30,7 @@ import {
   setBrandPrimaryColor,
 } from './LoyaltyScreen.styles';
 import { LoyaltyQrScannerModal } from '../../components/loyalty/LoyaltyQrScannerModal';
+import { RewardOrderLinkModal } from '../../components/rewards/RewardOrderLinkModal';
 
 export function LoyaltyScreen() {
   const { theme: businessTheme } = useBusiness();
@@ -58,6 +59,11 @@ export function LoyaltyScreen() {
   ] = useState<string | null>(
     null,
   );
+
+  const [
+    pendingReward,
+    setPendingReward,
+  ] = useState<{ id: string; name: string } | null>(null);
 
   const [
     successMessage,
@@ -162,31 +168,17 @@ export function LoyaltyScreen() {
       rewardId: string,
       rewardName: string,
     ): void => {
-      Alert.alert(
-        'Canjear recompensa',
-        `¿Confirmas el canje de "${rewardName}"?`,
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Canjear',
-            onPress: () => {
-              void performRedeem(
-                rewardId,
-                rewardName,
-              );
-            },
-          },
-        ],
-      );
+      setPendingReward({
+        id: rewardId,
+        name: rewardName,
+      });
     };
 
   const performRedeem =
     async (
       rewardId: string,
       rewardName: string,
+      orderId: string | null,
     ): Promise<void> => {
       const token =
         qrToken.trim();
@@ -199,10 +191,13 @@ export function LoyaltyScreen() {
         await redeemReward(
           token,
           rewardId,
+          orderId,
         );
 
+        setPendingReward(null);
+
         setSuccessMessage(
-          `Recompensa canjeada: ${rewardName}`,
+          `${rewardName} enviado a Cocina${orderId ? ' y vinculado a la orden seleccionada' : ' como canje independiente'}.`,
         );
 
         const refreshed =
@@ -527,6 +522,9 @@ export function LoyaltyScreen() {
                         reward.status ===
                         'redeemed';
 
+                      const hasProduct =
+                        Boolean(reward.productId);
+
                       return (
                         <View
                           key={
@@ -585,12 +583,14 @@ export function LoyaltyScreen() {
                                 ? `🔒 Faltan ${reward.visitsRemaining} visita${reward.visitsRemaining === 1 ? '' : 's'}`
                                 : reward.status ===
                                   'available'
-                                  ? '🎁 Disponible para canjear'
+                                  ? hasProduct
+                                    ? '🎁 Disponible para canjear'
+                                    : '⚠️ Configura un producto para este premio'
                                   : '✓ Canjeada'
                             }
                           </Text>
 
-                          {isAvailable ? (
+                          {isAvailable && hasProduct ? (
                             <TouchableOpacity
                               style={
                                 styles.redeemButton
@@ -622,6 +622,21 @@ export function LoyaltyScreen() {
           </View>
         </>
       ) : null}
+      <RewardOrderLinkModal
+        visible={pendingReward !== null}
+        rewardName={pendingReward?.name ?? 'Premio'}
+        isProcessing={loading}
+        onClose={() => setPendingReward(null)}
+        onSelect={orderId => {
+          if (!pendingReward) return;
+          void performRedeem(
+            pendingReward.id,
+            pendingReward.name,
+            orderId,
+          );
+        }}
+      />
+
       <LoyaltyQrScannerModal
         visible={
           scannerVisible

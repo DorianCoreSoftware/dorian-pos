@@ -472,7 +472,7 @@ export async function printOrderTicket({
     await printer.write(
       `${item.quantity}x ${sanitizeTicketText(
         productName,
-      )}\n`,
+      )}${item.reward_source ? ' - PREMIO $0' : ''}\n`,
     );
 
     await setBold(

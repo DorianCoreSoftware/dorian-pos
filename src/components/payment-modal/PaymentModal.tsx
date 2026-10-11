@@ -77,8 +77,8 @@ export function PaymentModal({
     }
 
     setPaymentMethod('cash');
-    setAmountReceivedText('');
-  }, [visible]);
+    setAmountReceivedText(totalAmount === 0 ? '0' : '');
+  }, [visible, totalAmount]);
 
   const amountReceived =
     useMemo(() => {

@@ -79,6 +79,9 @@ export interface OrderItemRecord {
   quantity: number;
   price_at_purchase: string | number;
   notes: string | null;
+  reward_source?: 'promotion' | 'loyalty' | null;
+  promo_redemption_id?: string | null;
+  loyalty_redemption_id?: string | null;
   is_prepared: boolean;
   prepared_at: string | null;
   prepared_by: string | null;

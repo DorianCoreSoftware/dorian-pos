@@ -85,6 +85,20 @@ export async function fetchPromotionPrograms(): Promise<PromotionProgramRecord[]
 export async function createOrGetOrderPromoCoupon(
   orderId: string,
 ): Promise<PromoCouponRecord | null> {
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('order_kind')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (orderError) {
+    throw new Error(`No se pudo consultar el tipo de orden: ${orderError.message}`);
+  }
+
+  if (order?.order_kind === 'reward_redemption') {
+    return null;
+  }
+
   const { data, error } = await supabase.rpc(
     'create_or_get_order_promotion_coupon',
     { p_order_id: orderId },
@@ -105,6 +119,7 @@ export async function redeemCollectPromotion(
   programId: string,
   codes: string[],
   rewardId: string,
+  orderId?: string | null,
 ): Promise<string> {
   const { data, error } = await supabase.rpc(
     'redeem_collect_promotion',
@@ -112,6 +127,7 @@ export async function redeemCollectPromotion(
       p_program_id: programId,
       p_codes: codes,
       p_reward_id: rewardId,
+      p_order_id: orderId ?? null,
     },
   );
 

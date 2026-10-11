@@ -27,12 +27,16 @@ import {
   setLoyaltyRewardActive,
   updateLoyaltyReward,
 } from '../../../services/adminLoyaltyService';
+import { getAllProducts } from '../../../services/products';
+import { Product } from '../../../types';
 import {
   styles,
   setBrandPrimaryColor,
 } from './AdminLoyalty.styles';
 
 interface RewardForm {
+  productId: string;
+
   name: string;
 
   description: string;
@@ -46,6 +50,8 @@ interface RewardForm {
 
 const INITIAL_REWARD_FORM:
   RewardForm = {
+  productId: '',
+
   name: '',
 
   description: '',
@@ -96,6 +102,12 @@ export function AdminLoyalty() {
     useState<
       LoyaltyAdminReward[]
     >([]);
+
+
+  const [
+    products,
+    setProducts,
+  ] = useState<Product[]>([]);
 
   const [
     isEnabled,
@@ -155,8 +167,13 @@ export function AdminLoyalty() {
             null,
           );
 
-          const data =
-            await getLoyaltyAdminConfig();
+          const [data, productData] =
+            await Promise.all([
+              getLoyaltyAdminConfig(),
+              getAllProducts(),
+            ]);
+
+          setProducts(productData);
 
           setIsEnabled(
             data.settings.isEnabled,
@@ -350,6 +367,9 @@ export function AdminLoyalty() {
       );
 
       setRewardForm({
+        productId:
+          reward.productId ?? '',
+
         name:
           reward.name,
 
@@ -378,8 +398,11 @@ export function AdminLoyalty() {
 
   const handleSaveReward =
     async (): Promise<void> => {
+      const selectedProduct =
+        products.find(product => product.id === rewardForm.productId) ?? null;
+
       const name =
-        rewardForm.name.trim();
+        selectedProduct?.name.trim() ?? '';
 
       const requiredVisits =
         Number(
@@ -391,12 +414,10 @@ export function AdminLoyalty() {
           rewardForm.position,
         );
 
-      if (
-        name.length < 2
-      ) {
+      if (!selectedProduct) {
         Alert.alert(
           'Dato inválido',
-          'Ingresa el nombre del premio.',
+          'Selecciona un producto del negocio para usarlo como premio.',
         );
 
         return;
@@ -436,6 +457,8 @@ export function AdminLoyalty() {
         );
 
         const input = {
+          productId: selectedProduct.id,
+
           name,
 
           description:
@@ -938,26 +961,67 @@ export function AdminLoyalty() {
                   styles.label
                 }
               >
-                Nombre
+                Producto del premio
               </Text>
 
-              <TextInput
-                style={
-                  styles.input
-                }
-                value={
-                  rewardForm.name
-                }
-                onChangeText={value =>
-                  setRewardForm(
-                    current => ({
-                      ...current,
-                      name:
-                        value,
-                    }),
-                  )
-                }
-              />
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#444444',
+                  borderRadius: 8,
+                  backgroundColor: '#161616',
+                  maxHeight: 220,
+                  marginBottom: 16,
+                }}
+              >
+                <ScrollView nestedScrollEnabled>
+                  {products.map(product => {
+                    const selected = product.id === rewardForm.productId;
+
+                    return (
+                      <TouchableOpacity
+                        key={product.id}
+                        onPress={() =>
+                          setRewardForm(current => ({
+                            ...current,
+                            productId: product.id,
+                            name: product.name,
+                            description:
+                              product.description?.trim() ?? '',
+                          }))
+                        }
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 12,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#333333',
+                          backgroundColor: selected ? businessTheme.primary : 'transparent',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: selected ? businessTheme.onPrimary : '#FFFFFF',
+                            fontWeight: selected ? '800' : '500',
+                          }}
+                        >
+                          {product.name}
+                        </Text>
+                        {!product.is_active ? (
+                          <Text
+                            style={{
+                              color: selected ? businessTheme.onPrimary : '#888888',
+                              fontSize: 11,
+                              marginTop: 2,
+                            }}
+                          >
+                            Producto inactivo
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
 
               <Text
                 style={

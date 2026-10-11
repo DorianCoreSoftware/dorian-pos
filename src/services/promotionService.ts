@@ -99,6 +99,10 @@ export async function savePromotionProgram(
 export async function savePromotionReward(
   input: PromotionRewardInput,
 ): Promise<string> {
+  if (!input.productId?.trim()) {
+    throw new Error('Selecciona un producto válido para el premio.');
+  }
+
   if (!input.displayName.trim()) {
     throw new Error('El nombre del premio es obligatorio.');
   }

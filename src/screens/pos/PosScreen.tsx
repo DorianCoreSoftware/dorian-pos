@@ -860,13 +860,13 @@ export function POSScreen({
           ) : null}
         </View>
         <CategoryTabs
-          categorias={
+          categories={
             visibleCategories
           }
-          categoriaSeleccionada={
+          selectedCategory={
             selectedCategoryId
           }
-          onSelectCategoria={
+          onSelectCategory={
             setSelectedCategoryId
           }
         />

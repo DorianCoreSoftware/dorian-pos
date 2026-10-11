@@ -10,6 +10,7 @@ import {
 
 import { useBusiness } from '../../context/BusinessContext';
 import { useCurrency } from '../../hooks/useCurrency';
+import { RewardOrderLinkModal } from '../rewards/RewardOrderLinkModal';
 import {
   PromotionProgram,
   redeemPromotionCodes,
@@ -39,6 +40,7 @@ export function PromotionRedemptionPanel({
   const [singleCode, setSingleCode] = useState('');
   const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderLinkVisible, setOrderLinkVisible] = useState(false);
 
   const selectedProgram = useMemo(
     () => enabledPrograms.find(program => program.id === selectedProgramId) ?? enabledPrograms[0] ?? null,
@@ -117,7 +119,7 @@ export function PromotionRedemptionPanel({
   const collectCodesComplete =
     codes.length > 0 && codes.every(hasCodeSuffix);
 
-  const executeCollectRedemption = async () => {
+  const executeCollectRedemption = async (orderId: string | null) => {
     if (!selectedRewardId) {
       Alert.alert('Premio requerido', 'Selecciona un premio para continuar.');
       return;
@@ -129,11 +131,16 @@ export function PromotionRedemptionPanel({
         program: selectedProgram,
         codes,
         rewardId: selectedRewardId,
+        orderId,
       });
 
       const reward = selectedProgram.rewards.find(item => item.id === selectedRewardId);
       setCodes(Array.from({ length: selectedProgram.requiredCoupons ?? 0 }, () => selectedProgram.codePrefix));
-      Alert.alert('✅ Canje realizado', `Premio: ${reward?.displayName ?? 'Premio'}`);
+      setOrderLinkVisible(false);
+      Alert.alert(
+        '✅ Canje realizado',
+        `${reward?.displayName ?? 'Premio'} enviado a Cocina${orderId ? ' y vinculado a la orden seleccionada' : ' como canje independiente'}.`,
+      );
     } catch (error) {
       Alert.alert('No se pudo realizar el canje', error instanceof Error ? error.message : 'Error desconocido.');
     } finally {
@@ -163,6 +170,7 @@ export function PromotionRedemptionPanel({
   };
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={{ padding: 18 }}
@@ -243,7 +251,7 @@ export function PromotionRedemptionPanel({
 
             <TouchableOpacity
               disabled={isProcessing || selectedProgram.rewards.length === 0 || !collectCodesComplete}
-              onPress={() => void executeCollectRedemption()}
+              onPress={() => setOrderLinkVisible(true)}
               style={{ backgroundColor: theme.primary, opacity: isProcessing || selectedProgram.rewards.length === 0 || !collectCodesComplete ? 0.5 : 1, borderRadius: 10, padding: 13, marginTop: 20 }}
             >
               <Text style={{ color: theme.onPrimary, textAlign: 'center', fontWeight: '800' }}>
@@ -283,5 +291,19 @@ export function PromotionRedemptionPanel({
         )}
       </View>
     </ScrollView>
+
+      <RewardOrderLinkModal
+        visible={orderLinkVisible}
+        rewardName={
+          selectedProgram.rewards.find(reward => reward.id === selectedRewardId)?.displayName ??
+          'Premio'
+        }
+        isProcessing={isProcessing}
+        onClose={() => setOrderLinkVisible(false)}
+        onSelect={orderId => {
+          void executeCollectRedemption(orderId);
+        }}
+      />
+    </>
   );
 }

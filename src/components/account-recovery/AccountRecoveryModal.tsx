@@ -26,26 +26,15 @@ import {
 import {
   styles,
 } from './AccountRecoveryModal.styles';
-
-type RecoveryStep =
-  | 'identifier'
-  | 'code'
-  | 'secret'
-  | 'success';
-
-interface Props {
-  visible: boolean;
-  type: AccountRecoveryType;
-  initialIdentifier?: string;
-  onClose: () => void;
-}
+import { RecoveryStep } from '../../types/account-recovery/recovery-step';
+import { RecoveryProps } from '../../types/account-recovery/recovery-props';
 
 export function AccountRecoveryModal({
   visible,
   type,
   initialIdentifier = '',
   onClose,
-}: Props) {
+}: RecoveryProps) {
   const {
     business,
     theme,

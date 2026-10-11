@@ -8,17 +8,12 @@ import {
   setBrandPrimaryColor,
 } from './CategoryTabs.styles';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-
-interface CategoryTabsProps {
-  categorias: Category[];
-  categoriaSeleccionada: string;
-  onSelectCategoria: (id: string) => void;
-}
+import { CategoryTabsProps } from '../../types/category-tabs/category-tabs-props';
 
 export const CategoryTabs: React.FC<CategoryTabsProps> = ({
-  categorias,
-  categoriaSeleccionada,
-  onSelectCategoria,
+  categories,
+  selectedCategory,
+  onSelectCategory,
 }) => {
   const { theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
@@ -101,7 +96,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   const handleSelectCategory = (
     id: string,
   ): void => {
-    onSelectCategoria(
+    onSelectCategory(
       id,
     );
 
@@ -140,11 +135,11 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           styles.categoriesBarPhone,
         ]}
       >
-        {categorias.map(
+        {categories.map(
           (cat) => {
             const activa =
               cat.id ===
-              categoriaSeleccionada;
+              selectedCategory;
 
             return (
               <TouchableOpacity

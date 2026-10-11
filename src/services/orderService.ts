@@ -375,6 +375,9 @@ function mapOrderToKitchenOrder(
         notes:
           item.notes,
 
+        reward_source:
+          item.reward_source ?? null,
+
         is_prepared:
           item.is_prepared ?? false,
 

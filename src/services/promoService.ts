@@ -119,6 +119,7 @@ export async function redeemPromotionCodes(input: {
   program: PromotionProgram;
   codes: string[];
   rewardId: string;
+  orderId?: string | null;
 }): Promise<string> {
   const { program } = input;
 
@@ -141,11 +142,23 @@ export async function redeemPromotionCodes(input: {
     throw new Error('Todos los códigos deben ser diferentes.');
   }
 
-  if (!program.rewards.some(reward => reward.id === input.rewardId)) {
+  const selectedReward =
+    program.rewards.find(reward => reward.id === input.rewardId) ?? null;
+
+  if (!selectedReward) {
     throw new Error('Selecciona un premio válido.');
   }
 
-  return redeemCollectPromotion(program.id, codes, input.rewardId);
+  if (!selectedReward.productId) {
+    throw new Error('Este premio no está ligado a un producto. Corrígelo en Administración.');
+  }
+
+  return redeemCollectPromotion(
+    program.id,
+    codes,
+    input.rewardId,
+    input.orderId ?? null,
+  );
 }
 
 export async function redeemRefundPromotion(

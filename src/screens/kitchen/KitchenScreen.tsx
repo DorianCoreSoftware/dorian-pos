@@ -1214,6 +1214,9 @@ Cambio: ${formatCurrency(
             {line.products
               ?.name ??
               'Producto'}
+            {line.reward_source
+              ? ' · PREMIO $0'
+              : ''}
           </Text>
         </View>
 
