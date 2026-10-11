@@ -155,6 +155,7 @@ import {
 
 } from './AdminScreen.styles';
 import { AdminDashboard } from '../../components/admin/dashboard/AdminDashboard';
+import { appVersionLabel } from '../../Utils/appVersion';
 
 
 
@@ -1226,6 +1227,17 @@ export function AdminScreen({
 
           {businessName}
 
+        </Text>
+
+        <Text
+          style={{
+            marginTop: 4,
+            color: theme.textMuted,
+            fontSize: isPhone ? 11 : 12,
+            fontWeight: '600',
+          }}
+        >
+          {appVersionLabel}
         </Text>
 
       </View>
