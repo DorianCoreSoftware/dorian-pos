@@ -205,6 +205,7 @@ export async function fetchOrderPromoCoupon(
       )
     `)
     .eq('order_id', orderId)
+    .eq('voided', false)
     .maybeSingle();
 
   if (error) {
