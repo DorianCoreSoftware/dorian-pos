@@ -48,7 +48,10 @@ import {
 } from '../../context/AuthContext';
 import { useCurrency } from '../../hooks/useCurrency';
 import { PromotionProgram } from '../../services/promoService';
-import { CashRefundSummary, getCashRefundSummary } from '../../services/cashRefundService';
+import {
+  CombinedCashRefundSummary,
+  getCombinedCashRefundSummary,
+} from '../../services/combinedCashRefundService';
 import { getPromotionPrograms } from '../../services/promotionService';
 import { PromotionRedemptionPanel } from '../../components/promotions/PromotionRedemptionPanel';
 
@@ -256,7 +259,7 @@ export function CashClosingScreen({
   const [
     refundSummary,
     setRefundSummary,
-  ] = useState<CashRefundSummary>({
+  ] = useState<CombinedCashRefundSummary>({
     refunds: [],
     cash: 0,
     card: 0,
@@ -342,7 +345,7 @@ export function CashClosingScreen({
 
         try {
           const currentRefundSummary =
-            await getCashRefundSummary(
+            await getCombinedCashRefundSummary(
               cashSession.id,
             );
 

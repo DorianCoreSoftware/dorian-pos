@@ -564,6 +564,7 @@ export const Cart: React.FC<
                             index,
                           ) => (
                             <View
+                              key={`${item.id}-${modifier.id}-${index}`}
                               style={
                                 styles.modifierBadge
                               }

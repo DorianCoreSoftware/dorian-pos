@@ -38,6 +38,20 @@ import {
 } from '../../../services/reportService';
 
 import {
+    getRefundReport,
+    getRefundReportSummary,
+} from '../../../services/refundService';
+
+import {
+    RefundReportRow,
+    RefundReportSummary,
+} from '../../../types/refund';
+
+import {
+    AdminRefundReport,
+} from './AdminRefundReport';
+
+import {
     getModifierGroups,
     ModifierGroupEntity,
 } from '../../../services/modifierService';
@@ -89,6 +103,15 @@ const EMPTY_FINANCIAL: FinancialBalanceReport = {
     expenses: 0,
     balance: 0,
     expense_count: 0,
+};
+
+const EMPTY_REFUND_SUMMARY:
+    RefundReportSummary = {
+    refundsCount: 0,
+    refundedTotal: 0,
+    cashTotal: 0,
+    cardTotal: 0,
+    itemsCount: 0,
 };
 
 export function AdminReports() {
@@ -173,6 +196,18 @@ export function AdminReports() {
         dailyFinancial,
         setDailyFinancial,
     ] = useState<DailyFinancialReport[]>([]);
+    const [
+        refundRows,
+        setRefundRows,
+    ] = useState<RefundReportRow[]>([]);
+
+    const [
+        refundSummary,
+        setRefundSummary,
+    ] = useState<RefundReportSummary>(
+        EMPTY_REFUND_SUMMARY,
+    );
+
 
     const [
         isLoading,
@@ -279,6 +314,8 @@ export function AdminReports() {
                         financialBalanceData,
                         expenseCategoryData,
                         dailyFinancialData,
+                        refundReportData,
+                        refundSummaryData,
                         modifierReportEntries,
                     ] =
                         await Promise.all([
@@ -314,6 +351,16 @@ export function AdminReports() {
                             ),
 
                             getDailyFinancialReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getRefundReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getRefundReportSummary(
                                 dateRange.from,
                                 dateRange.to,
                             ),
@@ -359,6 +406,14 @@ export function AdminReports() {
 
                     setDailyFinancial(
                         dailyFinancialData,
+                    );
+
+                    setRefundRows(
+                        refundReportData,
+                    );
+
+                    setRefundSummary(
+                        refundSummaryData,
                     );
 
                     setModifierGroups(
@@ -536,6 +591,11 @@ export function AdminReports() {
                     value: 'financial',
                     label: 'Balance financiero',
                     description: 'Ventas netas contra egresos registrados.',
+                },
+                {
+                    value: 'refunds',
+                    label: 'Devoluciones',
+                    description: 'Historial, importes y artículos devueltos.',
                 },
                 ...modifierGroups.map(
                     group => ({
@@ -929,6 +989,12 @@ export function AdminReports() {
                             )}
                         </View>
                     </>
+                ) : activeSection === 'refunds' ? (
+                    <AdminRefundReport
+                        summary={refundSummary}
+                        rows={refundRows}
+                        formatCurrency={formatCurrency}
+                    />
                 ) : activeSection === 'financial' ? (
                     <FinancialReportPanel
                         summary={financialBalance}

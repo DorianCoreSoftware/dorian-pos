@@ -36,6 +36,9 @@ import { printOrderTicket } from '../../services/printerService';
 import { getExistingOrderPromoCoupon } from '../../services/promoService';
 import { getOrderById } from '../../services/orderService';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useAuth } from '../../context/AuthContext';
+import { RefundModal } from '../../components/refunds/RefundModal';
+import { canCreateRefund } from '../../Utils/permissions';
 
 import {
   PeriodFilter,
@@ -56,6 +59,7 @@ type DatePickerField =
   | null;
 
 export function SalesScreen() {
+  const { user } = useAuth();
   const { business, theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
 
@@ -128,6 +132,13 @@ export function SalesScreen() {
   } | null>(
     null,
   );
+  const [
+    refundSale,
+    setRefundSale,
+  ] = useState<CompletedSale | null>(
+    null,
+  );
+
 
   const [
     customStartDate,
@@ -574,6 +585,33 @@ export function SalesScreen() {
             styles.saleActions
           }
         >
+          {canCreateRefund(user) ? (
+            <TouchableOpacity
+              style={{
+                minHeight: 42,
+                paddingHorizontal: 14,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#d7a83b',
+                backgroundColor: '#2f2818',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 8,
+              }}
+              onPress={() => {
+                setRefundSale(item);
+              }}
+            >
+              <Text
+                style={{
+                  color: '#f0ca69',
+                  fontWeight: '900',
+                }}
+              >
+                ↩️ Devolver
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={[
               styles.reprintButton,
@@ -760,6 +798,18 @@ export function SalesScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      <RefundModal
+        visible={refundSale !== null}
+        orderId={refundSale?.orderId ?? null}
+        formatCurrency={formatCurrency}
+        onClose={() => {
+          setRefundSale(null);
+        }}
+        onCompleted={async () => {
+          await loadSales(true);
+        }}
+      />
+
 
       <PeriodFilter
         value={salesFilter}
