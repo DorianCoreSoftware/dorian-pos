@@ -76,3 +76,26 @@ export interface RefundReportSummary {
   cardTotal: number;
   itemsCount: number;
 }
+
+
+export interface RefundReceiptItem {
+  productName: string;
+  quantity: number;
+  unitRefundAmount: number;
+  refundAmount: number;
+}
+
+export interface RefundReceiptData {
+  refundId: string;
+  refundNumber: number;
+  refundType: RefundType;
+  orderId: string;
+  createdAt: string;
+  paymentMethod: string;
+  refundTotal: number;
+  reason: string;
+  notes: string | null;
+  policyException: boolean;
+  userName: string | null;
+  items: RefundReceiptItem[];
+}

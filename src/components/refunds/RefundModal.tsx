@@ -1,10 +1,9 @@
-import { useBusiness } from '../../context/BusinessContext';
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { getOrderRefundAvailability, getOrderRefundHistory, createOrderRefund } from '../../services/refundService';
+import { getOrderRefundAvailability, getOrderRefundHistory, createOrderRefund, getRefundReceiptDetails } from '../../services/refundService';
 import { RefundAvailabilityItem, OrderRefundHistoryRow } from '../../types/refund';
 import { printRefundTicket } from '../../services/printerService';
+import { useBusiness } from '../../context/BusinessContext';
 
 
 interface Props {
@@ -31,6 +30,13 @@ export function RefundModal({ visible, orderId, onClose, onCompleted, formatCurr
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [
+    reprintingRefundId,
+    setReprintingRefundId,
+  ] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!visible || !orderId) return;
@@ -71,6 +77,88 @@ export function RefundModal({ visible, orderId, onClose, onCompleted, formatCurr
       [item.itemId]: Math.min(item.remainingQuantity, Math.max(0, (current[item.itemId] ?? 0) + delta)),
     }));
   };
+
+  const handleReprintRefund =
+    async (
+      refund:
+        OrderRefundHistoryRow,
+    ): Promise<void> => {
+      if (
+        reprintingRefundId
+      ) {
+        return;
+      }
+
+      try {
+        setReprintingRefundId(
+          refund.refundId,
+        );
+
+        setErrorMessage(null);
+
+        const receipt =
+          await getRefundReceiptDetails(
+            refund.refundId,
+          );
+
+        await printRefundTicket({
+          refundNumber:
+            receipt.refundNumber,
+          refundType:
+            receipt.refundType,
+          orderId:
+            receipt.orderId,
+          createdAt:
+            receipt.createdAt,
+          paymentMethod:
+            receipt.paymentMethod,
+          refundTotal:
+            receipt.refundTotal,
+          reason:
+            receipt.reason,
+          notes:
+            receipt.notes,
+          policyException:
+            receipt.policyException,
+          userName:
+            receipt.userName,
+          items:
+            receipt.items.map(
+              item => ({
+                productName:
+                  item.productName,
+                quantity:
+                  item.quantity,
+                unitRefundAmount:
+                  item.unitRefundAmount,
+              }),
+            ),
+          currencyCode,
+        });
+
+        Alert.alert(
+          'Comprobante reimpreso',
+          `DEV-${String(
+            receipt.refundNumber,
+          ).padStart(
+            6,
+            '0',
+          )} se reimprimió correctamente.`,
+        );
+      } catch (error) {
+        Alert.alert(
+          'No se pudo reimprimir',
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al reimprimir el comprobante.',
+        );
+      } finally {
+        setReprintingRefundId(
+          null,
+        );
+      }
+    };
+
 
   const submit = async () => {
     if (!orderId || selectedCount <= 0) {
@@ -265,12 +353,106 @@ export function RefundModal({ visible, orderId, onClose, onCompleted, formatCurr
                 <Text style={styles.exceptionText}>Autorizar excepción a la política</Text>
               </TouchableOpacity>
 
-              {history.length > 0 ? <><Text style={styles.section}>Devoluciones anteriores</Text>{history.map(r => <View key={r.refundId} style={styles.history}><Text style={[
-                            styles.historyTitle,
-                            {
-                              color: brandPrimary,
-                            },
-                          ]}>DEV-{String(r.refundNumber).padStart(6, '0')}</Text><Text style={styles.muted}>{r.reason} · {formatCurrency(r.refundTotal)}</Text></View>)}</> : null}
+              {history.length > 0 ? (
+                <>
+                  <Text
+                    style={
+                      styles.section
+                    }
+                  >
+                    Devoluciones anteriores
+                  </Text>
+
+                  {history.map(
+                    r => (
+                      <View
+                        key={
+                          r.refundId
+                        }
+                        style={
+                          styles.history
+                        }
+                      >
+                        <View
+                          style={
+                            styles.historyHeader
+                          }
+                        >
+                          <View
+                            style={{
+                              flex: 1,
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.historyTitle,
+                                {
+                                  color:
+                                    brandPrimary,
+                                },
+                              ]}
+                            >
+                              DEV-
+                              {String(
+                                r.refundNumber,
+                              ).padStart(
+                                6,
+                                '0',
+                              )}
+                            </Text>
+
+                            <Text
+                              style={
+                                styles.muted
+                              }
+                            >
+                              {r.reason}
+                              {' · '}
+                              {formatCurrency(
+                                r.refundTotal,
+                              )}
+                            </Text>
+                          </View>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.reprintRefundButton,
+                              reprintingRefundId !==
+                                null &&
+                                styles.reprintRefundButtonDisabled,
+                            ]}
+                            disabled={
+                              reprintingRefundId !==
+                              null
+                            }
+                            onPress={() => {
+                              void handleReprintRefund(
+                                r,
+                              );
+                            }}
+                          >
+                            {reprintingRefundId ===
+                            r.refundId ? (
+                              <ActivityIndicator
+                                size="small"
+                                color="#111"
+                              />
+                            ) : (
+                              <Text
+                                style={
+                                  styles.reprintRefundButtonText
+                                }
+                              >
+                                🖨️ Reimprimir comprobante
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ),
+                  )}
+                </>
+              ) : null}
 
               {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
 
@@ -325,6 +507,10 @@ const styles = StyleSheet.create({
   check: { color: '#111', fontWeight: '900' },
   exceptionText: { flex: 1, color: '#bbb', fontSize: 13, fontWeight: '700' },
   history: { padding: 12, borderRadius: 10, backgroundColor: '#202020', borderWidth: 1, borderColor: '#333' },
+  historyHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reprintRefundButton: { minHeight: 38, paddingHorizontal: 12, borderRadius: 9, backgroundColor: '#e4b84e', alignItems: 'center', justifyContent: 'center' },
+  reprintRefundButtonDisabled: { opacity: .55 },
+  reprintRefundButtonText: { color: '#111', fontSize: 11, fontWeight: '900' },
   historyTitle: { color: '#f0ca69', fontSize: 13, fontWeight: '900' },
   error: { padding: 10, borderRadius: 8, backgroundColor: '#3a1717', color: '#ffb0b0', fontWeight: '700' },
   totalRow: { marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#333', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

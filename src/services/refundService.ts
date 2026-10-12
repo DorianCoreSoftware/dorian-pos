@@ -1,4 +1,5 @@
-import { RefundAvailabilityItem, CreateRefundInput, OrderRefundHistoryRow, RefundCashSummary, RefundReportRow, RefundReportSummary } from '../types/refund';
+
+import { RefundAvailabilityItem, CreateRefundInput, OrderRefundHistoryRow, RefundCashSummary, RefundReportRow, RefundReportSummary, RefundReceiptData } from '../types/refund';
 import { supabase } from './supabase';
 
 
@@ -291,4 +292,109 @@ export async function getOrderRefundStatuses(
   }
 
   return result;
+}
+
+
+export async function getRefundReceiptDetails(
+  refundId: string,
+): Promise<RefundReceiptData> {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'get_refund_receipt_details',
+    {
+      p_refund_id:
+        refundId,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      `No se pudo cargar el comprobante de devolución: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      'No se encontró la devolución.',
+    );
+  }
+
+  const row =
+    data as any;
+
+  return {
+    refundId:
+      String(row.refundId),
+    refundNumber:
+      Number(
+        row.refundNumber,
+      ),
+    refundType:
+      row.refundType ===
+      'full'
+        ? 'full'
+        : 'partial',
+    orderId:
+      String(row.orderId),
+    createdAt:
+      String(row.createdAt),
+    paymentMethod:
+      String(
+        row.paymentMethod ??
+        '',
+      ),
+    refundTotal:
+      Number(
+        row.refundTotal ??
+        0,
+      ),
+    reason:
+      String(
+        row.reason ??
+        '',
+      ),
+    notes:
+      row.notes == null
+        ? null
+        : String(row.notes),
+    policyException:
+      Boolean(
+        row.policyException,
+      ),
+    userName:
+      row.userName == null
+        ? null
+        : String(row.userName),
+    items:
+      Array.isArray(
+        row.items,
+      )
+        ? row.items.map(
+            (item: any) => ({
+              productName:
+                String(
+                  item.productName ??
+                  'Producto',
+                ),
+              quantity:
+                Number(
+                  item.quantity ??
+                  0,
+                ),
+              unitRefundAmount:
+                Number(
+                  item.unitRefundAmount ??
+                  0,
+                ),
+              refundAmount:
+                Number(
+                  item.refundAmount ??
+                  0,
+                ),
+            }),
+          )
+        : [],
+  };
 }
