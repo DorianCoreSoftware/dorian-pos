@@ -176,6 +176,19 @@ const createStyles = (
       backgroundColor: withAlpha(primaryColor, 0.14),
     },
 
+    netCard: {
+      borderColor: primaryColor,
+      backgroundColor:
+        withAlpha(
+          primaryColor,
+          0.08,
+        ),
+    },
+
+    summaryRefundedValue: {
+      color: '#E05A5A',
+    },
+
     summaryLabel: {
       color: '#AFAFAF',
       fontSize: 12,

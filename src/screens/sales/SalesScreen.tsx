@@ -328,15 +328,40 @@ export function SalesScreen() {
               sale.totalAmount;
           }
 
+          const refundStatus =
+            refundStatusByOrder[
+              sale.orderId
+            ];
+
+          if (refundStatus) {
+            accumulator.refunded +=
+              Number(
+                refundStatus
+                  .refundedTotal ??
+                  0,
+              );
+          }
+
           return accumulator;
         },
         {
           total: 0,
           cash: 0,
           card: 0,
+          refunded: 0,
         },
       );
-    }, [filteredSales]);
+    }, [
+      filteredSales,
+      refundStatusByOrder,
+    ]);
+
+  const netSales =
+    Math.max(
+      0,
+      summary.total -
+        summary.refunded,
+    );
 
   const handleSalesFilter = (
     filter: SalesFilter,
@@ -1594,6 +1619,70 @@ export function SalesScreen() {
             {
               filteredSales.length
             }
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.summaryCard,
+            isPhone &&
+              styles.summaryCardPhone,
+          ]}
+        >
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            ↩ Total devuelto
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.summaryValue,
+              styles.summaryRefundedValue,
+              isSmallPhone &&
+                styles.summaryValueSmall,
+            ]}
+          >
+            {formatCurrency(
+              summary.refunded,
+            )}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.summaryCard,
+            isPhone &&
+              styles.summaryCardPhone,
+            styles.netCard,
+          ]}
+        >
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            Neto después de devoluciones
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.totalValue,
+              isSmallPhone &&
+                styles.summaryValueSmall,
+            ]}
+          >
+            {formatCurrency(
+              netSales,
+            )}
           </Text>
         </View>
       </View>
