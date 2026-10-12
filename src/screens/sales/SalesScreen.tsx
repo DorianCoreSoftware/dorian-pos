@@ -797,6 +797,59 @@ export function SalesScreen() {
       }
     };
 
+  const refreshRefundHistoryAfterCompleted =
+    async (
+      orderId: string,
+    ): Promise<void> => {
+      const wasExpanded =
+        expandedRefundOrderId ===
+        orderId;
+
+      try {
+        if (wasExpanded) {
+          setLoadingRefundHistoryOrderId(
+            orderId,
+          );
+        }
+
+        const history =
+          await getOrderRefundHistory(
+            orderId,
+          );
+
+        setRefundHistoryByOrder(
+          current => ({
+            ...current,
+            [orderId]: history,
+          }),
+        );
+      } catch (error) {
+        console.error(
+          'No se pudo refrescar el historial de devoluciones:',
+          error,
+        );
+
+        setRefundHistoryByOrder(
+          current => {
+            const next = {
+              ...current,
+            };
+
+            delete next[orderId];
+
+            return next;
+          },
+        );
+      } finally {
+        if (wasExpanded) {
+          setLoadingRefundHistoryOrderId(
+            null,
+          );
+        }
+      }
+    };
+
+
 
   const renderSale = ({
     item,
@@ -1599,7 +1652,17 @@ export function SalesScreen() {
           setRefundSale(null);
         }}
         onCompleted={async () => {
+          const completedOrderId =
+            refundSale?.orderId ??
+            null;
+
           await loadSales(true);
+
+          if (completedOrderId) {
+            await refreshRefundHistoryAfterCompleted(
+              completedOrderId,
+            );
+          }
         }}
       />
 
