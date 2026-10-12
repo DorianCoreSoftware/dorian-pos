@@ -1,9 +1,11 @@
 import { useBusiness } from '../../context/BusinessContext';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { createOrderRefund, getOrderRefundAvailability, getOrderRefundHistory } from '../../services/refundService';
-import { OrderRefundHistoryRow, RefundAvailabilityItem } from '../../types/refund';
+import { Alert, ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { getOrderRefundAvailability, getOrderRefundHistory, createOrderRefund } from '../../services/refundService';
+import { RefundAvailabilityItem, OrderRefundHistoryRow } from '../../types/refund';
+import { printRefundTicket } from '../../services/printerService';
+
 
 interface Props {
   visible: boolean;
@@ -11,11 +13,12 @@ interface Props {
   onClose: () => void;
   onCompleted: () => Promise<void> | void;
   formatCurrency: (value: number) => string;
+  currencyCode: string;
 }
 
 const REASONS = ['Cliente se arrepintió', 'Producto incorrecto', 'Problema de calidad', 'Pedido incompleto', 'Otro'];
 
-export function RefundModal({ visible, orderId, onClose, onCompleted, formatCurrency }: Props) {
+export function RefundModal({ visible, orderId, onClose, onCompleted, formatCurrency, currencyCode }: Props) {
   const { theme: businessTheme } = useBusiness();
   const brandPrimary = businessTheme.primary;
 
@@ -85,15 +88,131 @@ export function RefundModal({ visible, orderId, onClose, onCompleted, formatCurr
     try {
       setSubmitting(true);
       setErrorMessage(null);
+      const selectedRefundItems =
+        items
+          .map(item => ({
+            productName:
+              item.productName,
+            quantity:
+              quantities[
+                item.itemId
+              ] ?? 0,
+            unitRefundAmount:
+              item.unitRefundAmount,
+          }))
+          .filter(
+            item =>
+              item.quantity > 0,
+          );
+
+      const previousRefundIds =
+        new Set(
+          history.map(
+            refund =>
+              refund.refundId,
+          ),
+        );
+
       await createOrderRefund({
         orderId,
-        items: Object.entries(quantities).filter(([, quantity]) => quantity > 0).map(([orderItemId, quantity]) => ({ orderItemId, quantity })),
+        items: Object.entries(
+          quantities,
+        )
+          .filter(
+            ([, quantity]) =>
+              quantity > 0,
+          )
+          .map(
+            ([
+              orderItemId,
+              quantity,
+            ]) => ({
+              orderItemId,
+              quantity,
+            }),
+          ),
         reason,
         notes,
         policyException,
       });
+
+      const updatedHistory =
+        await getOrderRefundHistory(
+          orderId,
+        );
+
+      const createdRefund =
+        updatedHistory.find(
+          refund =>
+            !previousRefundIds.has(
+              refund.refundId,
+            ),
+        ) ??
+        [...updatedHistory].sort(
+          (a, b) =>
+            b.refundNumber -
+            a.refundNumber,
+        )[0] ??
+        null;
+
+      let printError:
+        string | null = null;
+
+      if (createdRefund) {
+        try {
+          await printRefundTicket({
+            refundNumber:
+              createdRefund
+                .refundNumber,
+            refundType:
+              createdRefund
+                .refundType,
+            orderId,
+            createdAt:
+              createdRefund
+                .createdAt,
+            paymentMethod:
+              createdRefund
+                .paymentMethod,
+            refundTotal:
+              createdRefund
+                .refundTotal,
+            reason:
+              createdRefund.reason,
+            notes:
+              createdRefund.notes,
+            policyException:
+              createdRefund
+                .policyException,
+            userName:
+              createdRefund
+                .userName,
+            items:
+              selectedRefundItems,
+            currencyCode,
+          });
+        } catch (printErrorValue) {
+          printError =
+            printErrorValue instanceof
+            Error
+              ? printErrorValue.message
+              : 'No se pudo imprimir el comprobante.';
+        }
+      } else {
+        printError =
+          'La devolución quedó registrada, pero no se pudo obtener su folio para imprimir el comprobante.';
+      }
+
       await onCompleted();
+
       onClose();
+
+      if (printError) {
+        Alert.alert(
+          'Devolución registrada',
+          `La devolución se guardó correctamente, pero el comprobante no pudo imprimirse.\n\n${printError}`,
+        );
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'No se pudo completar la devolución.');
     } finally {

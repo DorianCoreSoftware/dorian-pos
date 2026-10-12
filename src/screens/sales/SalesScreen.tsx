@@ -861,6 +861,7 @@ export function SalesScreen() {
         visible={refundSale !== null}
         orderId={refundSale?.orderId ?? null}
         formatCurrency={formatCurrency}
+        currencyCode={currencyCode}
         onClose={() => {
           setRefundSale(null);
         }}

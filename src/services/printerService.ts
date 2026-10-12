@@ -867,6 +867,326 @@ export async function printOrderTicket({
   );
 }
 
+
+export interface RefundTicketItem {
+  productName: string;
+  quantity: number;
+  unitRefundAmount: number;
+}
+
+export interface PrintRefundTicketParams {
+  refundNumber: number;
+  refundType:
+    | 'full'
+    | 'partial';
+  orderId: string;
+  createdAt: string;
+  paymentMethod: string;
+  refundTotal: number;
+  reason: string;
+  notes: string | null;
+  policyException: boolean;
+  userName: string | null;
+  items: RefundTicketItem[];
+  currencyCode?: string;
+}
+
+export async function printRefundTicket({
+  refundNumber,
+  refundType,
+  orderId,
+  createdAt,
+  paymentMethod,
+  refundTotal,
+  reason,
+  notes,
+  policyException,
+  userName,
+  items,
+  currencyCode =
+    DEFAULT_CURRENCY_CODE,
+}: PrintRefundTicketParams): Promise<void> {
+  const printer =
+    await connectPrinter();
+
+  const business =
+    await getBusinessSettings();
+
+  const resolvedCurrencyCode =
+    normalizeCurrencyCode(
+      currencyCode,
+    );
+
+  const refundDate =
+    new Date(createdAt);
+
+  await printer.write(
+    '\x1B\x40',
+  );
+
+  await printBusinessHeader(
+    printer,
+    business.identity.businessName,
+    business.identity.phone,
+    business.identity.address,
+    runtimeBranding.printer.ticketLogo,
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    'COMPROBANTE DE DEVOLUCION\n',
+  );
+
+  await printer.write(
+    `DEV-${String(
+      refundNumber,
+    ).padStart(6, '0')}\n`,
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  await printer.write('\n');
+
+  await setAlignment(
+    printer,
+    'left',
+  );
+
+  await printer.write(
+    separator(),
+  );
+
+  await printer.write(
+    `Orden: #${orderId
+      .slice(-4)
+      .toUpperCase()}\n`,
+  );
+
+  await printer.write(
+    `Fecha: ${formatTicketDate(
+      Number.isNaN(
+        refundDate.getTime(),
+      )
+        ? new Date()
+        : refundDate,
+    )}\n`,
+  );
+
+  await printer.write(
+    createTextRow(
+      'TIPO',
+      refundType === 'full'
+        ? 'TOTAL'
+        : 'PARCIAL',
+    ),
+  );
+
+  await printer.write(
+    createTextRow(
+      'PAGO',
+      paymentMethod === 'cash'
+        ? 'EFECTIVO'
+        : paymentMethod === 'card'
+          ? 'TARJETA'
+          : sanitizeTicketText(
+              paymentMethod.toUpperCase(),
+            ),
+    ),
+  );
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    'ARTICULOS DEVUELTOS\n',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  for (const item of items) {
+    const cleanName =
+      sanitizeTicketText(
+        item.productName,
+      );
+
+    for (
+      const line of
+      wrapTicketText(
+        `${item.quantity}x ${cleanName}`,
+        32,
+      )
+    ) {
+      await printer.write(
+        `${line}\n`,
+      );
+    }
+
+    await printer.write(
+      createAmountRow(
+        '  IMPORTE',
+        roundCurrency(
+          item.quantity *
+            item.unitRefundAmount,
+        ),
+        resolvedCurrencyCode,
+      ),
+    );
+  }
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    createAmountRow(
+      'TOTAL DEVUELTO',
+      refundTotal,
+      resolvedCurrencyCode,
+    ),
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    'MOTIVO\n',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  for (
+    const line of
+    wrapTicketText(
+      sanitizeTicketText(
+        reason,
+      ),
+      32,
+    )
+  ) {
+    await printer.write(
+      `${line}\n`,
+    );
+  }
+
+  if (notes?.trim()) {
+    await printer.write('\n');
+
+    await setBold(
+      printer,
+      true,
+    );
+
+    await printer.write(
+      'NOTAS\n',
+    );
+
+    await setBold(
+      printer,
+      false,
+    );
+
+    for (
+      const line of
+      wrapTicketText(
+        sanitizeTicketText(
+          notes.trim(),
+        ),
+        32,
+      )
+    ) {
+      await printer.write(
+        `${line}\n`,
+      );
+    }
+  }
+
+  if (userName?.trim()) {
+    await printer.write('\n');
+
+    for (
+      const line of
+      wrapTicketText(
+        `Realizo: ${sanitizeTicketText(
+          userName.trim(),
+        )}`,
+        32,
+      )
+    ) {
+      await printer.write(
+        `${line}\n`,
+      );
+    }
+  }
+
+  if (policyException) {
+    await printer.write(
+      '\n*** EXCEPCION DE POLITICA ***\n',
+    );
+  }
+
+  await printer.write(
+    separator(),
+  );
+
+  await setAlignment(
+    printer,
+    'center',
+  );
+
+  await printer.write(
+    'DEVOLUCION REGISTRADA\n',
+  );
+
+  await printTicketFooter(
+    printer,
+    business.ticketSettings.footerText,
+  );
+
+  await feedPaper(
+    printer,
+    2,
+  );
+
+  await cutPaper(
+    printer,
+  );
+}
+
 export async function printRawText(
   text: string,
 ): Promise<void> {
