@@ -849,6 +849,60 @@ export function SalesScreen() {
       }
     };
 
+  const handleRefreshSales =
+    async (): Promise<void> => {
+      await loadSales(true);
+
+      if (
+        !expandedRefundOrderId
+      ) {
+        return;
+      }
+
+      try {
+        setLoadingRefundHistoryOrderId(
+          expandedRefundOrderId,
+        );
+
+        const history =
+          await getOrderRefundHistory(
+            expandedRefundOrderId,
+          );
+
+        setRefundHistoryByOrder(
+          current => ({
+            ...current,
+            [expandedRefundOrderId]:
+              history,
+          }),
+        );
+      } catch (error) {
+        console.error(
+          'No se pudo actualizar el historial de devoluciones expandido:',
+          error,
+        );
+
+        setRefundHistoryByOrder(
+          current => {
+            const next = {
+              ...current,
+            };
+
+            delete next[
+              expandedRefundOrderId
+            ];
+
+            return next;
+          },
+        );
+      } finally {
+        setLoadingRefundHistoryOrderId(
+          null,
+        );
+      }
+    };
+
+
 
 
   const renderSale = ({
@@ -1629,7 +1683,7 @@ export function SalesScreen() {
             isRefreshing
           }
           onPress={() => {
-            void loadSales(true);
+            void handleRefreshSales();
           }}
         >
           <Text
