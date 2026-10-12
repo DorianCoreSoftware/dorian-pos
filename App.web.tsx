@@ -18,45 +18,18 @@ function shouldUseAdminWeb(): boolean {
     return false;
   }
 
-  const hostname =
-    window.location.hostname
-      .toLowerCase();
-
   const pathname =
     window.location.pathname
       .toLowerCase();
 
-  const isAdminHost =
-    hostname ===
-      'app.doriancore.com';
-
-  const isLocalDevelopment =
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '0.0.0.0';
-
-  const isVercelPreview =
-    hostname.endsWith(
-      '.vercel.app',
-    );
-
-  const isAdminPath =
+  const isControlPanelPath =
     pathname ===
-      '/admin' ||
+      '/control-panel' ||
     pathname.startsWith(
-      '/admin/',
+      '/control-panel/',
     );
 
-  return (
-    isAdminHost ||
-    (
-      isAdminPath &&
-      (
-        isLocalDevelopment ||
-        isVercelPreview
-      )
-    )
-  );
+  return isControlPanelPath;
 }
 
 export default function AppWeb() {
