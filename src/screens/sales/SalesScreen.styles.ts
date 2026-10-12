@@ -492,6 +492,137 @@ const createStyles = (
       fontSize: 13,
       fontWeight: '900',
     },
+    refundHistorySection: {
+      marginTop: 14,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: '#333333',
+    },
+
+    refundHistoryToggle: {
+      minHeight: 42,
+      paddingHorizontal: 12,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: primaryColor,
+      backgroundColor:
+        withAlpha(
+          primaryColor,
+          0.09,
+        ),
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'space-between',
+      gap: 10,
+    },
+
+    refundHistoryToggleText: {
+      color: primaryColor,
+      fontSize: 12,
+      fontWeight: '900',
+      textTransform:
+        'uppercase',
+    },
+
+    refundHistoryChevron: {
+      color: primaryColor,
+      fontSize: 11,
+      fontWeight: '900',
+    },
+
+    refundHistoryList: {
+      marginTop: 10,
+      gap: 8,
+    },
+
+    refundHistoryCard: {
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#3A3A3A',
+      backgroundColor: '#222222',
+    },
+
+    refundHistoryHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent:
+        'space-between',
+      gap: 12,
+    },
+
+    refundHistoryFolio: {
+      color: primaryColor,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+
+    refundHistoryDate: {
+      marginTop: 3,
+      color: '#888888',
+      fontSize: 10,
+    },
+
+    refundHistoryAmount: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '900',
+    },
+
+    refundHistoryMeta: {
+      marginTop: 7,
+      color: '#999999',
+      fontSize: 11,
+      fontWeight: '700',
+    },
+
+    refundHistoryReason: {
+      marginTop: 7,
+      color: '#DDDDDD',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    refundHistoryException: {
+      marginTop: 7,
+      color: '#FFB36B',
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
+    refundHistoryEmpty: {
+      color: '#999999',
+      fontSize: 12,
+      paddingVertical: 8,
+      textAlign: 'center',
+    },
+
+    refundReceiptReprintButton: {
+      marginTop: 10,
+      minHeight: 38,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor:
+        primaryColor,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
+
+    refundReceiptReprintButtonDisabled: {
+      opacity: 0.55,
+    },
+
+    refundReceiptReprintButtonText: {
+      color: '#121212',
+      fontSize: 11,
+      fontWeight: '900',
+      textTransform:
+        'uppercase',
+    },
+
+
 
     saleActions: {
   marginTop: 14,

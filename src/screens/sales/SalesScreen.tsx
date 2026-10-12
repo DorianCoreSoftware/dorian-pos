@@ -1,38 +1,41 @@
-import { useBusiness } from '../../context/BusinessContext';
+import {
+  useBusiness } from '../../context/BusinessContext';
 
-import React, {
+import React,
+  {
   useCallback,
   useEffect,
   useMemo,
   useState,
-} from 'react';
+  } from 'react';
 
-import {
+import { Alert,
   ActivityIndicator,
   FlatList,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
-} from 'react-native';
+  } from 'react-native';
 
-import DateTimePicker, {
+import DateTimePicker,
+  {
   DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
+  } from '@react-native-community/datetimepicker';
 
 import {
   getCompletedSales,
-} from '../../services/salesService';
+  } from '../../services/salesService';
 
 import {
   CompletedSale,
-} from '../../types';
+  } from '../../types';
 
 import {
   styles,
   setBrandPrimaryColor,
-} from './SalesScreen.styles';
-import { printOrderTicket } from '../../services/printerService';
+  } from './SalesScreen.styles';
+import { printOrderTicket, printRefundTicket } from '../../services/printerService';
 import { getExistingOrderPromoCoupon } from '../../services/promoService';
 import { getOrderById } from '../../services/orderService';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -41,8 +44,11 @@ import { RefundModal } from '../../components/refunds/RefundModal';
 import {
   getOrderRefundStatuses,
   RefundStatusByOrder,
+  getOrderRefundHistory,
+  getRefundReceiptDetails,
 } from '../../services/refundService';
 import { canCreateRefund } from '../../Utils/permissions';
+import { OrderRefundHistoryRow } from '../../types/refund';
 
 import {
   PeriodFilter,
@@ -152,6 +158,37 @@ export function SalesScreen() {
       RefundStatusByOrder
     >
   >({});
+
+  const [
+    refundHistoryByOrder,
+    setRefundHistoryByOrder,
+  ] = useState<
+    Record<
+      string,
+      OrderRefundHistoryRow[]
+    >
+  >({});
+
+  const [
+    expandedRefundOrderId,
+    setExpandedRefundOrderId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    loadingRefundHistoryOrderId,
+    setLoadingRefundHistoryOrderId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    reprintingRefundId,
+    setReprintingRefundId,
+  ] = useState<string | null>(
+    null,
+  );
 
 
   const [
@@ -451,6 +488,147 @@ export function SalesScreen() {
       }
     };
 
+  const handleToggleRefundHistory =
+    async (
+      orderId: string,
+    ): Promise<void> => {
+      if (
+        expandedRefundOrderId ===
+        orderId
+      ) {
+        setExpandedRefundOrderId(
+          null,
+        );
+        return;
+      }
+
+      setExpandedRefundOrderId(
+        orderId,
+      );
+
+      if (
+        refundHistoryByOrder[
+          orderId
+        ]
+      ) {
+        return;
+      }
+
+      try {
+        setLoadingRefundHistoryOrderId(
+          orderId,
+        );
+
+        const history =
+          await getOrderRefundHistory(
+            orderId,
+          );
+
+        setRefundHistoryByOrder(
+          current => ({
+            ...current,
+            [orderId]:
+              history,
+          }),
+        );
+      } catch (error) {
+        setExpandedRefundOrderId(
+          null,
+        );
+
+        Alert.alert(
+          'No se pudo cargar',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cargar el historial de devoluciones.',
+        );
+      } finally {
+        setLoadingRefundHistoryOrderId(
+          null,
+        );
+      }
+    };
+
+  const handleReprintRefundReceipt =
+    async (
+      refund:
+        OrderRefundHistoryRow,
+    ): Promise<void> => {
+      if (
+        reprintingRefundId
+      ) {
+        return;
+      }
+
+      try {
+        setReprintingRefundId(
+          refund.refundId,
+        );
+
+        const receipt =
+          await getRefundReceiptDetails(
+            refund.refundId,
+          );
+
+        await printRefundTicket({
+          refundNumber:
+            receipt.refundNumber,
+          refundType:
+            receipt.refundType,
+          orderId:
+            receipt.orderId,
+          createdAt:
+            receipt.createdAt,
+          paymentMethod:
+            receipt.paymentMethod,
+          refundTotal:
+            receipt.refundTotal,
+          reason:
+            receipt.reason,
+          notes:
+            receipt.notes,
+          policyException:
+            receipt.policyException,
+          userName:
+            receipt.userName,
+          items:
+            receipt.items.map(
+              item => ({
+                productName:
+                  item.productName,
+                quantity:
+                  item.quantity,
+                unitRefundAmount:
+                  item.unitRefundAmount,
+              }),
+            ),
+          currencyCode,
+        });
+
+        Alert.alert(
+          'Comprobante reimpreso',
+          `DEV-${String(
+            receipt.refundNumber,
+          ).padStart(
+            6,
+            '0',
+          )} se reimprimió correctamente.`,
+        );
+      } catch (error) {
+        Alert.alert(
+          'No se pudo reimprimir',
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al reimprimir el comprobante.',
+        );
+      } finally {
+        setReprintingRefundId(
+          null,
+        );
+      }
+    };
+
+
   const renderSale = ({
     item,
   }: {
@@ -469,6 +647,19 @@ export function SalesScreen() {
     const isFullyRefunded =
       refundStatus?.status ===
       'full';
+
+    const refundHistory =
+      refundHistoryByOrder[
+        item.orderId
+      ] ?? [];
+
+    const isRefundHistoryExpanded =
+      expandedRefundOrderId ===
+      item.orderId;
+
+    const isRefundHistoryLoading =
+      loadingRefundHistoryOrderId ===
+      item.orderId;
 
     return (
       <View
@@ -638,6 +829,220 @@ export function SalesScreen() {
             </View>
           </View>
         ) : null}
+        {refundStatus ? (
+          <View
+            style={
+              styles.refundHistorySection
+            }
+          >
+            <TouchableOpacity
+              style={
+                styles.refundHistoryToggle
+              }
+              disabled={
+                isRefundHistoryLoading
+              }
+              onPress={() => {
+                void handleToggleRefundHistory(
+                  item.orderId,
+                );
+              }}
+            >
+              <Text
+                style={
+                  styles.refundHistoryToggleText
+                }
+              >
+                {isRefundHistoryExpanded
+                  ? 'Ocultar devoluciones'
+                  : refundHistory.length > 0
+                    ? `Ver devoluciones (${refundHistory.length})`
+                    : 'Ver devoluciones'}
+              </Text>
+
+              {isRefundHistoryLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    businessTheme.primary
+                  }
+                />
+              ) : (
+                <Text
+                  style={
+                    styles.refundHistoryChevron
+                  }
+                >
+                  {isRefundHistoryExpanded
+                    ? '▲'
+                    : '▼'}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {isRefundHistoryExpanded &&
+            !isRefundHistoryLoading ? (
+              <View
+                style={
+                  styles.refundHistoryList
+                }
+              >
+                {refundHistory.length ===
+                0 ? (
+                  <Text
+                    style={
+                      styles.refundHistoryEmpty
+                    }
+                  >
+                    No se encontraron devoluciones.
+                  </Text>
+                ) : (
+                  refundHistory.map(
+                    refund => (
+                      <View
+                        key={
+                          refund.refundId
+                        }
+                        style={
+                          styles.refundHistoryCard
+                        }
+                      >
+                        <View
+                          style={
+                            styles.refundHistoryHeader
+                          }
+                        >
+                          <View
+                            style={{
+                              flex: 1,
+                            }}
+                          >
+                            <Text
+                              style={
+                                styles.refundHistoryFolio
+                              }
+                            >
+                              DEV-
+                              {String(
+                                refund.refundNumber,
+                              ).padStart(
+                                6,
+                                '0',
+                              )}
+                            </Text>
+
+                            <Text
+                              style={
+                                styles.refundHistoryDate
+                              }
+                            >
+                              {formatSaleDateTime(
+                                refund.createdAt,
+                              )}
+                            </Text>
+                          </View>
+
+                          <Text
+                            style={
+                              styles.refundHistoryAmount
+                            }
+                          >
+                            {formatCurrency(
+                              refund.refundTotal,
+                            )}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={
+                            styles.refundHistoryMeta
+                          }
+                        >
+                          {refund.refundType ===
+                          'full'
+                            ? 'TOTAL'
+                            : 'PARCIAL'}
+                          {' · '}
+                          {refund.paymentMethod ===
+                          'cash'
+                            ? 'EFECTIVO'
+                            : refund.paymentMethod ===
+                                'card'
+                              ? 'TARJETA'
+                              : refund.paymentMethod.toUpperCase()}
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.refundHistoryReason
+                          }
+                        >
+                          {refund.reason}
+                        </Text>
+
+                        {refund.userName ? (
+                          <Text
+                            style={
+                              styles.refundHistoryMeta
+                            }
+                          >
+                            Realizó:{' '}
+                            {refund.userName}
+                          </Text>
+                        ) : null}
+
+                        {refund.policyException ? (
+                          <Text
+                            style={
+                              styles.refundHistoryException
+                            }
+                          >
+                            EXCEPCIÓN DE POLÍTICA
+                          </Text>
+                        ) : null}
+
+                        <TouchableOpacity
+                          style={[
+                            styles.refundReceiptReprintButton,
+                            reprintingRefundId !==
+                              null &&
+                              styles.refundReceiptReprintButtonDisabled,
+                          ]}
+                          disabled={
+                            reprintingRefundId !==
+                            null
+                          }
+                          onPress={() => {
+                            void handleReprintRefundReceipt(
+                              refund,
+                            );
+                          }}
+                        >
+                          {reprintingRefundId ===
+                          refund.refundId ? (
+                            <ActivityIndicator
+                              size="small"
+                              color="#121212"
+                            />
+                          ) : (
+                            <Text
+                              style={
+                                styles.refundReceiptReprintButtonText
+                              }
+                            >
+                              🖨️ Reimprimir comprobante
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    ),
+                  )
+                )}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <View
           style={
             styles.saleActions
