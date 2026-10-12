@@ -177,6 +177,11 @@ export function SalesScreen() {
   ] = useState(false);
 
   const [
+    periodRefundRefreshKey,
+    setPeriodRefundRefreshKey,
+  ] = useState(0);
+
+  const [
     refundHistoryByOrder,
     setRefundHistoryByOrder,
   ] = useState<
@@ -404,6 +409,7 @@ export function SalesScreen() {
     };
   }, [
     refundPeriodRange,
+    periodRefundRefreshKey,
   ]);
 
 
@@ -852,6 +858,10 @@ export function SalesScreen() {
   const handleRefreshSales =
     async (): Promise<void> => {
       await loadSales(true);
+
+      setPeriodRefundRefreshKey(
+        current => current + 1,
+      );
 
       if (
         !expandedRefundOrderId
@@ -1711,6 +1721,10 @@ export function SalesScreen() {
             null;
 
           await loadSales(true);
+
+          setPeriodRefundRefreshKey(
+            current => current + 1,
+          );
 
           if (completedOrderId) {
             await refreshRefundHistoryAfterCompleted(
