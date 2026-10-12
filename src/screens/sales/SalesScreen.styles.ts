@@ -288,6 +288,48 @@ const createStyles = (
       marginVertical: 12,
     },
 
+    refundFinancialSummary: {
+      marginBottom: 12,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#222222',
+      flexDirection: 'row',
+      gap: 10,
+    },
+
+    refundFinancialColumn: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    refundFinancialLabel: {
+      color: '#8F8F8F',
+      fontSize: 10,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      marginBottom: 4,
+    },
+
+    refundFinancialOriginal: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+
+    refundFinancialRefunded: {
+      color: '#E05A5A',
+      fontSize: 13,
+      fontWeight: '900',
+    },
+
+    refundFinancialNet: {
+      color: primaryColor,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
     paymentRow: {
       flexDirection: 'row',
       alignItems: 'center',

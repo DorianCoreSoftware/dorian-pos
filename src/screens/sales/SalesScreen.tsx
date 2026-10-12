@@ -648,6 +648,29 @@ export function SalesScreen() {
       refundStatus?.status ===
       'full';
 
+    const refundOriginalTotal =
+      refundStatus
+        ? Number(
+            refundStatus.originalTotal ??
+              item.totalAmount,
+          )
+        : item.totalAmount;
+
+    const refundedTotal =
+      refundStatus
+        ? Number(
+            refundStatus.refundedTotal ??
+              0,
+          )
+        : 0;
+
+    const netAfterRefund =
+      Math.max(
+        0,
+        refundOriginalTotal -
+          refundedTotal,
+      );
+
     const refundHistory =
       refundHistoryByOrder[
         item.orderId
@@ -735,6 +758,84 @@ export function SalesScreen() {
             styles.separator
           }
         />
+
+        {refundStatus ? (
+          <View
+            style={
+              styles.refundFinancialSummary
+            }
+          >
+            <View
+              style={
+                styles.refundFinancialColumn
+              }
+            >
+              <Text
+                style={
+                  styles.refundFinancialLabel
+                }
+              >
+                Original
+              </Text>
+              <Text
+                style={
+                  styles.refundFinancialOriginal
+                }
+              >
+                {formatCurrency(
+                  refundOriginalTotal,
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.refundFinancialColumn
+              }
+            >
+              <Text
+                style={
+                  styles.refundFinancialLabel
+                }
+              >
+                Devuelto
+              </Text>
+              <Text
+                style={
+                  styles.refundFinancialRefunded
+                }
+              >
+                −
+                {formatCurrency(
+                  refundedTotal,
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.refundFinancialColumn
+              }
+            >
+              <Text
+                style={
+                  styles.refundFinancialLabel
+                }
+              >
+                Neto
+              </Text>
+              <Text
+                style={
+                  styles.refundFinancialNet
+                }
+              >
+                {formatCurrency(
+                  netAfterRefund,
+                )}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <View
           style={
