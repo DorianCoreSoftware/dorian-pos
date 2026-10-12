@@ -72,6 +72,9 @@ type DatePickerField =
 
 export function SalesScreen() {
   const { user } = useAuth();
+
+  const userCanUseRefundFeatures =
+    canCreateRefund(user);
   const { business, theme: businessTheme } = useBusiness();
     setBrandPrimaryColor(businessTheme.primary);
 
@@ -255,13 +258,26 @@ export function SalesScreen() {
           const completedSales =
             await getCompletedSales();
 
-          const refundStatuses =
-            await getOrderRefundStatuses(
-              completedSales.map(
-                sale =>
-                  sale.orderId,
-              ),
-            );
+          let refundStatuses:
+            Record<string, RefundStatusByOrder> =
+              {};
+
+          if (userCanUseRefundFeatures) {
+            try {
+              refundStatuses =
+                await getOrderRefundStatuses(
+                  completedSales.map(
+                    sale =>
+                      sale.orderId,
+                  ),
+                );
+            } catch (refundError) {
+              console.error(
+                'No se pudieron cargar los estados de devolución:',
+                refundError,
+              );
+            }
+          }
 
           setSales(
             completedSales,
@@ -286,10 +302,8 @@ export function SalesScreen() {
           setIsRefreshing(false);
         }
       },
-      [],
-    );
-
-  useEffect(() => {
+      [userCanUseRefundFeatures],
+    );useEffect(() => {
     void loadSales();
   }, [loadSales]);
 
@@ -351,6 +365,16 @@ export function SalesScreen() {
   useEffect(() => {
     let mounted = true;
 
+    if (!userCanUseRefundFeatures) {
+      setPeriodRefundTotal(0);
+      setPeriodRefundCount(0);
+      setIsLoadingPeriodRefunds(false);
+
+      return () => {
+        mounted = false;
+      };
+    }
+
     void (async () => {
       try {
         setIsLoadingPeriodRefunds(
@@ -410,6 +434,7 @@ export function SalesScreen() {
   }, [
     refundPeriodRange,
     periodRefundRefreshKey,
+  userCanUseRefundFeatures,
   ]);
 
 
@@ -1186,66 +1211,7 @@ export function SalesScreen() {
                     .amountReceived ??
                   0,
                 )}
-              </Text>
-
-
-          <Text
-            style={{
-              marginTop: 6,
-              color: '#E05A5A',
-              fontSize: 10,
-              fontWeight: '800',
-            }}
-          >
-            Devuelto:{' '}
-            {formatCurrency(
-              summary.refundedCash,
-            )}
-          </Text>
-
-          <Text
-            style={{
-              marginTop: 2,
-              color:
-                businessTheme.primary,
-              fontSize: 11,
-              fontWeight: '900',
-            }}
-          >
-            Neto:{' '}
-            {formatCurrency(
-              netCash,
-            )}
-          </Text>
-
-          <Text
-            style={{
-              marginTop: 6,
-              color: '#E05A5A',
-              fontSize: 10,
-              fontWeight: '800',
-            }}
-          >
-            Devuelto:{' '}
-            {formatCurrency(
-              summary.refundedCard,
-            )}
-          </Text>
-
-          <Text
-            style={{
-              marginTop: 2,
-              color:
-                businessTheme.primary,
-              fontSize: 11,
-              fontWeight: '900',
-            }}
-          >
-            Neto:{' '}
-            {formatCurrency(
-              netCard,
-            )}
-          </Text></View>
+              </Text></View>
 
             <View
               style={
@@ -1707,7 +1673,8 @@ export function SalesScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-      <RefundModal
+      {userCanUseRefundFeatures ? (
+        <RefundModal
         visible={refundSale !== null}
         orderId={refundSale?.orderId ?? null}
         formatCurrency={formatCurrency}
@@ -1733,6 +1700,7 @@ export function SalesScreen() {
           }
         }}
       />
+      ) : null}
 
 
       <PeriodFilter
@@ -1891,7 +1859,39 @@ export function SalesScreen() {
               summary.cash,
             )}
           </Text>
-        </View>
+
+          {userCanUseRefundFeatures ? (
+            <>
+              <Text
+                style={{
+                  marginTop: 6,
+                  color: '#E05A5A',
+                  fontSize: 10,
+                  fontWeight: '800',
+                }}
+              >
+                Devuelto:{' '}
+                {formatCurrency(
+                  summary.refundedCash,
+                )}
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 2,
+                  color:
+                    businessTheme.primary,
+                  fontSize: 11,
+                  fontWeight: '900',
+                }}
+              >
+                Neto:{' '}
+                {formatCurrency(
+                  netCash,
+                )}
+              </Text>
+            </>
+          ) : null}</View>
 
         <View
           style={[
@@ -1922,7 +1922,39 @@ export function SalesScreen() {
               summary.card,
             )}
           </Text>
-        </View>
+
+          {userCanUseRefundFeatures ? (
+            <>
+              <Text
+                style={{
+                  marginTop: 6,
+                  color: '#E05A5A',
+                  fontSize: 10,
+                  fontWeight: '800',
+                }}
+              >
+                Devuelto:{' '}
+                {formatCurrency(
+                  summary.refundedCard,
+                )}
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 2,
+                  color:
+                    businessTheme.primary,
+                  fontSize: 11,
+                  fontWeight: '900',
+                }}
+              >
+                Neto:{' '}
+                {formatCurrency(
+                  netCard,
+                )}
+              </Text>
+            </>
+          ) : null}</View>
 
         <View
           style={[
@@ -1955,7 +1987,8 @@ export function SalesScreen() {
           </Text>
         </View>
 
-        <View
+        {userCanUseRefundFeatures ? (
+          <View
           style={[
             styles.summaryCard,
             isPhone &&
@@ -1986,8 +2019,10 @@ export function SalesScreen() {
             )}
           </Text>
         </View>
+        ) : null}
 
-        <View
+        {userCanUseRefundFeatures ? (
+          <View
           style={[
             styles.summaryCard,
             isPhone &&
@@ -2018,8 +2053,10 @@ export function SalesScreen() {
             )}
           </Text>
         </View>
+        ) : null}
 
-        <View
+        {userCanUseRefundFeatures ? (
+          <View
           style={[
             styles.summaryCard,
             isPhone &&
@@ -2066,6 +2103,7 @@ export function SalesScreen() {
               : 'devoluciones'}
           </Text>
         </View>
+        ) : null}
       </View>
 
       <View
