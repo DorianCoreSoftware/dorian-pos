@@ -155,6 +155,7 @@ import {
 
 } from './AdminScreen.styles';
 import { AdminDashboard } from '../../components/admin/dashboard/AdminDashboard';
+import { AdminRefundSettings } from '../../components/admin/refunds/AdminRefundSettings';
 import { appVersionLabel } from '../../Utils/appVersion';
 
 
@@ -187,7 +188,8 @@ type AdminSection =
 
   | 'delivery'
 
-  | 'feedback';
+  | 'feedback'
+  | 'refunds';
 
 
 
@@ -559,6 +561,24 @@ export function AdminScreen({
           });
 
         }
+
+        sections.push({
+
+          key:
+
+            'refunds',
+
+          label:
+
+            'DEVOLUCIONES',
+
+          icon:
+
+            '↩️',
+
+        });
+
+
 
 
 
@@ -1006,6 +1026,24 @@ export function AdminScreen({
         );
 
       }
+
+      if (
+
+        activeSection ===
+
+        'refunds'
+
+      ) {
+
+        return (
+
+          <AdminRefundSettings />
+
+        );
+
+      }
+
+
 
 
 

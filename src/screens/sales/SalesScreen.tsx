@@ -38,6 +38,10 @@ import { getOrderById } from '../../services/orderService';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useAuth } from '../../context/AuthContext';
 import { RefundModal } from '../../components/refunds/RefundModal';
+import {
+  getOrderRefundStatuses,
+  RefundStatusByOrder,
+} from '../../services/refundService';
 import { canCreateRefund } from '../../Utils/permissions';
 
 import {
@@ -139,6 +143,16 @@ export function SalesScreen() {
     null,
   );
 
+  const [
+    refundStatusByOrder,
+    setRefundStatusByOrder,
+  ] = useState<
+    Record<
+      string,
+      RefundStatusByOrder
+    >
+  >({});
+
 
   const [
     customStartDate,
@@ -182,8 +196,20 @@ export function SalesScreen() {
           const completedSales =
             await getCompletedSales();
 
+          const refundStatuses =
+            await getOrderRefundStatuses(
+              completedSales.map(
+                sale =>
+                  sale.orderId,
+              ),
+            );
+
           setSales(
             completedSales,
+          );
+
+          setRefundStatusByOrder(
+            refundStatuses,
           );
         } catch (error) {
           console.error(
@@ -435,6 +461,15 @@ export function SalesScreen() {
         .paymentMethod ===
       'cash';
 
+    const refundStatus =
+      refundStatusByOrder[
+        item.orderId
+      ] ?? null;
+
+    const isFullyRefunded =
+      refundStatus?.status ===
+      'full';
+
     return (
       <View
         style={
@@ -468,6 +503,29 @@ export function SalesScreen() {
                   .createdAt,
               )}
             </Text>
+
+              {refundStatus ? (
+                <View
+                  style={[
+                    styles.refundStatusBadge,
+                    refundStatus.status ===
+                      'full'
+                      ? styles.refundStatusBadgeFull
+                      : styles.refundStatusBadgePartial,
+                  ]}
+                >
+                  <Text
+                    style={
+                      styles.refundStatusBadgeText
+                    }
+                  >
+                    {refundStatus.status ===
+                    'full'
+                      ? '↩ DEVOLUCIÓN TOTAL'
+                      : '↩ DEVOLUCIÓN PARCIAL'}
+                  </Text>
+                </View>
+              ) : null}
           </View>
 
           <Text
@@ -585,7 +643,8 @@ export function SalesScreen() {
             styles.saleActions
           }
         >
-          {canCreateRefund(user) ? (
+          {canCreateRefund(user) &&
+            !isFullyRefunded ? (
             <TouchableOpacity
               style={{
                 minHeight: 42,

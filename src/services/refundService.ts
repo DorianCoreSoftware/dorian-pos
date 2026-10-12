@@ -100,3 +100,195 @@ export async function getRefundReportSummary(from: Date, to: Date): Promise<Refu
     itemsCount: Number(row?.items_count ?? 0),
   };
 }
+
+
+export interface RefundSettings {
+  enabled: boolean;
+  maxHours: number;
+  allowPartial: boolean;
+  requireReason: boolean;
+  requireNotes: boolean;
+  allowPolicyExceptions: boolean;
+  updatedAt?: string | null;
+}
+
+export async function getRefundSettings():
+  Promise<RefundSettings> {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'get_refund_settings',
+  );
+
+  if (error) {
+    throw new Error(
+      `No se pudo cargar la política de devoluciones: ${error.message}`,
+    );
+  }
+
+  if (!data || typeof data !== 'object') {
+    throw new Error(
+      'Supabase no devolvió la configuración de devoluciones.',
+    );
+  }
+
+  const row =
+    data as Record<string, unknown>;
+
+  return {
+    enabled:
+      Boolean(row.enabled),
+
+    maxHours:
+      Number(
+        row.maxHours ??
+        0,
+      ),
+
+    allowPartial:
+      Boolean(
+        row.allowPartial,
+      ),
+
+    requireReason:
+      Boolean(
+        row.requireReason,
+      ),
+
+    requireNotes:
+      Boolean(
+        row.requireNotes,
+      ),
+
+    allowPolicyExceptions:
+      Boolean(
+        row.allowPolicyExceptions,
+      ),
+
+    updatedAt:
+      typeof row.updatedAt ===
+      'string'
+        ? row.updatedAt
+        : null,
+  };
+}
+
+export async function updateRefundSettings(
+  input: RefundSettings,
+): Promise<void> {
+  const {
+    error,
+  } = await supabase.rpc(
+    'update_refund_settings',
+    {
+      p_enabled:
+        input.enabled,
+
+      p_max_hours:
+        input.maxHours,
+
+      p_allow_partial:
+        input.allowPartial,
+
+      p_require_reason:
+        input.requireReason,
+
+      p_require_notes:
+        input.requireNotes,
+
+      p_allow_policy_exceptions:
+        input.allowPolicyExceptions,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      `No se pudo guardar la política de devoluciones: ${error.message}`,
+    );
+  }
+}
+
+
+export type RefundStatus =
+  | 'partial'
+  | 'full';
+
+export interface RefundStatusByOrder {
+  orderId: string;
+  refundedTotal: number;
+  originalTotal: number;
+  status: RefundStatus;
+}
+
+export async function getOrderRefundStatuses(
+  orderIds: string[],
+): Promise<Record<string, RefundStatusByOrder>> {
+  const uniqueOrderIds =
+    Array.from(
+      new Set(
+        orderIds.filter(Boolean),
+      ),
+    );
+
+  if (uniqueOrderIds.length === 0) {
+    return {};
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'get_order_refund_statuses',
+    {
+      p_order_ids:
+        uniqueOrderIds,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      `No se pudo consultar el estado de las devoluciones: ${error.message}`,
+    );
+  }
+
+  const result:
+    Record<
+      string,
+      RefundStatusByOrder
+    > = {};
+
+  for (
+    const row of
+    (data ?? []) as any[]
+  ) {
+    if (!row?.order_id) {
+      continue;
+    }
+
+    result[row.order_id] = {
+      orderId:
+        row.order_id,
+
+      refundedTotal:
+        Number(
+          row.refunded_total ??
+          0,
+        ),
+
+      originalTotal:
+        Number(
+          row.original_total ??
+          0,
+        ),
+
+      status:
+        row.refund_status ===
+        'full'
+          ? 'full'
+          : 'partial',
+    };
+  }
+
+  return result;
+}

@@ -51,3 +51,10 @@ export function canViewRefundReport(
 ): boolean {
   return user?.role === 'admin';
 }
+
+
+export function canManageRefundSettings(
+  user: UserSession | null,
+): boolean {
+  return user?.role === 'admin';
+}

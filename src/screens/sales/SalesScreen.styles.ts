@@ -249,6 +249,33 @@ const createStyles = (
       marginTop: 3,
     },
 
+    refundStatusBadge: {
+      alignSelf: 'flex-start',
+      marginTop: 7,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+
+    refundStatusBadgePartial: {
+      borderColor: '#D7A83B',
+      backgroundColor:
+        'rgba(215, 168, 59, 0.13)',
+    },
+
+    refundStatusBadgeFull: {
+      borderColor: '#E05A5A',
+      backgroundColor:
+        'rgba(224, 90, 90, 0.13)',
+    },
+
+    refundStatusBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
     saleAmount: {
       color: primaryColor,
       fontSize: 20,
