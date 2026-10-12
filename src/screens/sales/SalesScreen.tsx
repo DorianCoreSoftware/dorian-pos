@@ -35,7 +35,8 @@ import {
   styles,
   setBrandPrimaryColor,
   } from './SalesScreen.styles';
-import { printOrderTicket, printRefundTicket } from '../../services/printerService';
+import { printOrderTicket,
+  printRefundTicket } from '../../services/printerService';
 import { getExistingOrderPromoCoupon } from '../../services/promoService';
 import { getOrderById } from '../../services/orderService';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -46,6 +47,7 @@ import {
   RefundStatusByOrder,
   getOrderRefundHistory,
   getRefundReceiptDetails,
+  getRefundReport,
 } from '../../services/refundService';
 import { canCreateRefund } from '../../Utils/permissions';
 import { OrderRefundHistoryRow } from '../../types/refund';
@@ -158,6 +160,21 @@ export function SalesScreen() {
       RefundStatusByOrder
     >
   >({});
+
+  const [
+    periodRefundTotal,
+    setPeriodRefundTotal,
+  ] = useState(0);
+
+  const [
+    periodRefundCount,
+    setPeriodRefundCount,
+  ] = useState(0);
+
+  const [
+    isLoadingPeriodRefunds,
+    setIsLoadingPeriodRefunds,
+  ] = useState(false);
 
   const [
     refundHistoryByOrder,
@@ -299,6 +316,96 @@ export function SalesScreen() {
       customEndDate,
       business?.timezone,
     ]);
+
+  const refundPeriodRange =
+    useMemo(() => {
+      if (
+        salesFilter === 'all'
+      ) {
+        return {
+          from: new Date(
+            '2000-01-01T00:00:00.000Z',
+          ),
+          to: new Date(),
+        };
+      }
+
+      return getBusinessPeriodRange(
+        salesFilter,
+        customStartDate,
+        customEndDate,
+        business?.timezone,
+      );
+    }, [
+      salesFilter,
+      customStartDate,
+      customEndDate,
+      business?.timezone,
+    ]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void (async () => {
+      try {
+        setIsLoadingPeriodRefunds(
+          true,
+        );
+
+        const rows =
+          await getRefundReport(
+            refundPeriodRange.from,
+            refundPeriodRange.to,
+          );
+
+        if (!mounted) {
+          return;
+        }
+
+        setPeriodRefundTotal(
+          rows.reduce(
+            (
+              total,
+              row,
+            ) =>
+              total +
+              Number(
+                row.refundTotal ??
+                  0,
+              ),
+            0,
+          ),
+        );
+
+        setPeriodRefundCount(
+          rows.length,
+        );
+      } catch (error) {
+        console.error(
+          'Error al cargar devoluciones del periodo:',
+          error,
+        );
+
+        if (mounted) {
+          setPeriodRefundTotal(0);
+          setPeriodRefundCount(0);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingPeriodRefunds(
+            false,
+          );
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [
+    refundPeriodRange,
+  ]);
+
 
   const summary =
     useMemo(() => {
@@ -1634,7 +1741,7 @@ export function SalesScreen() {
               styles.summaryLabel
             }
           >
-            ↩ Total devuelto
+            ↩ Devuelto de ventas del periodo
           </Text>
 
           <Text
@@ -1667,7 +1774,7 @@ export function SalesScreen() {
               styles.summaryLabel
             }
           >
-            Neto después de devoluciones
+            Neto de ventas del periodo
           </Text>
 
           <Text
@@ -1683,6 +1790,54 @@ export function SalesScreen() {
             {formatCurrency(
               netSales,
             )}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.summaryCard,
+            isPhone &&
+              styles.summaryCardPhone,
+          ]}
+        >
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            Devoluciones hechas en el periodo
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.summaryValue,
+              styles.summaryRefundedValue,
+              isSmallPhone &&
+                styles.summaryValueSmall,
+            ]}
+          >
+            {isLoadingPeriodRefunds
+              ? '...'
+              : formatCurrency(
+                  periodRefundTotal,
+                )}
+          </Text>
+
+          <Text
+            style={{
+              marginTop: 4,
+              color: '#888888',
+              fontSize: 10,
+              fontWeight: '700',
+            }}
+          >
+            {periodRefundCount}{' '}
+            {periodRefundCount === 1
+              ? 'devolución'
+              : 'devoluciones'}
           </Text>
         </View>
       </View>
