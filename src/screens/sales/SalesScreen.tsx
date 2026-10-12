@@ -441,12 +441,33 @@ export function SalesScreen() {
             ];
 
           if (refundStatus) {
-            accumulator.refunded +=
+            const refundedAmount =
               Number(
                 refundStatus
                   .refundedTotal ??
                   0,
               );
+
+            accumulator.refunded +=
+              refundedAmount;
+
+            if (
+              sale.payment
+                .paymentMethod ===
+              'cash'
+            ) {
+              accumulator.refundedCash +=
+                refundedAmount;
+            }
+
+            if (
+              sale.payment
+                .paymentMethod ===
+              'card'
+            ) {
+              accumulator.refundedCard +=
+                refundedAmount;
+            }
           }
 
           return accumulator;
@@ -456,6 +477,8 @@ export function SalesScreen() {
           cash: 0,
           card: 0,
           refunded: 0,
+          refundedCash: 0,
+          refundedCard: 0,
         },
       );
     }, [
@@ -468,6 +491,20 @@ export function SalesScreen() {
       0,
       summary.total -
         summary.refunded,
+    );
+
+  const netCash =
+    Math.max(
+      0,
+      summary.cash -
+        summary.refundedCash,
+    );
+
+  const netCard =
+    Math.max(
+      0,
+      summary.card -
+        summary.refundedCard,
     );
 
   const handleSalesFilter = (
@@ -1033,7 +1070,65 @@ export function SalesScreen() {
                   0,
                 )}
               </Text>
-            </View>
+
+
+          <Text
+            style={{
+              marginTop: 6,
+              color: '#E05A5A',
+              fontSize: 10,
+              fontWeight: '800',
+            }}
+          >
+            Devuelto:{' '}
+            {formatCurrency(
+              summary.refundedCash,
+            )}
+          </Text>
+
+          <Text
+            style={{
+              marginTop: 2,
+              color:
+                businessTheme.primary,
+              fontSize: 11,
+              fontWeight: '900',
+            }}
+          >
+            Neto:{' '}
+            {formatCurrency(
+              netCash,
+            )}
+          </Text>
+
+          <Text
+            style={{
+              marginTop: 6,
+              color: '#E05A5A',
+              fontSize: 10,
+              fontWeight: '800',
+            }}
+          >
+            Devuelto:{' '}
+            {formatCurrency(
+              summary.refundedCard,
+            )}
+          </Text>
+
+          <Text
+            style={{
+              marginTop: 2,
+              color:
+                businessTheme.primary,
+              fontSize: 11,
+              fontWeight: '900',
+            }}
+          >
+            Neto:{' '}
+            {formatCurrency(
+              netCard,
+            )}
+          </Text></View>
 
             <View
               style={
