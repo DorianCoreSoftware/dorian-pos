@@ -7,22 +7,11 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useBusiness } from '../../../context/BusinessContext';
+import { useCurrency } from '../../../hooks/useCurrency';
+import { Product } from '../../../types';
+import styles, { setBrandPrimaryColor } from './WebProductCard.styles';
 
-import {
-  Product,
-} from '../../types';
-
-import styles, {
-  setBrandPrimaryColor,
-} from './WebProductCard.styles';
-
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
-import {
-  useCurrency,
-} from '../../hooks/useCurrency';
 
 interface WebProductCardProps {
   product: Product;

@@ -10,21 +10,15 @@ import {
 import styles, {
   setBrandPrimaryColor,
 } from './WebOrderSuccessModal.styles';
-
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
-import {
-  getOrderTrackingCode,
-} from '../../Utils/orderTracking';
+import { useBusiness } from '../../../context/BusinessContext';
+import { getOrderTrackingCode } from '../../../Utils/orderTracking';
 
 interface WebOrderSuccessModalProps {
   visible: boolean;
 
   orderId:
-    | string
-    | null;
+  | string
+  | null;
 
   onClose: () => void;
 
@@ -53,8 +47,8 @@ export default function WebOrderSuccessModal({
   const shortId =
     orderId
       ? getOrderTrackingCode(
-          orderId,
-        )
+        orderId,
+      )
       : '';
 
   return (
@@ -148,7 +142,7 @@ export default function WebOrderSuccessModal({
               style={({ pressed }) => [
                 styles.button,
                 pressed &&
-                  styles.buttonPressed,
+                styles.buttonPressed,
               ]}
             >
               <Text

@@ -1,4 +1,4 @@
-import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
+import { DEFAULT_BRAND_PRIMARY } from '../../../../theme/brandStyles';
 
 import {
   StyleSheet,

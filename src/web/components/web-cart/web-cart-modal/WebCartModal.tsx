@@ -10,7 +10,7 @@ import {
 
 import {
   Cart,
-} from '../../types';
+} from '../../../../types';
 
 import styles, {
   setBrandPrimaryColor,
@@ -18,11 +18,11 @@ import styles, {
 
 import {
   useBusiness,
-} from '../../context/BusinessContext';
+} from '../../../../context/BusinessContext';
 
 import {
   useCurrency,
-} from '../../hooks/useCurrency';
+} from '../../../../hooks/useCurrency';
 
 interface WebCartModalProps {
   visible: boolean;

@@ -9,14 +9,8 @@ import {
 import styles, {
   setBrandPrimaryColor,
 } from './WebCartButton.styles';
-
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
-import {
-  useCurrency,
-} from '../../hooks/useCurrency';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { useCurrency } from '../../../../hooks/useCurrency';
 
 interface WebCartButtonProps {
   totalItems: number;

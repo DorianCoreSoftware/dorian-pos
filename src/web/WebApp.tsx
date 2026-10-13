@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import WebLoyaltyScreen from './screens/WebLoyaltyScreen';
+import WebAccountScreen from './screens/WebAccountScreen';
 
 import styles from './WebApp.styles';
 import { useBusiness } from '../context/BusinessContext';
@@ -16,7 +17,8 @@ import WebMenuScreen from './screens/WebMenuScreen';
 
 type WebRoute =
   | 'menu'
-  | 'loyalty';
+  | 'loyalty'
+  | 'account';
 
 function getCurrentRoute():
   WebRoute {
@@ -33,6 +35,16 @@ function getCurrentRoute():
     )
   ) {
     return 'loyalty';
+  }
+
+  if (
+    window.location.pathname ===
+      '/cuenta' ||
+    window.location.pathname.startsWith(
+      '/cuenta/',
+    )
+  ) {
+    return 'account';
   }
 
   return 'menu';
@@ -99,6 +111,25 @@ export default function WebApp() {
       );
     };
 
+
+  const goToAccount =
+    (): void => {
+      if (
+        typeof window !==
+        'undefined'
+      ) {
+        window.history.pushState(
+          {},
+          '',
+          '/cuenta',
+        );
+      }
+
+      setRoute(
+        'account',
+      );
+    };
+
   const goToMenu =
     (): void => {
       if (
@@ -151,15 +182,33 @@ export default function WebApp() {
                 onBack={
                   goToMenu
                 }
-              />
-            )
-            : (
-              <WebMenuScreen
-                onRewardsPress={
-                  goToRewards
+                onAccountPress={
+                  goToAccount
                 }
               />
             )
+            : route ===
+                'account'
+              ? (
+                <WebAccountScreen
+                  onBack={
+                    goToMenu
+                  }
+                  onRewardsPress={
+                    goToRewards
+                  }
+                />
+              )
+              : (
+                <WebMenuScreen
+                  onRewardsPress={
+                    goToRewards
+                  }
+                  onAccountPress={
+                    goToAccount
+                  }
+                />
+              )
         }
       </View>
     </View>

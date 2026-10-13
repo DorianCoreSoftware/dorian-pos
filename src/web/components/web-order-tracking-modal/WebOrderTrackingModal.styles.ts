@@ -1,8 +1,7 @@
-import { DEFAULT_BRAND_PRIMARY } from '../../theme/brandStyles';
-
 import {
   StyleSheet,
 } from 'react-native';
+import { DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
 
 const createStyles = (
   primaryColor: string,

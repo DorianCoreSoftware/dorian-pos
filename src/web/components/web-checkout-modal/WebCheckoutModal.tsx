@@ -1,4 +1,4 @@
-import { useBusiness } from '../../context/BusinessContext';
+
 
 import React, {
   useEffect,
@@ -18,30 +18,16 @@ import {
   View,
 } from 'react-native';
 
-import {
-  DeliveryDetails,
-} from '../../types';
-
-import {
-  DeliveryQuote,
-  getDeliveryQuote,
-} from '../../services/deliveryService';
-
-import {
-  WebFulfillmentType,
-} from '../services/webOrderService';
-
-import GooglePlaceAutocomplete, {
-  GooglePlaceSelection,
-} from './GooglePlaceAutocomplete';
-
 import styles, {
   setBrandPrimaryColor,
 } from './WebCheckoutModal.styles';
 
-import {
-  useCurrency,
-} from '../../hooks/useCurrency';
+import { useBusiness } from '../../../context/BusinessContext';
+import { useCurrency } from '../../../hooks/useCurrency';
+import { DeliveryQuote, getDeliveryQuote } from '../../../services/deliveryService';
+import { DeliveryDetails } from '../../../types';
+import { WebFulfillmentType } from '../../services/webOrderService';
+import GooglePlaceAutocomplete, { GooglePlaceSelection } from '../google-place/GooglePlaceAutocomplete';
 
 interface CheckoutData {
   fulfillmentType:
@@ -75,6 +61,12 @@ interface WebCheckoutModalProps {
 
   deliveryFee:
   number;
+
+  initialCustomerName?:
+  string;
+
+  initialCustomerPhone?:
+  string;
 
   submitting:
   boolean;
@@ -149,6 +141,8 @@ export default function WebCheckoutModal({
   modifierPromotionName,
   pickupTotal,
   deliveryFee,
+  initialCustomerName = '',
+  initialCustomerPhone = '',
   submitting,
   submitError,
   onClose,
@@ -230,6 +224,33 @@ export default function WebCheckoutModal({
       if (
         visible
       ) {
+        const cleanName =
+          initialCustomerName.trim();
+
+        const cleanPhone =
+          initialCustomerPhone.replace(
+            /\D/g,
+            '',
+          );
+
+        setCustomerName(
+          cleanName,
+        );
+
+        setCustomerPhone(
+          cleanPhone,
+        );
+
+        setDelivery(
+          (current) => ({
+            ...current,
+            customerName:
+              cleanName,
+            phone:
+              cleanPhone,
+          }),
+        );
+
         return;
       }
 
@@ -267,6 +288,8 @@ export default function WebCheckoutModal({
     },
     [
       visible,
+      initialCustomerName,
+      initialCustomerPhone,
     ],
   );
 

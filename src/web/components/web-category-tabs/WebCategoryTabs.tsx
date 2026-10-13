@@ -7,17 +7,12 @@ import {
   View,
 } from 'react-native';
 
-import {
-  Category,
-} from '../../types';
-
 import styles, {
   setBrandPrimaryColor,
 } from './WebCategoryTabs.styles';
+import { useBusiness } from '../../../context/BusinessContext';
+import { Category } from '../../../types';
 
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
 
 interface WebCategoryTabsProps {
   categories: Category[];

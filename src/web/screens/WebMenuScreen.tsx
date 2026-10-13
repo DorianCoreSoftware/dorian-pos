@@ -42,14 +42,6 @@ import {
   DeliveryDetails,
   Product,
 } from '../../types';
-import WebCartButton from '../components/WebCartButton';
-import WebCartModal from '../components/WebCartModal';
-import WebCategoryTabs from '../components/WebCategoryTabs';
-import WebCheckoutModal from '../components/WebCheckoutModal';
-import WebHeader from '../components/WebHeader';
-import WebOrderSuccessModal from '../components/WebOrderSuccessModal';
-import { WebOrderTrackingModal } from '../components/WebOrderTrackingModal';
-import WebProductCard from '../components/WebProductCard';
 import {
   createWebOrder,
   WebFulfillmentType,
@@ -75,10 +67,36 @@ import {
 import styles, {
   setBrandPrimaryColor,
 } from './WebMenuScreen.styles';
-import { WebFeedbackModal } from '../components/WebFeedbackModal';
+import WebCartButton from '../components/web-cart/web-cart-button/WebCartButton';
+import WebCartModal from '../components/web-cart/web-cart-modal/WebCartModal';
+import WebCategoryTabs from '../components/web-category-tabs/WebCategoryTabs';
+import WebCheckoutModal from '../components/web-checkout-modal/WebCheckoutModal';
+import { WebFeedbackModal } from '../components/web-feedback-modal/WebFeedbackModal';
+import WebHeader from '../components/web-header/WebHeader';
+import WebOrderSuccessModal from '../components/web-order-success-modal/WebOrderSuccessModal';
+import { WebOrderTrackingModal } from '../components/web-order-tracking-modal/WebOrderTrackingModal';
+import WebProductCard from '../components/web-product-card/WebProductCard';
+import WebOrderEntryChoiceModal from '../components/web-order-entry-choice-modal/WebOrderEntryChoiceModal';
+import {
+  getSavedWebCart,
+  getSavedWebOrderMode,
+  saveWebCart,
+  saveWebOrderMode,
+  clearSavedWebOrderMode,
+} from '../utils/webCartStorage';
+import {
+  clearSavedWebCustomerSessionToken,
+  getSavedWebCustomerSessionToken,
+} from '../utils/webCustomerStorage';
+import {
+  getMyWebCustomer,
+  isInvalidWebCustomerSessionError,
+  WebCustomerProfile,
+} from '../services/webCustomerService';
 
 interface WebMenuScreenProps {
   onRewardsPress?: () => void;
+  onAccountPress?: () => void;
 }
 
 function getColumns(
@@ -263,6 +281,7 @@ function openExternalUrl(
 
 export default function WebMenuScreen({
   onRewardsPress,
+  onAccountPress,
 }: WebMenuScreenProps) {
   const {
     business,
@@ -322,11 +341,100 @@ export default function WebMenuScreen({
   const [
     cart,
     setCart,
-  ] = useState<Cart>([]);
+  ] = useState<Cart>(
+    () =>
+      getSavedWebCart(),
+  );
+  const [
+    isOrderEntryChoiceVisible,
+    setIsOrderEntryChoiceVisible,
+  ] = useState(false);
   const [
     isCartVisible,
     setIsCartVisible,
   ] = useState(false);
+
+  const [
+    webCustomerProfile,
+    setWebCustomerProfile,
+  ] = useState<WebCustomerProfile | null>(
+    null,
+  );
+
+  useEffect(
+    () => {
+      let mounted = true;
+
+      const restoreCustomer =
+        async (): Promise<void> => {
+          const token =
+            getSavedWebCustomerSessionToken();
+
+          if (!token) {
+            if (mounted) {
+              setWebCustomerProfile(
+                null,
+              );
+            }
+            return;
+          }
+
+          try {
+            const customer =
+              await getMyWebCustomer(
+                token,
+              );
+
+            if (mounted) {
+              setWebCustomerProfile(
+                customer,
+              );
+            }
+          } catch (error) {
+            console.error(
+              'Error restaurando cliente web en menú:',
+              error,
+            );
+
+            if (
+              isInvalidWebCustomerSessionError(
+                error,
+              )
+            ) {
+              clearSavedWebCustomerSessionToken();
+
+              if (mounted) {
+                setWebCustomerProfile(
+                  null,
+                );
+              }
+            }
+          }
+        };
+
+      void restoreCustomer();
+
+      return () => {
+        mounted = false;
+      };
+    },
+    [],
+  );
+
+  useEffect(
+    () => {
+      saveWebCart(
+        cart,
+      );
+
+      if (
+        cart.length === 0
+      ) {
+        clearSavedWebOrderMode();
+      }
+    },
+    [cart],
+  );
   const [
     isCheckoutVisible,
     setIsCheckoutVisible,
@@ -837,15 +945,35 @@ export default function WebMenuScreen({
       ) {
         return;
       }
+
+      const nextCart =
+        addConfiguredProductToCart(
+          cart,
+          selectedProduct,
+          productNotes,
+          configuration,
+        );
+
       setCart(
-        (currentCart) =>
-          addConfiguredProductToCart(
-            currentCart,
-            selectedProduct,
-            productNotes,
-            configuration,
-          ),
+        nextCart,
       );
+
+      const hasCustomerSession =
+        !!getSavedWebCustomerSessionToken();
+
+      const hasGuestChoice =
+        getSavedWebOrderMode() ===
+        'guest';
+
+      if (
+        !hasCustomerSession &&
+        !hasGuestChoice
+      ) {
+        setIsOrderEntryChoiceVisible(
+          true,
+        );
+      }
+
       pendingWebOrderRequest
         .current = null;
       handleCloseConfigurator();
@@ -969,6 +1097,8 @@ export default function WebMenuScreen({
             data.deliveryDetails,
           clientRequestId:
             requestId,
+          customerSessionToken:
+            getSavedWebCustomerSessionToken(),
         });
       setSuccessfulOrderId(
         result.orderId,
@@ -1072,6 +1202,9 @@ export default function WebMenuScreen({
       <WebHeader
         onRewardsPress={
           onRewardsPress
+        }
+        onAccountPress={
+          onAccountPress
         }
       />
       <ScrollView
@@ -1657,6 +1790,12 @@ export default function WebMenuScreen({
         deliveryFee={
           deliveryFee
         }
+        initialCustomerName={
+          webCustomerProfile?.name ?? ''
+        }
+        initialCustomerPhone={
+          webCustomerProfile?.phone ?? ''
+        }
         submitting={
           isSubmittingOrder
         }
@@ -1679,6 +1818,25 @@ export default function WebMenuScreen({
         onSubmit={
           handleSubmitWebOrder
         }
+      />
+      <WebOrderEntryChoiceModal
+        visible={
+          isOrderEntryChoiceVisible
+        }
+        onContinueAsGuest={() => {
+          saveWebOrderMode(
+            'guest',
+          );
+          setIsOrderEntryChoiceVisible(
+            false,
+          );
+        }}
+        onLogin={() => {
+          setIsOrderEntryChoiceVisible(
+            false,
+          );
+          onAccountPress?.();
+        }}
       />
       <WebOrderSuccessModal
         visible={

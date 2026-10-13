@@ -14,18 +14,11 @@ import {
 } from 'react-native';
 
 import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
-import {
-  submitWebFeedback,
-  WebFeedbackType,
-} from '../services/webFeedbackService';
-
-import {
   styles,
   setBrandPrimaryColor,
 } from './WebFeedbackModal.styles';
+import { useBusiness } from '../../../context/BusinessContext';
+import { WebFeedbackType, submitWebFeedback } from '../../services/webFeedbackService';
 
 interface WebFeedbackModalProps {
   visible: boolean;
@@ -36,30 +29,30 @@ const TYPES: Array<{
   value: WebFeedbackType;
   label: string;
 }> = [
-  {
-    value: 'suggestion',
-    label: 'Sugerencia',
-  },
-  {
-    value: 'complaint',
-    label: 'Queja',
-  },
-  {
-    value: 'compliment',
-    label: 'Felicitación',
-  },
-  {
-    value: 'other',
-    label: 'Otro',
-  },
-];
+    {
+      value: 'suggestion',
+      label: 'Sugerencia',
+    },
+    {
+      value: 'complaint',
+      label: 'Queja',
+    },
+    {
+      value: 'compliment',
+      label: 'Felicitación',
+    },
+    {
+      value: 'other',
+      label: 'Otro',
+    },
+  ];
 
 export function WebFeedbackModal({
   visible,
   onClose,
 }: WebFeedbackModalProps) {
   const { theme: businessTheme } = useBusiness();
-    setBrandPrimaryColor(businessTheme.primary);
+  setBrandPrimaryColor(businessTheme.primary);
 
   const {
     business,

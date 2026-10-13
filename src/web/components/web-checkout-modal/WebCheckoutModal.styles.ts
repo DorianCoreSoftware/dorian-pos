@@ -1,11 +1,9 @@
-import {
-  DEFAULT_BRAND_PRIMARY,
-  withAlpha,
-} from '../../theme/brandStyles';
+
 
 import {
   StyleSheet,
 } from 'react-native';
+import { withAlpha, DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
 
 const createStyles = (
   primaryColor: string,

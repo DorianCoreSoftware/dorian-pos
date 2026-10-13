@@ -7,19 +7,20 @@ import {
   View,
 } from 'react-native';
 
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
 import styles from './WebHeader.styles';
+import { useBusiness } from '../../../context/BusinessContext';
 
 interface Props {
   onRewardsPress?:
+    () => void;
+
+  onAccountPress?:
     () => void;
 }
 
 export default function WebHeader({
   onRewardsPress,
+  onAccountPress,
 }: Props) {
   const {
     business,
@@ -94,33 +95,66 @@ export default function WebHeader({
           </Text>
         </View>
 
-        {onRewardsPress &&
-        business?.features.loyaltyEnabled ? (
-          <Pressable
-            style={[
-              styles.rewardsButton,
-              {
-                borderColor:
-                  theme.primary,
-              },
-            ]}
-            onPress={
-              onRewardsPress
-            }
-          >
-            <Text
+        <View
+          style={
+            styles.actions
+          }
+        >
+          {onRewardsPress &&
+          business?.features.loyaltyEnabled ? (
+            <Pressable
               style={[
-                styles.rewardsButtonText,
+                styles.rewardsButton,
                 {
-                  color:
+                  borderColor:
                     theme.primary,
                 },
               ]}
+              onPress={
+                onRewardsPress
+              }
             >
-              🎁 Rewards
-            </Text>
-          </Pressable>
-        ) : null}
+              <Text
+                style={[
+                  styles.rewardsButtonText,
+                  {
+                    color:
+                      theme.primary,
+                  },
+                ]}
+              >
+                🎁 Recompensas
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {onAccountPress ? (
+            <Pressable
+              style={[
+                styles.accountButton,
+                {
+                  backgroundColor:
+                    theme.primary,
+                },
+              ]}
+              onPress={
+                onAccountPress
+              }
+            >
+              <Text
+                style={[
+                  styles.accountButtonText,
+                  {
+                    color:
+                      theme.onPrimary,
+                  },
+                ]}
+              >
+                👤 Mi cuenta
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </View>
   );

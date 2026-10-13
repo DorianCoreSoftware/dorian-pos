@@ -24,6 +24,9 @@ export interface CreateWebOrderInput {
     DeliveryDetails | null;
 
   clientRequestId: string;
+
+  customerSessionToken?:
+    string | null;
 }
 
 export interface CreateWebOrderResult {
@@ -37,6 +40,7 @@ export async function createWebOrder({
   fulfillmentType,
   deliveryDetails,
   clientRequestId,
+  customerSessionToken,
 }: CreateWebOrderInput): Promise<CreateWebOrderResult> {
   if (
     !Array.isArray(cart) ||
@@ -183,30 +187,60 @@ export async function createWebOrder({
         }
       : null;
 
+  const cleanSessionToken =
+    customerSessionToken
+      ?.trim() || null;
+
+  const rpcArgs =
+    cleanSessionToken
+      ? {
+          p_items:
+            rpcItems,
+
+          p_delivery:
+            rpcDelivery,
+
+          p_client_request_id:
+            clientRequestId,
+
+          p_customer_name:
+            normalizedName,
+
+          p_customer_phone:
+            normalizedPhone,
+
+          p_fulfillment_type:
+            fulfillmentType,
+
+          p_customer_session_token:
+            cleanSessionToken,
+        }
+      : {
+          p_items:
+            rpcItems,
+
+          p_delivery:
+            rpcDelivery,
+
+          p_client_request_id:
+            clientRequestId,
+
+          p_customer_name:
+            normalizedName,
+
+          p_customer_phone:
+            normalizedPhone,
+
+          p_fulfillment_type:
+            fulfillmentType,
+        };
+
   const {
     data,
     error,
   } = await supabase.rpc(
     'create_web_order',
-    {
-      p_items:
-        rpcItems,
-
-      p_delivery:
-        rpcDelivery,
-
-      p_client_request_id:
-        clientRequestId,
-
-      p_customer_name:
-        normalizedName,
-
-      p_customer_phone:
-        normalizedPhone,
-
-      p_fulfillment_type:
-        fulfillmentType,
-    },
+    rpcArgs,
   );
 
   if (error) {

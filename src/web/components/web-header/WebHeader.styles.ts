@@ -67,6 +67,14 @@ const styles =
         3,
     },
 
+    actions: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+    },
+
     rewardsButton: {
       minHeight:
         42,
@@ -85,9 +93,40 @@ const styles =
 
       borderWidth:
         1,
+
+      marginLeft:
+        8,
     },
 
     rewardsButtonText: {
+      fontSize:
+        13,
+
+      fontWeight:
+        '900',
+    },
+
+    accountButton: {
+      minHeight:
+        42,
+
+      paddingHorizontal:
+        15,
+
+      borderRadius:
+        10,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginLeft:
+        8,
+    },
+
+    accountButtonText: {
       fontSize:
         13,
 

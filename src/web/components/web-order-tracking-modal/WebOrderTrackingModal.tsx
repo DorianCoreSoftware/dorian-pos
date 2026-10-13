@@ -14,23 +14,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-
-import {
-  getPublicOrderTracking,
-  normalizeTrackingCode,
-  PublicOrderTracking,
-  PublicOrderTrackingStatus,
-  subscribeToPublicOrderStatus,
-} from '../services/webOrderTrackingService';
-
-import {
-  setBrandPrimaryColor,
-  styles,
-} from './WebOrderTrackingModal.styles';
-
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
+import { useBusiness } from '../../../context/BusinessContext';
+import { PublicOrderTrackingStatus, PublicOrderTracking, normalizeTrackingCode, getPublicOrderTracking, subscribeToPublicOrderStatus } from '../../services/webOrderTrackingService';
+import { setBrandPrimaryColor, styles } from './WebOrderTrackingModal.styles';
 
 interface WebOrderTrackingModalProps {
   visible: boolean;

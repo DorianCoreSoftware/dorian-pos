@@ -12,11 +12,11 @@ import {
 
 import {
     useBusiness,
-} from '../../context/BusinessContext';
+} from '../../../context/BusinessContext';
 
 import {
     loadPlacesLibrary,
-} from '../services/googleMapsService';
+} from '../../services/googleMapsService';
 
 export interface GooglePlaceSelection {
     formattedAddress: string;
