@@ -1,12 +1,12 @@
 import {
   Cart,
   DeliveryDetails,
-} from '../../types';
+} from '../../../types';
 
 import {
   supabase,
-} from '../../services/supabase';
-import { getDeliveryServiceStatus } from '../../services/deliveryService';
+} from '../../../services/supabase';
+import { getDeliveryServiceStatus } from '../../../services/deliveryService';
 
 export type WebFulfillmentType =
   | 'pickup'

@@ -1,6 +1,6 @@
 import {
   supabase,
-} from '../../services/supabase';
+} from '../../../services/supabase';
 
 export type WebFeedbackType =
   | 'suggestion'

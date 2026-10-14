@@ -18,7 +18,7 @@ import {
   setBrandPrimaryColor,
 } from './WebFeedbackModal.styles';
 import { useBusiness } from '../../../context/BusinessContext';
-import { WebFeedbackType, submitWebFeedback } from '../../services/webFeedbackService';
+import { WebFeedbackType, submitWebFeedback } from '../../services/web-feedback/webFeedbackService';
 
 interface WebFeedbackModalProps {
   visible: boolean;
