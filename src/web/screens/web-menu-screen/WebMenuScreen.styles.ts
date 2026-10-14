@@ -1,7 +1,7 @@
 import {
   DEFAULT_BRAND_PRIMARY,
   withAlpha,
-} from '../../theme/brandStyles';
+} from '../../../theme/brandStyles';
 
 import {
   StyleSheet,

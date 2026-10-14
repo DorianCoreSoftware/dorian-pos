@@ -16,7 +16,7 @@ import {
 
 import {
     loadPlacesLibrary,
-} from '../../services/googleMapsService';
+} from '../../services/google-maps/googleMapsService';
 
 export interface GooglePlaceSelection {
     formattedAddress: string;

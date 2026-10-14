@@ -1,6 +1,6 @@
 import {
   supabase,
-} from '../../services/supabase';
+} from '../../../services/supabase';
 
 export interface PublicBusinessStatus {
   isOpen: boolean;

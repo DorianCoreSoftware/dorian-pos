@@ -195,6 +195,17 @@ const createStyles = (
         0.9,
     },
 
+    choiceButtonDisabled: {
+      opacity:
+        0.48,
+
+      backgroundColor:
+        '#171717',
+
+      borderColor:
+        '#2A2A2A',
+    },
+
     choiceTitle: {
       color:
         '#FFFFFF',
@@ -211,6 +222,11 @@ const createStyles = (
         primaryColor,
     },
 
+    choiceTitleDisabled: {
+      color:
+        '#777777',
+    },
+
     choiceSubtitle: {
       color:
         '#929292',
@@ -225,6 +241,11 @@ const createStyles = (
     choiceSubtitleSelected: {
       color:
         '#D8C174',
+    },
+
+    choiceSubtitleDisabled: {
+      color:
+        '#666666',
     },
 
     sectionTitle: {

@@ -5,7 +5,7 @@ import {
 
 import {
   WebFulfillmentType,
-} from '../services/webOrderService';
+} from '../services/web-order/webOrderService';
 
 export function createWebOrderFingerprint(
   cart: Cart,

@@ -1,4 +1,4 @@
-import { useBusiness } from '../../context/BusinessContext';
+import { useBusiness } from '../../../context/BusinessContext';
 
 import React, {
   useEffect,
@@ -19,80 +19,85 @@ import {
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
-} from '../../components/ProductConfigurator/ProductConfiguratorModal';
+} from '../../../components/ProductConfigurator/ProductConfiguratorModal';
 import {
   getActiveCategories,
-} from '../../services/categoryService';
+} from '../../../services/categoryService';
 import {
   getActiveProducts,
-} from '../../services/products';
+} from '../../../services/products';
 import {
   getActiveModifierPromotion,
   ModifierPromotion,
-} from '../../services/modifierPromotionService';
+} from '../../../services/modifierPromotionService';
 import {
   isDeliveryProduct,
-} from '../../Utils/delivery';
+} from '../../../Utils/delivery';
 import {
   getOrderTrackingCode,
-} from '../../Utils/orderTracking';
+} from '../../../Utils/orderTracking';
 import {
   Cart,
   Category,
   DeliveryDetails,
   Product,
-} from '../../types';
+} from '../../../types';
 import {
   createWebOrder,
   WebFulfillmentType,
-} from '../services/webOrderService';
+} from '../../services/web-order/webOrderService';
 import {
   getPublicBusinessStatus,
   PublicBusinessStatus,
-} from '../services/webBusinessHoursService';
+} from '../../services/web-business-hours/webBusinessHoursService';
+import {
+  getPublicWebBanners,
+  WebBanner,
+} from '../../../services/webBannerService';
 import {
   addConfiguredProductToCart,
   getCartSummary,
   removeCartItem,
   updateCartQuantity,
-} from '../utils/webCart';
+} from '../../utils/webCart';
 import {
   createRequestId,
   createWebOrderFingerprint,
-} from '../utils/webOrderRequest';
+} from '../../utils/webOrderRequest';
 import {
   getRecentWebOrderTrackingCodes,
   saveWebOrderTrackingCode,
-} from '../utils/webOrderHistory';
+} from '../../utils/webOrderHistory';
 import styles, {
   setBrandPrimaryColor,
 } from './WebMenuScreen.styles';
-import WebCartButton from '../components/web-cart/web-cart-button/WebCartButton';
-import WebCartModal from '../components/web-cart/web-cart-modal/WebCartModal';
-import WebCategoryTabs from '../components/web-category-tabs/WebCategoryTabs';
-import WebCheckoutModal from '../components/web-checkout-modal/WebCheckoutModal';
-import { WebFeedbackModal } from '../components/web-feedback-modal/WebFeedbackModal';
-import WebHeader from '../components/web-header/WebHeader';
-import WebOrderSuccessModal from '../components/web-order-success-modal/WebOrderSuccessModal';
-import { WebOrderTrackingModal } from '../components/web-order-tracking-modal/WebOrderTrackingModal';
-import WebProductCard from '../components/web-product-card/WebProductCard';
-import WebOrderEntryChoiceModal from '../components/web-order-entry-choice-modal/WebOrderEntryChoiceModal';
+import WebCartButton from '../../components/web-cart/web-cart-button/WebCartButton';
+import WebCartModal from '../../components/web-cart/web-cart-modal/WebCartModal';
+import WebCategoryTabs from '../../components/web-category-tabs/WebCategoryTabs';
+import WebCheckoutModal from '../../components/web-checkout-modal/WebCheckoutModal';
+import { WebFeedbackModal } from '../../components/web-feedback-modal/WebFeedbackModal';
+import WebHeader from '../../components/web-header/WebHeader';
+import WebOrderSuccessModal from '../../components/web-order-success-modal/WebOrderSuccessModal';
+import { WebOrderTrackingModal } from '../../components/web-order-tracking-modal/WebOrderTrackingModal';
+import WebProductCard from '../../components/web-product-card/WebProductCard';
+import WebOrderEntryChoiceModal from '../../components/web-order-entry-choice-modal/WebOrderEntryChoiceModal';
+import WebBannerCarousel from '../../components/web-banner-carousel/WebBannerCarousel';
 import {
   getSavedWebCart,
   getSavedWebOrderMode,
   saveWebCart,
   saveWebOrderMode,
   clearSavedWebOrderMode,
-} from '../utils/webCartStorage';
+} from '../../utils/webCartStorage';
 import {
   clearSavedWebCustomerSessionToken,
   getSavedWebCustomerSessionToken,
-} from '../utils/webCustomerStorage';
+} from '../../utils/webCustomerStorage';
 import {
   getMyWebCustomer,
   isInvalidWebCustomerSessionError,
   WebCustomerProfile,
-} from '../services/webCustomerService';
+} from '../../services/web-customer/webCustomerService';
 
 interface WebMenuScreenProps {
   onRewardsPress?: () => void;
@@ -287,7 +292,7 @@ export default function WebMenuScreen({
     business,
     theme: businessTheme,
   } = useBusiness();
-    setBrandPrimaryColor(businessTheme.primary);
+  setBrandPrimaryColor(businessTheme.primary);
 
   const [
     isFeedbackVisible,
@@ -304,6 +309,10 @@ export default function WebMenuScreen({
     products,
     setProducts,
   ] = useState<Product[]>([]);
+  const [
+    webBanners,
+    setWebBanners,
+  ] = useState<WebBanner[]>([]);
   const [
     selectedCategoryId,
     setSelectedCategoryId,
@@ -649,6 +658,7 @@ export default function WebMenuScreen({
         loadedProducts,
         loadedModifierPromotion,
         loadedBusinessStatus,
+        loadedWebBanners,
       ] =
         await Promise.all([
           getActiveCategories(),
@@ -660,6 +670,10 @@ export default function WebMenuScreen({
           getPublicBusinessStatus()
             .catch(
               () => null,
+            ),
+          getPublicWebBanners()
+            .catch(
+              () => [],
             ),
         ]);
       setCategories(
@@ -673,6 +687,9 @@ export default function WebMenuScreen({
       );
       setBusinessStatus(
         loadedBusinessStatus,
+      );
+      setWebBanners(
+        loadedWebBanners,
       );
       setBusinessStatusError(
         loadedBusinessStatus
@@ -1221,7 +1238,7 @@ export default function WebMenuScreen({
           styles.scrollContentWithCart,
         ]}
         stickyHeaderIndices={[
-          2,
+          3,
         ]}
         refreshControl={
           <RefreshControl
@@ -1417,6 +1434,11 @@ export default function WebMenuScreen({
               )}
           </View>
         </View>
+        <WebBannerCarousel
+          banners={
+            webBanners
+          }
+        />
         <View
           style={
             styles.categorySticky

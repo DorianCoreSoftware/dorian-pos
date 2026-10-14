@@ -15,26 +15,11 @@ import {
 
 import QRCode from 'qrcode';
 
-import {
-  getWebLoyaltyStatus,
-  WebLoyaltyStatus,
-} from '../services/webLoyaltyService';
-
-import {
-  activateMyWebRewards,
-  isInvalidWebCustomerSessionError,
-} from '../services/webCustomerService';
-
-import {
-  clearSavedWebCustomerSessionToken,
-  getSavedWebCustomerSessionToken,
-} from '../utils/webCustomerStorage';
-
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
 import styles from './WebLoyaltyScreen.styles';
+import { useBusiness } from '../../../context/BusinessContext';
+import { activateMyWebRewards, isInvalidWebCustomerSessionError } from '../../services/web-customer/webCustomerService';
+import { WebLoyaltyStatus, getWebLoyaltyStatus } from '../../services/web-loyalty/webLoyaltyService';
+import { getSavedWebCustomerSessionToken, clearSavedWebCustomerSessionToken } from '../../utils/webCustomerStorage';
 
 interface Props {
   onBack: () => void;

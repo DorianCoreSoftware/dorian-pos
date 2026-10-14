@@ -8,12 +8,11 @@ import {
   View,
 } from 'react-native';
 
-import WebLoyaltyScreen from './screens/WebLoyaltyScreen';
-import WebAccountScreen from './screens/WebAccountScreen';
-
 import styles from './WebApp.styles';
 import { useBusiness } from '../context/BusinessContext';
-import WebMenuScreen from './screens/WebMenuScreen';
+import WebMenuScreen from './screens/web-menu-screen/WebMenuScreen';
+import WebAccountScreen from './screens/web-account-screen/WebAccountScreen';
+import WebLoyaltyScreen from './screens/web-loyalty-screen/WebLoyaltyScreen';
 
 type WebRoute =
   | 'menu'
@@ -39,7 +38,7 @@ function getCurrentRoute():
 
   if (
     window.location.pathname ===
-      '/cuenta' ||
+    '/cuenta' ||
     window.location.pathname.startsWith(
       '/cuenta/',
     )
@@ -188,7 +187,7 @@ export default function WebApp() {
               />
             )
             : route ===
-                'account'
+              'account'
               ? (
                 <WebAccountScreen
                   onBack={

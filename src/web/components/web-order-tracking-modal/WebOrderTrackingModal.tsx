@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useBusiness } from '../../../context/BusinessContext';
-import { PublicOrderTrackingStatus, PublicOrderTracking, normalizeTrackingCode, getPublicOrderTracking, subscribeToPublicOrderStatus } from '../../services/webOrderTrackingService';
+import { PublicOrderTrackingStatus, PublicOrderTracking, normalizeTrackingCode, getPublicOrderTracking, subscribeToPublicOrderStatus } from '../../services/web-order-tracking/webOrderTrackingService';
 import { setBrandPrimaryColor, styles } from './WebOrderTrackingModal.styles';
 
 interface WebOrderTrackingModalProps {

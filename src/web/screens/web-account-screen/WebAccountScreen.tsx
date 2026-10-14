@@ -12,28 +12,10 @@ import {
   View,
 } from 'react-native';
 
-import {
-  useBusiness,
-} from '../../context/BusinessContext';
-
-import {
-  getMyWebCustomer,
-  getMyWebOrders,
-  isInvalidWebCustomerSessionError,
-  loginWebCustomer,
-  logoutWebCustomer,
-  registerWebCustomer,
-  WebCustomerOrder,
-  WebCustomerProfile,
-} from '../services/webCustomerService';
-
-import {
-  clearSavedWebCustomerSessionToken,
-  getSavedWebCustomerSessionToken,
-  saveWebCustomerSessionToken,
-} from '../utils/webCustomerStorage';
-
 import styles from './WebAccountScreen.styles';
+import { useBusiness } from '../../../context/BusinessContext';
+import { WebCustomerProfile, WebCustomerOrder, getMyWebCustomer, getMyWebOrders, isInvalidWebCustomerSessionError, loginWebCustomer, registerWebCustomer, logoutWebCustomer } from '../../services/web-customer/webCustomerService';
+import { getSavedWebCustomerSessionToken, clearSavedWebCustomerSessionToken, saveWebCustomerSessionToken } from '../../utils/webCustomerStorage';
 
 interface Props {
   onBack: () => void;

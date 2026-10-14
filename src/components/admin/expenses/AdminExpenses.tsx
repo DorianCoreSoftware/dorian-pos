@@ -118,6 +118,11 @@ export function AdminExpenses() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
+  const [
+    showExpenseDatePicker,
+    setShowExpenseDatePicker,
+  ] = useState(false);
+
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -259,6 +264,38 @@ export function AdminExpenses() {
     setCustomEnd(value);
   };
 
+  const handleExpenseDate = (
+    event: DateTimePickerEvent,
+    value?: Date,
+  ): void => {
+    setShowExpenseDatePicker(false);
+
+    if (
+      event.type !== 'set' ||
+      !value
+    ) {
+      return;
+    }
+
+    setDraft(current => {
+      const nextDate =
+        new Date(
+          current.expenseAt,
+        );
+
+      nextDate.setFullYear(
+        value.getFullYear(),
+        value.getMonth(),
+        value.getDate(),
+      );
+
+      return {
+        ...current,
+        expenseAt: nextDate,
+      };
+    });
+  };
+
   return (
     <>
       <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -281,7 +318,11 @@ export function AdminExpenses() {
 
         {period === 'custom' ? (
           <View style={styles.customDateRow}>
-            <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border, backgroundColor: theme.surface }]} onPress={() => setShowStartPicker(true)}>
+            <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border, backgroundColor: theme.surface }]} onPress={() =>
+              setShowExpenseDatePicker(
+                true,
+              )
+            }>
               <Text style={[styles.dateLabel, { color: theme.textMuted }]}>Desde</Text>
               <Text style={[styles.dateValue, { color: theme.text }]}>{formatPickerDate(customStart)}</Text>
             </TouchableOpacity>
@@ -384,7 +425,11 @@ export function AdminExpenses() {
               </View>
 
               <Text style={[styles.label, { color: theme.textMuted }]}>Fecha</Text>
-              <TouchableOpacity style={[styles.selector, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={() => setShowStartPicker(true)}>
+              <TouchableOpacity style={[styles.selector, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={() =>
+                setShowExpenseDatePicker(
+                  true,
+                )
+              }>
                 <Text style={[styles.selectorText, { color: theme.text }]}>{formatBusinessDateTime(pickerDateTimeToBusinessUtc(draft.expenseAt, business?.timezone), business?.timezone)}</Text>
                 <Text style={{ color: theme.primary }}>▾</Text>
               </TouchableOpacity>
@@ -434,17 +479,19 @@ export function AdminExpenses() {
 
       {showStartPicker ? (
         <DateTimePicker
-          value={expenseModalVisible ? draft.expenseAt : customStart}
-          mode={expenseModalVisible ? 'datetime' : 'date'}
+          value={customStart}
+          mode="date"
           maximumDate={new Date()}
-          onChange={(event, value) => {
-            if (expenseModalVisible) {
-              setShowStartPicker(false);
-              if (event.type === 'set' && value) setDraft(current => ({ ...current, expenseAt: value }));
-            } else {
-              handleStartDate(event, value);
-            }
-          }}
+          onChange={handleStartDate}
+        />
+      ) : null}
+
+      {showExpenseDatePicker ? (
+        <DateTimePicker
+          value={draft.expenseAt}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={handleExpenseDate}
         />
       ) : null}
 

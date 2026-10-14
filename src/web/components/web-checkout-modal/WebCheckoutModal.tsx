@@ -24,9 +24,9 @@ import styles, {
 
 import { useBusiness } from '../../../context/BusinessContext';
 import { useCurrency } from '../../../hooks/useCurrency';
-import { DeliveryQuote, getDeliveryQuote } from '../../../services/deliveryService';
+import { DeliveryQuote, getDeliveryQuote, getDeliveryServiceStatus } from '../../../services/deliveryService';
 import { DeliveryDetails } from '../../../types';
-import { WebFulfillmentType } from '../../services/webOrderService';
+import { WebFulfillmentType } from '../../services/web-order/webOrderService';
 import GooglePlaceAutocomplete, { GooglePlaceSelection } from '../google-place/GooglePlaceAutocomplete';
 
 interface CheckoutData {
@@ -212,6 +212,18 @@ export default function WebCheckoutModal({
     );
 
   const [
+    deliveryEnabled,
+    setDeliveryEnabled,
+  ] =
+    useState(true);
+
+  const [
+    isLoadingDeliveryStatus,
+    setIsLoadingDeliveryStatus,
+  ] =
+    useState(false);
+
+  const [
     errors,
     setErrors,
   ] =
@@ -290,6 +302,84 @@ export default function WebCheckoutModal({
       visible,
       initialCustomerName,
       initialCustomerPhone,
+    ],
+  );
+
+  useEffect(
+    () => {
+      if (!visible) {
+        return;
+      }
+
+      let cancelled =
+        false;
+
+      void (async () => {
+        try {
+          setIsLoadingDeliveryStatus(
+            true,
+          );
+
+          const enabled =
+            await getDeliveryServiceStatus();
+
+          if (cancelled) {
+            return;
+          }
+
+          setDeliveryEnabled(
+            enabled,
+          );
+
+          if (!enabled) {
+            setFulfillmentType(
+              'pickup',
+            );
+
+            setDeliveryQuote(
+              null,
+            );
+
+            setDeliveryQuoteError(
+              null,
+            );
+          }
+        } catch (error) {
+          console.error(
+            'Error consultando estado de reparto:',
+            error,
+          );
+
+          /*
+           * Fail closed:
+           * si no podemos saber si reparto está activo,
+           * no permitimos generar un delivery.
+           */
+          if (!cancelled) {
+            setDeliveryEnabled(
+              false,
+            );
+
+            setFulfillmentType(
+              'pickup',
+            );
+          }
+        } finally {
+          if (!cancelled) {
+            setIsLoadingDeliveryStatus(
+              false,
+            );
+          }
+        }
+      })();
+
+      return () => {
+        cancelled =
+          true;
+      };
+    },
+    [
+      visible,
     ],
   );
 
@@ -565,6 +655,18 @@ export default function WebCheckoutModal({
     );
 
     if (
+      fulfillmentType ===
+      'delivery' &&
+      !deliveryEnabled
+    ) {
+      setFulfillmentType(
+        'pickup',
+      );
+
+      return;
+    }
+
+    if (
       Object.keys(
         nextErrors,
       ).length >
@@ -691,6 +793,13 @@ export default function WebCheckoutModal({
 
   function handleDeliveryPress():
     void {
+    if (
+      !deliveryEnabled ||
+      isLoadingDeliveryStatus
+    ) {
+      return;
+    }
+
     setFulfillmentType(
       'delivery',
     );
@@ -822,16 +931,23 @@ export default function WebCheckoutModal({
               <ChoiceButton
                 title="Domicilio"
                 subtitle={
-                  deliveryFee >
-                    0
-                    ? `Desde ${formatCurrency(
-                      deliveryFee,
-                    )}`
-                    : 'Entrega a domicilio'
+                  isLoadingDeliveryStatus
+                    ? 'Consultando disponibilidad...'
+                    : !deliveryEnabled
+                      ? 'Servicio no disponible por el momento'
+                      : deliveryFee > 0
+                        ? `Desde ${formatCurrency(
+                          deliveryFee,
+                        )}`
+                        : 'Entrega a domicilio'
                 }
                 selected={
                   fulfillmentType ===
                   'delivery'
+                }
+                disabled={
+                  !deliveryEnabled ||
+                  isLoadingDeliveryStatus
                 }
                 onPress={
                   handleDeliveryPress
@@ -1334,6 +1450,7 @@ function ChoiceButton({
   title,
   subtitle,
   selected,
+  disabled = false,
   onPress,
 }: {
   title:
@@ -1345,11 +1462,17 @@ function ChoiceButton({
   selected:
   boolean;
 
+  disabled?:
+  boolean;
+
   onPress:
   () => void;
 }) {
   return (
     <Pressable
+      disabled={
+        disabled
+      }
       onPress={
         onPress
       }
@@ -1361,7 +1484,11 @@ function ChoiceButton({
           selected &&
           styles.choiceButtonSelected,
 
+          disabled &&
+          styles.choiceButtonDisabled,
+
           pressed &&
+          !disabled &&
           styles.choiceButtonPressed,
         ]}
     >
@@ -1371,6 +1498,9 @@ function ChoiceButton({
 
           selected &&
           styles.choiceTitleSelected,
+
+          disabled &&
+          styles.choiceTitleDisabled,
         ]}
       >
         {title}
@@ -1382,6 +1512,9 @@ function ChoiceButton({
 
           selected &&
           styles.choiceSubtitleSelected,
+
+          disabled &&
+          styles.choiceSubtitleDisabled,
         ]}
       >
         {subtitle}
