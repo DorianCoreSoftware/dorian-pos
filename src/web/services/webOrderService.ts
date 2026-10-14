@@ -6,6 +6,7 @@ import {
 import {
   supabase,
 } from '../../services/supabase';
+import { getDeliveryServiceStatus } from '../../services/deliveryService';
 
 export type WebFulfillmentType =
   | 'pickup'
@@ -18,15 +19,15 @@ export interface CreateWebOrderInput {
   customerPhone: string;
 
   fulfillmentType:
-    WebFulfillmentType;
+  WebFulfillmentType;
 
   deliveryDetails:
-    DeliveryDetails | null;
+  DeliveryDetails | null;
 
   clientRequestId: string;
 
   customerSessionToken?:
-    string | null;
+  string | null;
 }
 
 export interface CreateWebOrderResult {
@@ -77,7 +78,7 @@ export async function createWebOrder({
 
   if (
     fulfillmentType ===
-      'delivery' &&
+    'delivery' &&
     !deliveryDetails
   ) {
     throw new Error(
@@ -145,47 +146,61 @@ export async function createWebOrder({
   const rpcDelivery =
     fulfillmentType ===
       'delivery' &&
-    deliveryDetails
+      deliveryDetails
       ? {
-          street:
-            deliveryDetails
-              .street
-              .trim(),
+        street:
+          deliveryDetails
+            .street
+            .trim(),
 
-          exteriorNumber:
-            deliveryDetails
-              .exteriorNumber
-              .trim(),
+        exteriorNumber:
+          deliveryDetails
+            .exteriorNumber
+            .trim(),
 
-          interiorNumber:
-            deliveryDetails
-              .interiorNumber
-              .trim(),
+        interiorNumber:
+          deliveryDetails
+            .interiorNumber
+            .trim(),
 
-          neighborhood:
-            deliveryDetails
-              .neighborhood
-              .trim(),
+        neighborhood:
+          deliveryDetails
+            .neighborhood
+            .trim(),
 
-          postalCode:
-            deliveryDetails
-              .postalCode
-              .trim(),
+        postalCode:
+          deliveryDetails
+            .postalCode
+            .trim(),
 
-          deliveryReferences:
-            deliveryDetails
-              .deliveryReferences
-              .trim(),
+        deliveryReferences:
+          deliveryDetails
+            .deliveryReferences
+            .trim(),
 
-          latitude:
-            deliveryDetails
-              .latitude,
+        latitude:
+          deliveryDetails
+            .latitude,
 
-          longitude:
-            deliveryDetails
-              .longitude,
-        }
+        longitude:
+          deliveryDetails
+            .longitude,
+      }
       : null;
+
+  if (
+    fulfillmentType ===
+    'delivery'
+  ) {
+    const deliveryEnabled =
+      await getDeliveryServiceStatus();
+
+    if (!deliveryEnabled) {
+      throw new Error(
+        'El servicio a domicilio no está disponible por el momento.',
+      );
+    }
+  }
 
   const cleanSessionToken =
     customerSessionToken
@@ -194,46 +209,46 @@ export async function createWebOrder({
   const rpcArgs =
     cleanSessionToken
       ? {
-          p_items:
-            rpcItems,
+        p_items:
+          rpcItems,
 
-          p_delivery:
-            rpcDelivery,
+        p_delivery:
+          rpcDelivery,
 
-          p_client_request_id:
-            clientRequestId,
+        p_client_request_id:
+          clientRequestId,
 
-          p_customer_name:
-            normalizedName,
+        p_customer_name:
+          normalizedName,
 
-          p_customer_phone:
-            normalizedPhone,
+        p_customer_phone:
+          normalizedPhone,
 
-          p_fulfillment_type:
-            fulfillmentType,
+        p_fulfillment_type:
+          fulfillmentType,
 
-          p_customer_session_token:
-            cleanSessionToken,
-        }
+        p_customer_session_token:
+          cleanSessionToken,
+      }
       : {
-          p_items:
-            rpcItems,
+        p_items:
+          rpcItems,
 
-          p_delivery:
-            rpcDelivery,
+        p_delivery:
+          rpcDelivery,
 
-          p_client_request_id:
-            clientRequestId,
+        p_client_request_id:
+          clientRequestId,
 
-          p_customer_name:
-            normalizedName,
+        p_customer_name:
+          normalizedName,
 
-          p_customer_phone:
-            normalizedPhone,
+        p_customer_phone:
+          normalizedPhone,
 
-          p_fulfillment_type:
-            fulfillmentType,
-        };
+        p_fulfillment_type:
+          fulfillmentType,
+      };
 
   const {
     data,

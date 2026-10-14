@@ -31,6 +31,25 @@ interface DeliveryQuoteRpcRow {
     | number;
 }
 
+export async function getDeliveryServiceStatus():
+  Promise<boolean> {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'get_delivery_service_status',
+  );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudo consultar el estado del servicio a domicilio.',
+    );
+  }
+
+  return Boolean(data);
+}
+
 export async function getDeliveryQuote(
   latitude: number,
   longitude: number,
