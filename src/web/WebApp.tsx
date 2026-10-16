@@ -13,6 +13,7 @@ import { useBusiness } from '../context/BusinessContext';
 import WebMenuScreen from './screens/web-menu-screen/WebMenuScreen';
 import WebAccountScreen from './screens/web-account-screen/WebAccountScreen';
 import WebLoyaltyScreen from './screens/web-loyalty-screen/WebLoyaltyScreen';
+import WebCookieNotice from './components/web-cookie-notice/WebCookieNotice';
 
 type WebRoute =
   | 'menu'
@@ -210,6 +211,7 @@ export default function WebApp() {
               )
         }
       </View>
+       <WebCookieNotice />
     </View>
   );
 }

@@ -374,6 +374,26 @@ const styles =
             textAlign: 'center',
             marginTop: 9,
         },
+
+        rewardImageContainer: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            borderWidth: 1,
+            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+        },
+
+        rewardImage: {
+            width: '100%',
+            height: '100%',
+        },
+
+        rewardImageFallback: {
+            fontSize: 22,
+        },
     });
 
 export default styles;

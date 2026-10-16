@@ -117,24 +117,15 @@ export default function WebBannerCarousel({
       1180,
     ) - 40;
 
-  const bannerHeight =
-    width < 640
-      ? Math.min(
-        270,
-        Math.max(
-          170,
-          availableWidth *
-          8 / 16,
-        ),
-      )
-      : Math.min(
-        365,
-        Math.max(
-          230,
-          availableWidth *
-          7 / 16,
-        ),
-      );
+ const bannerHeight =
+  Math.min(
+    640,
+    Math.max(
+      190,
+      availableWidth *
+      9 / 16,
+    ),
+  );
 
   const hasOverlayText =
     !!activeBanner.title ||
