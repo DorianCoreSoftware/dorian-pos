@@ -128,6 +128,16 @@ const styles =
       fontWeight:
         '900',
     },
+
+    mobileButton: {
+      minHeight: 38,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+    },
+
+    mobileButtonText: {
+      fontSize: 11,
+    },
   });
 
 export default styles;

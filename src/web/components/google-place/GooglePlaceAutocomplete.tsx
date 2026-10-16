@@ -17,28 +17,8 @@ import {
 import {
     loadPlacesLibrary,
 } from '../../services/google-maps/googleMapsService';
+import { GooglePlaceAutocompleteProps } from '../../models/google-place-autocomplete/google-place-autocomplete-props';
 
-export interface GooglePlaceSelection {
-    formattedAddress: string;
-
-    latitude: number;
-    longitude: number;
-
-    street?: string;
-    exteriorNumber?: string;
-    neighborhood?: string;
-    postalCode?: string;
-}
-
-interface GooglePlaceAutocompleteProps {
-    disabled?: boolean;
-
-    onPlaceSelected:
-    (
-        place:
-            GooglePlaceSelection,
-    ) => void;
-}
 
 function getAddressComponent(
     components: any[],
