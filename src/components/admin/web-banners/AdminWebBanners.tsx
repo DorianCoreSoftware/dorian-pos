@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   ScrollView,
   Switch,
   Text,
@@ -584,13 +585,38 @@ export function AdminWebBanners() {
     const nextState =
       !banner.isActive;
 
-    Alert.alert(
+    const title =
       nextState
         ? 'Activar publicidad'
-        : 'Desactivar publicidad',
+        : 'Desactivar publicidad';
+
+    const message =
       nextState
         ? '¿Deseas volver a mostrar este banner cuando esté dentro de su vigencia?'
-        : '¿Deseas ocultar este banner de la web?',
+        : '¿Deseas ocultar este banner de la web?';
+
+    if (
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined'
+    ) {
+      const confirmed =
+        window.confirm(
+          `${title}\n\n${message}`,
+        );
+
+      if (confirmed) {
+        void executeToggle(
+          banner,
+          nextState,
+        );
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      title,
+      message,
       [
         {
           text: 'Cancelar',
@@ -644,9 +670,30 @@ export function AdminWebBanners() {
   function confirmDelete(
     banner: WebBanner,
   ): void {
+    const message =
+      '¿Deseas eliminar definitivamente este banner?';
+
+    if (
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined'
+    ) {
+      const confirmed =
+        window.confirm(
+          `Eliminar publicidad\n\n${message}`,
+        );
+
+      if (confirmed) {
+        void executeDelete(
+          banner,
+        );
+      }
+
+      return;
+    }
+
     Alert.alert(
       'Eliminar publicidad',
-      '¿Deseas eliminar definitivamente este banner?',
+      message,
       [
         {
           text: 'Cancelar',
@@ -1090,7 +1137,7 @@ export function AdminWebBanners() {
                   }
                 >
                   {pendingImage?.uri ||
-                  selectedBanner?.imageUrl ? (
+                    selectedBanner?.imageUrl ? (
                     <Image
                       source={{
                         uri:
@@ -1136,7 +1183,7 @@ export function AdminWebBanners() {
                       }
                     >
                       {pendingImage ||
-                      selectedBanner?.imageUrl
+                        selectedBanner?.imageUrl
                         ? 'Cambiar imagen'
                         : 'Seleccionar imagen'}
                     </Text>
@@ -1550,7 +1597,7 @@ export function AdminWebBanners() {
           minimumDate={
             datePickerField ===
               'endsAt' &&
-            form.startsAt
+              form.startsAt
               ? getPickerDate(
                 form.startsAt,
               )

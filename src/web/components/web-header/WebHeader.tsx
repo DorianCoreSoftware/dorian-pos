@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import {
   Image,
@@ -12,16 +12,22 @@ import { useBusiness } from '../../../context/BusinessContext';
 
 interface Props {
   onRewardsPress?:
-    () => void;
+  () => void;
 
   onAccountPress?:
-    () => void;
+  () => void;
 }
 
 export default function WebHeader({
   onRewardsPress,
   onAccountPress,
 }: Props) {
+
+  const [
+    logoFailed,
+    setLogoFailed,
+  ] = useState(false);
+
   const {
     business,
     theme,
@@ -33,6 +39,10 @@ export default function WebHeader({
 
   const logoUrl =
     business?.identity.logoUrl;
+
+  const showLogo =
+    !!logoUrl &&
+    !logoFailed;
 
   return (
     <View
@@ -52,7 +62,7 @@ export default function WebHeader({
           styles.inner
         }
       >
-        {logoUrl ? (
+        {showLogo ? (
           <Image
             source={{
               uri:
@@ -62,38 +72,41 @@ export default function WebHeader({
               styles.logo
             }
             resizeMode="contain"
+            onError={() =>
+              setLogoFailed(true)
+            }
           />
-        ) : null}
-
-        <View
-          style={
-            styles.copy
-          }
-        >
-          <Text
-            style={[
-              styles.title,
-              {
-                color:
-                  theme.primary,
-              },
-            ]}
+        ) : (
+          <View
+            style={
+              styles.copy
+            }
           >
-            {businessName}
-          </Text>
+            <Text
+              style={[
+                styles.title,
+                {
+                  color:
+                    theme.primary,
+                },
+              ]}
+            >
+              {businessName}
+            </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                color:
-                  theme.text,
-              },
-            ]}
-          >
-            Ordena en línea
-          </Text>
-        </View>
+            <Text
+              style={[
+                styles.subtitle,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
+            >
+              Ordena en línea
+            </Text>
+          </View>
+        )}
 
         <View
           style={
@@ -101,7 +114,7 @@ export default function WebHeader({
           }
         >
           {onRewardsPress &&
-          business?.features.loyaltyEnabled ? (
+            business?.features.loyaltyEnabled ? (
             <Pressable
               style={[
                 styles.rewardsButton,

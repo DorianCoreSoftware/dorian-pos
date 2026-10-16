@@ -36,14 +36,10 @@ const styles =
     },
 
     logo: {
-      width:
-        72,
-
-      height:
-        72,
-
-      marginRight:
-        16,
+      width: 130,
+      height: 72,
+      marginRight: 16,
+      flexShrink: 0,
     },
 
     copy: {
@@ -68,11 +64,10 @@ const styles =
     },
 
     actions: {
-      flexDirection:
-        'row',
-
-      alignItems:
-        'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexShrink: 0,
+      marginLeft: 'auto',
     },
 
     rewardsButton: {

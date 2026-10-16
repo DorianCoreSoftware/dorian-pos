@@ -16,6 +16,8 @@ export interface WebLoyaltyCustomer {
 
 export interface WebLoyaltyReward {
   id: string;
+  productId: string | null;
+  imageUrl: string | null;
   name: string;
   description: string | null;
   requiredVisits: number;
