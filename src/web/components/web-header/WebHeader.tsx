@@ -4,24 +4,18 @@ import {
   Image,
   Pressable,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import styles from './WebHeader.styles';
 import { useBusiness } from '../../../context/BusinessContext';
-
-interface Props {
-  onRewardsPress?:
-  () => void;
-
-  onAccountPress?:
-  () => void;
-}
+import { WebHeaderProps } from '../../models/web-header/web-header-props';
 
 export default function WebHeader({
   onRewardsPress,
   onAccountPress,
-}: Props) {
+}: WebHeaderProps) {
 
   const [
     logoFailed,
@@ -43,6 +37,13 @@ export default function WebHeader({
   const showLogo =
     !!logoUrl &&
     !logoFailed;
+
+  const {
+    width,
+  } = useWindowDimensions();
+
+  const isMobile =
+    width < 640;
 
   return (
     <View
@@ -118,6 +119,8 @@ export default function WebHeader({
             <Pressable
               style={[
                 styles.rewardsButton,
+                isMobile &&
+                styles.mobileButton,
                 {
                   borderColor:
                     theme.primary,
@@ -130,6 +133,8 @@ export default function WebHeader({
               <Text
                 style={[
                   styles.rewardsButtonText,
+                  isMobile &&
+                  styles.mobileButtonText,
                   {
                     color:
                       theme.primary,
@@ -145,6 +150,8 @@ export default function WebHeader({
             <Pressable
               style={[
                 styles.accountButton,
+                isMobile &&
+                styles.mobileButton,
                 {
                   backgroundColor:
                     theme.primary,
@@ -157,6 +164,8 @@ export default function WebHeader({
               <Text
                 style={[
                   styles.accountButtonText,
+                  isMobile &&
+                  styles.mobileButtonText,
                   {
                     color:
                       theme.onPrimary,
