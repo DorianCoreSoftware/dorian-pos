@@ -134,6 +134,7 @@ export function CashClosingScreen({
 
   const {
     width,
+    height,
   } = useWindowDimensions();
 
   const isPhone =
@@ -141,6 +142,14 @@ export function CashClosingScreen({
 
   const isSmallPhone =
     width < 430;
+
+  const historyModalMaxHeight =
+    isPhone
+      ? Math.max(
+        320,
+        height - 96,
+      )
+      : undefined;
 
   const [
     sales,
@@ -1791,14 +1800,25 @@ export function CashClosingScreen({
           }
         >
           <View
-            style={
-              styles.historyModalOverlay
-            }
+            style={[
+              styles.historyModalOverlay,
+
+              isPhone &&
+              styles.historyModalOverlayPhone,
+            ]}
           >
             <View
-              style={
-                styles.historyModalContent
-              }
+              style={[
+                styles.historyModalContent,
+
+                isPhone &&
+                styles.historyModalContentPhone,
+
+                isPhone && {
+                  maxHeight:
+                    historyModalMaxHeight,
+                },
+              ]}
             >
               <View
                 style={
@@ -1848,6 +1868,9 @@ export function CashClosingScreen({
               <ScrollView
                 style={
                   styles.historyModalScroll
+                }
+                contentContainerStyle={
+                  styles.historyModalScrollContent
                 }
                 showsVerticalScrollIndicator={
                   false

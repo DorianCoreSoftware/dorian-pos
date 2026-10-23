@@ -26,6 +26,11 @@ const createStyles = (
       backgroundColor: '#151515',
     },
 
+    bannerLink: {
+      width: '100%',
+      height: '100%',
+    },
+
     image: {
       width: '100%',
       height: '100%',

@@ -8,6 +8,7 @@ export interface WebBanner {
   description: string | null;
   imageUrl: string;
   imagePath: string | null;
+  targetUrl: string | null;
   sortOrder: number;
   isActive: boolean;
   startsAt: string | null;
@@ -22,6 +23,7 @@ interface WebBannerRow {
   description: string | null;
   image_url: string;
   image_path?: string | null;
+  target_url?: string | null;
   sort_order: number;
   is_active?: boolean;
   starts_at?: string | null;
@@ -35,6 +37,7 @@ export interface SaveWebBannerInput {
   description: string | null;
   imageUrl: string;
   imagePath: string;
+  targetUrl: string | null;
   sortOrder: number;
   isActive: boolean;
   startsAt: string | null;
@@ -50,6 +53,7 @@ function mapBanner(
     description: row.description,
     imageUrl: row.image_url,
     imagePath: row.image_path ?? null,
+    targetUrl: row.target_url ?? null,
     sortOrder: Number(row.sort_order ?? 0),
     isActive: row.is_active ?? true,
     startsAt: row.starts_at ?? null,
@@ -65,6 +69,7 @@ const ADMIN_SELECT = `
   description,
   image_url,
   image_path,
+  target_url,
   sort_order,
   is_active,
   starts_at,
@@ -144,6 +149,7 @@ export async function createWebBanner(
       description: input.description,
       image_url: input.imageUrl,
       image_path: input.imagePath,
+      target_url: input.targetUrl,
       sort_order: input.sortOrder,
       is_active: input.isActive,
       starts_at: input.startsAt,
@@ -178,6 +184,7 @@ export async function updateWebBanner(
       description: input.description,
       image_url: input.imageUrl,
       image_path: input.imagePath,
+      target_url: input.targetUrl,
       sort_order: input.sortOrder,
       is_active: input.isActive,
       starts_at: input.startsAt,
@@ -222,6 +229,26 @@ export async function setWebBannerActive(
     throw new Error(
       error.message ||
       'No se pudo cambiar el estado de la publicidad.',
+    );
+  }
+}
+
+export async function reorderWebBanners(
+  bannerIds: string[],
+): Promise<void> {
+  const {
+    error,
+  } = await supabase.rpc(
+    'reorder_web_banners',
+    {
+      p_banner_ids: bannerIds,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudo guardar el orden de la publicidad.',
     );
   }
 }

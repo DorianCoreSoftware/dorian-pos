@@ -27,7 +27,9 @@ import { useCurrency } from '../../../hooks/useCurrency';
 import { DeliveryQuote, getDeliveryQuote, getDeliveryServiceStatus } from '../../../services/deliveryService';
 import { DeliveryDetails } from '../../../types';
 import { WebFulfillmentType } from '../../services/web-order/webOrderService';
-import GooglePlaceAutocomplete, { GooglePlaceSelection } from '../google-place/GooglePlaceAutocomplete';
+import { GooglePlaceSelection } from '../../models/google-place-autocomplete/google-place-selection';
+import GooglePlaceAutocomplete from '../google-place/GooglePlaceAutocomplete';
+
 
 interface CheckoutData {
   fulfillmentType:

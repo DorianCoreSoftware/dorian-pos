@@ -139,8 +139,63 @@ const createStyles = (
       backgroundColor: '#1D1D1D',
     },
 
+    bannerCardCompact: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: 12,
+      padding: 12,
+    },
+
+    bannerMain: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+
+    bannerMainCompact: {
+      width: '100%',
+      alignItems: 'center',
+      gap: 10,
+    },
+
     bannerCardInactive: {
       opacity: 0.58,
+    },
+
+    bannerCardDragging: {
+      opacity: 0.42,
+      borderColor: primaryColor,
+    },
+
+    reorderControls: {
+      width: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    dragHandleButton: {
+      width: 34,
+      minHeight: 52,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#252525',
+    },
+
+    dragHandleButtonActive: {
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.14),
+    },
+
+    dragHandle: {
+      color: primaryColor,
+      fontSize: 26,
+      fontWeight: '900',
+      lineHeight: 28,
     },
 
     thumbnailBox: {
@@ -151,6 +206,11 @@ const createStyles = (
       borderWidth: 1,
       borderColor: '#3A3A3A',
       backgroundColor: '#141414',
+    },
+
+    thumbnailBoxCompact: {
+      width: 126,
+      flexShrink: 0,
     },
 
     thumbnail: {
@@ -171,6 +231,7 @@ const createStyles = (
     },
 
     bannerTitle: {
+      flexShrink: 1,
       color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '900',
@@ -213,6 +274,12 @@ const createStyles = (
       marginTop: 5,
     },
 
+    linkText: {
+      color: primaryColor,
+      fontSize: 10,
+      marginTop: 6,
+    },
+
     metaText: {
       color: '#777777',
       fontSize: 10,
@@ -222,6 +289,19 @@ const createStyles = (
     actions: {
       minWidth: 105,
       gap: 7,
+    },
+
+    actionsCompact: {
+      width: '100%',
+      minWidth: 0,
+      flexDirection: 'row',
+      gap: 7,
+    },
+
+    actionButtonCompact: {
+      flex: 1,
+      minWidth: 0,
+      paddingHorizontal: 6,
     },
 
     editButton: {

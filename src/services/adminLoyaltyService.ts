@@ -245,3 +245,25 @@ export async function setLoyaltyRewardActive(
     },
   );
 }
+
+export async function reorderLoyaltyRewards(
+  rewardIds: string[],
+): Promise<void> {
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      'reorder_loyalty_rewards',
+      {
+        p_reward_ids:
+          rewardIds,
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudo guardar el orden de las recompensas.',
+    );
+  }
+}

@@ -1627,52 +1627,6 @@ export function SalesScreen() {
         styles.container
       }
     >
-      <View
-        style={
-          styles.header
-        }
-      >
-        <View>
-          <Text
-            style={
-              styles.title
-            }
-          >
-            Ventas
-          </Text>
-
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            Historial de órdenes
-            cobradas y entregadas
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={
-            styles.refreshButton
-          }
-          disabled={
-            isRefreshing
-          }
-          onPress={() => {
-            void handleRefreshSales();
-          }}
-        >
-          <Text
-            style={
-              styles.refreshButtonText
-            }
-          >
-            {isRefreshing
-              ? 'Actualizando...'
-              : '↻ Actualizar'}
-          </Text>
-        </TouchableOpacity>
-      </View>
       {userCanUseRefundFeatures ? (
         <RefundModal
         visible={refundSale !== null}
@@ -1702,505 +1656,551 @@ export function SalesScreen() {
       />
       ) : null}
 
+      <FlatList
+        data={
+          filteredSales
+        }
+        keyExtractor={
+          (item) =>
+            item.orderId
+        }
+        renderItem={
+          renderSale
+        }
+        contentContainerStyle={
+          styles.salesList
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
+        ListHeaderComponent={
+          <>
+          <View
+            style={
+              styles.header
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.title
+                }
+              >
+                Ventas
+              </Text>
 
-      <PeriodFilter
-        value={salesFilter}
-        onChange={
-          handleSalesFilter
+              <Text
+                style={
+                  styles.subtitle
+                }
+              >
+                Historial de órdenes
+                cobradas y entregadas
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={
+                styles.refreshButton
+              }
+              disabled={
+                isRefreshing
+              }
+              onPress={() => {
+                void handleRefreshSales();
+              }}
+            >
+              <Text
+                style={
+                  styles.refreshButtonText
+                }
+              >
+                {isRefreshing
+                  ? 'Actualizando...'
+                  : '↻ Actualizar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <PeriodFilter
+            value={salesFilter}
+            onChange={
+              handleSalesFilter
+            }
+          />
+
+          {salesFilter ===
+            'custom' ? (
+            <View
+              style={[
+                styles.customDateContainer,
+                isSmallPhone &&
+                styles.customDateContainerSmall,
+              ]}
+            >
+              <TouchableOpacity
+                style={
+                  styles.dateField
+                }
+                activeOpacity={0.8}
+                onPress={() =>
+                  setDatePickerField(
+                    'from',
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.dateLabel
+                  }
+                >
+                  Desde
+                </Text>
+
+                <Text
+                  style={
+                    styles.dateValue
+                  }
+                >
+                  📅{' '}
+                  {formatShortDate(
+                    customStartDate,
+                  )}
+                </Text>
+              </TouchableOpacity>
+
+              <Text
+                style={
+                  styles.dateRangeSeparator
+                }
+              >
+                →
+              </Text>
+
+              <TouchableOpacity
+                style={
+                  styles.dateField
+                }
+                activeOpacity={0.8}
+                onPress={() =>
+                  setDatePickerField(
+                    'to',
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.dateLabel
+                  }
+                >
+                  Hasta
+                </Text>
+
+                <Text
+                  style={
+                    styles.dateValue
+                  }
+                >
+                  📅{' '}
+                  {formatShortDate(
+                    customEndDate,
+                  )}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          <View
+            style={[
+              styles.summaryContainer,
+              isPhone &&
+              styles.summaryContainerPhone,
+            ]}
+          >
+            <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                styles.summaryCardPhone,
+                styles.totalCard,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Total vendido
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.totalValue,
+                  isSmallPhone &&
+                  styles.summaryValueSmall,
+                ]}
+              >
+                {formatCurrency(
+                  summary.total,
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                styles.summaryCardPhone,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                💵 Efectivo
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.summaryValue,
+                  isSmallPhone &&
+                  styles.summaryValueSmall,
+                ]}
+              >
+                {formatCurrency(
+                  summary.cash,
+                )}
+              </Text>
+
+              {userCanUseRefundFeatures ? (
+                <>
+                  <Text
+                    style={{
+                      marginTop: 6,
+                      color: '#E05A5A',
+                      fontSize: 10,
+                      fontWeight: '800',
+                    }}
+                  >
+                    Devuelto:{' '}
+                    {formatCurrency(
+                      summary.refundedCash,
+                    )}
+                  </Text>
+
+                  <Text
+                    style={{
+                      marginTop: 2,
+                      color:
+                        businessTheme.primary,
+                      fontSize: 11,
+                      fontWeight: '900',
+                    }}
+                  >
+                    Neto:{' '}
+                    {formatCurrency(
+                      netCash,
+                    )}
+                  </Text>
+                </>
+              ) : null}</View>
+
+            <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                styles.summaryCardPhone,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                💳 Tarjeta
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.summaryValue,
+                  isSmallPhone &&
+                  styles.summaryValueSmall,
+                ]}
+              >
+                {formatCurrency(
+                  summary.card,
+                )}
+              </Text>
+
+              {userCanUseRefundFeatures ? (
+                <>
+                  <Text
+                    style={{
+                      marginTop: 6,
+                      color: '#E05A5A',
+                      fontSize: 10,
+                      fontWeight: '800',
+                    }}
+                  >
+                    Devuelto:{' '}
+                    {formatCurrency(
+                      summary.refundedCard,
+                    )}
+                  </Text>
+
+                  <Text
+                    style={{
+                      marginTop: 2,
+                      color:
+                        businessTheme.primary,
+                      fontSize: 11,
+                      fontWeight: '900',
+                    }}
+                  >
+                    Neto:{' '}
+                    {formatCurrency(
+                      netCard,
+                    )}
+                  </Text>
+                </>
+              ) : null}</View>
+
+            <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                styles.summaryCardPhone,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Ventas
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.summaryValue,
+                  isSmallPhone &&
+                  styles.summaryValueSmall,
+                ]}
+              >
+                {
+                  filteredSales.length
+                }
+              </Text>
+            </View>
+
+            {userCanUseRefundFeatures ? (
+              <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                  styles.summaryCardPhone,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                ↩ Devuelto de ventas del periodo
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.summaryValue,
+                  styles.summaryRefundedValue,
+                  isSmallPhone &&
+                    styles.summaryValueSmall,
+                ]}
+              >
+                {formatCurrency(
+                  summary.refunded,
+                )}
+              </Text>
+            </View>
+            ) : null}
+
+            {userCanUseRefundFeatures ? (
+              <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                  styles.summaryCardPhone,
+                styles.netCard,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Neto de ventas del periodo
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.totalValue,
+                  isSmallPhone &&
+                    styles.summaryValueSmall,
+                ]}
+              >
+                {formatCurrency(
+                  netSales,
+                )}
+              </Text>
+            </View>
+            ) : null}
+
+            {userCanUseRefundFeatures ? (
+              <View
+              style={[
+                styles.summaryCard,
+                isPhone &&
+                  styles.summaryCardPhone,
+              ]}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Devoluciones hechas en el periodo
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                style={[
+                  styles.summaryValue,
+                  styles.summaryRefundedValue,
+                  isSmallPhone &&
+                    styles.summaryValueSmall,
+                ]}
+              >
+                {isLoadingPeriodRefunds
+                  ? '...'
+                  : formatCurrency(
+                      periodRefundTotal,
+                    )}
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 4,
+                  color: '#888888',
+                  fontSize: 10,
+                  fontWeight: '700',
+                }}
+              >
+                {periodRefundCount}{' '}
+                {periodRefundCount === 1
+                  ? 'devolución'
+                  : 'devoluciones'}
+              </Text>
+            </View>
+            ) : null}
+          </View>
+
+          <View
+            style={
+              styles.listHeader
+            }
+          >
+            <Text
+              style={
+                styles.listTitle
+              }
+            >
+              Historial
+            </Text>
+
+            <Text
+              style={
+                styles.listCount
+              }
+            >
+              {filteredSales.length}{' '}
+              {filteredSales.length === 1
+                ? 'venta'
+                : 'ventas'}
+            </Text>
+          </View>
+
+          {errorMessage ? (
+            <View
+              style={
+                styles.inlineError
+              }
+            >
+              <Text
+                style={
+                  styles.inlineErrorText
+                }
+              >
+                ⚠️ {errorMessage}
+              </Text>
+            </View>
+          ) : null}
+          </>
+        }
+        ListEmptyComponent={
+            <View
+              style={
+                styles.emptyContainer
+              }
+            >
+              <Text
+                style={
+                  styles.emptyIcon
+                }
+              >
+                💰
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyTitle
+                }
+              >
+                No hay ventas en este
+                periodo
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyText
+                }
+              >
+                Cambia el filtro o
+                selecciona otro rango
+                de fechas.
+              </Text>
+            </View>
         }
       />
-
-      {salesFilter ===
-        'custom' ? (
-        <View
-          style={[
-            styles.customDateContainer,
-            isSmallPhone &&
-            styles.customDateContainerSmall,
-          ]}
-        >
-          <TouchableOpacity
-            style={
-              styles.dateField
-            }
-            activeOpacity={0.8}
-            onPress={() =>
-              setDatePickerField(
-                'from',
-              )
-            }
-          >
-            <Text
-              style={
-                styles.dateLabel
-              }
-            >
-              Desde
-            </Text>
-
-            <Text
-              style={
-                styles.dateValue
-              }
-            >
-              📅{' '}
-              {formatShortDate(
-                customStartDate,
-              )}
-            </Text>
-          </TouchableOpacity>
-
-          <Text
-            style={
-              styles.dateRangeSeparator
-            }
-          >
-            →
-          </Text>
-
-          <TouchableOpacity
-            style={
-              styles.dateField
-            }
-            activeOpacity={0.8}
-            onPress={() =>
-              setDatePickerField(
-                'to',
-              )
-            }
-          >
-            <Text
-              style={
-                styles.dateLabel
-              }
-            >
-              Hasta
-            </Text>
-
-            <Text
-              style={
-                styles.dateValue
-              }
-            >
-              📅{' '}
-              {formatShortDate(
-                customEndDate,
-              )}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      <View
-        style={[
-          styles.summaryContainer,
-          isPhone &&
-          styles.summaryContainerPhone,
-        ]}
-      >
-        <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-            styles.summaryCardPhone,
-            styles.totalCard,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            Total vendido
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.totalValue,
-              isSmallPhone &&
-              styles.summaryValueSmall,
-            ]}
-          >
-            {formatCurrency(
-              summary.total,
-            )}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-            styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            💵 Efectivo
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.summaryValue,
-              isSmallPhone &&
-              styles.summaryValueSmall,
-            ]}
-          >
-            {formatCurrency(
-              summary.cash,
-            )}
-          </Text>
-
-          {userCanUseRefundFeatures ? (
-            <>
-              <Text
-                style={{
-                  marginTop: 6,
-                  color: '#E05A5A',
-                  fontSize: 10,
-                  fontWeight: '800',
-                }}
-              >
-                Devuelto:{' '}
-                {formatCurrency(
-                  summary.refundedCash,
-                )}
-              </Text>
-
-              <Text
-                style={{
-                  marginTop: 2,
-                  color:
-                    businessTheme.primary,
-                  fontSize: 11,
-                  fontWeight: '900',
-                }}
-              >
-                Neto:{' '}
-                {formatCurrency(
-                  netCash,
-                )}
-              </Text>
-            </>
-          ) : null}</View>
-
-        <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-            styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            💳 Tarjeta
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.summaryValue,
-              isSmallPhone &&
-              styles.summaryValueSmall,
-            ]}
-          >
-            {formatCurrency(
-              summary.card,
-            )}
-          </Text>
-
-          {userCanUseRefundFeatures ? (
-            <>
-              <Text
-                style={{
-                  marginTop: 6,
-                  color: '#E05A5A',
-                  fontSize: 10,
-                  fontWeight: '800',
-                }}
-              >
-                Devuelto:{' '}
-                {formatCurrency(
-                  summary.refundedCard,
-                )}
-              </Text>
-
-              <Text
-                style={{
-                  marginTop: 2,
-                  color:
-                    businessTheme.primary,
-                  fontSize: 11,
-                  fontWeight: '900',
-                }}
-              >
-                Neto:{' '}
-                {formatCurrency(
-                  netCard,
-                )}
-              </Text>
-            </>
-          ) : null}</View>
-
-        <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-            styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            Ventas
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.summaryValue,
-              isSmallPhone &&
-              styles.summaryValueSmall,
-            ]}
-          >
-            {
-              filteredSales.length
-            }
-          </Text>
-        </View>
-
-        {userCanUseRefundFeatures ? (
-          <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-              styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            ↩ Devuelto de ventas del periodo
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.summaryValue,
-              styles.summaryRefundedValue,
-              isSmallPhone &&
-                styles.summaryValueSmall,
-            ]}
-          >
-            {formatCurrency(
-              summary.refunded,
-            )}
-          </Text>
-        </View>
-        ) : null}
-
-        {userCanUseRefundFeatures ? (
-          <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-              styles.summaryCardPhone,
-            styles.netCard,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            Neto de ventas del periodo
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.totalValue,
-              isSmallPhone &&
-                styles.summaryValueSmall,
-            ]}
-          >
-            {formatCurrency(
-              netSales,
-            )}
-          </Text>
-        </View>
-        ) : null}
-
-        {userCanUseRefundFeatures ? (
-          <View
-          style={[
-            styles.summaryCard,
-            isPhone &&
-              styles.summaryCardPhone,
-          ]}
-        >
-          <Text
-            style={
-              styles.summaryLabel
-            }
-          >
-            Devoluciones hechas en el periodo
-          </Text>
-
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={[
-              styles.summaryValue,
-              styles.summaryRefundedValue,
-              isSmallPhone &&
-                styles.summaryValueSmall,
-            ]}
-          >
-            {isLoadingPeriodRefunds
-              ? '...'
-              : formatCurrency(
-                  periodRefundTotal,
-                )}
-          </Text>
-
-          <Text
-            style={{
-              marginTop: 4,
-              color: '#888888',
-              fontSize: 10,
-              fontWeight: '700',
-            }}
-          >
-            {periodRefundCount}{' '}
-            {periodRefundCount === 1
-              ? 'devolución'
-              : 'devoluciones'}
-          </Text>
-        </View>
-        ) : null}
-      </View>
-
-      <View
-        style={
-          styles.listHeader
-        }
-      >
-        <Text
-          style={
-            styles.listTitle
-          }
-        >
-          Historial
-        </Text>
-
-        <Text
-          style={
-            styles.listCount
-          }
-        >
-          {filteredSales.length}{' '}
-          {filteredSales.length === 1
-            ? 'venta'
-            : 'ventas'}
-        </Text>
-      </View>
-
-      {errorMessage ? (
-        <View
-          style={
-            styles.inlineError
-          }
-        >
-          <Text
-            style={
-              styles.inlineErrorText
-            }
-          >
-            ⚠️ {errorMessage}
-          </Text>
-        </View>
-      ) : null}
-
-      {filteredSales.length ===
-        0 ? (
-        <View
-          style={
-            styles.emptyContainer
-          }
-        >
-          <Text
-            style={
-              styles.emptyIcon
-            }
-          >
-            💰
-          </Text>
-
-          <Text
-            style={
-              styles.emptyTitle
-            }
-          >
-            No hay ventas en este
-            periodo
-          </Text>
-
-          <Text
-            style={
-              styles.emptyText
-            }
-          >
-            Cambia el filtro o
-            selecciona otro rango
-            de fechas.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={
-            filteredSales
-          }
-          keyExtractor={
-            (item) =>
-              item.orderId
-          }
-          renderItem={
-            renderSale
-          }
-          contentContainerStyle={
-            styles.salesList
-          }
-          showsVerticalScrollIndicator={
-            false
-          }
-        />
-      )}
 
       {datePickerField ? (
         <DateTimePicker

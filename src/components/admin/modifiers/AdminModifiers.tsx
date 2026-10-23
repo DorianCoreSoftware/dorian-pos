@@ -1113,253 +1113,257 @@ export function AdminModifiers({
                 styles.container
             }
         >
-            <View
+            <FlatList
                 style={
-                    styles.toolbar
+                    styles.modifierList
                 }
-            >
-                <View
-                    style={
-                        styles.searchContainer
-                    }
-                >
-                    <Text
-                        style={
-                            styles.searchIcon
-                        }
-                    >
-                        🔎
-                    </Text>
+                data={
+                    visibleModifiers
+                }
+                keyExtractor={
+                    (item) =>
+                        item.id
+                }
+                renderItem={
+                    renderModifier
+                }
+                contentContainerStyle={
+                    styles.listContent
+                }
+                showsVerticalScrollIndicator={
+                    false
+                }
+                ListHeaderComponent={
+                    <>
+                        <View
+                            style={
+                                styles.toolbar
+                            }
+                        >
+                            <View
+                                style={
+                                    styles.searchContainer
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.searchIcon
+                                    }
+                                >
+                                    🔎
+                                </Text>
 
-                    <TextInput
-                        value={
-                            searchText
-                        }
-                        onChangeText={
-                            setSearchText
-                        }
-                        style={
-                            styles.searchInput
-                        }
-                        placeholder="Buscar modificador..."
-                        placeholderTextColor="#777777"
-                        autoCorrect={false}
-                    />
+                                <TextInput
+                                    value={
+                                        searchText
+                                    }
+                                    onChangeText={
+                                        setSearchText
+                                    }
+                                    style={
+                                        styles.searchInput
+                                    }
+                                    placeholder="Buscar modificador..."
+                                    placeholderTextColor="#777777"
+                                    autoCorrect={false}
+                                />
 
-                    {searchText ? (
-                        <TouchableOpacity
-                            onPress={() =>
-                                setSearchText('')
+                                {searchText ? (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            setSearchText('')
+                                        }
+                                    >
+                                        <Text
+                                            style={
+                                                styles.clearSearchText
+                                            }
+                                        >
+                                            ✕
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+
+                            <View
+                                style={
+                                    styles.unavailableFilter
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.unavailableFilterText
+                                    }
+                                >
+                                    Mostrar inactivos
+                                </Text>
+
+                                <Switch
+                                    value={
+                                        showUnavailable
+                                    }
+                                    onValueChange={
+                                        setShowUnavailable
+                                    }
+                                />
+                            </View>
+
+                            <TouchableOpacity
+                                style={
+                                    styles.manageGroupsButton
+                                }
+                                onPress={
+                                    openGroupsModal
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.manageGroupsButtonText
+                                    }
+                                >
+                                    ⚙ Grupos
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={
+                                    styles.createButton
+                                }
+                                onPress={
+                                    openCreateModal
+                                }
+                            >
+                                <Text
+                                    style={
+                                        styles.createButtonText
+                                    }
+                                >
+                                    + Nuevo modificador
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View
+                            style={
+                                styles.filterTabs
+                            }
+                        >
+                            {[
+                                {
+                                    id:
+                                        'all',
+                                    name:
+                                        'TODOS',
+                                },
+                                ...groups.map(
+                                    group => ({
+                                        id:
+                                            group.id,
+                                        name:
+                                            group.name.toUpperCase(),
+                                    }),
+                                ),
+                            ].map(
+                                group => {
+                                    const selected =
+                                        activeFilter ===
+                                        group.id;
+
+                                    return (
+                                        <TouchableOpacity
+                                            key={
+                                                group.id
+                                            }
+                                            style={[
+                                                styles.filterButton,
+
+                                                selected &&
+                                                styles.filterButtonActive,
+                                            ]}
+                                            onPress={() =>
+                                                setActiveFilter(
+                                                    group.id,
+                                                )
+                                            }
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.filterButtonText,
+
+                                                    selected &&
+                                                    styles.filterButtonTextActive,
+                                                ]}
+                                            >
+                                                {group.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                },
+                            )}
+                        </View>
+
+                        <View
+                            style={
+                                styles.listHeader
                             }
                         >
                             <Text
                                 style={
-                                    styles.clearSearchText
+                                    styles.listTitle
                                 }
                             >
-                                ✕
+                                Modificadores
                             </Text>
-                        </TouchableOpacity>
-                    ) : null}
-                </View>
 
-                <View
-                    style={
-                        styles.unavailableFilter
-                    }
-                >
-                    <Text
-                        style={
-                            styles.unavailableFilterText
-                        }
-                    >
-                        Mostrar inactivos
-                    </Text>
-
-                    <Switch
-                        value={
-                            showUnavailable
-                        }
-                        onValueChange={
-                            setShowUnavailable
-                        }
-                    />
-                </View>
-
-                <TouchableOpacity
-                    style={
-                        styles.manageGroupsButton
-                    }
-                    onPress={
-                        openGroupsModal
-                    }
-                >
-                    <Text
-                        style={
-                            styles.manageGroupsButtonText
-                        }
-                    >
-                        ⚙ Grupos
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={
-                        styles.createButton
-                    }
-                    onPress={
-                        openCreateModal
-                    }
-                >
-                    <Text
-                        style={
-                            styles.createButtonText
-                        }
-                    >
-                        + Nuevo modificador
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            <View
-                style={
-                    styles.filterTabs
-                }
-            >
-                {[
-                    {
-                        id:
-                            'all',
-                        name:
-                            'TODOS',
-                    },
-                    ...groups.map(
-                        group => ({
-                            id:
-                                group.id,
-                            name:
-                                group.name.toUpperCase(),
-                        }),
-                    ),
-                ].map(
-                    group => {
-                        const selected =
-                            activeFilter ===
-                            group.id;
-
-                        return (
-                            <TouchableOpacity
-                                key={
-                                    group.id
-                                }
-                                style={[
-                                    styles.filterButton,
-
-                                    selected &&
-                                    styles.filterButtonActive,
-                                ]}
-                                onPress={() =>
-                                    setActiveFilter(
-                                        group.id,
-                                    )
+                            <Text
+                                style={
+                                    styles.modifierCount
                                 }
                             >
-                                <Text
-                                    style={[
-                                        styles.filterButtonText,
-
-                                        selected &&
-                                        styles.filterButtonTextActive,
-                                    ]}
-                                >
-                                    {group.name}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    },
-                )}
-            </View>
-
-            <View
-                style={
-                    styles.listHeader
+                                {
+                                    visibleModifiers.length
+                                }{' '}
+                                {visibleModifiers.length ===
+                                    1
+                                    ? 'modificador'
+                                    : 'modificadores'}
+                            </Text>
+                        </View>
+                    </>
                 }
-            >
-                <Text
-                    style={
-                        styles.listTitle
-                    }
-                >
-                    Modificadores
-                </Text>
-
-                <Text
-                    style={
-                        styles.modifierCount
-                    }
-                >
-                    {
-                        visibleModifiers.length
-                    }{' '}
-                    {visibleModifiers.length ===
-                        1
-                        ? 'modificador'
-                        : 'modificadores'}
-                </Text>
-            </View>
-
-            {visibleModifiers.length ===
-                0 ? (
-                <View
-                    style={
-                        styles.emptyContainer
-                    }
-                >
-                    <Text
+                ListEmptyComponent={
+                    <View
                         style={
-                            styles.emptyIcon
+                            styles.emptyContainer
                         }
                     >
-                        🧂
-                    </Text>
+                        <Text
+                            style={
+                                styles.emptyIcon
+                            }
+                        >
+                            🧂
+                        </Text>
 
-                    <Text
-                        style={
-                            styles.emptyTitle
-                        }
-                    >
-                        No hay modificadores
-                    </Text>
+                        <Text
+                            style={
+                                styles.emptyTitle
+                            }
+                        >
+                            No hay modificadores
+                        </Text>
 
-                    <Text
-                        style={
-                            styles.emptyText
-                        }
-                    >
-                        Cambia los filtros o
-                        agrega un nuevo modificador.
-                    </Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={
-                        visibleModifiers
-                    }
-                    keyExtractor={
-                        (item) =>
-                            item.id
-                    }
-                    renderItem={
-                        renderModifier
-                    }
-                    contentContainerStyle={
-                        styles.listContent
-                    }
-                    showsVerticalScrollIndicator={
-                        false
-                    }
-                />
-            )}
+                        <Text
+                            style={
+                                styles.emptyText
+                            }
+                        >
+                            Cambia los filtros o
+                            agrega un nuevo modificador.
+                        </Text>
+                    </View>
+                }
+            />
 
             <Modal
                 visible={

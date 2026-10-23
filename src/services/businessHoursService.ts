@@ -56,8 +56,14 @@ export interface BusinessSettings {
 }
 
 export interface SaveBusinessSettingsInput {
-  identity: BusinessIdentity;
-  features: BusinessFeatures;
+  identity: Pick<
+    BusinessIdentity,
+    | 'businessName'
+    | 'shortName'
+    | 'currencyCode'
+    | 'phone'
+    | 'address'
+  >;
   timezone: string;
   ticketSettings: BusinessTicketSettings;
   socialLinks: BusinessSocialLinks;
@@ -523,19 +529,6 @@ export async function saveBusinessSettings(
   const address =
     input.identity.address.trim();
 
-  const logoUrl =
-    input.identity.logoUrl.trim();
-
-  const primaryColor =
-    input.identity.primaryColor
-      .trim()
-      .toUpperCase();
-
-  const secondaryColor =
-    input.identity.secondaryColor
-      .trim()
-      .toUpperCase();
-
   const timezone =
     input.timezone.trim();
 
@@ -613,15 +606,6 @@ export async function saveBusinessSettings(
     );
   }
 
-  if (
-    logoUrl &&
-    !/^https?:\/\//i.test(logoUrl)
-  ) {
-    throw new Error(
-      'El logo debe usar una URL http o https.',
-    );
-  }
-
   const socialValues = [
     facebookUrl,
     instagramUrl,
@@ -638,21 +622,6 @@ export async function saveBusinessSettings(
   ) {
     throw new Error(
       'Las URLs de redes sociales no pueden superar 220 caracteres.',
-    );
-  }
-
-  const hexColorRegex =
-    /^#[0-9A-F]{6}$/;
-
-  if (!hexColorRegex.test(primaryColor)) {
-    throw new Error(
-      'El color principal debe usar formato hexadecimal, por ejemplo #FFBF00.',
-    );
-  }
-
-  if (!hexColorRegex.test(secondaryColor)) {
-    throw new Error(
-      'El color secundario debe usar formato hexadecimal, por ejemplo #000000.',
     );
   }
 
@@ -681,27 +650,6 @@ export async function saveBusinessSettings(
 
         address:
           address || null,
-
-        logo_url:
-          logoUrl || null,
-
-        primary_color:
-          primaryColor,
-
-        secondary_color:
-          secondaryColor,
-
-        loyalty_enabled:
-          input.features.loyaltyEnabled,
-
-        delivery_enabled:
-          input.features.deliveryEnabled,
-
-        promotions_enabled:
-          input.features.promotionsEnabled,
-
-        kitchen_enabled:
-          input.features.kitchenEnabled,
 
         timezone,
 

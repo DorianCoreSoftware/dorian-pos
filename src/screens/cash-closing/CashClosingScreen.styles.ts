@@ -577,6 +577,11 @@ const createStyles = (
         'rgba(0, 0, 0, 0.82)',
     },
 
+    historyModalOverlayPhone: {
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+    },
+
     historyModalContent: {
       width: '100%',
       maxWidth: 650,
@@ -586,6 +591,11 @@ const createStyles = (
       borderWidth: 1,
       borderColor: '#424242',
       backgroundColor: '#1D1D1D',
+    },
+
+    historyModalContentPhone: {
+      padding: 14,
+      borderRadius: 12,
     },
 
     historyModalHeader: {
@@ -626,6 +636,10 @@ const createStyles = (
 
     historyModalScroll: {
       flexGrow: 0,
+    },
+
+    historyModalScrollContent: {
+      paddingBottom: 8,
     },
 
     historyModalStatusRow: {

@@ -1,20 +1,26 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
+  LayoutChangeEvent,
   Modal,
+  PanResponder,
   Platform,
   ScrollView,
   Switch,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -29,6 +35,7 @@ import {
   deleteWebBanner,
   getAdminWebBanners,
   setWebBannerActive,
+  reorderWebBanners,
   updateWebBanner,
   WebBanner,
 } from '../../../services/webBannerService';
@@ -50,7 +57,7 @@ import {
 interface BannerFormState {
   title: string;
   description: string;
-  sortOrder: string;
+  targetUrl: string;
   startsAt: string;
   endsAt: string;
   isActive: boolean;
@@ -65,11 +72,378 @@ const INITIAL_FORM:
   BannerFormState = {
   title: '',
   description: '',
-  sortOrder: '0',
+  targetUrl: '',
   startsAt: '',
   endsAt: '',
   isActive: true,
 };
+
+
+interface BannerCardLayout {
+  y: number;
+  height: number;
+}
+
+interface SortableBannerCardProps {
+  banner: WebBanner;
+  isCompact: boolean;
+  isDisabled: boolean;
+  isDragging: boolean;
+  onLayout: (
+    bannerId: string,
+    event: LayoutChangeEvent,
+  ) => void;
+  onDragStart: (
+    bannerId: string,
+  ) => void;
+  onDragEnd: (
+    bannerId: string,
+    offsetY: number,
+  ) => void;
+  onEdit: (
+    banner: WebBanner,
+  ) => void;
+  onToggle: (
+    banner: WebBanner,
+  ) => void;
+  onDelete: (
+    banner: WebBanner,
+  ) => void;
+}
+
+function SortableBannerCard({
+  banner,
+  isCompact,
+  isDisabled,
+  isDragging,
+  onLayout,
+  onDragStart,
+  onDragEnd,
+  onEdit,
+  onToggle,
+  onDelete,
+}: SortableBannerCardProps) {
+  const translateY =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const onDragStartRef =
+    useRef(onDragStart);
+
+  const onDragEndRef =
+    useRef(onDragEnd);
+
+  onDragStartRef.current =
+    onDragStart;
+
+  onDragEndRef.current =
+    onDragEnd;
+
+  const panResponder =
+    useMemo(
+      () =>
+        PanResponder.create({
+          onStartShouldSetPanResponder:
+            () => !isDisabled,
+          onMoveShouldSetPanResponder:
+            () => !isDisabled,
+          onPanResponderGrant: () => {
+            if (isDisabled) {
+              return;
+            }
+
+            onDragStartRef.current(
+              banner.id,
+            );
+          },
+          onPanResponderMove: (
+            _event,
+            gestureState,
+          ) => {
+            if (isDisabled) {
+              return;
+            }
+
+            translateY.setValue(
+              gestureState.dy,
+            );
+          },
+          onPanResponderRelease: (
+            _event,
+            gestureState,
+          ) => {
+            translateY.setValue(0);
+
+            if (isDisabled) {
+              return;
+            }
+
+            onDragEndRef.current(
+              banner.id,
+              gestureState.dy,
+            );
+          },
+          onPanResponderTerminate: () => {
+            translateY.setValue(0);
+
+            onDragEndRef.current(
+              banner.id,
+              0,
+            );
+          },
+          onPanResponderTerminationRequest:
+            () => false,
+          onShouldBlockNativeResponder:
+            () => true,
+        }),
+      [
+        banner.id,
+        isDisabled,
+        translateY,
+      ],
+    );
+
+  return (
+    <Animated.View
+      onLayout={event =>
+        onLayout(
+          banner.id,
+          event,
+        )
+      }
+      style={[
+        styles.bannerCard,
+        isCompact &&
+        styles.bannerCardCompact,
+        !banner.isActive &&
+        styles.bannerCardInactive,
+        isDragging &&
+        styles.bannerCardDragging,
+        {
+          transform: [
+            {
+              translateY,
+            },
+          ],
+          zIndex:
+            isDragging
+              ? 20
+              : 0,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.bannerMain,
+          isCompact &&
+          styles.bannerMainCompact,
+        ]}
+      >
+        <View
+          style={
+            styles.reorderControls
+          }
+        >
+          <View
+            {...panResponder.panHandlers}
+            style={[
+              styles.dragHandleButton,
+              isDragging &&
+              styles.dragHandleButtonActive,
+            ]}
+          >
+            <Text
+              style={
+                styles.dragHandle
+              }
+            >
+              ≡
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.thumbnailBox,
+            isCompact &&
+            styles.thumbnailBoxCompact,
+          ]}
+        >
+          <Image
+            source={{
+              uri:
+                banner.imageUrl,
+            }}
+            style={
+              styles.thumbnail
+            }
+            resizeMode="cover"
+          />
+        </View>
+
+        <View
+          style={
+            styles.bannerInfo
+          }
+        >
+          <View
+            style={
+              styles.bannerTitleRow
+            }
+          >
+            <Text
+              style={
+                styles.bannerTitle
+              }
+              numberOfLines={
+                isCompact
+                  ? 2
+                  : 1
+              }
+            >
+              {banner.title ||
+                'Banner sin título'}
+            </Text>
+
+            <View
+              style={[
+                styles.statusBadge,
+                banner.isActive
+                  ? styles.statusBadgeActive
+                  : styles.statusBadgeInactive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  banner.isActive
+                    ? styles.statusTextActive
+                    : styles.statusTextInactive,
+                ]}
+              >
+                {banner.isActive
+                  ? 'ACTIVO'
+                  : 'INACTIVO'}
+              </Text>
+            </View>
+          </View>
+
+          {!!banner.description && (
+            <Text
+              style={
+                styles.descriptionText
+              }
+              numberOfLines={2}
+            >
+              {banner.description}
+            </Text>
+          )}
+
+          {!!banner.targetUrl && (
+            <Text
+              style={
+                styles.linkText
+              }
+              numberOfLines={1}
+            >
+              🔗 {banner.targetUrl}
+            </Text>
+          )}
+
+          <Text
+            style={
+              styles.metaText
+            }
+          >
+            {getScheduleSummary(
+              banner,
+            )}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.actions,
+          isCompact &&
+          styles.actionsCompact,
+        ]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.editButton,
+            isCompact &&
+            styles.actionButtonCompact,
+          ]}
+          disabled={
+            isDisabled
+          }
+          onPress={() =>
+            onEdit(banner)
+          }
+        >
+          <Text
+            style={
+              styles.editButtonText
+            }
+          >
+            Editar
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.stateButton,
+            banner.isActive
+              ? styles.deactivateButton
+              : styles.activateButton,
+            isCompact &&
+            styles.actionButtonCompact,
+          ]}
+          disabled={
+            isDisabled
+          }
+          onPress={() =>
+            onToggle(banner)
+          }
+        >
+          <Text
+            style={
+              styles.actionText
+            }
+          >
+            {banner.isActive
+              ? 'Desactivar'
+              : 'Activar'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.deleteButton,
+            isCompact &&
+            styles.actionButtonCompact,
+          ]}
+          disabled={
+            isDisabled
+          }
+          onPress={() =>
+            onDelete(banner)
+          }
+        >
+          <Text
+            style={
+              styles.actionText
+            }
+          >
+            Eliminar
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
 
 export function AdminWebBanners() {
   const {
@@ -120,6 +494,31 @@ export function AdminWebBanners() {
     isProcessing,
     setIsProcessing,
   ] = useState(false);
+
+  const [
+    isReordering,
+    setIsReordering,
+  ] = useState(false);
+
+  const [
+    draggedBannerId,
+    setDraggedBannerId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const {
+    width: windowWidth,
+  } = useWindowDimensions();
+
+  const isCompact =
+    windowWidth < 720;
+
+  const bannerLayouts =
+    useRef<Record<
+      string,
+      BannerCardLayout
+    >>({});
 
   const [
     errorMessage,
@@ -175,23 +574,9 @@ export function AdminWebBanners() {
 
   function openCreateModal():
     void {
-    const nextOrder =
-      banners.length > 0
-        ? Math.max(
-          ...banners.map(
-            banner =>
-              banner.sortOrder,
-          ),
-        ) + 1
-        : 1;
-
     setSelectedBanner(null);
     setPendingImage(null);
-    setForm({
-      ...INITIAL_FORM,
-      sortOrder:
-        String(nextOrder),
-    });
+    setForm(INITIAL_FORM);
     setDatePickerField(null);
     setIsModalVisible(true);
   }
@@ -210,8 +595,8 @@ export function AdminWebBanners() {
         banner.title ?? '',
       description:
         banner.description ?? '',
-      sortOrder:
-        String(banner.sortOrder),
+      targetUrl:
+        banner.targetUrl ?? '',
       startsAt:
         formatDateInput(
           banner.startsAt,
@@ -391,20 +776,20 @@ export function AdminWebBanners() {
       return;
     }
 
-    const sortOrder =
-      Number(
-        form.sortOrder,
+    const targetUrl =
+      normalizeTargetUrl(
+        form.targetUrl,
       );
 
     if (
-      !Number.isInteger(
-        sortOrder,
-      ) ||
-      sortOrder < 0
+      targetUrl &&
+      !isValidTargetUrl(
+        targetUrl,
+      )
     ) {
       Alert.alert(
-        'Orden inválido',
-        'El orden debe ser un número entero igual o mayor a 0.',
+        'Enlace inválido',
+        'Usa una ruta interna que empiece con / o una URL completa http:// o https://.',
       );
 
       return;
@@ -502,7 +887,19 @@ export function AdminWebBanners() {
           form.description.trim() || null,
         imageUrl,
         imagePath,
-        sortOrder,
+        targetUrl,
+        sortOrder:
+          selectedBanner?.sortOrder ??
+          (
+            banners.length > 0
+              ? Math.max(
+                ...banners.map(
+                  banner =>
+                    banner.sortOrder,
+                ),
+              ) + 1
+              : 0
+          ),
         isActive:
           form.isActive,
         startsAt,
@@ -577,6 +974,169 @@ export function AdminWebBanners() {
     } finally {
       setIsProcessing(false);
     }
+  }
+
+  async function persistBannerOrder(
+    nextBanners: WebBanner[],
+  ): Promise<void> {
+    const normalized =
+      nextBanners.map(
+        (banner, index) => ({
+          ...banner,
+          sortOrder: index,
+        }),
+      );
+
+    const previous = banners;
+
+    setBanners(normalized);
+
+    try {
+      setIsReordering(true);
+
+      await reorderWebBanners(
+        normalized.map(
+          banner => banner.id,
+        ),
+      );
+    } catch (error) {
+      setBanners(previous);
+
+      Alert.alert(
+        'No se pudo reordenar',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el nuevo orden de la publicidad.',
+      );
+    } finally {
+      setIsReordering(false);
+      setDraggedBannerId(null);
+    }
+  }
+
+  function handleBannerLayout(
+    bannerId: string,
+    event: LayoutChangeEvent,
+  ): void {
+    const {
+      y,
+      height,
+    } = event.nativeEvent.layout;
+
+    bannerLayouts.current[
+      bannerId
+    ] = {
+      y,
+      height,
+    };
+  }
+
+  function handleDragStart(
+    bannerId: string,
+  ): void {
+    if (
+      isProcessing ||
+      isReordering
+    ) {
+      return;
+    }
+
+    setDraggedBannerId(
+      bannerId,
+    );
+  }
+
+  function handleDragEnd(
+    bannerId: string,
+    offsetY: number,
+  ): void {
+    setDraggedBannerId(null);
+
+    if (
+      isProcessing ||
+      isReordering ||
+      Math.abs(offsetY) < 8
+    ) {
+      return;
+    }
+
+    const draggedLayout =
+      bannerLayouts.current[
+        bannerId
+      ];
+
+    if (!draggedLayout) {
+      return;
+    }
+
+    const draggedCenter =
+      draggedLayout.y +
+      draggedLayout.height / 2 +
+      offsetY;
+
+    const remainingBanners =
+      banners.filter(
+        banner =>
+          banner.id !== bannerId,
+      );
+
+    let insertionIndex = 0;
+
+    remainingBanners.forEach(
+      banner => {
+        const layout =
+          bannerLayouts.current[
+            banner.id
+          ];
+
+        if (!layout) {
+          return;
+        }
+
+        const center =
+          layout.y +
+          layout.height / 2;
+
+        if (
+          draggedCenter > center
+        ) {
+          insertionIndex += 1;
+        }
+      },
+    );
+
+    const currentIndex =
+      banners.findIndex(
+        banner =>
+          banner.id === bannerId,
+      );
+
+    if (
+      currentIndex < 0 ||
+      insertionIndex === currentIndex
+    ) {
+      return;
+    }
+
+    const nextBanners = [
+      ...banners,
+    ];
+
+    const [movedBanner] =
+      nextBanners.splice(
+        currentIndex,
+        1,
+      );
+
+    nextBanners.splice(
+      insertionIndex,
+      0,
+      movedBanner,
+    );
+
+    void persistBannerOrder(
+      nextBanners,
+    );
   }
 
   function confirmToggle(
@@ -722,6 +1282,24 @@ export function AdminWebBanners() {
         banner.id,
       );
 
+      const remainingBannerIds =
+        banners
+          .filter(
+            currentBanner =>
+              currentBanner.id !==
+              banner.id,
+          )
+          .map(
+            currentBanner =>
+              currentBanner.id,
+          );
+
+      if (remainingBannerIds.length > 0) {
+        await reorderWebBanners(
+          remainingBannerIds,
+        );
+      }
+
       try {
         await deleteWebBannerImage(
           banner.imagePath,
@@ -841,7 +1419,7 @@ export function AdminWebBanners() {
               styles.subtitle
             }
           >
-            Crea banners para la página pública. Puedes programar su vigencia, ordenarlos y activarlos o desactivarlos.
+            Crea banners para la página pública. Arrástralos para cambiar su orden y agrega un enlace opcional al destino de la publicidad.
           </Text>
         </View>
 
@@ -869,6 +1447,9 @@ export function AdminWebBanners() {
       <ScrollView
         contentContainerStyle={
           styles.listContent
+        }
+        scrollEnabled={
+          !draggedBannerId
         }
         showsVerticalScrollIndicator={
           false
@@ -907,173 +1488,39 @@ export function AdminWebBanners() {
         ) : (
           banners.map(
             banner => (
-              <View
-                key={
+              <SortableBannerCard
+                key={banner.id}
+                banner={banner}
+                isCompact={
+                  isCompact
+                }
+                isDisabled={
+                  isProcessing ||
+                  isReordering
+                }
+                isDragging={
+                  draggedBannerId ===
                   banner.id
                 }
-                style={[
-                  styles.bannerCard,
-                  !banner.isActive &&
-                  styles.bannerCardInactive,
-                ]}
-              >
-                <View
-                  style={
-                    styles.thumbnailBox
-                  }
-                >
-                  <Image
-                    source={{
-                      uri:
-                        banner.imageUrl,
-                    }}
-                    style={
-                      styles.thumbnail
-                    }
-                    resizeMode="cover"
-                  />
-                </View>
-
-                <View
-                  style={
-                    styles.bannerInfo
-                  }
-                >
-                  <View
-                    style={
-                      styles.bannerTitleRow
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.bannerTitle
-                      }
-                      numberOfLines={1}
-                    >
-                      {banner.title ||
-                        'Banner sin título'}
-                    </Text>
-
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        banner.isActive
-                          ? styles.statusBadgeActive
-                          : styles.statusBadgeInactive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          banner.isActive
-                            ? styles.statusTextActive
-                            : styles.statusTextInactive,
-                        ]}
-                      >
-                        {banner.isActive
-                          ? 'ACTIVO'
-                          : 'INACTIVO'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {!!banner.description && (
-                    <Text
-                      style={
-                        styles.descriptionText
-                      }
-                      numberOfLines={2}
-                    >
-                      {banner.description}
-                    </Text>
-                  )}
-
-                  <Text
-                    style={
-                      styles.metaText
-                    }
-                  >
-                    Orden {banner.sortOrder} · {getScheduleSummary(banner)}
-                  </Text>
-                </View>
-
-                <View
-                  style={
-                    styles.actions
-                  }
-                >
-                  <TouchableOpacity
-                    style={
-                      styles.editButton
-                    }
-                    disabled={
-                      isProcessing
-                    }
-                    onPress={() =>
-                      openEditModal(
-                        banner,
-                      )
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.editButtonText
-                      }
-                    >
-                      Editar
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.stateButton,
-                      banner.isActive
-                        ? styles.deactivateButton
-                        : styles.activateButton,
-                    ]}
-                    disabled={
-                      isProcessing
-                    }
-                    onPress={() =>
-                      confirmToggle(
-                        banner,
-                      )
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.actionText
-                      }
-                    >
-                      {banner.isActive
-                        ? 'Desactivar'
-                        : 'Activar'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={
-                      styles.deleteButton
-                    }
-                    disabled={
-                      isProcessing
-                    }
-                    onPress={() =>
-                      confirmDelete(
-                        banner,
-                      )
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.actionText
-                      }
-                    >
-                      Eliminar
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+                onLayout={
+                  handleBannerLayout
+                }
+                onDragStart={
+                  handleDragStart
+                }
+                onDragEnd={
+                  handleDragEnd
+                }
+                onEdit={
+                  openEditModal
+                }
+                onToggle={
+                  confirmToggle
+                }
+                onDelete={
+                  confirmDelete
+                }
+              />
             ),
           )
         )}
@@ -1265,53 +1712,48 @@ export function AdminWebBanners() {
                 }
               />
 
-              <View
+              <Text
                 style={
-                  styles.row
+                  styles.inputLabel
                 }
               >
-                <View
-                  style={
-                    styles.rowField
-                  }
-                >
-                  <Text
-                    style={
-                      styles.inputLabel
-                    }
-                  >
-                    Orden
-                  </Text>
+                Enlace del banner
+              </Text>
 
-                  <TextInput
-                    value={
-                      form.sortOrder
-                    }
-                    onChangeText={
-                      value =>
-                        setForm(
-                          current => ({
-                            ...current,
-                            sortOrder:
-                              value.replace(
-                                /\D/g,
-                                '',
-                              ),
-                          }),
-                        )
-                    }
-                    style={
-                      styles.input
-                    }
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    placeholderTextColor="#777777"
-                    editable={
-                      !isProcessing
-                    }
-                  />
-                </View>
-              </View>
+              <TextInput
+                value={
+                  form.targetUrl
+                }
+                onChangeText={
+                  value =>
+                    setForm(
+                      current => ({
+                        ...current,
+                        targetUrl: value,
+                      }),
+                    )
+                }
+                style={
+                  styles.input
+                }
+                placeholder="Opcional: /recompensas o https://ejemplo.com"
+                placeholderTextColor="#777777"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                maxLength={2048}
+                editable={
+                  !isProcessing
+                }
+              />
+
+              <Text
+                style={
+                  styles.fieldHint
+                }
+              >
+                Si lo dejas vacío, el banner solo mostrará la imagen. Las rutas internas empiezan con / y los enlaces externos con http:// o https://.
+              </Text>
 
               <Text
                 style={
@@ -1748,6 +2190,39 @@ function formatDateLabel(
       year: 'numeric',
     },
   );
+}
+
+function normalizeTargetUrl(
+  value: string,
+): string | null {
+  const trimmed = value.trim();
+
+  return trimmed || null;
+}
+
+function isValidTargetUrl(
+  value: string,
+): boolean {
+  if (
+    value === '/' ||
+    (
+      value.startsWith('/') &&
+      !value.startsWith('//')
+    )
+  ) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(value);
+
+    return (
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:'
+    );
+  } catch {
+    return false;
+  }
 }
 
 function getScheduleSummary(

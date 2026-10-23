@@ -3,13 +3,18 @@ import { useBusiness } from '../../../context/BusinessContext';
 import React, {
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  LayoutChangeEvent,
   Modal,
+  PanResponder,
   ScrollView,
   Switch,
   Text,
@@ -24,6 +29,7 @@ import {
   getLoyaltyAdminConfig,
   LoyaltyAdminReward,
   saveLoyaltySettings,
+  reorderLoyaltyRewards,
   setLoyaltyRewardActive,
   updateLoyaltyReward,
 } from '../../../services/adminLoyaltyService';
@@ -43,7 +49,6 @@ interface RewardForm {
 
   requiredVisits: string;
 
-  position: string;
 
   isActive: boolean;
 }
@@ -58,10 +63,260 @@ const INITIAL_REWARD_FORM:
 
   requiredVisits: '',
 
-  position: '0',
 
   isActive: true,
 };
+
+
+interface RewardCardLayout {
+  y: number;
+  height: number;
+}
+
+interface SortableRewardCardProps {
+  reward: LoyaltyAdminReward;
+  isDisabled: boolean;
+  isDragging: boolean;
+  onLayout: (
+    rewardId: string,
+    event: LayoutChangeEvent,
+  ) => void;
+  onDragStart: (
+    rewardId: string,
+  ) => void;
+  onDragEnd: (
+    rewardId: string,
+    offsetY: number,
+  ) => void;
+  onToggle: (
+    reward: LoyaltyAdminReward,
+    value: boolean,
+  ) => void;
+  onEdit: (
+    reward: LoyaltyAdminReward,
+  ) => void;
+}
+
+function SortableRewardCard({
+  reward,
+  isDisabled,
+  isDragging,
+  onLayout,
+  onDragStart,
+  onDragEnd,
+  onToggle,
+  onEdit,
+}: SortableRewardCardProps) {
+  const translateY =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const onDragStartRef =
+    useRef(onDragStart);
+
+  const onDragEndRef =
+    useRef(onDragEnd);
+
+  onDragStartRef.current =
+    onDragStart;
+
+  onDragEndRef.current =
+    onDragEnd;
+
+  const panResponder =
+    useMemo(
+      () =>
+        PanResponder.create({
+          onStartShouldSetPanResponder:
+            () => !isDisabled,
+          onMoveShouldSetPanResponder:
+            () => !isDisabled,
+          onPanResponderGrant: () => {
+            if (isDisabled) {
+              return;
+            }
+
+            onDragStartRef.current(
+              reward.id,
+            );
+          },
+          onPanResponderMove: (
+            _event,
+            gestureState,
+          ) => {
+            if (isDisabled) {
+              return;
+            }
+
+            translateY.setValue(
+              gestureState.dy,
+            );
+          },
+          onPanResponderRelease: (
+            _event,
+            gestureState,
+          ) => {
+            translateY.setValue(0);
+
+            if (isDisabled) {
+              return;
+            }
+
+            onDragEndRef.current(
+              reward.id,
+              gestureState.dy,
+            );
+          },
+          onPanResponderTerminate: () => {
+            translateY.setValue(0);
+
+            onDragEndRef.current(
+              reward.id,
+              0,
+            );
+          },
+          onPanResponderTerminationRequest:
+            () => false,
+          onShouldBlockNativeResponder:
+            () => true,
+        }),
+      [
+        isDisabled,
+        reward.id,
+        translateY,
+      ],
+    );
+
+  return (
+    <Animated.View
+      onLayout={event =>
+        onLayout(
+          reward.id,
+          event,
+        )
+      }
+      style={[
+        styles.rewardCard,
+        isDragging &&
+        styles.rewardCardDragging,
+        {
+          transform: [
+            {
+              translateY,
+            },
+          ],
+          zIndex:
+            isDragging
+              ? 20
+              : 0,
+        },
+      ]}
+    >
+      <View
+        style={
+          styles.rewardDragColumn
+        }
+      >
+        <View
+          {...panResponder.panHandlers}
+          style={[
+            styles.dragHandleButton,
+            isDragging &&
+            styles.dragHandleButtonActive,
+          ]}
+        >
+          <Text
+            style={
+              styles.dragHandle
+            }
+          >
+            ≡
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={
+          styles.rewardInfo
+        }
+      >
+        <Text
+          style={
+            styles.rewardName
+          }
+        >
+          {reward.name}
+        </Text>
+
+        {reward.description ? (
+          <Text
+            style={
+              styles.rewardDescription
+            }
+          >
+            {reward.description}
+          </Text>
+        ) : null}
+
+        <Text
+          style={
+            styles.rewardVisits
+          }
+        >
+          {reward.requiredVisits}{' '}
+          visita
+          {reward.requiredVisits === 1
+            ? ''
+            : 's'}
+        </Text>
+      </View>
+
+      <View
+        style={
+          styles.rewardActions
+        }
+      >
+        <Switch
+          value={
+            reward.isActive
+          }
+          disabled={
+            isDisabled
+          }
+          onValueChange={value => {
+            onToggle(
+              reward,
+              value,
+            );
+          }}
+        />
+
+        <TouchableOpacity
+          style={
+            styles.editButton
+          }
+          disabled={
+            isDisabled
+          }
+          onPress={() =>
+            onEdit(
+              reward,
+            )
+          }
+        >
+          <Text
+            style={
+              styles.editButtonText
+            }
+          >
+            EDITAR
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
 
 export function AdminLoyalty() {
   const { theme: businessTheme } = useBusiness();
@@ -108,6 +363,23 @@ export function AdminLoyalty() {
     products,
     setProducts,
   ] = useState<Product[]>([]);
+
+  const [
+    isReordering,
+    setIsReordering,
+  ] = useState(false);
+
+  const [
+    draggedRewardId,
+    setDraggedRewardId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const rewardLayouts =
+    useRef<Record<string, RewardCardLayout>>(
+      {},
+    );
 
   const [
     isEnabled,
@@ -346,10 +618,6 @@ export function AdminLoyalty() {
 
       setRewardForm({
         ...INITIAL_REWARD_FORM,
-        position:
-          String(
-            rewards.length,
-          ),
       });
 
       setModalVisible(
@@ -382,11 +650,6 @@ export function AdminLoyalty() {
             reward.requiredVisits,
           ),
 
-        position:
-          String(
-            reward.position,
-          ),
-
         isActive:
           reward.isActive,
       });
@@ -395,6 +658,40 @@ export function AdminLoyalty() {
         true,
       );
     };
+
+  const visitsConflict =
+    useMemo(
+      () => {
+        const requiredVisits =
+          Number(
+            rewardForm.requiredVisits,
+          );
+
+        if (
+          !Number.isInteger(
+            requiredVisits,
+          ) ||
+          requiredVisits <= 0
+        ) {
+          return null;
+        }
+
+        return (
+          rewards.find(
+            reward =>
+              reward.id !==
+              selectedReward?.id &&
+              reward.requiredVisits ===
+              requiredVisits,
+          ) ?? null
+        );
+      },
+      [
+        rewardForm.requiredVisits,
+        rewards,
+        selectedReward?.id,
+      ],
+    );
 
   const handleSaveReward =
     async (): Promise<void> => {
@@ -410,8 +707,16 @@ export function AdminLoyalty() {
         );
 
       const position =
-        Number(
-          rewardForm.position,
+        selectedReward?.position ??
+        (
+          rewards.length > 0
+            ? Math.max(
+              ...rewards.map(
+                reward =>
+                  reward.position,
+              ),
+            ) + 1
+            : 0
         );
 
       if (!selectedProduct) {
@@ -437,15 +742,10 @@ export function AdminLoyalty() {
         return;
       }
 
-      if (
-        !Number.isInteger(
-          position,
-        ) ||
-        position < 0
-      ) {
+      if (visitsConflict) {
         Alert.alert(
-          'Dato inválido',
-          'La posición no es válida.',
+          'Visitas ya asignadas',
+          `${requiredVisits} visita${requiredVisits === 1 ? '' : 's'} ya ${requiredVisits === 1 ? 'está ligada' : 'están ligadas'} al premio "${visitsConflict.name}". Elige otro número de visitas.`,
         );
 
         return;
@@ -539,6 +839,176 @@ export function AdminLoyalty() {
       }
     };
 
+  async function persistRewardOrder(
+    nextRewards: LoyaltyAdminReward[],
+  ): Promise<void> {
+    const previous = rewards;
+    const originalVisits =
+      rewards.map(
+        reward =>
+          reward.requiredVisits,
+      );
+
+    const normalized =
+      nextRewards.map(
+        (reward, index) => ({
+          ...reward,
+          position: index,
+          requiredVisits:
+            originalVisits[index] ??
+            reward.requiredVisits,
+        }),
+      );
+
+    setRewards(normalized);
+
+    try {
+      setIsReordering(true);
+
+      await reorderLoyaltyRewards(
+        normalized.map(
+          reward => reward.id,
+        ),
+      );
+    } catch (error) {
+      setRewards(previous);
+
+      Alert.alert(
+        'No se pudo reordenar',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el nuevo orden de los premios.',
+      );
+    } finally {
+      setIsReordering(false);
+      setDraggedRewardId(null);
+    }
+  }
+
+  function handleRewardLayout(
+    rewardId: string,
+    event: LayoutChangeEvent,
+  ): void {
+    const {
+      y,
+      height,
+    } = event.nativeEvent.layout;
+
+    rewardLayouts.current[
+      rewardId
+    ] = {
+      y,
+      height,
+    };
+  }
+
+  function handleDragStart(
+    rewardId: string,
+  ): void {
+    if (
+      isProcessing ||
+      isReordering
+    ) {
+      return;
+    }
+
+    setDraggedRewardId(
+      rewardId,
+    );
+  }
+
+  function handleDragEnd(
+    rewardId: string,
+    offsetY: number,
+  ): void {
+    setDraggedRewardId(null);
+
+    if (
+      isProcessing ||
+      isReordering ||
+      Math.abs(offsetY) < 8
+    ) {
+      return;
+    }
+
+    const draggedLayout =
+      rewardLayouts.current[
+        rewardId
+      ];
+
+    if (!draggedLayout) {
+      return;
+    }
+
+    const draggedCenter =
+      draggedLayout.y +
+      draggedLayout.height / 2 +
+      offsetY;
+
+    const remainingRewards =
+      rewards.filter(
+        reward =>
+          reward.id !== rewardId,
+      );
+
+    let insertionIndex = 0;
+
+    remainingRewards.forEach(
+      reward => {
+        const layout =
+          rewardLayouts.current[
+            reward.id
+          ];
+
+        if (!layout) {
+          return;
+        }
+
+        const center =
+          layout.y +
+          layout.height / 2;
+
+        if (
+          draggedCenter > center
+        ) {
+          insertionIndex += 1;
+        }
+      },
+    );
+
+    const currentIndex =
+      rewards.findIndex(
+        reward =>
+          reward.id === rewardId,
+      );
+
+    if (
+      currentIndex < 0 ||
+      insertionIndex === currentIndex
+    ) {
+      return;
+    }
+
+    const nextRewards =
+      [...rewards];
+
+    const [draggedReward] =
+      nextRewards.splice(
+        currentIndex,
+        1,
+      );
+
+    nextRewards.splice(
+      insertionIndex,
+      0,
+      draggedReward,
+    );
+
+    void persistRewardOrder(
+      nextRewards,
+    );
+  }
+
   if (
     isLoading
   ) {
@@ -564,6 +1034,9 @@ export function AdminLoyalty() {
         }
         contentContainerStyle={
           styles.contentContainer
+        }
+        scrollEnabled={
+          !draggedRewardId
         }
       >
         <View
@@ -759,9 +1232,11 @@ export function AdminLoyalty() {
         </View>
 
         <View
-          style={
-            styles.rewardsHeader
-          }
+          style={[
+            styles.rewardsHeader,
+            isPhone &&
+            styles.rewardsHeaderPhone,
+          ]}
         >
           <View>
             <Text
@@ -777,14 +1252,16 @@ export function AdminLoyalty() {
                 styles.sectionSubtitle
               }
             >
-              Define cuántas visitas necesita el cliente para cada recompensa.
+              Arrastra los premios para cambiar su orden. Las visitas se intercambian con la posición.
             </Text>
           </View>
 
           <TouchableOpacity
-            style={
-              styles.addButton
-            }
+            style={[
+              styles.addButton,
+              isPhone &&
+              styles.addButtonPhone,
+            ]}
             onPress={
               openCreateModal
             }
@@ -819,103 +1296,43 @@ export function AdminLoyalty() {
             )
             : rewards.map(
               reward => (
-                <View
+                <SortableRewardCard
                   key={
                     reward.id
                   }
-                  style={
-                    styles.rewardCard
+                  reward={
+                    reward
                   }
-                >
-                  <View
-                    style={
-                      styles.rewardInfo
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.rewardName
-                      }
-                    >
-                      {
-                        reward.name
-                      }
-                    </Text>
-
-                    {
-                      reward.description
-                        ? (
-                          <Text
-                            style={
-                              styles.rewardDescription
-                            }
-                          >
-                            {
-                              reward.description
-                            }
-                          </Text>
-                        )
-                        : null
-                    }
-
-                    <Text
-                      style={
-                        styles.rewardVisits
-                      }
-                    >
-                      {
-                        reward.requiredVisits
-                      }{' '}
-                      visita
-                      {
-                        reward.requiredVisits ===
-                        1
-                          ? ''
-                          : 's'
-                      }
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.rewardActions
-                    }
-                  >
-                    <Switch
-                      value={
-                        reward.isActive
-                      }
-                      disabled={
-                        isProcessing
-                      }
-                      onValueChange={value => {
-                        void handleToggleReward(
-                          reward,
-                          value,
-                        );
-                      }}
-                    />
-
-                    <TouchableOpacity
-                      style={
-                        styles.editButton
-                      }
-                      onPress={() =>
-                        openEditModal(
-                          reward,
-                        )
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.editButtonText
-                        }
-                      >
-                        EDITAR
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                  isDisabled={
+                    isProcessing ||
+                    isReordering
+                  }
+                  isDragging={
+                    draggedRewardId ===
+                    reward.id
+                  }
+                  onLayout={
+                    handleRewardLayout
+                  }
+                  onDragStart={
+                    handleDragStart
+                  }
+                  onDragEnd={
+                    handleDragEnd
+                  }
+                  onToggle={(
+                    currentReward,
+                    value,
+                  ) => {
+                    void handleToggleReward(
+                      currentReward,
+                      value,
+                    );
+                  }}
+                  onEdit={
+                    openEditModal
+                  }
+                />
               ),
             )
         }
@@ -1078,32 +1495,21 @@ export function AdminLoyalty() {
                 }
               />
 
-              <Text
-                style={
-                  styles.label
-                }
-              >
-                Orden
-              </Text>
-
-              <TextInput
-                style={
-                  styles.input
-                }
-                keyboardType="numeric"
-                value={
-                  rewardForm.position
-                }
-                onChangeText={value =>
-                  setRewardForm(
-                    current => ({
-                      ...current,
-                      position:
-                        value,
-                    }),
-                  )
-                }
-              />
+              {visitsConflict ? (
+                <View
+                  style={
+                    styles.warningBox
+                  }
+                >
+                  <Text
+                    style={
+                      styles.warningText
+                    }
+                  >
+                    ⚠ {rewardForm.requiredVisits} visita{rewardForm.requiredVisits === '1' ? '' : 's'} ya {rewardForm.requiredVisits === '1' ? 'está ligada' : 'están ligadas'} a "{visitsConflict.name}". Elige otro número.
+                  </Text>
+                </View>
+              ) : null}
 
               <View
                 style={
@@ -1166,7 +1572,8 @@ export function AdminLoyalty() {
                     styles.primaryButton
                   }
                   disabled={
-                    isProcessing
+                    isProcessing ||
+                    !!visitsConflict
                   }
                   onPress={() => {
                     void handleSaveReward();
