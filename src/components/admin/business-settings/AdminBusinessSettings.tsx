@@ -1,5 +1,3 @@
-import { DEFAULT_BRAND_PRIMARY } from '../../../theme/brandStyles';
-
 import React, {
   useEffect,
   useState,
@@ -39,15 +37,8 @@ interface BusinessSettingsForm {
   currencyCode: string;
   phone: string;
   address: string;
-  logoUrl: string;
   ticketFooter: string;
-  primaryColor: string;
-  secondaryColor: string;
   timezone: string;
-  loyaltyEnabled: boolean;
-  deliveryEnabled: boolean;
-  promotionsEnabled: boolean;
-  kitchenEnabled: boolean;
   facebookUrl: string;
   instagramUrl: string;
   tiktokUrl: string;
@@ -63,15 +54,8 @@ const EMPTY_FORM:
     DEFAULT_CURRENCY_CODE,
   phone: '',
   address: '',
-  logoUrl: '',
   ticketFooter: 'Gracias por tu compra',
-  primaryColor: DEFAULT_BRAND_PRIMARY,
-  secondaryColor: '#000000',
   timezone: 'America/Mexico_City',
-  loyaltyEnabled: true,
-  deliveryEnabled: true,
-  promotionsEnabled: true,
-  kitchenEnabled: true,
   facebookUrl: '',
   instagramUrl: '',
   tiktokUrl: '',
@@ -129,32 +113,11 @@ export function AdminBusinessSettings() {
       address:
         business.identity.address,
 
-      logoUrl:
-        business.identity.logoUrl,
-
-      primaryColor:
-        business.identity.primaryColor,
-
-      secondaryColor:
-        business.identity.secondaryColor,
-
       ticketFooter:
         business.ticketSettings.footerText,
 
       timezone:
         business.timezone,
-
-      loyaltyEnabled:
-        business.features.loyaltyEnabled,
-
-      deliveryEnabled:
-        business.features.deliveryEnabled,
-
-      promotionsEnabled:
-        business.features.promotionsEnabled,
-
-      kitchenEnabled:
-        business.features.kitchenEnabled,
 
       facebookUrl:
         business.socialLinks.facebookUrl,
@@ -207,29 +170,6 @@ export function AdminBusinessSettings() {
 
             address:
               form.address,
-
-            logoUrl:
-              form.logoUrl,
-
-            primaryColor:
-              form.primaryColor,
-
-            secondaryColor:
-              form.secondaryColor,
-          },
-
-          features: {
-            loyaltyEnabled:
-              form.loyaltyEnabled,
-
-            deliveryEnabled:
-              form.deliveryEnabled,
-
-            promotionsEnabled:
-              form.promotionsEnabled,
-
-            kitchenEnabled:
-              form.kitchenEnabled,
           },
 
           timezone:
@@ -344,7 +284,7 @@ export function AdminBusinessSettings() {
             },
           ]}
         >
-          Estos datos serán la fuente de verdad para la identidad, apariencia y funciones de Dorian POS.
+          Administra los datos operativos y de contacto de tu negocio.
         </Text>
       </View>
 
@@ -406,120 +346,6 @@ export function AdminBusinessSettings() {
           maxLength={180}
           theme={theme}
         />
-
-        <Field
-          label="URL del logo"
-          value={form.logoUrl}
-          onChangeText={value =>
-            updateField(
-              'logoUrl',
-              value,
-            )
-          }
-          placeholder="https://..."
-          autoCapitalize="none"
-          theme={theme}
-        />
-      </SettingsCard>
-
-      <SettingsCard
-        title="Apariencia"
-        subtitle="Colores de identidad que iremos propagando por toda la aplicación."
-        theme={theme}
-      >
-        <View
-          style={[
-            styles.twoColumnRow,
-            isPhone &&
-              styles.twoColumnRowPhone,
-          ]}
-        >
-          <View
-            style={
-              styles.flexField
-            }
-          >
-            <Field
-              label="Color principal"
-              value={form.primaryColor}
-              onChangeText={value =>
-                updateField(
-                  'primaryColor',
-                  value,
-                )
-              }
-              placeholder="#FFBF00"
-              autoCapitalize="characters"
-              theme={theme}
-            />
-          </View>
-
-          <View
-            style={
-              styles.flexField
-            }
-          >
-            <Field
-              label="Color secundario"
-              value={form.secondaryColor}
-              onChangeText={value =>
-                updateField(
-                  'secondaryColor',
-                  value,
-                )
-              }
-              placeholder="#000000"
-              autoCapitalize="characters"
-              theme={theme}
-            />
-          </View>
-        </View>
-
-        <View
-          style={
-            styles.colorPreviewRow
-          }
-        >
-          <View
-            style={[
-              styles.colorPreview,
-              {
-                backgroundColor:
-                  /^#[0-9A-Fa-f]{6}$/.test(
-                    form.primaryColor,
-                  )
-                    ? form.primaryColor
-                    : theme.surfaceAlt,
-              },
-            ]}
-          />
-
-          <View
-            style={[
-              styles.colorPreview,
-              {
-                backgroundColor:
-                  /^#[0-9A-Fa-f]{6}$/.test(
-                    form.secondaryColor,
-                  )
-                    ? form.secondaryColor
-                    : theme.surfaceAlt,
-              },
-            ]}
-          />
-
-          <Text
-            style={[
-              styles.previewText,
-              {
-                color:
-                  theme.textMuted,
-              },
-            ]}
-          >
-            Vista previa de los colores de marca
-          </Text>
-        </View>
       </SettingsCard>
 
       <SettingsCard
@@ -658,65 +484,6 @@ export function AdminBusinessSettings() {
           autoCapitalize="none"
           maxLength={220}
           theme={theme}
-        />
-      </SettingsCard>
-
-      <SettingsCard
-        title="Funciones"
-        subtitle="Activa o desactiva módulos opcionales para este negocio."
-        theme={theme}
-      >
-        <FeatureSwitch
-          title="Cocina"
-          description="Flujo de preparación y tablero de cocina."
-          value={form.kitchenEnabled}
-          onValueChange={value =>
-            updateField(
-              'kitchenEnabled',
-              value,
-            )
-          }
-          theme={theme}
-        />
-
-        <FeatureSwitch
-          title="Entregas"
-          description="Pedidos a domicilio, zonas y reparto."
-          value={form.deliveryEnabled}
-          onValueChange={value =>
-            updateField(
-              'deliveryEnabled',
-              value,
-            )
-          }
-          theme={theme}
-        />
-
-        <FeatureSwitch
-          title="Recompensas"
-          description="Programa de lealtad y recompensas."
-          value={form.loyaltyEnabled}
-          onValueChange={value =>
-            updateField(
-              'loyaltyEnabled',
-              value,
-            )
-          }
-          theme={theme}
-        />
-
-        <FeatureSwitch
-          title="Promociones"
-          description="Módulo de promociones del negocio."
-          value={form.promotionsEnabled}
-          onValueChange={value =>
-            updateField(
-              'promotionsEnabled',
-              value,
-            )
-          }
-          theme={theme}
-          isLast
         />
       </SettingsCard>
 

@@ -231,7 +231,7 @@ const createStyles = (
     },
 
     salesList: {
-      paddingBottom: 24,
+      paddingBottom: 40,
     },
 
     saleCard: {

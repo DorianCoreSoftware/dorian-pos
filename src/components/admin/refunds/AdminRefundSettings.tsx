@@ -477,35 +477,34 @@ export function AdminRefundSettings() {
           activeOpacity={0.85}
           style={{
             marginTop: 24,
-            alignSelf:
-              'flex-start',
-            minWidth: 180,
+            minHeight: 48,
             paddingHorizontal:
-              22,
-            paddingVertical:
-              13,
-            borderRadius: 11,
+              18,
+            borderRadius: 9,
             alignItems:
+              'center',
+            justifyContent:
               'center',
             backgroundColor:
               theme.primary,
             opacity:
               isSaving
-                ? 0.65
+                ? 0.55
                 : 1,
           }}
         >
           <Text
             style={{
-              color: '#FFFFFF',
+              color:
+                theme.onPrimary,
               fontWeight:
                 '900',
               fontSize: 13,
             }}
           >
             {isSaving
-              ? 'GUARDANDO...'
-              : 'GUARDAR POLÍTICA'}
+              ? 'Guardando...'
+              : 'Guardar política'}
           </Text>
         </TouchableOpacity>
       </View>

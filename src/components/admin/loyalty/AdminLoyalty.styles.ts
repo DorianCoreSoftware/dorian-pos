@@ -140,6 +140,11 @@ const createStyles = (
       marginBottom: 15,
     },
 
+    rewardsHeaderPhone: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
+
     sectionTitle: {
       color: '#FFFFFF',
       fontSize: 20,
@@ -161,6 +166,11 @@ const createStyles = (
       justifyContent: 'center',
     },
 
+    addButtonPhone: {
+      width: '100%',
+      marginTop: 4,
+    },
+
     addButtonText: {
       color: '#111111',
       fontWeight: '900',
@@ -180,8 +190,42 @@ const createStyles = (
       gap: 14,
     },
 
+    rewardCardDragging: {
+      opacity: 0.92,
+      borderColor: primaryColor,
+    },
+
+    rewardDragColumn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    dragHandleButton: {
+      width: 44,
+      minHeight: 54,
+      borderWidth: 1,
+      borderColor: '#454545',
+      borderRadius: 9,
+      backgroundColor: '#232323',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    dragHandleButtonActive: {
+      borderColor: primaryColor,
+      backgroundColor: '#2B2718',
+    },
+
+    dragHandle: {
+      color: primaryColor,
+      fontSize: 24,
+      fontWeight: '900',
+      lineHeight: 26,
+    },
+
     rewardInfo: {
       flex: 1,
+      minWidth: 0,
     },
 
     rewardName: {
@@ -277,6 +321,23 @@ const createStyles = (
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 16,
+    },
+
+    warningBox: {
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: '#D79B24',
+      borderRadius: 8,
+      backgroundColor: '#2B2415',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+
+    warningText: {
+      color: '#FFD36A',
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 18,
     },
 
     cancelButtonText: {

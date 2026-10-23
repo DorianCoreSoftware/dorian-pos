@@ -366,7 +366,17 @@ const createStyles = (
 
 
 
+        modifierList: {
+
+            flex: 1,
+
+        },
+
+
+
         listContent: {
+
+            flexGrow: 1,
 
             paddingBottom: 30,
 

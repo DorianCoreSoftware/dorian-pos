@@ -154,6 +154,62 @@ export default function WebBannerCarousel({
     );
   }
 
+  function openBannerTarget():
+    void {
+    const targetUrl =
+      activeBanner.targetUrl
+        ?.trim();
+
+    if (
+      !targetUrl ||
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+
+    if (
+      targetUrl === '/' ||
+      (
+        targetUrl.startsWith('/') &&
+        !targetUrl.startsWith('//')
+      )
+    ) {
+      window.location.assign(
+        targetUrl,
+      );
+      return;
+    }
+
+    try {
+      const target =
+        new URL(
+          targetUrl,
+          window.location.origin,
+        );
+
+      if (
+        target.origin ===
+        window.location.origin
+      ) {
+        window.location.assign(
+          target.href,
+        );
+        return;
+      }
+
+      window.open(
+        target.href,
+        '_blank',
+        'noopener,noreferrer',
+      );
+    } catch {
+      console.warn(
+        'URL inválida en banner:',
+        targetUrl,
+      );
+    }
+  }
+
   return (
     <View
       style={
@@ -169,44 +225,66 @@ export default function WebBannerCarousel({
           },
         ]}
       >
-        <Image
-          source={{
-            uri:
-              activeBanner.imageUrl,
-          }}
-          style={
-            styles.image
+        <Pressable
+          accessibilityRole={
+            activeBanner.targetUrl
+              ? 'link'
+              : undefined
           }
-          resizeMode="cover"
-        />
-
-        {hasOverlayText && (
-          <View
+          accessibilityLabel={
+            activeBanner.targetUrl
+              ? `Abrir ${activeBanner.title || 'publicidad'}`
+              : undefined
+          }
+          disabled={
+            !activeBanner.targetUrl
+          }
+          onPress={
+            openBannerTarget
+          }
+          style={
+            styles.bannerLink
+          }
+        >
+          <Image
+            source={{
+              uri:
+                activeBanner.imageUrl,
+            }}
             style={
-              styles.overlay
+              styles.image
             }
-          >
-            {!!activeBanner.title && (
-              <Text
-                style={
-                  styles.title
-                }
-              >
-                {activeBanner.title}
-              </Text>
-            )}
+            resizeMode="cover"
+          />
 
-            {!!activeBanner.description && (
-              <Text
-                style={
-                  styles.description
-                }
-              >
-                {activeBanner.description}
-              </Text>
-            )}
-          </View>
-        )}
+          {hasOverlayText && (
+            <View
+              style={
+                styles.overlay
+              }
+            >
+              {!!activeBanner.title && (
+                <Text
+                  style={
+                    styles.title
+                  }
+                >
+                  {activeBanner.title}
+                </Text>
+              )}
+
+              {!!activeBanner.description && (
+                <Text
+                  style={
+                    styles.description
+                  }
+                >
+                  {activeBanner.description}
+                </Text>
+              )}
+            </View>
+          )}
+        </Pressable>
 
         {banners.length > 1 && (
           <>
