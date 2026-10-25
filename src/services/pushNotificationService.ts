@@ -22,6 +22,9 @@ const WEB_ORDERS_CHANNEL_ID =
 const DELIVERY_ORDERS_CHANNEL_ID =
   'delivery-orders';
 
+const EVENT_REQUESTS_CHANNEL_ID =
+  'event-requests';
+
 type PushDeviceType =
   | 'pos'
   | 'driver';
@@ -143,7 +146,49 @@ async function configureAndroidNotificationChannels():
             .PUBLIC,
       },
     );
+
+  /*
+   * Solicitudes de eventos para POS.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      EVENT_REQUESTS_CHANNEL_ID,
+      {
+        name:
+          'Eventos',
+
+        description:
+          'Avisos de nuevas solicitudes de eventos recibidas desde la web.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          300,
+          200,
+          300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
 }
+
 
 /*
  * ============================================================
@@ -505,41 +550,79 @@ export function isDeliveryReadyNotification(
   );
 }
 
+
+/*
+ * ============================================================
+ * NOTIFICACIÓN DE NUEVA SOLICITUD DE EVENTO
+ * ============================================================
+ */
+export interface EventRequestNotificationData {
+  type: 'new_event_request';
+  requestId?: string;
+  folio?: number;
+}
+
+export function isEventRequestNotification(
+  data: unknown,
+): data is EventRequestNotificationData {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  const notificationData = data as {
+    type?: unknown;
+    requestId?: unknown;
+    folio?: unknown;
+  };
+
+  return notificationData.type === 'new_event_request';
+}
+
 /*
  * ============================================================
  * LISTENER POS
  * ============================================================
  */
 export function listenToPushNotificationResponses(
-  onWebOrderPressed:
-    (
-      data:
-        WebOrderNotificationData,
-    ) => void,
+  onWebOrderPressed: (
+    data: WebOrderNotificationData,
+  ) => void,
+  onEventRequestPressed?: (
+    data: EventRequestNotificationData,
+  ) => void,
 ): Notifications.EventSubscription {
-  return Notifications
-    .addNotificationResponseReceivedListener(
-      (
-        response,
-      ) => {
-        const data =
-          response
-            .notification
-            .request
-            .content
-            .data;
+  return Notifications.addNotificationResponseReceivedListener(
+    response => {
+      const data = response.notification.request.content.data;
 
-        if (
-          isWebOrderNotification(
-            data,
-          )
-        ) {
-          onWebOrderPressed(
-            data,
-          );
-        }
-      },
-    );
+      if (isWebOrderNotification(data)) {
+        onWebOrderPressed(data);
+        return;
+      }
+
+      if (
+        onEventRequestPressed &&
+        isEventRequestNotification(data)
+      ) {
+        onEventRequestPressed(data);
+      }
+    },
+  );
+}
+
+export function listenToPushNotificationsReceived(
+  onEventRequestReceived: (
+    data: EventRequestNotificationData,
+  ) => void,
+): Notifications.EventSubscription {
+  return Notifications.addNotificationReceivedListener(
+    notification => {
+      const data = notification.request.content.data;
+      if (isEventRequestNotification(data)) {
+        onEventRequestReceived(data);
+      }
+    },
+  );
 }
 
 /*

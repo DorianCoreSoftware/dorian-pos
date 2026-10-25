@@ -54,6 +54,10 @@ import {
 } from './src/screens/admin/AdminScreen';
 
 import {
+  EventsScreen,
+} from './src/screens/events/EventsScreen';
+
+import {
   GlobalHeader,
   MainTab,
 } from './src/components/header/GlobalHeader';
@@ -86,10 +90,16 @@ import {
 
 import {
   getLastPushNotificationResponse,
+  isEventRequestNotification,
   isWebOrderNotification,
   listenToPushNotificationResponses,
+  listenToPushNotificationsReceived,
   registerPosPushNotifications,
 } from './src/services/pushNotificationService';
+
+import {
+  getEventRequestsAdmin,
+} from './src/services/adminEventsService';
 
 function MainApp() {
   const {
@@ -112,6 +122,35 @@ function MainApp() {
   ] = useState<MainTab>(
     'pos',
   );
+
+  const [
+    newEventRequestsCount,
+    setNewEventRequestsCount,
+  ] = useState(0);
+
+  const refreshNewEventRequestsCount =
+    async (): Promise<void> => {
+      if (
+        !user?.id ||
+        !business?.features.eventsEnabled ||
+        !canManageCatalog(user)
+      ) {
+        setNewEventRequestsCount(0);
+        return;
+      }
+
+      try {
+        const requests = await getEventRequestsAdmin();
+        setNewEventRequestsCount(
+          requests.filter(item => item.status === 'new').length,
+        );
+      } catch (error) {
+        console.error(
+          'Error actualizando contador de eventos:',
+          error,
+        );
+      }
+    };
 
   const [
     editingOrderId,
@@ -148,6 +187,30 @@ function MainApp() {
     useRef<string | null>(
       null,
     );
+
+  useEffect(() => {
+    void refreshNewEventRequestsCount();
+
+    if (
+      !user?.id ||
+      !business?.features.eventsEnabled ||
+      !canManageCatalog(user)
+    ) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refreshNewEventRequestsCount();
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    user?.id,
+    user?.role,
+    business?.features.eventsEnabled,
+  ]);
 
   /*
    * ==========================================================
@@ -245,7 +308,7 @@ function MainApp() {
      */
     const subscription =
       listenToPushNotificationResponses(
-        (data) => {
+        data => {
           console.log(
             '🍔 Pedido web abierto desde notificación:',
             data,
@@ -259,6 +322,26 @@ function MainApp() {
           void openKitchenFromNotification(
             notificationKey,
           );
+        },
+        data => {
+          if (
+            business?.features.eventsEnabled &&
+            canManageCatalog(user)
+          ) {
+            console.log(
+              '🎉 Solicitud de evento abierta desde notificación:',
+              data,
+            );
+            setActiveTab('events');
+            void refreshNewEventRequestsCount();
+          }
+        },
+      );
+
+    const receivedSubscription =
+      listenToPushNotificationsReceived(
+        () => {
+          void refreshNewEventRequestsCount();
         },
       );
 
@@ -290,11 +373,22 @@ function MainApp() {
               .content
               .data;
 
-          if (
-            !isWebOrderNotification(
-              data,
-            )
-          ) {
+          if (isEventRequestNotification(data)) {
+            if (
+              business?.features.eventsEnabled &&
+              canManageCatalog(user)
+            ) {
+              console.log(
+                '🎉 POS iniciado desde solicitud de evento:',
+                data,
+              );
+              setActiveTab('events');
+              await refreshNewEventRequestsCount();
+            }
+            return;
+          }
+
+          if (!isWebOrderNotification(data)) {
             return;
           }
 
@@ -306,10 +400,7 @@ function MainApp() {
           const notificationKey =
             data.orderId ??
             data.trackingCode ??
-            response
-              .notification
-              .request
-              .identifier;
+            response.notification.request.identifier;
 
           await openKitchenFromNotification(
             notificationKey,
@@ -325,11 +416,14 @@ function MainApp() {
 
     return () => {
       subscription.remove();
+      receivedSubscription.remove();
     };
   }, [
     user?.id,
     fetchKitchenOrders,
     business?.features.kitchenEnabled,
+    business?.features.eventsEnabled,
+    user?.role,
   ]);
 
   /*
@@ -363,10 +457,23 @@ function MainApp() {
         'pos',
       );
     }
+
+
+    if (
+      activeTab === 'events' &&
+      (
+        !business?.features.eventsEnabled ||
+        !canManageCatalog(user)
+      )
+    ) {
+      setActiveTab('pos');
+    }
   }, [
     activeTab,
     business?.features.kitchenEnabled,
     business?.features.loyaltyEnabled,
+    business?.features.eventsEnabled,
+    user?.role,
   ]);
 
   const userCanManageCash =
@@ -808,6 +915,25 @@ function MainApp() {
       }
 
       if (
+        activeTab === 'events'
+      ) {
+        if (
+          !business?.features.eventsEnabled ||
+          !userCanManageCatalog
+        ) {
+          return renderRestricted(
+            'Solo un administrador puede gestionar solicitudes de eventos.',
+          );
+        }
+
+        return (
+          <EventsScreen
+            onRequestsChanged={refreshNewEventRequestsCount}
+          />
+        );
+      }
+
+      if (
         activeTab ===
         'admin'
       ) {
@@ -859,6 +985,9 @@ function MainApp() {
         }
         pendingOrdersCount={
           pendingOrders.length
+        }
+        newEventRequestsCount={
+          newEventRequestsCount
         }
         user={
           user

@@ -39,6 +39,7 @@ export type MainTab =
   | 'sales'
   | 'loyalty'
   | 'cash'
+  | 'events'
   | 'admin';
 
 interface HeaderProps {
@@ -52,6 +53,8 @@ interface HeaderProps {
 
   pendingOrdersCount: number;
 
+  newEventRequestsCount: number;
+
   user: any;
 
   logout: () => void;
@@ -62,6 +65,7 @@ export function GlobalHeader({
   setActiveTab,
   editingOrderId,
   pendingOrdersCount,
+  newEventRequestsCount,
   user,
   logout,
 }: HeaderProps) {
@@ -448,6 +452,19 @@ export function GlobalHeader({
               }
             >
               CAJA
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
+
+
+        {business?.features.eventsEnabled && canManageCatalog(user) ? (
+          <TouchableOpacity
+            style={getTabButtonStyle('events')}
+            onPress={() => setActiveTab('events')}
+          >
+            <Text style={getTabTextStyle('events')}>
+              EVENTOS{newEventRequestsCount > 0 ? ` (${newEventRequestsCount})` : ''}
             </Text>
           </TouchableOpacity>
         ) : null}

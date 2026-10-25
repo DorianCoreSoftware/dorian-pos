@@ -98,10 +98,14 @@ import {
   isInvalidWebCustomerSessionError,
   WebCustomerProfile,
 } from '../../services/web-customer/webCustomerService';
+import {
+  getPublicEventsAvailability,
+} from '../../services/web-events/webEventsService';
 
 interface WebMenuScreenProps {
   onRewardsPress?: () => void;
   onAccountPress?: () => void;
+  onEventsPress?: () => void;
 }
 
 function getColumns(
@@ -287,6 +291,7 @@ function openExternalUrl(
 export default function WebMenuScreen({
   onRewardsPress,
   onAccountPress,
+  onEventsPress,
 }: WebMenuScreenProps) {
   const {
     business,
@@ -313,6 +318,10 @@ export default function WebMenuScreen({
     webBanners,
     setWebBanners,
   ] = useState<WebBanner[]>([]);
+  const [
+    eventsAvailable,
+    setEventsAvailable,
+  ] = useState(false);
   const [
     selectedCategoryId,
     setSelectedCategoryId,
@@ -659,6 +668,7 @@ export default function WebMenuScreen({
         loadedModifierPromotion,
         loadedBusinessStatus,
         loadedWebBanners,
+        loadedEventsAvailable,
       ] =
         await Promise.all([
           getActiveCategories(),
@@ -675,6 +685,10 @@ export default function WebMenuScreen({
             .catch(
               () => [],
             ),
+          getPublicEventsAvailability()
+            .catch(
+              () => false,
+            ),
         ]);
       setCategories(
         loadedCategories,
@@ -690,6 +704,9 @@ export default function WebMenuScreen({
       );
       setWebBanners(
         loadedWebBanners,
+      );
+      setEventsAvailable(
+        loadedEventsAvailable,
       );
       setBusinessStatusError(
         loadedBusinessStatus
@@ -1335,6 +1352,29 @@ export default function WebMenuScreen({
                 Seguir pedido
               </Text>
             </Pressable>
+            {eventsAvailable &&
+              onEventsPress && (
+                <Pressable
+                  onPress={
+                    onEventsPress
+                  }
+                  style={({
+                    pressed,
+                  }) => [
+                      styles.topActionSecondary,
+                      pressed &&
+                      styles.topActionPressed,
+                    ]}
+                >
+                  <Text
+                    style={
+                      styles.topActionSecondaryText
+                    }
+                  >
+                    🎉 Eventos
+                  </Text>
+                </Pressable>
+              )}
             <Pressable
               onPress={() =>
                 setIsFeedbackVisible(

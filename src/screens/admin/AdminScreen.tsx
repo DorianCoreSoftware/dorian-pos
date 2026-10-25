@@ -81,6 +81,7 @@ import {
 import { AdminDashboard } from '../../components/admin/dashboard/AdminDashboard';
 import { AdminRefundSettings } from '../../components/admin/refunds/AdminRefundSettings';
 import { AdminWebBanners } from '../../components/admin/web-banners/AdminWebBanners';
+import { AdminEvents } from '../../components/admin/events/AdminEvents';
 import { appVersionLabel } from '../../Utils/appVersion';
 
 type AdminSection =
@@ -99,6 +100,7 @@ type AdminSection =
   | 'delivery'
   | 'feedback'
   | 'web-banners'
+  | 'events'
   | 'refunds';
 
 interface AdminSectionOption {
@@ -282,6 +284,19 @@ export function AdminScreen({
               '🚚',
           });
         }
+        if (
+          business?.features
+            .eventsEnabled
+        ) {
+          sections.push({
+            key:
+              'events',
+            label:
+              'EVENTOS',
+            icon:
+              '🎉',
+          });
+        }
         sections.push({
           key:
             'refunds',
@@ -312,6 +327,8 @@ export function AdminScreen({
       [
         business?.features
           .deliveryEnabled,
+        business?.features
+          .eventsEnabled,
         business?.features
           .loyaltyEnabled,
         business?.features
@@ -508,6 +525,22 @@ export function AdminScreen({
           <AdminDeliverySettings />
         );
       }
+      if (
+        activeSection ===
+        'events'
+      ) {
+        if (
+          !business?.features
+            .eventsEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <AdminEvents />
+        );
+      }
+
       if (
         activeSection ===
         'refunds'

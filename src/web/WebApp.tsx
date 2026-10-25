@@ -13,11 +13,13 @@ import { useBusiness } from '../context/BusinessContext';
 import WebMenuScreen from './screens/web-menu-screen/WebMenuScreen';
 import WebAccountScreen from './screens/web-account-screen/WebAccountScreen';
 import WebLoyaltyScreen from './screens/web-loyalty-screen/WebLoyaltyScreen';
+import WebEventsScreen from './screens/web-events-screen/WebEventsScreen';
 import WebCookieNotice from './components/web-cookie-notice/WebCookieNotice';
 
 type WebRoute =
   | 'menu'
   | 'loyalty'
+  | 'events'
   | 'account';
 
 function getCurrentRoute():
@@ -35,6 +37,16 @@ function getCurrentRoute():
     )
   ) {
     return 'loyalty';
+  }
+
+  if (
+    window.location.pathname ===
+    '/eventos' ||
+    window.location.pathname.startsWith(
+      '/eventos/',
+    )
+  ) {
+    return 'events';
   }
 
   if (
@@ -108,6 +120,25 @@ export default function WebApp() {
 
       setRoute(
         'loyalty',
+      );
+    };
+
+
+  const goToEvents =
+    (): void => {
+      if (
+        typeof window !==
+        'undefined'
+      ) {
+        window.history.pushState(
+          {},
+          '',
+          '/eventos',
+        );
+      }
+
+      setRoute(
+        'events',
       );
     };
 
@@ -188,6 +219,15 @@ export default function WebApp() {
               />
             )
             : route ===
+              'events'
+              ? (
+                <WebEventsScreen
+                  onBack={
+                    goToMenu
+                  }
+                />
+              )
+            : route ===
               'account'
               ? (
                 <WebAccountScreen
@@ -206,6 +246,9 @@ export default function WebApp() {
                   }
                   onAccountPress={
                     goToAccount
+                  }
+                  onEventsPress={
+                    goToEvents
                   }
                 />
               )

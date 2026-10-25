@@ -27,6 +27,7 @@ export interface BusinessFeatures {
   deliveryEnabled: boolean;
   promotionsEnabled: boolean;
   kitchenEnabled: boolean;
+  eventsEnabled: boolean;
 }
 
 export interface WebOrderSettings {
@@ -108,6 +109,7 @@ interface BusinessSettingsRow {
   delivery_enabled: boolean | null;
   promotions_enabled: boolean | null;
   kitchen_enabled: boolean | null;
+  events_enabled: boolean | null;
   timezone: string;
   web_orders_enabled: boolean;
   web_orders_pause_message: string | null;
@@ -299,6 +301,7 @@ export async function getBusinessSettings(): Promise<
     delivery_enabled,
     promotions_enabled,
     kitchen_enabled,
+    events_enabled,
     timezone,
     web_orders_enabled,
     web_orders_pause_message,
@@ -386,6 +389,10 @@ export async function getBusinessSettings(): Promise<
       kitchenEnabled:
         row.kitchen_enabled ??
         true,
+
+      eventsEnabled:
+        row.events_enabled ??
+        false,
     },
 
     timezone:
