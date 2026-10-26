@@ -25,6 +25,9 @@ const DELIVERY_ORDERS_CHANNEL_ID =
 const EVENT_REQUESTS_CHANNEL_ID =
   'event-requests';
 
+const EVENT_REMINDERS_CHANNEL_ID =
+  'event-reminders';
+
 type PushDeviceType =
   | 'pos'
   | 'driver';
@@ -159,6 +162,47 @@ async function configureAndroidNotificationChannels():
 
         description:
           'Avisos de nuevas solicitudes de eventos recibidas desde la web.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          300,
+          200,
+          300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
+
+  /*
+   * Recordatorios operativos de eventos.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      EVENT_REMINDERS_CHANNEL_ID,
+      {
+        name:
+          'Recordatorios de eventos',
+
+        description:
+          'Avisos de anticipos, saldos, eventos próximos y checklist.',
 
         importance:
           Notifications
@@ -557,7 +601,7 @@ export function isDeliveryReadyNotification(
  * ============================================================
  */
 export interface EventRequestNotificationData {
-  type: 'new_event_request';
+  type: 'new_event_request' | 'event_reminder';
   requestId?: string;
   folio?: number;
 }
@@ -575,7 +619,10 @@ export function isEventRequestNotification(
     folio?: unknown;
   };
 
-  return notificationData.type === 'new_event_request';
+  return (
+    notificationData.type === 'new_event_request' ||
+    notificationData.type === 'event_reminder'
+  );
 }
 
 /*

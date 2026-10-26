@@ -561,3 +561,119 @@ export async function getDailyFinancialReport(
     balance: Number(row.balance ?? 0),
   }));
 }
+
+// ============================================================
+// EVENTOS
+// ============================================================
+
+export type EventReportStatus =
+  | 'new'
+  | 'reviewing'
+  | 'quoted'
+  | 'accepted'
+  | 'confirmed'
+  | 'rejected'
+  | 'cancelled'
+  | 'completed';
+
+export interface EventReportRow {
+  requestId: string;
+  folio: number;
+  status: EventReportStatus;
+  eventDate: string;
+  eventTime: string;
+  createdAt: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  eventTypeName: string;
+  packageName: string;
+  guestCount: number;
+  estimatedTotal: number;
+  quotedTotal: number | null;
+  effectiveTotal: number;
+  eventPaymentsTotal: number;
+  posPaymentsTotal: number;
+  totalCollected: number;
+  pendingBalance: number;
+  posOrderId: string;
+  wasQuoted: boolean;
+}
+
+interface EventReportRpcRow {
+  request_id: string;
+  folio: string | number;
+  status: EventReportStatus;
+  event_date: string;
+  event_time: string | null;
+  created_at: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
+  event_type_name: string | null;
+  package_name: string | null;
+  guest_count: string | number | null;
+  estimated_total: string | number | null;
+  quoted_total: string | number | null;
+  effective_total: string | number | null;
+  event_payments_total: string | number | null;
+  pos_payments_total: string | number | null;
+  total_collected: string | number | null;
+  pending_balance: string | number | null;
+  pos_order_id: string | null;
+  was_quoted: boolean | null;
+}
+
+export type EventReportDateBasis =
+  | 'request'
+  | 'event';
+
+export async function getEventReport(
+  from: Date,
+  to: Date,
+  dateBasis: EventReportDateBasis = 'request',
+): Promise<EventReportRow[]> {
+  const { data, error } = await supabase.rpc(
+    'get_event_report',
+    {
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+      p_date_basis: dateBasis,
+    },
+  );
+
+  if (error) {
+    console.error(
+      'Error fetching event report:',
+      error,
+    );
+    throw error;
+  }
+
+  return ((data ?? []) as EventReportRpcRow[]).map(row => ({
+    requestId: row.request_id,
+    folio: Number(row.folio ?? 0),
+    status: row.status,
+    eventDate: row.event_date,
+    eventTime: row.event_time ?? '',
+    createdAt: row.created_at,
+    customerName: row.customer_name ?? '',
+    customerPhone: row.customer_phone ?? '',
+    customerEmail: row.customer_email ?? '',
+    eventTypeName: row.event_type_name ?? '',
+    packageName: row.package_name ?? '',
+    guestCount: Number(row.guest_count ?? 0),
+    estimatedTotal: Number(row.estimated_total ?? 0),
+    quotedTotal:
+      row.quoted_total === null
+        ? null
+        : Number(row.quoted_total),
+    effectiveTotal: Number(row.effective_total ?? 0),
+    eventPaymentsTotal: Number(row.event_payments_total ?? 0),
+    posPaymentsTotal: Number(row.pos_payments_total ?? 0),
+    totalCollected: Number(row.total_collected ?? 0),
+    pendingBalance: Number(row.pending_balance ?? 0),
+    posOrderId: row.pos_order_id ?? '',
+    wasQuoted: Boolean(row.was_quoted),
+  }));
+}

@@ -23,10 +23,13 @@ import {
     DailySalesReport,
     ExpenseCategoryReport,
     FinancialBalanceReport,
+    EventReportDateBasis,
+    EventReportRow,
     getDailyFinancialReport,
     getDailySalesReport,
     getExpenseCategoryReport,
     getFinancialBalanceReport,
+    getEventReport,
     getModifierSalesReport,
     getProductSalesReport,
     getPromotionActivityReport,
@@ -50,6 +53,10 @@ import {
 import {
     AdminRefundReport,
 } from './AdminRefundReport';
+
+import {
+    AdminEventReport,
+} from './AdminEventReport';
 
 import {
     getModifierGroups,
@@ -152,6 +159,13 @@ export function AdminReports() {
     );
 
     const [
+        eventDateBasis,
+        setEventDateBasis,
+    ] = useState<EventReportDateBasis>(
+        'request',
+    );
+
+    const [
         summary,
         setSummary,
     ] = useState<SalesReportSummary>(
@@ -207,6 +221,11 @@ export function AdminReports() {
     ] = useState<RefundReportSummary>(
         EMPTY_REFUND_SUMMARY,
     );
+
+    const [
+        eventRows,
+        setEventRows,
+    ] = useState<EventReportRow[]>([]);
 
 
     const [
@@ -316,6 +335,7 @@ export function AdminReports() {
                         dailyFinancialData,
                         refundReportData,
                         refundSummaryData,
+                        eventReportData,
                         modifierReportEntries,
                     ] =
                         await Promise.all([
@@ -364,6 +384,14 @@ export function AdminReports() {
                                 dateRange.from,
                                 dateRange.to,
                             ),
+
+                            business?.features.eventsEnabled
+                                ? getEventReport(
+                                    dateRange.from,
+                                    dateRange.to,
+                                    eventDateBasis,
+                                )
+                                : Promise.resolve([]),
 
                             Promise.all(
                                 activeGroups.map(
@@ -416,6 +444,10 @@ export function AdminReports() {
                         refundSummaryData,
                     );
 
+                    setEventRows(
+                        eventReportData,
+                    );
+
                     setModifierGroups(
                         activeGroups,
                     );
@@ -447,6 +479,8 @@ export function AdminReports() {
     }, [
         dateRange.from,
         dateRange.to,
+        business?.features.eventsEnabled,
+        eventDateBasis,
     ]);
 
     const reportRows =
@@ -569,6 +603,23 @@ export function AdminReports() {
             [],
         );
 
+    const eventDateBasisOptions =
+        useMemo<AdminReportSelectOption[]>(
+            () => [
+                {
+                    value: 'request',
+                    label: 'Fecha de solicitud',
+                    description: 'Analiza las solicitudes según cuándo fueron creadas.',
+                },
+                {
+                    value: 'event',
+                    label: 'Fecha del evento',
+                    description: 'Analiza los eventos según la fecha programada.',
+                },
+            ],
+            [],
+        );
+
     const reportOptions =
         useMemo<AdminReportSelectOption[]>(
             () => [
@@ -597,6 +648,13 @@ export function AdminReports() {
                     label: 'Devoluciones',
                     description: 'Historial, importes y artículos devueltos.',
                 },
+                ...(business?.features.eventsEnabled
+                    ? [{
+                        value: 'events',
+                        label: 'Eventos',
+                        description: 'Conversión, cobros, saldos y desempeño de eventos.',
+                    }]
+                    : []),
                 ...modifierGroups.map(
                     group => ({
                         value: group.code,
@@ -605,7 +663,10 @@ export function AdminReports() {
                     }),
                 ),
             ],
-            [modifierGroups],
+            [
+                modifierGroups,
+                business?.features.eventsEnabled,
+            ],
         );
 
     const activeReportTitle =
@@ -793,6 +854,21 @@ export function AdminReports() {
                         modalTitle="Seleccionar reporte"
                         modalSubtitle="Solo se mostrará el contenido del reporte elegido."
                     />
+
+                    {activeSection === 'events' ? (
+                        <AdminReportSelect
+                            label="Fecha base"
+                            value={eventDateBasis}
+                            options={eventDateBasisOptions}
+                            onChange={value =>
+                                setEventDateBasis(
+                                    value as EventReportDateBasis,
+                                )
+                            }
+                            modalTitle="Fecha base del reporte"
+                            modalSubtitle="Elige si el periodo se aplica a la solicitud o a la fecha programada del evento."
+                        />
+                    ) : null}
                 </View>
 
                 {dateFilter === 'custom' ? (
@@ -989,6 +1065,11 @@ export function AdminReports() {
                             )}
                         </View>
                     </>
+                ) : activeSection === 'events' ? (
+                    <AdminEventReport
+                        rows={eventRows}
+                        formatCurrency={formatCurrency}
+                    />
                 ) : activeSection === 'refunds' ? (
                     <AdminRefundReport
                         summary={refundSummary}
@@ -1123,7 +1204,10 @@ export function AdminReports() {
                     mode="date"
                     display="default"
                     maximumDate={
-                        new Date()
+                        activeSection === 'events' &&
+                        eventDateBasis === 'event'
+                            ? undefined
+                            : new Date()
                     }
                     onChange={
                         handleStartDateChange
@@ -1142,7 +1226,10 @@ export function AdminReports() {
                         customStartDate
                     }
                     maximumDate={
-                        new Date()
+                        activeSection === 'events' &&
+                        eventDateBasis === 'event'
+                            ? undefined
+                            : new Date()
                     }
                     onChange={
                         handleEndDateChange

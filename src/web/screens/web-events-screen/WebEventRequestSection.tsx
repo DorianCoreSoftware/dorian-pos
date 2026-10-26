@@ -18,10 +18,12 @@ interface Props {
   eventTypeId: string | null;
   packageId: string | null;
   eventDate: string;
+  eventTime: string;
   guestCount: number;
   estimatedTotal: number;
   currencyCode: string;
   isDateValid: boolean;
+  isTimeValid: boolean;
   extras: SubmitPublicEventExtra[];
 }
 
@@ -44,14 +46,15 @@ export default function WebEventRequestSection({
   eventTypeId,
   packageId,
   eventDate,
+  eventTime,
   guestCount,
   estimatedTotal,
   currencyCode,
   isDateValid,
+  isTimeValid,
   extras,
 }: Props) {
   const { theme } = useBusiness();
-  const [eventTime, setEventTime] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -68,6 +71,7 @@ export default function WebEventRequestSection({
       !!eventTypeId &&
       !!packageId &&
       isDateValid &&
+      isTimeValid &&
       customerName.trim().length >= 2 &&
       customerPhone.trim().length >= 7 &&
       !isSubmitting,
@@ -75,6 +79,7 @@ export default function WebEventRequestSection({
       eventTypeId,
       packageId,
       isDateValid,
+      isTimeValid,
       customerName,
       customerPhone,
       isSubmitting,
@@ -88,6 +93,10 @@ export default function WebEventRequestSection({
     }
     if (!isDateValid) {
       setError('Selecciona una fecha válida para tu evento.');
+      return;
+    }
+    if (!isTimeValid || !eventTime) {
+      setError('Selecciona un horario disponible para tu evento.');
       return;
     }
     if (customerName.trim().length < 2) {
@@ -165,28 +174,10 @@ export default function WebEventRequestSection({
       <Text style={[styles.title, { color: theme.text }]}>5. Solicita tu evento</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>Déjanos tus datos para revisar disponibilidad. Esta solicitud todavía no confirma una reservación.</Text>
 
-      <Text style={[styles.label, { color: theme.textMuted }]}>Hora tentativa (opcional)</Text>
-      {React.createElement('input', {
-        type: 'time',
-        value: eventTime,
-        onChange: (event: React.ChangeEvent<HTMLInputElement>) => setEventTime(event.target.value),
-        'aria-label': 'Hora tentativa del evento',
-        style: {
-          width: '100%',
-          minHeight: 48,
-          boxSizing: 'border-box',
-          borderWidth: 1,
-          borderStyle: 'solid',
-          borderColor: theme.border,
-          borderRadius: 10,
-          backgroundColor: theme.background,
-          color: theme.text,
-          paddingLeft: 14,
-          paddingRight: 14,
-          fontSize: 15,
-          marginBottom: 14,
-        },
-      })}
+      <View style={[styles.preview, { borderColor: theme.border, backgroundColor: theme.background }]}>
+        <Text style={[styles.previewLabel, { color: theme.textMuted }]}>Horario seleccionado</Text>
+        <Text style={[styles.previewValue, { color: theme.primary }]}>{eventTime || 'Selecciona un horario disponible arriba'}</Text>
+      </View>
 
       <Text style={[styles.label, { color: theme.textMuted }]}>Nombre *</Text>
       <TextInput

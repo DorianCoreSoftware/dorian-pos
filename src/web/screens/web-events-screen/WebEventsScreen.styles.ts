@@ -328,6 +328,41 @@ const styles =
       marginTop: 10,
     },
 
+    slotLoading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 44,
+    },
+
+    slotGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+
+    slotButton: {
+      minWidth: 104,
+      minHeight: 54,
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    slotButtonText: {
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
+    slotEndText: {
+      marginTop: 2,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+
     emptyText: {
       fontSize: 13,
       lineHeight: 19,

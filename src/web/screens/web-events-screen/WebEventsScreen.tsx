@@ -19,10 +19,12 @@ import {
 } from '../../../context/BusinessContext';
 
 import {
+  getPublicEventAvailableSlots,
   getPublicEventCatalog,
   PublicEventCatalog,
   PublicEventExtra,
   PublicEventPackage,
+  PublicEventSlot,
 } from '../../services/web-events/webEventsService';
 
 import styles from './WebEventsScreen.styles';
@@ -142,6 +144,22 @@ export default function WebEventsScreen({
     eventDate,
     setEventDate,
   ] = useState('');
+  const [
+    eventTime,
+    setEventTime,
+  ] = useState('');
+  const [
+    availableSlots,
+    setAvailableSlots,
+  ] = useState<PublicEventSlot[]>([]);
+  const [
+    loadingSlots,
+    setLoadingSlots,
+  ] = useState(false);
+  const [
+    slotError,
+    setSlotError,
+  ] = useState<string | null>(null);
   const [
     extraSelections,
     setExtraSelections,
@@ -386,6 +404,60 @@ export default function WebEventsScreen({
         eventDate > maximumDate
       )
     );
+
+  useEffect(() => {
+    let mounted = true;
+
+    setEventTime('');
+    setAvailableSlots([]);
+    setSlotError(null);
+
+    if (
+      !selectedPackageId ||
+      !eventDate ||
+      !!dateError
+    ) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    const loadSlots = async (): Promise<void> => {
+      try {
+        setLoadingSlots(true);
+        const slots = await getPublicEventAvailableSlots(
+          selectedPackageId,
+          eventDate,
+        );
+
+        if (mounted) {
+          setAvailableSlots(slots);
+        }
+      } catch (slotsError) {
+        if (mounted) {
+          setSlotError(
+            slotsError instanceof Error
+              ? slotsError.message
+              : 'No se pudieron consultar los horarios disponibles.',
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoadingSlots(false);
+        }
+      }
+    };
+
+    void loadSlots();
+
+    return () => {
+      mounted = false;
+    };
+  }, [
+    selectedPackageId,
+    eventDate,
+    dateError,
+  ]);
 
   function applyGuestCount(
     value: number,
@@ -1046,6 +1118,107 @@ export default function WebEventsScreen({
                 },
               ]}
             >
+              Horario disponible
+            </Text>
+
+            {loadingSlots ? (
+              <View style={styles.slotLoading}>
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary}
+                />
+                <Text
+                  style={[
+                    styles.helperText,
+                    { color: theme.textMuted },
+                  ]}
+                >
+                  Consultando horarios...
+                </Text>
+              </View>
+            ) : slotError ? (
+              <Text
+                style={[
+                  styles.errorText,
+                  { color: theme.danger },
+                ]}
+              >
+                {slotError}
+              </Text>
+            ) : !eventDate || dateError ? (
+              <Text
+                style={[
+                  styles.helperText,
+                  { color: theme.textMuted },
+                ]}
+              >
+                Selecciona una fecha válida para consultar horarios.
+              </Text>
+            ) : availableSlots.length === 0 ? (
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: theme.textMuted },
+                ]}
+              >
+                No hay horarios disponibles para esta fecha y paquete.
+              </Text>
+            ) : (
+              <View style={styles.slotGrid}>
+                {availableSlots.map(slot => {
+                  const selected = eventTime === slot.time;
+                  return (
+                    <Pressable
+                      key={slot.time}
+                      onPress={() => setEventTime(slot.time)}
+                      style={[
+                        styles.slotButton,
+                        {
+                          backgroundColor: selected
+                            ? theme.surfaceAlt
+                            : theme.background,
+                          borderColor: selected
+                            ? theme.primary
+                            : theme.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.slotButtonText,
+                          {
+                            color: selected
+                              ? theme.primary
+                              : theme.text,
+                          },
+                        ]}
+                      >
+                        {slot.time}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.slotEndText,
+                          { color: theme.textMuted },
+                        ]}
+                      >
+                        hasta {slot.endTime}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            <Text
+              style={[
+                styles.fieldLabel,
+                {
+                  color:
+                    theme.textMuted,
+                  marginTop: 18,
+                },
+              ]}
+            >
               Personas
             </Text>
             <View
@@ -1601,10 +1774,12 @@ export default function WebEventsScreen({
             eventTypeId={selectedTypeId}
             packageId={selectedPackageId}
             eventDate={eventDate}
+            eventTime={eventTime}
             guestCount={guestCount}
             estimatedTotal={estimatedTotal}
             currencyCode={currencyCode}
             isDateValid={!!eventDate && !dateError}
+            isTimeValid={!!eventTime}
             extras={extraBreakdown.map(item => ({
               extraId: item.extra.id,
               quantity: item.quantity,

@@ -14,12 +14,14 @@ import WebMenuScreen from './screens/web-menu-screen/WebMenuScreen';
 import WebAccountScreen from './screens/web-account-screen/WebAccountScreen';
 import WebLoyaltyScreen from './screens/web-loyalty-screen/WebLoyaltyScreen';
 import WebEventsScreen from './screens/web-events-screen/WebEventsScreen';
+import WebEventQuoteScreen from './screens/web-event-quote-screen/WebEventQuoteScreen';
 import WebCookieNotice from './components/web-cookie-notice/WebCookieNotice';
 
 type WebRoute =
   | 'menu'
   | 'loyalty'
   | 'events'
+  | 'eventQuote'
   | 'account';
 
 function getCurrentRoute():
@@ -37,6 +39,14 @@ function getCurrentRoute():
     )
   ) {
     return 'loyalty';
+  }
+
+  if (
+    window.location.pathname.startsWith(
+      '/eventos/cotizacion/',
+    )
+  ) {
+    return 'eventQuote';
   }
 
   if (
@@ -60,6 +70,20 @@ function getCurrentRoute():
   }
 
   return 'menu';
+}
+
+function getEventQuoteToken(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const prefix = '/eventos/cotizacion/';
+  const path = window.location.pathname;
+  if (!path.startsWith(prefix)) {
+    return '';
+  }
+
+  return decodeURIComponent(path.slice(prefix.length).split('/')[0] ?? '');
 }
 
 export default function WebApp() {
@@ -207,7 +231,15 @@ export default function WebApp() {
       >
         {
           route ===
-            'loyalty'
+            'eventQuote'
+            ? (
+              <WebEventQuoteScreen
+                token={getEventQuoteToken()}
+                onBack={goToMenu}
+              />
+            )
+            : route ===
+              'loyalty'
             ? (
               <WebLoyaltyScreen
                 onBack={

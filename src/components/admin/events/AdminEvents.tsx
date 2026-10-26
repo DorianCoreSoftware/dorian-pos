@@ -37,15 +37,18 @@ import {
   saveEventExtra,
   saveEventPackage,
   saveEventSettings,
+  processEventRemindersAdmin,
   saveEventType,
   setEventExtraActive,
   setEventPackageActive,
   setEventTypeActive,
 } from '../../../services/adminEventsService';
 import { styles } from './AdminEvents.styles';
+import { AdminEventAvailability } from './AdminEventAvailability';
 
 type EventsTab =
   | 'settings'
+  | 'availability'
   | 'types'
   | 'packages'
   | 'extras';
@@ -68,6 +71,16 @@ interface EventSettingsForm {
   maxAdvanceDays: string;
   quoteDisclaimer: string;
   terms: string;
+  depositEnabled: boolean;
+  depositType: 'percentage' | 'fixed';
+  depositValue: string;
+  depositDueDays: string;
+  portalBaseUrl: string;
+  remindersEnabled: boolean;
+  depositReminderDaysBefore: string;
+  eventReminderHoursBefore: string;
+  balanceReminderHoursBefore: string;
+  checklistReminderHoursBefore: string;
 }
 
 interface EventTypeForm {
@@ -132,6 +145,16 @@ const toSettingsForm = (
   maxAdvanceDays: String(settings.maxAdvanceDays),
   quoteDisclaimer: settings.quoteDisclaimer,
   terms: settings.terms,
+  depositEnabled: settings.depositEnabled,
+  depositType: settings.depositType,
+  depositValue: String(settings.depositValue),
+  depositDueDays: String(settings.depositDueDays),
+  portalBaseUrl: settings.portalBaseUrl,
+  remindersEnabled: settings.remindersEnabled,
+  depositReminderDaysBefore: String(settings.depositReminderDaysBefore),
+  eventReminderHoursBefore: String(settings.eventReminderHoursBefore),
+  balanceReminderHoursBefore: String(settings.balanceReminderHoursBefore),
+  checklistReminderHoursBefore: String(settings.checklistReminderHoursBefore),
 });
 
 interface SortableCardProps {
@@ -377,6 +400,16 @@ export function AdminEvents() {
           settingsForm.quoteDisclaimer,
         terms:
           settingsForm.terms,
+          depositEnabled: settingsForm.depositEnabled,
+          depositType: settingsForm.depositType,
+          depositValue: Number(settingsForm.depositValue),
+          depositDueDays: Number(settingsForm.depositDueDays),
+          portalBaseUrl: settingsForm.portalBaseUrl,
+          remindersEnabled: settingsForm.remindersEnabled,
+          depositReminderDaysBefore: Number(settingsForm.depositReminderDaysBefore),
+          eventReminderHoursBefore: Number(settingsForm.eventReminderHoursBefore),
+          balanceReminderHoursBefore: Number(settingsForm.balanceReminderHoursBefore),
+          checklistReminderHoursBefore: Number(settingsForm.checklistReminderHoursBefore),
       });
       Alert.alert(
         'Configuración guardada',
@@ -390,6 +423,18 @@ export function AdminEvents() {
           ? error.message
           : 'No se pudo guardar la configuración.',
       );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleProcessReminders = async (): Promise<void> => {
+    try {
+      setIsProcessing(true);
+      await processEventRemindersAdmin();
+      Alert.alert('Recordatorios procesados', 'Se revisaron los eventos y se despacharon los avisos pendientes.');
+    } catch (error) {
+      Alert.alert('Recordatorios', error instanceof Error ? error.message : 'No se pudieron procesar los recordatorios.');
     } finally {
       setIsProcessing(false);
     }
@@ -770,6 +815,7 @@ export function AdminEvents() {
     label: string;
   }> = [
     { key: 'settings', label: 'CONFIGURACIÓN' },
+    { key: 'availability', label: 'DISPONIBILIDAD' },
     { key: 'types', label: `TIPOS (${types.length})` },
     { key: 'packages', label: `PAQUETES (${packages.length})` },
     { key: 'extras', label: `EXTRAS (${extras.length})` },
@@ -855,7 +901,12 @@ export function AdminEvents() {
             isProcessing={isProcessing}
             theme={theme}
             onSave={handleSaveSettings}
+            onProcessReminders={handleProcessReminders}
           />
+        ) : null}
+
+        {activeTab === 'availability' ? (
+          <AdminEventAvailability isPhone={isPhone} />
         ) : null}
 
         {activeTab === 'types' ? (
@@ -1363,6 +1414,7 @@ function SettingsSection({
   isProcessing,
   theme,
   onSave,
+  onProcessReminders,
 }: {
   form: EventSettingsForm;
   setForm: React.Dispatch<React.SetStateAction<EventSettingsForm>>;
@@ -1370,6 +1422,7 @@ function SettingsSection({
   isProcessing: boolean;
   theme: any;
   onSave: () => Promise<void>;
+  onProcessReminders: () => Promise<void>;
 }) {
   return (
     <>
@@ -1458,6 +1511,179 @@ function SettingsSection({
             />
           </View>
         </View>
+      </View>
+
+      <View
+        style={[
+          styles.card,
+          isPhone && styles.cardPhone,
+          { backgroundColor: theme.surface, borderColor: theme.border },
+        ]}
+      >
+        <Text style={[styles.cardTitle, { color: theme.text }]}>Anticipo y confirmación</Text>
+        <Text style={[styles.cardSubtitle, { color: theme.textMuted }]}>Configura cuánto debe pagar el cliente para que una solicitud aceptada pase a evento confirmado.</Text>
+        <View style={styles.switchRow}>
+          <View style={styles.switchText}>
+            <Text style={{ color: theme.text, fontWeight: '800' }}>Solicitar anticipo</Text>
+            <Text style={{ color: theme.textMuted, marginTop: 3, fontSize: 12 }}>El anticipo se congela al aceptar la solicitud y los pagos se registran como movimientos históricos.</Text>
+          </View>
+          <Switch
+            value={form.depositEnabled}
+            onValueChange={(value: boolean) => setForm(current => ({ ...current, depositEnabled: value }))}
+          />
+        </View>
+
+        {form.depositEnabled ? (
+          <>
+            <Text style={[styles.label, { color: theme.textMuted, marginTop: 12 }]}>Tipo de anticipo</Text>
+            <View style={styles.choiceWrap}>
+              {[
+                { value: 'percentage' as const, label: 'PORCENTAJE' },
+                { value: 'fixed' as const, label: 'MONTO FIJO' },
+              ].map(option => {
+                const selected = form.depositType === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.choice,
+                      {
+                        borderColor: selected ? theme.primary : theme.border,
+                        backgroundColor: selected ? theme.surfaceAlt : theme.surface,
+                      },
+                    ]}
+                    onPress={() => setForm(current => ({ ...current, depositType: option.value }))}
+                  >
+                    <Text style={[styles.choiceText, { color: selected ? theme.primary : theme.textMuted }]}>{option.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={[styles.twoColumns, isPhone && styles.twoColumnsPhone]}>
+              <View style={styles.column}>
+                <Field
+                  label={form.depositType === 'percentage' ? 'Anticipo (%)' : 'Anticipo fijo'}
+                  value={form.depositValue}
+                  onChangeText={(value: string) => setForm(current => ({ ...current, depositValue: value }))}
+                  placeholder={form.depositType === 'percentage' ? '50' : '1000'}
+                  theme={theme}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.column}>
+                <Field
+                  label="Plazo para pagar (días)"
+                  value={form.depositDueDays}
+                  onChangeText={(value: string) => setForm(current => ({ ...current, depositDueDays: value }))}
+                  placeholder="2"
+                  theme={theme}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
+      </View>
+
+      <View
+        style={[
+          styles.card,
+          isPhone && styles.cardPhone,
+          { backgroundColor: theme.surface, borderColor: theme.border },
+        ]}
+      >
+        <Text style={[styles.cardTitle, { color: theme.text }]}>Recordatorios automáticos</Text>
+        <Text style={[styles.cardSubtitle, { color: theme.textMuted }]}>
+          Envía avisos internos al POS para anticipos, eventos próximos, saldos pendientes y checklist operativo.
+        </Text>
+        <View style={styles.switchRow}>
+          <View style={styles.switchText}>
+            <Text style={{ color: theme.text, fontWeight: '800' }}>Activar recordatorios</Text>
+            <Text style={{ color: theme.textMuted, marginTop: 3, fontSize: 12 }}>Se procesan automáticamente y cada aviso se registra una sola vez por evento.</Text>
+          </View>
+          <Switch
+            value={form.remindersEnabled}
+            onValueChange={(value: boolean) => setForm(current => ({ ...current, remindersEnabled: value }))}
+          />
+        </View>
+        {form.remindersEnabled ? (
+          <>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: theme.border, backgroundColor: theme.surfaceAlt, marginTop: 12 }]}
+              disabled={isProcessing}
+              onPress={() => { void onProcessReminders(); }}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.text }]}>PROCESAR RECORDATORIOS AHORA</Text>
+            </TouchableOpacity>
+            <View style={[styles.twoColumns, isPhone && styles.twoColumnsPhone]}>
+              <View style={styles.column}>
+                <Field
+                  label="Anticipo: días antes del vencimiento"
+                  value={form.depositReminderDaysBefore}
+                  onChangeText={(value: string) => setForm(current => ({ ...current, depositReminderDaysBefore: value }))}
+                  placeholder="1"
+                  theme={theme}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.column}>
+                <Field
+                  label="Evento próximo: horas antes"
+                  value={form.eventReminderHoursBefore}
+                  onChangeText={(value: string) => setForm(current => ({ ...current, eventReminderHoursBefore: value }))}
+                  placeholder="24"
+                  theme={theme}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+            <View style={[styles.twoColumns, isPhone && styles.twoColumnsPhone]}>
+              <View style={styles.column}>
+                <Field
+                  label="Saldo pendiente: horas antes"
+                  value={form.balanceReminderHoursBefore}
+                  onChangeText={(value: string) => setForm(current => ({ ...current, balanceReminderHoursBefore: value }))}
+                  placeholder="24"
+                  theme={theme}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.column}>
+                <Field
+                  label="Checklist incompleto: horas antes"
+                  value={form.checklistReminderHoursBefore}
+                  onChangeText={(value: string) => setForm(current => ({ ...current, checklistReminderHoursBefore: value }))}
+                  placeholder="6"
+                  theme={theme}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
+      </View>
+
+      <View
+        style={[
+          styles.card,
+          isPhone && styles.cardPhone,
+          { backgroundColor: theme.surface, borderColor: theme.border },
+        ]}
+      >
+        <Text style={[styles.cardTitle, { color: theme.text }]}>Portal del cliente</Text>
+        <Text style={[styles.cardSubtitle, { color: theme.textMuted }]}>
+          Dominio público usado para generar enlaces seguros de cotización desde el POS. En producción usa la URL pública del sitio del cliente.
+        </Text>
+        <Field
+          label="URL pública base"
+          value={form.portalBaseUrl}
+          onChangeText={(value: string) => setForm(current => ({ ...current, portalBaseUrl: value }))}
+          placeholder="https://eventos.tunegocio.com"
+          theme={theme}
+        />
+        <Text style={{ color: theme.textMuted, fontSize: 11, lineHeight: 17 }}>
+          Ejemplo de enlace: {form.portalBaseUrl.trim() || 'https://tu-dominio.com'}/eventos/cotizacion/...
+        </Text>
       </View>
 
       <View

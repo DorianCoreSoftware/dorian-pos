@@ -338,3 +338,47 @@ export async function submitPublicEventRequest(
     createdAt: raw.createdAt ?? raw.created_at ?? '',
   };
 }
+
+export interface PublicEventSlot {
+  time: string;
+  endTime: string;
+}
+
+interface PublicEventSlotsRpcResult {
+  enabled?: boolean;
+  slots?: Array<{
+    time?: string;
+    endTime?: string;
+    end_time?: string;
+  }>;
+}
+
+export async function getPublicEventAvailableSlots(
+  packageId: string,
+  eventDate: string,
+): Promise<PublicEventSlot[]> {
+  const { data, error } = await supabase.rpc(
+    'get_public_event_available_slots',
+    {
+      p_package_id: packageId,
+      p_event_date: eventDate,
+    },
+  );
+
+  if (error) {
+    throw new Error(`No se pudieron consultar los horarios disponibles: ${error.message}`);
+  }
+
+  const raw = (data ?? {}) as PublicEventSlotsRpcResult;
+
+  if (!raw.enabled) {
+    return [];
+  }
+
+  return (raw.slots ?? [])
+    .map(slot => ({
+      time: (slot.time ?? '').slice(0, 5),
+      endTime: (slot.endTime ?? slot.end_time ?? '').slice(0, 5),
+    }))
+    .filter(slot => !!slot.time && !!slot.endTime);
+}
