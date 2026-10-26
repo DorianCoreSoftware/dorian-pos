@@ -6,7 +6,7 @@ import {
 import {
   supabase,
 } from '../../../services/supabase';
-import { getDeliveryServiceStatus } from '../../../services/deliveryService';
+import { getFulfillmentAvailability } from '../../../services/deliveryService';
 
 export type WebFulfillmentType =
   | 'pickup'
@@ -188,18 +188,27 @@ export async function createWebOrder({
       }
       : null;
 
-  if (
-    fulfillmentType ===
-    'delivery'
-  ) {
-    const deliveryEnabled =
-      await getDeliveryServiceStatus();
+  const fulfillmentAvailability =
+    await getFulfillmentAvailability();
 
-    if (!deliveryEnabled) {
-      throw new Error(
-        'El servicio a domicilio no está disponible por el momento.',
-      );
-    }
+  if (
+    fulfillmentType === 'pickup' &&
+    !fulfillmentAvailability.pickupAvailable
+  ) {
+    throw new Error(
+      fulfillmentAvailability.pickupReason ||
+      'El servicio para recoger no está disponible por el momento.',
+    );
+  }
+
+  if (
+    fulfillmentType === 'delivery' &&
+    !fulfillmentAvailability.deliveryAvailable
+  ) {
+    throw new Error(
+      fulfillmentAvailability.deliveryReason ||
+      'El servicio a domicilio no está disponible por el momento.',
+    );
   }
 
   const cleanSessionToken =

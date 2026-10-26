@@ -237,6 +237,174 @@ const createStyles = (
         '900',
     },
 
+    fulfillmentModeCard: {
+      marginTop: 14,
+      padding: 14,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#181818',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 14,
+    },
+
+    fulfillmentModeInfo: {
+      flex: 1,
+    },
+
+    fulfillmentModeTitle: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
+    fulfillmentModeSubtitle: {
+      color: '#888888',
+      fontSize: 10,
+      marginTop: 3,
+    },
+
+    fulfillmentSwitches: {
+      gap: 7,
+    },
+
+    compactSwitchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
+
+    compactSwitchLabel: {
+      color: '#BBBBBB',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+
+    scheduleBuilder: {
+      marginTop: 18,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: '#343434',
+    },
+
+    scheduleTypeRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 6,
+    },
+
+    scheduleTypeButton: {
+      flex: 1,
+      minHeight: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#252525',
+    },
+
+    scheduleTypeButtonActive: {
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.12),
+    },
+
+    scheduleTypeButtonText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    dayButtons: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 12,
+    },
+
+    dayButton: {
+      minWidth: 44,
+      minHeight: 34,
+      paddingHorizontal: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#444444',
+      backgroundColor: '#252525',
+    },
+
+    dayButtonActive: {
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.12),
+    },
+
+    dayButtonText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '800',
+    },
+
+    scheduleList: {
+      marginTop: 18,
+      gap: 8,
+    },
+
+    scheduleEmpty: {
+      color: '#888888',
+      fontSize: 11,
+      lineHeight: 16,
+    },
+
+    scheduleWindowRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      padding: 11,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#181818',
+    },
+
+    scheduleWindowInfo: {
+      flex: 1,
+    },
+
+    scheduleWindowTitle: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    scheduleWindowTime: {
+      color: primaryColor,
+      fontSize: 11,
+      fontWeight: '700',
+      marginTop: 3,
+    },
+
+    scheduleDeleteButton: {
+      minHeight: 34,
+      paddingHorizontal: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 7,
+      borderWidth: 1,
+      borderColor: '#793838',
+      backgroundColor: '#351B1B',
+    },
+
+    scheduleDeleteButtonText: {
+      color: '#FF8A80',
+      fontSize: 10,
+      fontWeight: '800',
+    },
+
     coordinatesRow: {
       flexDirection:
         'row',

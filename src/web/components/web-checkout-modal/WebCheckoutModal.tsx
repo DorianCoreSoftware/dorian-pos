@@ -24,7 +24,12 @@ import styles, {
 
 import { useBusiness } from '../../../context/BusinessContext';
 import { useCurrency } from '../../../hooks/useCurrency';
-import { DeliveryQuote, getDeliveryQuote, getDeliveryServiceStatus } from '../../../services/deliveryService';
+import {
+  DeliveryQuote,
+  FulfillmentAvailability,
+  getDeliveryQuote,
+  getFulfillmentAvailability,
+} from '../../../services/deliveryService';
 import { DeliveryDetails } from '../../../types';
 import { WebFulfillmentType } from '../../services/web-order/webOrderService';
 import { GooglePlaceSelection } from '../../models/google-place-autocomplete/google-place-selection';
@@ -214,14 +219,13 @@ export default function WebCheckoutModal({
     );
 
   const [
-    deliveryEnabled,
-    setDeliveryEnabled,
-  ] =
-    useState(true);
+    fulfillmentAvailability,
+    setFulfillmentAvailability,
+  ] = useState<FulfillmentAvailability | null>(null);
 
   const [
-    isLoadingDeliveryStatus,
-    setIsLoadingDeliveryStatus,
+    isLoadingFulfillmentStatus,
+    setIsLoadingFulfillmentStatus,
   ] =
     useState(false);
 
@@ -318,33 +322,32 @@ export default function WebCheckoutModal({
 
       void (async () => {
         try {
-          setIsLoadingDeliveryStatus(
+          setIsLoadingFulfillmentStatus(
             true,
           );
 
-          const enabled =
-            await getDeliveryServiceStatus();
+          const availability =
+            await getFulfillmentAvailability();
 
           if (cancelled) {
             return;
           }
 
-          setDeliveryEnabled(
-            enabled,
+          setFulfillmentAvailability(
+            availability,
           );
 
-          if (!enabled) {
-            setFulfillmentType(
-              'pickup',
-            );
+          if (availability.pickupAvailable) {
+            setFulfillmentType('pickup');
+          } else if (availability.deliveryAvailable) {
+            setFulfillmentType('delivery');
+          } else {
+            setFulfillmentType('pickup');
+          }
 
-            setDeliveryQuote(
-              null,
-            );
-
-            setDeliveryQuoteError(
-              null,
-            );
+          if (!availability.deliveryAvailable) {
+            setDeliveryQuote(null);
+            setDeliveryQuoteError(null);
           }
         } catch (error) {
           console.error(
@@ -358,17 +361,20 @@ export default function WebCheckoutModal({
            * no permitimos generar un delivery.
            */
           if (!cancelled) {
-            setDeliveryEnabled(
-              false,
-            );
+            setFulfillmentAvailability({
+              pickupAvailable: false,
+              deliveryAvailable: false,
+              pickupReason: 'No se pudo validar la disponibilidad para recoger.',
+              deliveryReason: 'No se pudo validar la disponibilidad a domicilio.',
+              pickupNextWindow: null,
+              deliveryNextWindow: null,
+            });
 
-            setFulfillmentType(
-              'pickup',
-            );
+            setFulfillmentType('pickup');
           }
         } finally {
           if (!cancelled) {
-            setIsLoadingDeliveryStatus(
+            setIsLoadingFulfillmentStatus(
               false,
             );
           }
@@ -425,8 +431,15 @@ export default function WebCheckoutModal({
       ],
     );
 
+  const selectedFulfillmentAvailable =
+    fulfillmentType === 'pickup'
+      ? Boolean(fulfillmentAvailability?.pickupAvailable)
+      : Boolean(fulfillmentAvailability?.deliveryAvailable);
+
   const isConfirmDisabled =
     submitting ||
+    isLoadingFulfillmentStatus ||
+    !selectedFulfillmentAvailable ||
     isQuotingDelivery ||
     (
       fulfillmentType ===
@@ -657,14 +670,16 @@ export default function WebCheckoutModal({
     );
 
     if (
-      fulfillmentType ===
-      'delivery' &&
-      !deliveryEnabled
+      fulfillmentType === 'pickup' &&
+      !fulfillmentAvailability?.pickupAvailable
     ) {
-      setFulfillmentType(
-        'pickup',
-      );
+      return;
+    }
 
+    if (
+      fulfillmentType === 'delivery' &&
+      !fulfillmentAvailability?.deliveryAvailable
+    ) {
       return;
     }
 
@@ -784,20 +799,22 @@ export default function WebCheckoutModal({
 
   function handlePickupPress():
     void {
-    setFulfillmentType(
-      'pickup',
-    );
+    if (
+      isLoadingFulfillmentStatus ||
+      !fulfillmentAvailability?.pickupAvailable
+    ) {
+      return;
+    }
 
-    setDeliveryQuoteError(
-      null,
-    );
+    setFulfillmentType('pickup');
+    setDeliveryQuoteError(null);
   }
 
   function handleDeliveryPress():
     void {
     if (
-      !deliveryEnabled ||
-      isLoadingDeliveryStatus
+      !fulfillmentAvailability?.deliveryAvailable ||
+      isLoadingFulfillmentStatus
     ) {
       return;
     }
@@ -920,10 +937,23 @@ export default function WebCheckoutModal({
             >
               <ChoiceButton
                 title="Recoger"
-                subtitle="Paso por mi pedido"
+                subtitle={
+                  isLoadingFulfillmentStatus
+                    ? 'Consultando disponibilidad...'
+                    : fulfillmentAvailability?.pickupAvailable
+                      ? 'Paso por mi pedido'
+                      : fulfillmentAvailability?.pickupNextWindow
+                        ? `Disponible: ${fulfillmentAvailability.pickupNextWindow}`
+                        : fulfillmentAvailability?.pickupReason ||
+                          'No disponible por el momento'
+                }
                 selected={
                   fulfillmentType ===
                   'pickup'
+                }
+                disabled={
+                  !fulfillmentAvailability?.pickupAvailable ||
+                  isLoadingFulfillmentStatus
                 }
                 onPress={
                   handlePickupPress
@@ -933,14 +963,15 @@ export default function WebCheckoutModal({
               <ChoiceButton
                 title="Domicilio"
                 subtitle={
-                  isLoadingDeliveryStatus
+                  isLoadingFulfillmentStatus
                     ? 'Consultando disponibilidad...'
-                    : !deliveryEnabled
-                      ? 'Servicio no disponible por el momento'
+                    : !fulfillmentAvailability?.deliveryAvailable
+                      ? fulfillmentAvailability?.deliveryNextWindow
+                        ? `Disponible: ${fulfillmentAvailability.deliveryNextWindow}`
+                        : fulfillmentAvailability?.deliveryReason ||
+                          'No disponible por el momento'
                       : deliveryFee > 0
-                        ? `Desde ${formatCurrency(
-                          deliveryFee,
-                        )}`
+                        ? `Desde ${formatCurrency(deliveryFee)}`
                         : 'Entrega a domicilio'
                 }
                 selected={
@@ -948,14 +979,28 @@ export default function WebCheckoutModal({
                   'delivery'
                 }
                 disabled={
-                  !deliveryEnabled ||
-                  isLoadingDeliveryStatus
+                  !fulfillmentAvailability?.deliveryAvailable ||
+                  isLoadingFulfillmentStatus
                 }
                 onPress={
                   handleDeliveryPress
                 }
               />
             </View>
+
+            {!isLoadingFulfillmentStatus &&
+              fulfillmentAvailability &&
+              !fulfillmentAvailability.pickupAvailable &&
+              !fulfillmentAvailability.deliveryAvailable ? (
+                <View style={styles.fulfillmentUnavailableBox}>
+                  <Text style={styles.fulfillmentUnavailableTitle}>
+                    No hay modalidades disponibles en este momento
+                  </Text>
+                  <Text style={styles.fulfillmentUnavailableText}>
+                    Revisa los próximos horarios mostrados arriba.
+                  </Text>
+                </View>
+              ) : null}
 
             <SectionTitle>
               Tus datos
