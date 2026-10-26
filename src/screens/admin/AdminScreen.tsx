@@ -82,6 +82,7 @@ import { AdminDashboard } from '../../components/admin/dashboard/AdminDashboard'
 import { AdminRefundSettings } from '../../components/admin/refunds/AdminRefundSettings';
 import { AdminWebBanners } from '../../components/admin/web-banners/AdminWebBanners';
 import { AdminEvents } from '../../components/admin/events/AdminEvents';
+import { AdminInvoicing } from '../../components/admin/invoicing/AdminInvoicing';
 import { appVersionLabel } from '../../Utils/appVersion';
 
 type AdminSection =
@@ -101,6 +102,7 @@ type AdminSection =
   | 'feedback'
   | 'web-banners'
   | 'events'
+  | 'invoicing'
   | 'refunds';
 
 interface AdminSectionOption {
@@ -297,6 +299,19 @@ export function AdminScreen({
               '🎉',
           });
         }
+        if (
+          business?.features
+            .invoicingEnabled
+        ) {
+          sections.push({
+            key:
+              'invoicing',
+            label:
+              'FACTURACIÓN',
+            icon:
+              '🧾',
+          });
+        }
         sections.push({
           key:
             'refunds',
@@ -329,6 +344,8 @@ export function AdminScreen({
           .deliveryEnabled,
         business?.features
           .eventsEnabled,
+        business?.features
+          .invoicingEnabled,
         business?.features
           .loyaltyEnabled,
         business?.features
@@ -538,6 +555,22 @@ export function AdminScreen({
 
         return (
           <AdminEvents />
+        );
+      }
+
+      if (
+        activeSection ===
+        'invoicing'
+      ) {
+        if (
+          !business?.features
+            .invoicingEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <AdminInvoicing />
         );
       }
 
