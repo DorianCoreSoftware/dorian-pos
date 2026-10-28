@@ -84,6 +84,8 @@ import { AdminWebBanners } from '../../components/admin/web-banners/AdminWebBann
 import { AdminEvents } from '../../components/admin/events/AdminEvents';
 import { AdminInvoicing } from '../../components/admin/invoicing/AdminInvoicing';
 import { AdminInventory } from '../../components/admin/inventory/AdminInventory';
+import { AdminPurchases } from '../../components/admin/purchases/AdminPurchases';
+import { AdminNotifications } from '../../components/admin/notifications/AdminNotifications';
 import { appVersionLabel } from '../../Utils/appVersion';
 
 type AdminSection =
@@ -91,6 +93,8 @@ type AdminSection =
   | 'business'
   | 'products'
   | 'inventory'
+  | 'purchases'
+  | 'notifications'
   | 'categories'
   | 'modifiers'
   | 'users'
@@ -196,6 +200,22 @@ export function AdminScreen({
                 'INVENTARIO',
               icon:
                 '🧺',
+            },
+            {
+              key:
+                'purchases',
+              label:
+                'COMPRAS',
+              icon:
+                '🛒',
+            },
+            {
+              key:
+                'notifications',
+              label:
+                'NOTIFICACIONES',
+              icon:
+                '🔔',
             },
             {
               key:
@@ -449,6 +469,29 @@ export function AdminScreen({
       ) {
         return (
           <AdminInventory />
+        );
+      }
+      if (
+        activeSection ===
+        'purchases'
+      ) {
+        return (
+          <AdminPurchases />
+        );
+      }
+      if (
+        activeSection ===
+        'notifications'
+      ) {
+        return (
+          <AdminNotifications
+            onNavigateToInventory={
+              () =>
+                setActiveSection(
+                  'inventory',
+                )
+            }
+          />
         );
       }
       if (

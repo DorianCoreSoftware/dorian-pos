@@ -10,7 +10,9 @@ export type InventoryMovementType =
   | 'entry'
   | 'exit'
   | 'adjustment'
-  | 'waste';
+  | 'waste'
+  | 'sale'
+  | 'purchase_reversal';
 
 export interface InventoryItem {
   id: string;
