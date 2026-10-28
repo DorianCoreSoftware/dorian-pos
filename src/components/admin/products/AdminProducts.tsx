@@ -46,6 +46,8 @@ import {
 import { uploadProductImage } from '../../../services/productImageService';
 import { useCurrency } from '../../../hooks/useCurrency';
 
+import { ProductInventoryRecipeModal } from '../inventory/ProductInventoryRecipeModal';
+
 import {
     getAllModifiers,
     getModifierGroups,
@@ -194,6 +196,13 @@ export function AdminProducts({
     const [
         selectedProduct,
         setSelectedProduct,
+    ] = useState<Product | null>(
+        null,
+    );
+
+    const [
+        inventoryRecipeProduct,
+        setInventoryRecipeProduct,
     ] = useState<Product | null>(
         null,
     );
@@ -1828,6 +1837,28 @@ export function AdminProducts({
                         style={
                             styles.editButton
                         }
+                        disabled={
+                            isProcessing
+                        }
+                        onPress={() =>
+                            setInventoryRecipeProduct(
+                                item,
+                            )
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.editButtonText
+                            }
+                        >
+                            Receta
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={
+                            styles.editButton
+                        }
                         onPress={() => {
                             void openEditModal(
                                 item,
@@ -1947,6 +1978,36 @@ export function AdminProducts({
                 styles.container
             }
         >
+            <ProductInventoryRecipeModal
+                visible={
+                    inventoryRecipeProduct !==
+                    null
+                }
+                productId={
+                    inventoryRecipeProduct
+                        ?.id ??
+                    null
+                }
+                productName={
+                    inventoryRecipeProduct
+                        ?.name ??
+                    ''
+                }
+                productPrice={
+                    Number(
+                        inventoryRecipeProduct
+                            ?.price ??
+                        0,
+                    )
+                }
+                onClose={
+                    () =>
+                        setInventoryRecipeProduct(
+                            null,
+                        )
+                }
+            />
+
             <Modal
                 visible={
                     optionSelectorGroupId !== null

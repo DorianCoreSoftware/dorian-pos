@@ -83,12 +83,14 @@ import { AdminRefundSettings } from '../../components/admin/refunds/AdminRefundS
 import { AdminWebBanners } from '../../components/admin/web-banners/AdminWebBanners';
 import { AdminEvents } from '../../components/admin/events/AdminEvents';
 import { AdminInvoicing } from '../../components/admin/invoicing/AdminInvoicing';
+import { AdminInventory } from '../../components/admin/inventory/AdminInventory';
 import { appVersionLabel } from '../../Utils/appVersion';
 
 type AdminSection =
   | 'dashboard'
   | 'business'
   | 'products'
+  | 'inventory'
   | 'categories'
   | 'modifiers'
   | 'users'
@@ -186,6 +188,14 @@ export function AdminScreen({
                 'PRODUCTOS',
               icon:
                 '📦',
+            },
+            {
+              key:
+                'inventory',
+              label:
+                'INVENTARIO',
+              icon:
+                '🧺',
             },
             {
               key:
@@ -431,6 +441,14 @@ export function AdminScreen({
               onProductsChanged
             }
           />
+        );
+      }
+      if (
+        activeSection ===
+        'inventory'
+      ) {
+        return (
+          <AdminInventory />
         );
       }
       if (

@@ -44,6 +44,10 @@ import {
     useCurrency,
 } from '../../../hooks/useCurrency';
 
+import {
+    ModifierInventoryRecipeModal,
+} from './ModifierInventoryRecipeModal';
+
 type ModifierFilter =
     | 'all'
     | string;
@@ -106,6 +110,13 @@ export function AdminModifiers({
     const [
         selectedModifier,
         setSelectedModifier,
+    ] = useState<ModifierWithGroup | null>(
+        null,
+    );
+
+    const [
+        inventoryRecipeModifier,
+        setInventoryRecipeModifier,
     ] = useState<ModifierWithGroup | null>(
         null,
     );
@@ -992,6 +1003,28 @@ export function AdminModifiers({
                 >
                     <TouchableOpacity
                         style={
+                            styles.recipeButton
+                        }
+                        disabled={
+                            isProcessing
+                        }
+                        onPress={() =>
+                            setInventoryRecipeModifier(
+                                item,
+                            )
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.recipeButtonText
+                            }
+                        >
+                            Receta
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={
                             styles.editButton
                         }
                         onPress={() =>
@@ -1113,6 +1146,36 @@ export function AdminModifiers({
                 styles.container
             }
         >
+            <ModifierInventoryRecipeModal
+                visible={
+                    inventoryRecipeModifier !==
+                    null
+                }
+                modifierId={
+                    inventoryRecipeModifier
+                        ?.id ??
+                    null
+                }
+                modifierName={
+                    inventoryRecipeModifier
+                        ?.name ??
+                    ''
+                }
+                extraPrice={
+                    Number(
+                        inventoryRecipeModifier
+                            ?.extra_price ??
+                        0,
+                    )
+                }
+                onClose={
+                    () =>
+                        setInventoryRecipeModifier(
+                            null,
+                        )
+                }
+            />
+
             <FlatList
                 style={
                     styles.modifierList
