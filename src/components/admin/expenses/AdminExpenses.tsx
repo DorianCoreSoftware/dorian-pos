@@ -181,6 +181,14 @@ export function AdminExpenses() {
   };
 
   const openEditExpense = (expense: ExpenseRecord) => {
+    if (expense.isGenerated) {
+      Alert.alert(
+        'Egreso automático',
+        'Este egreso fue generado por una compra. Corrígelo desde Compras para mantener inventario y finanzas sincronizados.',
+      );
+      return;
+    }
+
     setDraft({
       id: expense.id,
       categoryId: expense.categoryId,
@@ -213,6 +221,14 @@ export function AdminExpenses() {
   };
 
   const handleDeleteExpense = (expense: ExpenseRecord) => {
+    if (expense.isGenerated) {
+      Alert.alert(
+        'Egreso automático',
+        'Este egreso fue generado por una compra y no puede eliminarse directamente. Usa la reversa desde Compras.',
+      );
+      return;
+    }
+
     Alert.alert('Eliminar egreso', `¿Eliminar "${expense.description}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -372,12 +388,20 @@ export function AdminExpenses() {
                   <Text style={[styles.expenseAmount, { color: theme.danger }]}>{formatCurrency(expense.amount)}</Text>
                 </View>
                 <View style={styles.expenseActions}>
-                  <TouchableOpacity onPress={() => openEditExpense(expense)}>
-                    <Text style={[styles.actionText, { color: theme.primary }]}>Editar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteExpense(expense)}>
-                    <Text style={[styles.actionText, { color: theme.danger }]}>Eliminar</Text>
-                  </TouchableOpacity>
+                  {expense.isGenerated ? (
+                    <Text style={[styles.actionText, { color: theme.textMuted }]}>
+                      Generado automáticamente · corregir desde Compras
+                    </Text>
+                  ) : (
+                    <>
+                      <TouchableOpacity onPress={() => openEditExpense(expense)}>
+                        <Text style={[styles.actionText, { color: theme.primary }]}>Editar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteExpense(expense)}>
+                        <Text style={[styles.actionText, { color: theme.danger }]}>Eliminar</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               </View>
             ))}

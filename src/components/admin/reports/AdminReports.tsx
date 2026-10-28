@@ -33,6 +33,10 @@ import {
     getModifierSalesReport,
     getProductSalesReport,
     getPromotionActivityReport,
+    getProfitabilityReport,
+    getDailyProfitabilityReport,
+    ProfitabilityReport,
+    DailyProfitabilityReport,
     getSalesReportSummary,
     ModifierSalesReport,
     ProductSalesReport,
@@ -57,6 +61,10 @@ import {
 import {
     AdminEventReport,
 } from './AdminEventReport';
+
+import {
+    AdminProfitabilityReport,
+} from './AdminProfitabilityReport';
 
 import {
     getModifierGroups,
@@ -110,6 +118,20 @@ const EMPTY_FINANCIAL: FinancialBalanceReport = {
     expenses: 0,
     balance: 0,
     expense_count: 0,
+};
+
+const EMPTY_PROFITABILITY:
+    ProfitabilityReport = {
+    grossSales: 0,
+    refunds: 0,
+    netSales: 0,
+    cogs: 0,
+    grossProfit: 0,
+    grossMarginPercent: null,
+    ordersCount: 0,
+    costedOrdersCount: 0,
+    uncostedOrdersCount: 0,
+    costCoveragePercent: 100,
 };
 
 const EMPTY_REFUND_SUMMARY:
@@ -210,6 +232,20 @@ export function AdminReports() {
         dailyFinancial,
         setDailyFinancial,
     ] = useState<DailyFinancialReport[]>([]);
+
+    const [
+        profitability,
+        setProfitability,
+    ] = useState<ProfitabilityReport>(
+        EMPTY_PROFITABILITY,
+    );
+
+    const [
+        dailyProfitability,
+        setDailyProfitability,
+    ] = useState<DailyProfitabilityReport[]>(
+        [],
+    );
     const [
         refundRows,
         setRefundRows,
@@ -333,6 +369,8 @@ export function AdminReports() {
                         financialBalanceData,
                         expenseCategoryData,
                         dailyFinancialData,
+                        profitabilityData,
+                        dailyProfitabilityData,
                         refundReportData,
                         refundSummaryData,
                         eventReportData,
@@ -371,6 +409,16 @@ export function AdminReports() {
                             ),
 
                             getDailyFinancialReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getProfitabilityReport(
+                                dateRange.from,
+                                dateRange.to,
+                            ),
+
+                            getDailyProfitabilityReport(
                                 dateRange.from,
                                 dateRange.to,
                             ),
@@ -434,6 +482,14 @@ export function AdminReports() {
 
                     setDailyFinancial(
                         dailyFinancialData,
+                    );
+
+                    setProfitability(
+                        profitabilityData,
+                    );
+
+                    setDailyProfitability(
+                        dailyProfitabilityData,
                     );
 
                     setRefundRows(
@@ -642,6 +698,11 @@ export function AdminReports() {
                     value: 'financial',
                     label: 'Balance financiero',
                     description: 'Ventas netas contra egresos registrados.',
+                },
+                {
+                    value: 'profitability',
+                    label: 'Utilidad real',
+                    description: 'Ventas entregadas contra costo histórico real de los insumos consumidos.',
                 },
                 {
                     value: 'refunds',
@@ -1081,6 +1142,12 @@ export function AdminReports() {
                         summary={financialBalance}
                         categories={expenseCategories}
                         daily={dailyFinancial}
+                        formatCurrency={formatCurrency}
+                    />
+                ) : activeSection === 'profitability' ? (
+                    <AdminProfitabilityReport
+                        summary={profitability}
+                        daily={dailyProfitability}
                         formatCurrency={formatCurrency}
                     />
                 ) : activeSection === 'promotions' ? (

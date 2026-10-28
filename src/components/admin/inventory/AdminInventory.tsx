@@ -100,6 +100,8 @@ const MOVEMENT_LABELS:
     exit: 'Salida',
     adjustment: 'Ajuste',
     waste: 'Merma',
+    sale: 'Venta',
+    purchase_reversal: 'Reversa compra',
   };
 
 function formatQuantity(

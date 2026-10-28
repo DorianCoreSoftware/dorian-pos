@@ -22,6 +22,9 @@ const WEB_ORDERS_CHANNEL_ID =
 const DELIVERY_ORDERS_CHANNEL_ID =
   'delivery-orders';
 
+const CRITICAL_ALERTS_CHANNEL_ID =
+  'critical-alerts';
+
 const EVENT_REQUESTS_CHANNEL_ID =
   'event-requests';
 
@@ -135,6 +138,50 @@ async function configureAndroidNotificationChannels():
           300,
           200,
           300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
+
+
+  /*
+   * Alertas operativas críticas.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      CRITICAL_ALERTS_CHANNEL_ID,
+      {
+        name:
+          'Alertas críticas',
+
+        description:
+          'Alertas operativas críticas del POS que requieren atención.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          400,
+          180,
+          400,
+          180,
+          400,
         ],
 
         enableVibrate:
@@ -720,4 +767,85 @@ export async function getLastPushNotificationResponse():
   > {
   return Notifications
     .getLastNotificationResponseAsync();
+}
+
+
+/*
+ * ============================================================
+ * ALERTA CRÍTICA DEL CENTRO DE NOTIFICACIONES
+ * ============================================================
+ */
+export interface CriticalPosAlertNotificationData {
+  type:
+    'critical_pos_alert';
+
+  notificationId?:
+    string;
+
+  notificationType?:
+    string;
+
+  sourceType?:
+    string;
+
+  sourceId?:
+    string;
+}
+
+export function isCriticalPosAlertNotification(
+  data:
+    unknown,
+): data is CriticalPosAlertNotificationData {
+  if (
+    !data ||
+    typeof data !==
+      'object'
+  ) {
+    return false;
+  }
+
+  const notificationData =
+    data as {
+      type?:
+        unknown;
+    };
+
+  return (
+    notificationData.type ===
+    'critical_pos_alert'
+  );
+}
+
+/*
+ * Listener independiente para no romper el listener actual
+ * de pedidos web.
+ */
+export function listenToCriticalPosAlertResponses(
+  onCriticalAlertPressed:
+    (
+      data:
+        CriticalPosAlertNotificationData,
+    ) => void,
+): Notifications.EventSubscription {
+  return Notifications
+    .addNotificationResponseReceivedListener(
+      response => {
+        const data =
+          response
+            .notification
+            .request
+            .content
+            .data;
+
+        if (
+          isCriticalPosAlertNotification(
+            data,
+          )
+        ) {
+          onCriticalAlertPressed(
+            data,
+          );
+        }
+      },
+    );
 }
