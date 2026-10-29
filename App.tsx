@@ -6,6 +6,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
   Text,
   TouchableOpacity,
   View,
@@ -58,6 +59,10 @@ import {
 } from './src/screens/events/EventsScreen';
 
 import {
+  AttendanceScreen,
+} from './src/screens/attendance/AttendanceScreen';
+
+import {
   GlobalHeader,
   MainTab,
 } from './src/components/header/GlobalHeader';
@@ -98,8 +103,21 @@ import {
 } from './src/services/pushNotificationService';
 
 import {
+  configureAttendanceNotificationChannel,
+  getAttendanceNotificationTarget,
+  isAttendanceNotification,
+  listenToAttendanceNotificationResponses,
+} from './src/services/attendancePushNavigationService';
+
+import {
   getEventRequestsAdmin,
 } from './src/services/adminEventsService';
+
+import {
+  AttendanceStatus,
+  getAttendanceStatus,
+  syncAttendanceNotifications,
+} from './src/services/attendanceService';
 
 function MainApp() {
   const {
@@ -120,13 +138,82 @@ function MainApp() {
     activeTab,
     setActiveTab,
   ] = useState<MainTab>(
-    'pos',
+    user?.role === 'driver'
+      ? 'driver'
+      : 'pos',
   );
+
+  const [
+    attendanceFocus,
+    setAttendanceFocus,
+  ] = useState<
+    | 'attendance'
+    | 'notifications'
+    | 'requests'
+    | 'receipts'
+    | 'schedule'
+    | null
+  >(null);
+
+  const [
+    attendanceFocusToken,
+    setAttendanceFocusToken,
+  ] = useState(0);
+
+  const openAttendanceFromNotification =
+    (data: {
+      type: 'attendance_notification';
+      category?: string;
+    }): void => {
+      setAttendanceFocus(
+        getAttendanceNotificationTarget(data),
+      );
+      setAttendanceFocusToken(
+        current => current + 1,
+      );
+      setActiveTab('attendance');
+    };
 
   const [
     newEventRequestsCount,
     setNewEventRequestsCount,
   ] = useState(0);
+
+  const [
+    attendanceStatus,
+    setAttendanceStatus,
+  ] = useState<AttendanceStatus | null>(null);
+
+  const lastAttendanceAlertAt =
+    useRef(0);
+
+  const refreshAttendanceStatus =
+    async (): Promise<void> => {
+      if (!user?.id) {
+        setAttendanceStatus(null);
+        return;
+      }
+
+      try {
+        const status =
+          await getAttendanceStatus();
+        setAttendanceStatus(status);
+
+        try {
+          await syncAttendanceNotifications();
+        } catch (notificationError) {
+          console.warn(
+            'No se pudo sincronizar el monitoreo de asistencia:',
+            notificationError,
+          );
+        }
+      } catch (error) {
+        console.error(
+          'Error actualizando estado de asistencia:',
+          error,
+        );
+      }
+    };
 
   const refreshNewEventRequestsCount =
     async (): Promise<void> => {
@@ -212,6 +299,77 @@ function MainApp() {
     business?.features.eventsEnabled,
   ]);
 
+  useEffect(() => {
+    void refreshAttendanceStatus();
+
+    if (!user?.id) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refreshAttendanceStatus();
+    }, 60000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void refreshAttendanceStatus();
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (
+      !attendanceStatus ||
+      activeTab === 'attendance'
+    ) {
+      return;
+    }
+
+    const shouldWarn =
+      attendanceStatus.needsClockInReminder ||
+      attendanceStatus.needsClockOutReminder;
+
+    if (!shouldWarn) {
+      return;
+    }
+
+    const now = Date.now();
+    const intervalMs = Math.max(
+      1,
+      attendanceStatus.settings.reminderIntervalMinutes,
+    ) * 60000;
+
+    if (
+      lastAttendanceAlertAt.current > 0 &&
+      now - lastAttendanceAlertAt.current < intervalMs
+    ) {
+      return;
+    }
+
+    lastAttendanceAlertAt.current = now;
+
+    Alert.alert(
+      attendanceStatus.needsClockOutReminder
+        ? 'Salida pendiente'
+        : 'Entrada pendiente',
+      attendanceStatus.needsClockOutReminder
+        ? 'Tu jornada sigue abierta después del horario del negocio. Registra tu salida cuando termines.'
+        : 'Estás usando el sistema dentro de la ventana laboral y todavía no has registrado tu entrada.',
+      [
+        {
+          text: 'Ir a asistencia',
+          onPress: () => setActiveTab('attendance'),
+        },
+        {
+          text: 'Recordarme después',
+          style: 'cancel',
+        },
+      ],
+    );
+  }, [attendanceStatus, activeTab]);
+
   /*
    * ==========================================================
    * REGISTRO PUSH
@@ -230,6 +388,15 @@ function MainApp() {
   }, [
     user?.id,
   ]);
+
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    void configureAttendanceNotificationChannel();
+  }, [user?.id]);
 
   /*
    * ==========================================================
@@ -338,6 +505,17 @@ function MainApp() {
         },
       );
 
+    const attendanceSubscription =
+      listenToAttendanceNotificationResponses(
+        data => {
+          console.log(
+            '🕐 Notificación laboral abierta:',
+            data,
+          );
+          openAttendanceFromNotification(data);
+        },
+      );
+
     const receivedSubscription =
       listenToPushNotificationsReceived(
         () => {
@@ -372,6 +550,15 @@ function MainApp() {
               .request
               .content
               .data;
+
+          if (isAttendanceNotification(data)) {
+            console.log(
+              '🕐 POS iniciado desde notificación laboral:',
+              data,
+            );
+            openAttendanceFromNotification(data);
+            return;
+          }
 
           if (isEventRequestNotification(data)) {
             if (
@@ -416,6 +603,7 @@ function MainApp() {
 
     return () => {
       subscription.remove();
+      attendanceSubscription.remove();
       receivedSubscription.remove();
     };
   }, [
@@ -862,6 +1050,34 @@ function MainApp() {
 
       if (
         activeTab ===
+        'driver'
+      ) {
+        if (
+          user?.role !== 'driver' ||
+          !business?.features.deliveryEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <DriverScreen />
+        );
+      }
+
+      if (
+        activeTab ===
+        'attendance'
+      ) {
+        return (
+          <AttendanceScreen
+            focusTarget={attendanceFocus}
+            focusToken={attendanceFocusToken}
+          />
+        );
+      }
+
+      if (
+        activeTab ===
         'sales'
       ) {
         return (
@@ -996,6 +1212,39 @@ function MainApp() {
           logout
         }
       />
+
+      {activeTab !== 'attendance' &&
+      (attendanceStatus?.needsClockInReminder ||
+        attendanceStatus?.needsClockOutReminder) ? (
+        <TouchableOpacity
+          onPress={() => setActiveTab('attendance')}
+          style={{
+            minHeight: 44,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            backgroundColor: attendanceStatus.needsClockOutReminder
+              ? theme.danger
+              : theme.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              color: attendanceStatus.needsClockOutReminder
+                ? '#FFFFFF'
+                : theme.onPrimary,
+              fontSize: 13,
+              fontWeight: '900',
+              textAlign: 'center',
+            }}
+          >
+            {attendanceStatus.needsClockOutReminder
+              ? '⚠️ Tu jornada sigue abierta. Toca para registrar salida.'
+              : '⚠️ No has registrado tu entrada. Toca para ir a Asistencia.'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
 
       {renderActiveScreen()}
     </View>
@@ -1201,12 +1450,7 @@ function NavigationGateway() {
         registerActivity
       }
     >
-      {user.role ===
-      'driver' ? (
-        <DriverScreen />
-      ) : (
-        <MainApp />
-      )}
+      <MainApp />
     </View>
   );
 }

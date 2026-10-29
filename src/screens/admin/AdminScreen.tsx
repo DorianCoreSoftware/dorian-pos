@@ -89,6 +89,7 @@ import { AdminNotifications } from '../../components/admin/notifications/AdminNo
 import { AdminCrm } from '../../components/admin/crm/AdminCrm';
 import { AdminMarketing } from '../../components/admin/marketing/AdminMarketing';
 import { appVersionLabel } from '../../Utils/appVersion';
+import { AdminAttendance } from '../../components/admin/attendance/AdminAttendance';
 
 type AdminSection =
   | 'dashboard'
@@ -102,6 +103,7 @@ type AdminSection =
   | 'categories'
   | 'modifiers'
   | 'users'
+  | 'attendance'
   | 'reports'
   | 'expenses'
   | 'printer'
@@ -260,6 +262,14 @@ export function AdminScreen({
                 'USUARIOS',
               icon:
                 '👥',
+            },
+            {
+              key:
+                'attendance',
+              label:
+                'ASISTENCIA',
+              icon:
+                '🕐',
             },
             {
               key:
@@ -561,6 +571,14 @@ export function AdminScreen({
       ) {
         return (
           <AdminUsers />
+        );
+      }
+      if (
+        activeSection ===
+        'attendance'
+      ) {
+        return (
+          <AdminAttendance />
         );
       }
       if (

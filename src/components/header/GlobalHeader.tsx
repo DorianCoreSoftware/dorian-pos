@@ -35,6 +35,8 @@ import {
 
 export type MainTab =
   | 'pos'
+  | 'driver'
+  | 'attendance'
   | 'kitchen'
   | 'sales'
   | 'loyalty'
@@ -273,10 +275,11 @@ export function GlobalHeader({
             >
               {user?.fullName}{' '}
               (
-              {user?.role ===
-                'admin'
+              {user?.role === 'admin'
                 ? 'Admin'
-                : 'Caja'}
+                : user?.role === 'driver'
+                  ? 'Reparto'
+                  : 'Caja'}
               )
             </Text>
           ) : (
@@ -332,6 +335,28 @@ export function GlobalHeader({
           styles.tabContainerPhone,
         ]}
       >
+        {user?.role === 'driver' ? (
+          <>
+            <TouchableOpacity
+              style={getTabButtonStyle('driver')}
+              onPress={() => setActiveTab('driver')}
+            >
+              <Text style={getTabTextStyle('driver')}>
+                REPARTO
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={getTabButtonStyle('attendance')}
+              onPress={() => setActiveTab('attendance')}
+            >
+              <Text style={getTabTextStyle('attendance')}>
+                ASISTENCIA
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
         <TouchableOpacity
           style={
             getTabButtonStyle(
@@ -495,6 +520,17 @@ export function GlobalHeader({
             </Text>
           </TouchableOpacity>
         ) : null}
+
+            <TouchableOpacity
+              style={getTabButtonStyle('attendance')}
+              onPress={() => setActiveTab('attendance')}
+            >
+              <Text style={getTabTextStyle('attendance')}>
+                ASISTENCIA
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {editingOrderId ? (
