@@ -98,9 +98,6 @@ import {
   isInvalidWebCustomerSessionError,
   WebCustomerProfile,
 } from '../../services/web-customer/webCustomerService';
-import {
-  getPublicEventsAvailability,
-} from '../../services/web-events/webEventsService';
 
 interface WebMenuScreenProps {
   onRewardsPress?: () => void;
@@ -141,6 +138,71 @@ function normalizeText(
       'es',
     );
 }
+const MARKETING_TRACKING_STORAGE_KEY =
+  'dorian_marketing_tracking_token';
+
+function getMarketingTrackingToken():
+  | string
+  | null {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return null;
+  }
+
+  const urlToken =
+    new URLSearchParams(
+      window.location.search,
+    )
+      .get('mkt')
+      ?.trim() ||
+    null;
+
+  if (urlToken) {
+    try {
+      window.sessionStorage.setItem(
+        MARKETING_TRACKING_STORAGE_KEY,
+        urlToken,
+      );
+    } catch {
+      // sessionStorage puede estar bloqueado.
+    }
+
+    return urlToken;
+  }
+
+  try {
+    return (
+      window.sessionStorage.getItem(
+        MARKETING_TRACKING_STORAGE_KEY,
+      )
+        ?.trim() ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function clearMarketingTrackingToken():
+void {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(
+      MARKETING_TRACKING_STORAGE_KEY,
+    );
+  } catch {
+    // sessionStorage puede estar bloqueado.
+  }
+}
+
 function getTrackingCodeFromPath():
   | string
   | null {
@@ -319,10 +381,6 @@ export default function WebMenuScreen({
     setWebBanners,
   ] = useState<WebBanner[]>([]);
   const [
-    eventsAvailable,
-    setEventsAvailable,
-  ] = useState(false);
-  const [
     selectedCategoryId,
     setSelectedCategoryId,
   ] = useState<
@@ -493,6 +551,14 @@ export default function WebMenuScreen({
   ] = useState<
     string | null
   >(null);
+  const [
+    marketingTrackingToken,
+  ] = useState<
+    string | null
+  >(
+    () =>
+      getMarketingTrackingToken(),
+  );
   const [
     businessStatus,
     setBusinessStatus,
@@ -668,7 +734,6 @@ export default function WebMenuScreen({
         loadedModifierPromotion,
         loadedBusinessStatus,
         loadedWebBanners,
-        loadedEventsAvailable,
       ] =
         await Promise.all([
           getActiveCategories(),
@@ -685,10 +750,6 @@ export default function WebMenuScreen({
             .catch(
               () => [],
             ),
-          getPublicEventsAvailability()
-            .catch(
-              () => false,
-            ),
         ]);
       setCategories(
         loadedCategories,
@@ -704,9 +765,6 @@ export default function WebMenuScreen({
       );
       setWebBanners(
         loadedWebBanners,
-      );
-      setEventsAvailable(
-        loadedEventsAvailable,
       );
       setBusinessStatusError(
         loadedBusinessStatus
@@ -1062,6 +1120,7 @@ export default function WebMenuScreen({
       WebFulfillmentType;
       customerName: string;
       customerPhone: string;
+      marketingCode: string;
       deliveryDetails:
       DeliveryDetails | null;
     },
@@ -1133,10 +1192,23 @@ export default function WebMenuScreen({
             requestId,
           customerSessionToken:
             getSavedWebCustomerSessionToken(),
+          marketingCode:
+            data.marketingCode,
+          marketingToken:
+            marketingTrackingToken,
         });
       setSuccessfulOrderId(
         result.orderId,
       );
+
+      if (
+        marketingTrackingToken ||
+        data.marketingCode
+          .trim()
+      ) {
+        clearMarketingTrackingToken();
+      }
+
       const trackingCode =
         getOrderTrackingCode(
           result.orderId,
@@ -1352,29 +1424,6 @@ export default function WebMenuScreen({
                 Seguir pedido
               </Text>
             </Pressable>
-            {eventsAvailable &&
-              onEventsPress && (
-                <Pressable
-                  onPress={
-                    onEventsPress
-                  }
-                  style={({
-                    pressed,
-                  }) => [
-                      styles.topActionSecondary,
-                      pressed &&
-                      styles.topActionPressed,
-                    ]}
-                >
-                  <Text
-                    style={
-                      styles.topActionSecondaryText
-                    }
-                  >
-                    🎉 Eventos
-                  </Text>
-                </Pressable>
-              )}
             <Pressable
               onPress={() =>
                 setIsFeedbackVisible(

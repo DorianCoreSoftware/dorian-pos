@@ -6,7 +6,7 @@ import {
 import {
   supabase,
 } from '../../../services/supabase';
-import { getFulfillmentAvailability } from '../../../services/deliveryService';
+import { getDeliveryServiceStatus } from '../../../services/deliveryService';
 
 export type WebFulfillmentType =
   | 'pickup'
@@ -28,6 +28,12 @@ export interface CreateWebOrderInput {
 
   customerSessionToken?:
   string | null;
+
+  marketingCode?:
+  string | null;
+
+  marketingToken?:
+  string | null;
 }
 
 export interface CreateWebOrderResult {
@@ -42,6 +48,8 @@ export async function createWebOrder({
   deliveryDetails,
   clientRequestId,
   customerSessionToken,
+  marketingCode,
+  marketingToken,
 }: CreateWebOrderInput): Promise<CreateWebOrderResult> {
   if (
     !Array.isArray(cart) ||
@@ -188,27 +196,18 @@ export async function createWebOrder({
       }
       : null;
 
-  const fulfillmentAvailability =
-    await getFulfillmentAvailability();
-
   if (
-    fulfillmentType === 'pickup' &&
-    !fulfillmentAvailability.pickupAvailable
+    fulfillmentType ===
+    'delivery'
   ) {
-    throw new Error(
-      fulfillmentAvailability.pickupReason ||
-      'El servicio para recoger no está disponible por el momento.',
-    );
-  }
+    const deliveryEnabled =
+      await getDeliveryServiceStatus();
 
-  if (
-    fulfillmentType === 'delivery' &&
-    !fulfillmentAvailability.deliveryAvailable
-  ) {
-    throw new Error(
-      fulfillmentAvailability.deliveryReason ||
-      'El servicio a domicilio no está disponible por el momento.',
-    );
+    if (!deliveryEnabled) {
+      throw new Error(
+        'El servicio a domicilio no está disponible por el momento.',
+      );
+    }
   }
 
   const cleanSessionToken =
@@ -281,6 +280,54 @@ export async function createWebOrder({
     throw new Error(
       'No se recibió el identificador del pedido.',
     );
+  }
+
+  const cleanMarketingCode =
+    marketingCode
+      ?.trim()
+      .toUpperCase() ||
+    null;
+
+  const cleanMarketingToken =
+    marketingToken
+      ?.trim() ||
+    null;
+
+  if (
+    cleanMarketingCode ||
+    cleanMarketingToken
+  ) {
+    /*
+     * El pedido ya existe en este punto.
+     * El tracking es complementario y nunca debe
+     * convertir un pedido exitoso en un error de checkout.
+     */
+    const {
+      error:
+        marketingTrackingError,
+    } =
+      await supabase.rpc(
+        'claim_marketing_tracking_for_web_order',
+        {
+          p_order_id:
+            data,
+          p_client_request_id:
+            clientRequestId,
+          p_code:
+            cleanMarketingCode,
+          p_token:
+            cleanMarketingToken,
+        },
+      );
+
+    if (
+      marketingTrackingError
+    ) {
+      console.warn(
+        'No se pudo asociar el tracking de Marketing al pedido:',
+        marketingTrackingError.message,
+      );
+    }
   }
 
   return {

@@ -24,12 +24,7 @@ import styles, {
 
 import { useBusiness } from '../../../context/BusinessContext';
 import { useCurrency } from '../../../hooks/useCurrency';
-import {
-  DeliveryQuote,
-  FulfillmentAvailability,
-  getDeliveryQuote,
-  getFulfillmentAvailability,
-} from '../../../services/deliveryService';
+import { DeliveryQuote, getDeliveryQuote, getDeliveryServiceStatus } from '../../../services/deliveryService';
 import { DeliveryDetails } from '../../../types';
 import { WebFulfillmentType } from '../../services/web-order/webOrderService';
 import { GooglePlaceSelection } from '../../models/google-place-autocomplete/google-place-selection';
@@ -44,6 +39,9 @@ interface CheckoutData {
   string;
 
   customerPhone:
+  string;
+
+  marketingCode:
   string;
 
   deliveryDetails:
@@ -183,6 +181,12 @@ export default function WebCheckoutModal({
     useState('');
 
   const [
+    marketingCode,
+    setMarketingCode,
+  ] =
+    useState('');
+
+  const [
     delivery,
     setDelivery,
   ] =
@@ -219,13 +223,14 @@ export default function WebCheckoutModal({
     );
 
   const [
-    fulfillmentAvailability,
-    setFulfillmentAvailability,
-  ] = useState<FulfillmentAvailability | null>(null);
+    deliveryEnabled,
+    setDeliveryEnabled,
+  ] =
+    useState(true);
 
   const [
-    isLoadingFulfillmentStatus,
-    setIsLoadingFulfillmentStatus,
+    isLoadingDeliveryStatus,
+    setIsLoadingDeliveryStatus,
   ] =
     useState(false);
 
@@ -284,6 +289,10 @@ export default function WebCheckoutModal({
         '',
       );
 
+      setMarketingCode(
+        '',
+      );
+
       setDelivery({
         ...EMPTY_DELIVERY,
       });
@@ -322,32 +331,33 @@ export default function WebCheckoutModal({
 
       void (async () => {
         try {
-          setIsLoadingFulfillmentStatus(
+          setIsLoadingDeliveryStatus(
             true,
           );
 
-          const availability =
-            await getFulfillmentAvailability();
+          const enabled =
+            await getDeliveryServiceStatus();
 
           if (cancelled) {
             return;
           }
 
-          setFulfillmentAvailability(
-            availability,
+          setDeliveryEnabled(
+            enabled,
           );
 
-          if (availability.pickupAvailable) {
-            setFulfillmentType('pickup');
-          } else if (availability.deliveryAvailable) {
-            setFulfillmentType('delivery');
-          } else {
-            setFulfillmentType('pickup');
-          }
+          if (!enabled) {
+            setFulfillmentType(
+              'pickup',
+            );
 
-          if (!availability.deliveryAvailable) {
-            setDeliveryQuote(null);
-            setDeliveryQuoteError(null);
+            setDeliveryQuote(
+              null,
+            );
+
+            setDeliveryQuoteError(
+              null,
+            );
           }
         } catch (error) {
           console.error(
@@ -361,20 +371,17 @@ export default function WebCheckoutModal({
            * no permitimos generar un delivery.
            */
           if (!cancelled) {
-            setFulfillmentAvailability({
-              pickupAvailable: false,
-              deliveryAvailable: false,
-              pickupReason: 'No se pudo validar la disponibilidad para recoger.',
-              deliveryReason: 'No se pudo validar la disponibilidad a domicilio.',
-              pickupNextWindow: null,
-              deliveryNextWindow: null,
-            });
+            setDeliveryEnabled(
+              false,
+            );
 
-            setFulfillmentType('pickup');
+            setFulfillmentType(
+              'pickup',
+            );
           }
         } finally {
           if (!cancelled) {
-            setIsLoadingFulfillmentStatus(
+            setIsLoadingDeliveryStatus(
               false,
             );
           }
@@ -431,15 +438,8 @@ export default function WebCheckoutModal({
       ],
     );
 
-  const selectedFulfillmentAvailable =
-    fulfillmentType === 'pickup'
-      ? Boolean(fulfillmentAvailability?.pickupAvailable)
-      : Boolean(fulfillmentAvailability?.deliveryAvailable);
-
   const isConfirmDisabled =
     submitting ||
-    isLoadingFulfillmentStatus ||
-    !selectedFulfillmentAvailable ||
     isQuotingDelivery ||
     (
       fulfillmentType ===
@@ -670,16 +670,14 @@ export default function WebCheckoutModal({
     );
 
     if (
-      fulfillmentType === 'pickup' &&
-      !fulfillmentAvailability?.pickupAvailable
+      fulfillmentType ===
+      'delivery' &&
+      !deliveryEnabled
     ) {
-      return;
-    }
+      setFulfillmentType(
+        'pickup',
+      );
 
-    if (
-      fulfillmentType === 'delivery' &&
-      !fulfillmentAvailability?.deliveryAvailable
-    ) {
       return;
     }
 
@@ -751,6 +749,11 @@ export default function WebCheckoutModal({
       customerPhone:
         normalizedPhone,
 
+      marketingCode:
+        marketingCode
+          .trim()
+          .toUpperCase(),
+
       deliveryDetails:
         fulfillmentType ===
           'delivery'
@@ -799,22 +802,20 @@ export default function WebCheckoutModal({
 
   function handlePickupPress():
     void {
-    if (
-      isLoadingFulfillmentStatus ||
-      !fulfillmentAvailability?.pickupAvailable
-    ) {
-      return;
-    }
+    setFulfillmentType(
+      'pickup',
+    );
 
-    setFulfillmentType('pickup');
-    setDeliveryQuoteError(null);
+    setDeliveryQuoteError(
+      null,
+    );
   }
 
   function handleDeliveryPress():
     void {
     if (
-      !fulfillmentAvailability?.deliveryAvailable ||
-      isLoadingFulfillmentStatus
+      !deliveryEnabled ||
+      isLoadingDeliveryStatus
     ) {
       return;
     }
@@ -937,23 +938,10 @@ export default function WebCheckoutModal({
             >
               <ChoiceButton
                 title="Recoger"
-                subtitle={
-                  isLoadingFulfillmentStatus
-                    ? 'Consultando disponibilidad...'
-                    : fulfillmentAvailability?.pickupAvailable
-                      ? 'Paso por mi pedido'
-                      : fulfillmentAvailability?.pickupNextWindow
-                        ? `Disponible: ${fulfillmentAvailability.pickupNextWindow}`
-                        : fulfillmentAvailability?.pickupReason ||
-                          'No disponible por el momento'
-                }
+                subtitle="Paso por mi pedido"
                 selected={
                   fulfillmentType ===
                   'pickup'
-                }
-                disabled={
-                  !fulfillmentAvailability?.pickupAvailable ||
-                  isLoadingFulfillmentStatus
                 }
                 onPress={
                   handlePickupPress
@@ -963,15 +951,14 @@ export default function WebCheckoutModal({
               <ChoiceButton
                 title="Domicilio"
                 subtitle={
-                  isLoadingFulfillmentStatus
+                  isLoadingDeliveryStatus
                     ? 'Consultando disponibilidad...'
-                    : !fulfillmentAvailability?.deliveryAvailable
-                      ? fulfillmentAvailability?.deliveryNextWindow
-                        ? `Disponible: ${fulfillmentAvailability.deliveryNextWindow}`
-                        : fulfillmentAvailability?.deliveryReason ||
-                          'No disponible por el momento'
+                    : !deliveryEnabled
+                      ? 'Servicio no disponible por el momento'
                       : deliveryFee > 0
-                        ? `Desde ${formatCurrency(deliveryFee)}`
+                        ? `Desde ${formatCurrency(
+                          deliveryFee,
+                        )}`
                         : 'Entrega a domicilio'
                 }
                 selected={
@@ -979,28 +966,14 @@ export default function WebCheckoutModal({
                   'delivery'
                 }
                 disabled={
-                  !fulfillmentAvailability?.deliveryAvailable ||
-                  isLoadingFulfillmentStatus
+                  !deliveryEnabled ||
+                  isLoadingDeliveryStatus
                 }
                 onPress={
                   handleDeliveryPress
                 }
               />
             </View>
-
-            {!isLoadingFulfillmentStatus &&
-              fulfillmentAvailability &&
-              !fulfillmentAvailability.pickupAvailable &&
-              !fulfillmentAvailability.deliveryAvailable ? (
-                <View style={styles.fulfillmentUnavailableBox}>
-                  <Text style={styles.fulfillmentUnavailableTitle}>
-                    No hay modalidades disponibles en este momento
-                  </Text>
-                  <Text style={styles.fulfillmentUnavailableText}>
-                    Revisa los próximos horarios mostrados arriba.
-                  </Text>
-                </View>
-              ) : null}
 
             <SectionTitle>
               Tus datos
@@ -1051,6 +1024,47 @@ export default function WebCheckoutModal({
                   )
               }
             />
+
+            <FormInput
+              label="Código de campaña (opcional)"
+              value={
+                marketingCode
+              }
+              placeholder="Ej. VIPNOV26"
+              maxLength={
+                40
+              }
+              onChangeText={
+                (
+                  value,
+                ) =>
+                  setMarketingCode(
+                    value
+                      .toUpperCase()
+                      .replace(
+                        /[^A-Z0-9_-]/g,
+                        '',
+                      ),
+                  )
+              }
+            />
+
+            <Text
+              style={{
+                marginTop:
+                  -2,
+                marginBottom:
+                  10,
+                color:
+                  businessTheme.textMuted,
+                fontSize:
+                  11,
+                lineHeight:
+                  16,
+              }}
+            >
+              Si recibiste un código de una campaña, escríbelo aquí. No modifica el precio salvo que la promoción correspondiente lo indique por separado.
+            </Text>
 
             {fulfillmentType ===
               'delivery' && (

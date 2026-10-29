@@ -86,6 +86,8 @@ import { AdminInvoicing } from '../../components/admin/invoicing/AdminInvoicing'
 import { AdminInventory } from '../../components/admin/inventory/AdminInventory';
 import { AdminPurchases } from '../../components/admin/purchases/AdminPurchases';
 import { AdminNotifications } from '../../components/admin/notifications/AdminNotifications';
+import { AdminCrm } from '../../components/admin/crm/AdminCrm';
+import { AdminMarketing } from '../../components/admin/marketing/AdminMarketing';
 import { appVersionLabel } from '../../Utils/appVersion';
 
 type AdminSection =
@@ -95,6 +97,8 @@ type AdminSection =
   | 'inventory'
   | 'purchases'
   | 'notifications'
+  | 'crm'
+  | 'marketing'
   | 'categories'
   | 'modifiers'
   | 'users'
@@ -216,6 +220,22 @@ export function AdminScreen({
                 'NOTIFICACIONES',
               icon:
                 '🔔',
+            },
+            {
+              key:
+                'crm',
+              label:
+                'CRM',
+              icon:
+                '👥',
+            },
+            {
+              key:
+                'marketing',
+              label:
+                'MARKETING',
+              icon:
+                '📣',
             },
             {
               key:
@@ -492,6 +512,22 @@ export function AdminScreen({
                 )
             }
           />
+        );
+      }
+      if (
+        activeSection ===
+        'crm'
+      ) {
+        return (
+          <AdminCrm />
+        );
+      }
+      if (
+        activeSection ===
+        'marketing'
+      ) {
+        return (
+          <AdminMarketing />
         );
       }
       if (

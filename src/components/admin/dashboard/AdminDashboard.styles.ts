@@ -8,303 +8,327 @@ export const styles =
       flex: 1,
     },
 
-    content: {
-      paddingBottom: 36,
-      gap: 16,
-    },
-
-    centerState: {
-      flex: 1,
-      minHeight: 280,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-    },
-
-    centerStateText: {
-      marginTop: 10,
-      fontSize: 12,
-      textAlign: 'center',
-    },
-
-    errorTitle: {
-      fontSize: 16,
-      fontWeight: '900',
-      textAlign: 'center',
-    },
-
     header: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      alignItems: 'flex-end',
       justifyContent: 'space-between',
-      gap: 14,
-    },
-
-    headerText: {
-      flexGrow: 1,
-      flexBasis: 220,
-      minWidth: 0,
-    },
-
-    periodControl: {
-      flexGrow: 1,
-      flexBasis: 220,
-      maxWidth: 320,
+      alignItems: 'flex-start',
+      gap: 12,
+      marginBottom: 14,
     },
 
     title: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: '900',
     },
 
     subtitle: {
-      marginTop: 5,
-      fontSize: 12,
-      lineHeight: 17,
+      marginTop: 4,
+      fontSize: 10,
+      lineHeight: 16,
+      maxWidth: 620,
     },
 
-    customDateRow: {
+    periodRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 7,
+      marginBottom: 15,
+    },
+
+    periodButton: {
+      minHeight: 36,
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    periodText: {
+      fontSize: 9,
+      fontWeight: '900',
+    },
+
+    grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 10,
     },
 
-    dateButton: {
+    heroCard: {
       flexGrow: 1,
-      flexBasis: 150,
-      minHeight: 56,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-      borderRadius: 10,
+      flexBasis: 220,
+      minWidth: 170,
       borderWidth: 1,
-      justifyContent: 'center',
+      borderRadius: 13,
+      padding: 14,
     },
 
-    dateLabel: {
-      fontSize: 9,
-      fontWeight: '800',
-      letterSpacing: 0.5,
+    card: {
+      flexGrow: 1,
+      flexBasis: 175,
+      minWidth: 155,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
+    },
+
+    cardLabel: {
+      fontSize: 8,
+      fontWeight: '900',
       textTransform: 'uppercase',
     },
 
-    dateValue: {
-      marginTop: 3,
+    heroValue: {
+      marginTop: 6,
+      fontSize: 24,
+      fontWeight: '900',
+    },
+
+    cardValue: {
+      marginTop: 5,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+
+    comparison: {
+      marginTop: 5,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+
+    helper: {
+      marginTop: 5,
+      fontSize: 9,
+      lineHeight: 14,
+    },
+
+    section: {
+      marginTop: 20,
+    },
+
+    sectionTitle: {
+      marginBottom: 9,
       fontSize: 13,
       fontWeight: '900',
     },
 
-    kpiGrid: {
+    alertCard: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 10,
-    },
-
-    kpiCard: {
-      flexGrow: 1,
-      flexBasis: 145,
-      minWidth: 135,
-      minHeight: 116,
-      padding: 14,
-      borderRadius: 12,
-      borderWidth: 1,
+      alignItems: 'center',
       justifyContent: 'space-between',
-    },
-
-    kpiLabel: {
-      fontSize: 10,
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-    },
-
-    kpiValue: {
+      gap: 10,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
       marginTop: 8,
-      fontSize: 24,
+    },
+
+    alertInfo: {
+      flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 160,
+    },
+
+    alertTitle: {
+      fontSize: 11,
       fontWeight: '900',
     },
 
-    kpiHint: {
-      marginTop: 7,
-      fontSize: 10,
+    alertText: {
+      marginTop: 3,
+      fontSize: 9,
       lineHeight: 14,
     },
 
-    healthCard: {
-      padding: 16,
-      borderRadius: 12,
+    badge: {
+      minWidth: 40,
+      minHeight: 32,
       borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
 
-    healthHeader: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 14,
-    },
-
-    healthHeaderText: {
-      flex: 1,
-      minWidth: 0,
-    },
-
-    healthPercent: {
-      fontSize: 24,
+    badgeText: {
+      fontSize: 11,
       fontWeight: '900',
     },
 
-    progressTrack: {
-      height: 10,
-      marginTop: 14,
-      overflow: 'hidden',
-      borderRadius: 999,
+    chartCard: {
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
     },
 
-    progressFill: {
-      height: '100%',
-      borderRadius: 999,
-    },
-
-    healthFooter: {
+    chartHeader: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+
+    chartTitle: {
+      fontSize: 11,
+      fontWeight: '900',
+    },
+
+    chartHint: {
+      fontSize: 8,
+      lineHeight: 12,
+    },
+
+    barsRow: {
+      minHeight: 150,
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 6,
+    },
+
+    barItem: {
+      flex: 1,
+      minWidth: 24,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+
+    barTrack: {
+      width: '100%',
+      minHeight: 110,
+      justifyContent: 'flex-end',
+      borderRadius: 6,
+      overflow: 'hidden',
+    },
+
+    barFill: {
+      width: '100%',
+      minHeight: 3,
+      borderRadius: 6,
+    },
+
+    barLabel: {
+      marginTop: 5,
+      fontSize: 7,
+      textAlign: 'center',
+    },
+
+    compareGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
       marginTop: 10,
     },
 
-    healthMetric: {
-      fontSize: 10,
-      fontWeight: '700',
-    },
-
-    twoColumnGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-    },
-
-    panel: {
+    comparePill: {
       flexGrow: 1,
-      flexBasis: 300,
-      minWidth: 0,
-      padding: 16,
-      borderRadius: 12,
+      flexBasis: 150,
+      minWidth: 130,
       borderWidth: 1,
+      borderRadius: 10,
+      padding: 10,
     },
 
-    sectionTitle: {
-      fontSize: 15,
+    compareLabel: {
+      fontSize: 8,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+    },
+
+    compareValue: {
+      marginTop: 4,
+      fontSize: 14,
       fontWeight: '900',
     },
 
-    sectionSubtitle: {
-      marginTop: 4,
+    productRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 9,
+      borderBottomWidth: 1,
+    },
+
+    productRank: {
+      width: 26,
       fontSize: 10,
-      lineHeight: 15,
+      fontWeight: '900',
+      textAlign: 'center',
+    },
+
+    productInfo: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    productName: {
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
+    productMeta: {
+      marginTop: 2,
+      fontSize: 8,
+    },
+
+    productRevenue: {
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
+    emptyState: {
+      paddingVertical: 22,
+      alignItems: 'center',
     },
 
     emptyText: {
-      marginTop: 18,
-      fontSize: 11,
-      lineHeight: 16,
+      fontSize: 9,
       textAlign: 'center',
-    },
-
-    dailyList: {
-      gap: 13,
-      marginTop: 16,
-    },
-
-    dailyRow: {
-      gap: 5,
-    },
-
-    dailyHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 8,
-    },
-
-    dailyDate: {
-      fontSize: 10,
-      fontWeight: '800',
-      textTransform: 'capitalize',
-    },
-
-    dailyBalance: {
-      fontSize: 11,
-      fontWeight: '900',
-    },
-
-    miniTrack: {
-      height: 5,
-      overflow: 'hidden',
-      borderRadius: 999,
-    },
-
-    miniBar: {
-      height: '100%',
-      borderRadius: 999,
-    },
-
-    topCategory: {
-      marginTop: 14,
-      padding: 14,
-      borderRadius: 10,
-    },
-
-    topCategoryLabel: {
-      fontSize: 9,
-      fontWeight: '800',
-      letterSpacing: 0.5,
-    },
-
-    topCategoryName: {
-      marginTop: 5,
-      fontSize: 16,
-      fontWeight: '900',
-    },
-
-    topCategoryAmount: {
-      marginTop: 3,
-      fontSize: 21,
-      fontWeight: '900',
-    },
-
-    categoryList: {
-      gap: 13,
-      marginTop: 16,
-    },
-
-    categoryRow: {
-      gap: 5,
-    },
-
-    categoryHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-    },
-
-    categoryName: {
-      flex: 1,
-      minWidth: 0,
-      fontSize: 11,
-      fontWeight: '800',
-    },
-
-    categoryAmount: {
-      fontSize: 10,
-      fontWeight: '900',
-    },
-
-    accountingNote: {
-      fontSize: 9,
       lineHeight: 14,
-      textAlign: 'center',
-      paddingHorizontal: 8,
+    },
+
+    footer: {
+      marginTop: 16,
+      paddingBottom: 30,
+    },
+
+    footerText: {
+      fontSize: 8,
+      lineHeight: 13,
+    },
+
+    loading: {
+      paddingVertical: 48,
+      alignItems: 'center',
+    },
+
+    errorBox: {
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 14,
+    },
+
+    errorText: {
+      fontSize: 10,
+      lineHeight: 16,
+    },
+
+    refreshButton: {
+      marginTop: 10,
+      alignSelf: 'flex-start',
+      minHeight: 38,
+      paddingHorizontal: 13,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    refreshText: {
+      fontSize: 9,
+      fontWeight: '900',
     },
   });
