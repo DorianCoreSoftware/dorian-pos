@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useBusiness } from '../../../context/BusinessContext';
-import { AttendanceEmployeeRequest, getAdminAttendanceRequests, reviewAttendanceEmployeeRequest } from '../../../services/attendanceService';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendanceEmployeeRequest, getAdminAttendanceRequests, reviewAttendanceEmployeeRequest } from '../../../../services/attendanceService';
 
 function label(value: string): string {
   const map: Record<string,string> = { permission:'Permiso', vacation:'Vacaciones', medical_leave:'Incapacidad', absence_justified:'Falta justificada', late_justified:'Retardo justificado', early_leave_justified:'Salida anticipada justificada', other:'Otra' };

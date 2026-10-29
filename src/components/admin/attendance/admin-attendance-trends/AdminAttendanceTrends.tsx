@@ -13,18 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-import {
-  AttendanceEmployeeTrend,
-  AttendanceTrendTeamSummary,
-  AttendanceWeekdayPattern,
-  getAttendanceEmployeeTrends,
-  getAttendanceTeamTrend,
-  getAttendanceWeekdayPatterns,
-  syncAttendanceShiftExecution,
-} from '../../../services/attendanceService';
-
-import { useBusiness } from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendanceEmployeeTrend, AttendanceTrendTeamSummary, AttendanceWeekdayPattern, syncAttendanceShiftExecution, getAttendanceTeamTrend, getAttendanceEmployeeTrends, getAttendanceWeekdayPatterns } from '../../../../services/attendanceService';
 
 type RangeKey = '14' | '30' | '45';
 

@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 
-import { useBusiness } from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 import {
   AttendanceAuditLogItem,
   AttendancePeriodLock,
@@ -18,7 +19,7 @@ import {
   getAttendancePeriodLocks,
   lockAttendancePeriod,
   reopenAttendancePeriod,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -98,7 +99,7 @@ export function AdminAttendanceAudit() {
 
   const handleLock = async () => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      Alert.alert('Fechas inválidas', 'Usa el formato AAAA-MM-DD.');
+      Alert.alert('Fechas inválidas', 'Selecciona un rango de fechas válido.');
       return;
     }
     if (reason.trim().length < 3) {
@@ -186,8 +187,8 @@ export function AdminAttendanceAudit() {
 
       <View style={card}>
         <Text style={{ color: theme.text, fontWeight: '800', marginBottom: 10 }}>Cerrar periodo</Text>
-        <TextInput value={startDate} onChangeText={setStartDate} placeholder="Inicio AAAA-MM-DD" placeholderTextColor={theme.textMuted} style={input} autoCapitalize="none" />
-        <TextInput value={endDate} onChangeText={setEndDate} placeholder="Fin AAAA-MM-DD" placeholderTextColor={theme.textMuted} style={input} autoCapitalize="none" />
+        <DateCalendarField label="Desde" value={startDate} onChange={setStartDate} maximumDate={endDate} />
+        <DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate} />
         <TextInput value={reason} onChangeText={setReason} placeholder="Motivo del cierre" placeholderTextColor={theme.textMuted} style={input} />
         <TouchableOpacity disabled={loading} onPress={() => void handleLock()} style={{ backgroundColor: theme.primary, borderRadius: 10, padding: 12, alignItems: 'center', opacity: loading ? 0.6 : 1 }}>
           <Text style={{ color: '#111', fontWeight: '900' }}>CERRAR Y PROTEGER PERIODO</Text>

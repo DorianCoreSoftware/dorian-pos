@@ -23,11 +23,12 @@ import {
   AttendanceReportDay,
   getAttendancePeriodReport,
   getAttendanceReportDays,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
 
 import {
   useBusiness,
-} from '../../../context/BusinessContext';
+} from '../../../../context/BusinessContext';
+import { DateCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 
 type PresetDays = 30 | 90 | 180 | 365;
 
@@ -147,7 +148,7 @@ export function AdminAttendanceAnalytics() {
 
   const load = useCallback(async (): Promise<void> => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      Alert.alert('Analítica', 'Usa fechas con formato AAAA-MM-DD.');
+      Alert.alert('Analítica', 'Selecciona un rango de fechas válido.');
       return;
     }
 
@@ -437,31 +438,11 @@ export function AdminAttendanceAnalytics() {
 
       <View style={styles.filtersRow}>
         <View style={styles.dateField}>
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>DESDE</Text>
-          <TextInput
-            value={startDate}
-            onChangeText={value => {
-              setPreset(null);
-              setStartDate(value);
-            }}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor={theme.textMuted}
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-          />
+          <DateCalendarField label="Desde" value={startDate} maximumDate={endDate} onChange={value => { setPreset(null); setStartDate(value); }} />
         </View>
 
         <View style={styles.dateField}>
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>HASTA</Text>
-          <TextInput
-            value={endDate}
-            onChangeText={value => {
-              setPreset(null);
-              setEndDate(value);
-            }}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor={theme.textMuted}
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-          />
+          <DateCalendarField label="Hasta" value={endDate} minimumDate={startDate} onChange={value => { setPreset(null); setEndDate(value); }} />
         </View>
 
         <TouchableOpacity

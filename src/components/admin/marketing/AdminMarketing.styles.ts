@@ -13,7 +13,7 @@ export const styles =
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: 12,
-      marginBottom: 14,
+      marginBottom: 18,
     },
     title: {
       fontSize: 22,
@@ -28,8 +28,8 @@ export const styles =
     toolbar: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 8,
-      marginBottom: 14,
+      gap: 11,
+      marginBottom: 18,
     },
     button: {
       minHeight: 40,
@@ -51,13 +51,13 @@ export const styles =
       justifyContent: 'center',
     },
     list: {
-      gap: 10,
-      paddingBottom: 30,
+      gap: 15,
+      paddingBottom: 34,
     },
     card: {
       borderWidth: 1,
       borderRadius: 12,
-      padding: 13,
+      padding: 17,
     },
     cardHeader: {
       flexDirection: 'row',
@@ -96,14 +96,15 @@ export const styles =
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-      marginTop: 11,
+      marginTop: 15,
     },
     metric: {
-      minWidth: 105,
+      minWidth: 120,
+      flexBasis: 120,
       flexGrow: 1,
       borderWidth: 1,
       borderRadius: 9,
-      padding: 9,
+      padding: 11,
     },
     metricLabel: {
       fontSize: 8,
@@ -119,8 +120,8 @@ export const styles =
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'flex-end',
-      gap: 8,
-      marginTop: 12,
+      gap: 10,
+      marginTop: 16,
     },
     secondaryButton: {
       minHeight: 38,

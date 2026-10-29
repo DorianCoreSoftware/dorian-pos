@@ -17,14 +17,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-import { useBusiness } from '../../../context/BusinessContext';
-import {
-  AttendancePeriodReportItem,
-  AttendanceReportDay,
-  getAttendancePeriodReport,
-  getAttendanceReportDays,
-} from '../../../services/attendanceService';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendancePeriodReportItem, AttendanceReportDay, getAttendancePeriodReport, getAttendanceReportDays } from '../../../../services/attendanceService';
+import { DateCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -212,7 +207,7 @@ export function AdminAttendanceReports() {
 
   const loadReport = async (): Promise<void> => {
     if (!validateDate(startDate) || !validateDate(endDate)) {
-      Alert.alert('Fechas inválidas', 'Usa el formato AAAA-MM-DD.');
+      Alert.alert('Fechas inválidas', 'Selecciona un rango de fechas válido.');
       return;
     }
 
@@ -334,23 +329,8 @@ export function AdminAttendanceReports() {
       </View>
 
       <View style={styles.filters}>
-        <View style={styles.dateField}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>DESDE · AAAA-MM-DD</Text>
-          <TextInput
-            value={startDate}
-            onChangeText={setStartDate}
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-          />
-        </View>
-
-        <View style={styles.dateField}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>HASTA · AAAA-MM-DD</Text>
-          <TextInput
-            value={endDate}
-            onChangeText={setEndDate}
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-          />
-        </View>
+        <View style={styles.dateField}><DateCalendarField label="Desde" value={startDate} onChange={setStartDate} maximumDate={endDate} /></View>
+        <View style={styles.dateField}><DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate} /></View>
 
         <TouchableOpacity
           disabled={loading}

@@ -10,16 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendanceEmployee, AttendanceIncident, getAttendanceEmployees, getAttendanceIncidents, createAttendanceIncident, reviewAttendanceIncident } from '../../../../services/attendanceService';
+import { DateCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 
-import { useBusiness } from '../../../context/BusinessContext';
-import {
-  AttendanceEmployee,
-  AttendanceIncident,
-  createAttendanceIncident,
-  getAttendanceEmployees,
-  getAttendanceIncidents,
-  reviewAttendanceIncident,
-} from '../../../services/attendanceService';
+
 
 const INCIDENT_TYPES = [
   ['absence_justified', 'Falta justificada'],
@@ -104,7 +99,7 @@ export function AdminAttendanceIncidents() {
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      Alert.alert('Fecha inválida', 'Usa el formato AAAA-MM-DD.');
+      Alert.alert('Fecha inválida', 'Selecciona un rango de fechas válido.');
       return;
     }
     if (endDate < startDate) {
@@ -270,14 +265,8 @@ export function AdminAttendanceIncidents() {
             </View>
 
             <View style={styles.dateRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: theme.textMuted }]}>DESDE · AAAA-MM-DD</Text>
-                <TextInput value={startDate} onChangeText={setStartDate} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: theme.textMuted }]}>HASTA · AAAA-MM-DD</Text>
-                <TextInput value={endDate} onChangeText={setEndDate} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
-              </View>
+              <View style={{ flex: 1 }}><DateCalendarField label="Desde" value={startDate} onChange={setStartDate} maximumDate={endDate} /></View>
+              <View style={{ flex: 1 }}><DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate} /></View>
             </View>
 
             <Text style={[styles.label, { color: theme.textMuted }]}>DESCRIPCIÓN / JUSTIFICACIÓN</Text>

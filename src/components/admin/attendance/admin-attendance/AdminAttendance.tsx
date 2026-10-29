@@ -18,24 +18,16 @@ import {
   View,
 } from 'react-native';
 
-import { useBusiness } from '../../../context/BusinessContext';
-import { AdminAttendanceSchedules } from './AdminAttendanceSchedules';
-import { AdminAttendanceIncidents } from './AdminAttendanceIncidents';
-import { AdminAttendanceReports } from './AdminAttendanceReports';
-import { AdminAttendancePayroll } from './AdminAttendancePayroll';
-import { AdminAttendanceEmployeeDossier } from './AdminAttendanceEmployeeDossier';
-import { AdminAttendanceRequests } from './AdminAttendanceRequests';
-import { AdminAttendanceAudit } from './AdminAttendanceAudit';
-import { AdminAttendanceAnalytics } from './AdminAttendanceAnalytics';
-import { AdminAttendancePlanning } from './AdminAttendancePlanning';
-import { AdminAttendanceSalesPlanning } from './AdminAttendanceSalesPlanning';
-import { AdminAttendanceShiftDrafts } from './AdminAttendanceShiftDrafts';
-import { AdminAttendanceShiftChanges } from './AdminAttendanceShiftChanges';
-import { AdminAttendanceExecution } from './AdminAttendanceExecution';
-import { AdminAttendanceReliability } from './AdminAttendanceReliability';
-import { AdminAttendanceTrends } from './AdminAttendanceTrends';
-import { AdminAttendancePeriodClosure } from './AdminAttendancePeriodClosure';
-import { AdminAttendanceHealth } from './AdminAttendanceHealth';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
+import { AdminAttendancePayroll } from '../admin-attendance-payroll/AdminAttendancePayroll';
+import { AdminAttendanceEmployeeDossier } from '../admin-attendance-employee-dossier/AdminAttendanceEmployeeDossier';
+import { AdminAttendanceRequests } from '../admin-attendance-requests/AdminAttendanceRequests';
+import { AdminAttendanceAudit } from '../admin-attendance-audit/AdminAttendanceAudit';
+import { AdminAttendanceAnalytics } from '../admin-attendance-analytics/AdminAttendanceAnalytics';
+import { AdminAttendanceSalesPlanning } from '../admin-attendance-sales-planning/AdminAttendanceSalesPlanning';
+import { AdminAttendanceExecution } from '../admin-attendance-execution/AdminAttendanceExecution';
+import { AdminAttendanceHealth } from '../admin-attendance-health/AdminAttendanceHealth';
 import {
   AdminAttendanceRecord,
   AttendanceSettings,
@@ -43,7 +35,16 @@ import {
   getAdminAttendance,
   getAttendanceSettings,
   saveAttendanceSettings,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
+import { AdminAttendanceIncidents } from '../admin-attendance-incidents/AdminAttendanceIncidents';
+import { AdminAttendancePeriodClosure } from '../admin-attendance-period-closure/AdminAttendancePeriodClosure';
+import { AdminAttendancePlanning } from '../admin-attendance-planning/AdminAttendancePlanning';
+import { AdminAttendanceReliability } from '../admin-attendance-reliability/AdminAttendanceReliability';
+import { AdminAttendanceReports } from '../admin-attendance-reports/AdminAttendanceReports';
+import { AdminAttendanceSchedules } from '../admin-attendance-schedules/AdminAttendanceSchedules';
+import { AdminAttendanceShiftChanges } from '../admin-attendance-shift-changes/AdminAttendanceShiftChanges';
+import { AdminAttendanceShiftDrafts } from '../admin-attendance-shift-drafts/AdminAttendanceShiftDrafts';
+import { AdminAttendanceTrends } from '../admin-attendance-trends/AdminAttendanceTrends';
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -104,7 +105,7 @@ function parseEditorValue(value: string): string | null {
   );
 
   if (!match) {
-    throw new Error('Usa el formato AAAA-MM-DD HH:mm.');
+    throw new Error('Selecciona una fecha y captura una hora válida.');
   }
 
   const [, year, month, day, hour, minute] = match;
@@ -125,6 +126,42 @@ function parseEditorValue(value: string): string | null {
   return date.toISOString();
 }
 
+type AttendanceSectionKey =
+  | 'rules'
+  | 'people'
+  | 'planning'
+  | 'monitoring'
+  | 'closing'
+  | 'operations';
+
+function AccordionSection({
+  title,
+  subtitle,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  open: boolean;
+  onToggle: () => void;
+  children?: React.ReactNode;
+}) {
+  const { theme } = useBusiness();
+  return (
+    <View style={[localStyles.accordion, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <TouchableOpacity onPress={onToggle} activeOpacity={0.85} style={localStyles.accordionHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={[localStyles.accordionTitle, { color: theme.text }]}>{title}</Text>
+          <Text style={[localStyles.accordionSubtitle, { color: theme.textMuted }]}>{subtitle}</Text>
+        </View>
+        <Text style={[localStyles.accordionChevron, { color: theme.primary }]}>{open ? '−' : '+'}</Text>
+      </TouchableOpacity>
+      {open ? <View style={localStyles.accordionContent}>{children}</View> : null}
+    </View>
+  );
+}
+
 export function AdminAttendance() {
   const { theme } = useBusiness();
 
@@ -133,6 +170,8 @@ export function AdminAttendance() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [onlyOpen, setOnlyOpen] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<AttendanceSectionKey, boolean>>({ rules: false, people: false, planning: false, monitoring: false, closing: false, operations: true });
+  const toggleSection = (key: AttendanceSectionKey): void => setOpenSections(current => ({ ...current, [key]: !current[key] }));
 
   const [editing, setEditing] = useState<AdminAttendanceRecord | null>(null);
   const [clockInValue, setClockInValue] = useState('');
@@ -316,6 +355,12 @@ export function AdminAttendance() {
         </Text>
       </View>
 
+      <AccordionSection
+        title="Configuración y solicitudes"
+        subtitle="Reglas del checador, solicitudes, horarios e incidencias."
+        open={openSections.rules}
+        onToggle={() => toggleSection('rules')}
+      >
       <View
         style={[
           localStyles.settingsCard,
@@ -426,7 +471,16 @@ export function AdminAttendance() {
       </View>
 
       <AdminAttendanceRequests />
+      <AdminAttendanceSchedules />
+      <AdminAttendanceIncidents />
+      </AccordionSection>
 
+      <AccordionSection
+        title="Expediente, reportes y nómina"
+        subtitle="Expedientes, reportes, nómina y auditoría del personal."
+        open={openSections.people}
+        onToggle={() => toggleSection('people')}
+      >
       <AdminAttendanceEmployeeDossier />
 
       <AdminAttendanceReports />
@@ -434,7 +488,14 @@ export function AdminAttendance() {
       <AdminAttendancePayroll />
 
       <AdminAttendanceAudit />
+      </AccordionSection>
 
+      <AccordionSection
+        title="Planeación y turnos"
+        subtitle="Analítica, cobertura, demanda por ventas y borradores de turnos."
+        open={openSections.planning}
+        onToggle={() => toggleSection('planning')}
+      >
       <AdminAttendanceAnalytics />
 
       <AdminAttendancePlanning />
@@ -444,21 +505,38 @@ export function AdminAttendance() {
       <AdminAttendanceShiftDrafts />
 
       <AdminAttendanceShiftChanges />
+      </AccordionSection>
 
+      <AccordionSection
+        title="Seguimiento y desempeño"
+        subtitle="Ejecución real, confiabilidad y tendencias del equipo."
+        open={openSections.monitoring}
+        onToggle={() => toggleSection('monitoring')}
+      >
       <AdminAttendanceExecution />
 
       <AdminAttendanceReliability />
 
       <AdminAttendanceTrends />
+      </AccordionSection>
 
+      <AccordionSection
+        title="Cierre y diagnóstico"
+        subtitle="Cierres administrativos y salud técnica del módulo."
+        open={openSections.closing}
+        onToggle={() => toggleSection('closing')}
+      >
       <AdminAttendancePeriodClosure />
 
       <AdminAttendanceHealth />
+      </AccordionSection>
 
-      <AdminAttendanceSchedules />
-
-      <AdminAttendanceIncidents />
-
+      <AccordionSection
+        title="Operación diaria"
+        subtitle="Quién está trabajando, historial de checadas y correcciones."
+        open={openSections.operations}
+        onToggle={() => toggleSection('operations')}
+      >
       <View
         style={[
           localStyles.summaryCard,
@@ -553,6 +631,7 @@ export function AdminAttendance() {
           ))}
         </View>
       </ScrollView>
+      </AccordionSection>
 
       <Modal
         visible={Boolean(editing)}
@@ -572,19 +651,9 @@ export function AdminAttendance() {
               {editing?.employee_name}
             </Text>
 
-            <Text style={[localStyles.fieldLabel, { color: theme.textMuted }]}>ENTRADA · AAAA-MM-DD HH:mm</Text>
-            <TextInput
-              value={clockInValue}
-              onChangeText={setClockInValue}
-              style={[localStyles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-            />
+            <DateTimeCalendarField label="Entrada" value={clockInValue} onChange={setClockInValue} />
 
-            <Text style={[localStyles.fieldLabel, { color: theme.textMuted }]}>SALIDA · vacío = turno abierto</Text>
-            <TextInput
-              value={clockOutValue}
-              onChangeText={setClockOutValue}
-              style={[localStyles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-            />
+            <DateTimeCalendarField label="Salida · opcional" value={clockOutValue} onChange={setClockOutValue} allowClear />
 
             <Text style={[localStyles.fieldLabel, { color: theme.textMuted }]}>MOTIVO OBLIGATORIO</Text>
             <TextInput
@@ -627,6 +696,12 @@ const localStyles = StyleSheet.create({
   center: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
   scrollContainer: { flex: 1, width: '100%' },
   container: { gap: 18, paddingBottom: 36 },
+  accordion: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  accordionHeader: { minHeight: 72, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accordionTitle: { fontSize: 16, fontWeight: '900' },
+  accordionSubtitle: { marginTop: 3, fontSize: 11, lineHeight: 16 },
+  accordionChevron: { width: 28, textAlign: 'center', fontSize: 24, fontWeight: '900' },
+  accordionContent: { gap: 16, padding: 14, paddingTop: 4 },
   title: { fontSize: 24, fontWeight: '900' },
   subtitle: { marginTop: 4, fontSize: 13, fontWeight: '600' },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 18, gap: 14 },

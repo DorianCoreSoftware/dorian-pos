@@ -26,11 +26,11 @@ import {
   getAttendanceSalesPlanningSettings,
   getEmployeeSchedule,
   saveAttendanceSalesPlanningSettings,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
 
 import {
   useBusiness,
-} from '../../../context/BusinessContext';
+} from '../../../../context/BusinessContext';
 
 type EmployeePlan = {
   employee: AttendanceEmployee;

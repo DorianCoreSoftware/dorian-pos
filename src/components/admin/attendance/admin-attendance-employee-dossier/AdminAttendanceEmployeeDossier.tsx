@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 
-import { useBusiness } from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 import {
   AttendanceDailySummaryItem,
   AttendanceEmployee,
@@ -22,7 +23,7 @@ import {
   getAttendanceEmployees,
   getAttendanceIncidents,
   getAttendancePeriodReport,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -126,7 +127,7 @@ export function AdminAttendanceEmployeeDossier() {
   const loadDossier = async (): Promise<void> => {
     if (!userId) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < startDate) {
-      Alert.alert('Periodo inválido', 'Usa fechas AAAA-MM-DD y verifica que la fecha final no sea anterior a la inicial.');
+      Alert.alert('Periodo inválido', 'Selecciona un rango válido y verifica que la fecha final no sea anterior a la inicial.');
       return;
     }
 
@@ -182,8 +183,8 @@ export function AdminAttendanceEmployeeDossier() {
       </ScrollView>
 
       <View style={styles.filters}>
-        <View style={styles.dateField}><Text style={[styles.label, { color: theme.textMuted }]}>DESDE</Text><TextInput value={startDate} onChangeText={setStartDate} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} /></View>
-        <View style={styles.dateField}><Text style={[styles.label, { color: theme.textMuted }]}>HASTA</Text><TextInput value={endDate} onChangeText={setEndDate} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} /></View>
+        <View style={styles.dateField}><DateCalendarField label="Desde" value={startDate} onChange={setStartDate} maximumDate={endDate} /></View>
+        <View style={styles.dateField}><DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate} /></View>
         <TouchableOpacity disabled={!userId || loading} onPress={() => void loadDossier()} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: !userId || loading ? 0.55 : 1 }]}><Text style={{ color: theme.onPrimary, fontWeight: '900' }}>{loading ? 'CARGANDO...' : 'ACTUALIZAR'}</Text></TouchableOpacity>
       </View>
 

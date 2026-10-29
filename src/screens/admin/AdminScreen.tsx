@@ -89,7 +89,7 @@ import { AdminNotifications } from '../../components/admin/notifications/AdminNo
 import { AdminCrm } from '../../components/admin/crm/AdminCrm';
 import { AdminMarketing } from '../../components/admin/marketing/AdminMarketing';
 import { appVersionLabel } from '../../Utils/appVersion';
-import { AdminAttendance } from '../../components/admin/attendance/AdminAttendance';
+import { AdminAttendance } from '../../components/admin/attendance/admin-attendance/AdminAttendance';
 
 type AdminSection =
   | 'dashboard'

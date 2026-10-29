@@ -14,22 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-import {
-  AttendanceEmployee,
-  AttendancePeriodReportItem,
-  AttendancePreventionSettings,
-  EmployeeScheduleDay,
-  getAttendanceEmployees,
-  getAttendancePeriodReport,
-  getAttendancePreventionSettings,
-  getEmployeeSchedule,
-  saveAttendancePreventionSettings,
-} from '../../../services/attendanceService';
-
-import {
-  useBusiness,
-} from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendanceEmployee, EmployeeScheduleDay, AttendancePreventionSettings, AttendancePeriodReportItem, getAttendancePreventionSettings, getAttendanceEmployees, getAttendancePeriodReport, getEmployeeSchedule, saveAttendancePreventionSettings } from '../../../../services/attendanceService';
 
 type EmployeePlan = {
   employee: AttendanceEmployee;

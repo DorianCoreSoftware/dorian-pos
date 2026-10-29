@@ -17,9 +17,9 @@ import {
 import {
   AttendanceModuleHealthCheck,
   getAttendanceModuleHealth,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
 
-import { useBusiness } from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
 
 function statusLabel(
   status: AttendanceModuleHealthCheck['status'],

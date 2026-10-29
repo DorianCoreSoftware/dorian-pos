@@ -38,7 +38,7 @@ import {
 
 import {
   GooglePlaceSearch,
-} from '../../common/GooglePlaceSearch';
+} from '../../common/google-place-search/GooglePlaceSearch';
 
 import {
   styles,

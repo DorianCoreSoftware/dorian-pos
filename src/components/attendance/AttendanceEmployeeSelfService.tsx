@@ -27,6 +27,7 @@ import {
   getMyPayrollReceipts,
   sendPayrollReceiptEmail,
 } from '../../services/attendanceService';
+import { DateCalendarField } from '../common/date-calendar-field/DateCalendarField';
 
 export type AttendanceEmployeeSelfServiceSection =
   | 'summary'
@@ -144,7 +145,7 @@ export function AttendanceEmployeeSelfService({
 
   const submitRequest = async (): Promise<void> => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      Alert.alert('Fechas inválidas', 'Usa AAAA-MM-DD.'); return;
+      Alert.alert('Fechas inválidas', 'Selecciona un rango de fechas válido.'); return;
     }
     if (endDate < startDate) { Alert.alert('Fechas inválidas', 'La fecha final no puede ser anterior.'); return; }
     if (note.trim().length < 3) { Alert.alert('Descripción requerida', 'Explica brevemente tu solicitud.'); return; }
@@ -228,8 +229,8 @@ export function AttendanceEmployeeSelfService({
             {REQUEST_OPTIONS.map(option => <TouchableOpacity key={option.key} onPress={() => setRequestType(option.key)} style={[styles.chip, { borderColor: requestType === option.key ? theme.primary : theme.border }]}><Text style={{ color: requestType === option.key ? theme.primary : theme.textMuted, fontWeight: '800' }}>{option.label}</Text></TouchableOpacity>)}
           </ScrollView>
           <View style={styles.dateRow}>
-            <TextInput value={startDate} onChangeText={setStartDate} placeholder="Desde AAAA-MM-DD" placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
-            <TextInput value={endDate} onChangeText={setEndDate} placeholder="Hasta AAAA-MM-DD" placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
+            <View style={{ flex: 1, minWidth: 160 }}><DateCalendarField label="Desde" value={startDate} onChange={setStartDate} maximumDate={endDate || undefined} /></View>
+            <View style={{ flex: 1, minWidth: 160 }}><DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate || undefined} /></View>
           </View>
           <TextInput value={note} onChangeText={setNote} multiline placeholder="Motivo / explicación" placeholderTextColor={theme.textMuted} style={[styles.input, styles.note, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
           <TouchableOpacity disabled={saving} onPress={() => void submitRequest()} style={[styles.primary, { backgroundColor: theme.primary }]}><Text style={{ color: theme.onPrimary, fontWeight: '900' }}>{saving ? 'ENVIANDO...' : 'ENVIAR SOLICITUD'}</Text></TouchableOpacity>

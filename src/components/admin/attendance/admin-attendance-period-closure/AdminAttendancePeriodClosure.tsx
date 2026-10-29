@@ -16,18 +16,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendancePeriodClosureSnapshot, AttendancePeriodClosureStatus, getAttendancePeriodClosureSnapshots, getAttendancePeriodClosureStatus, lockAttendancePeriod, createAttendancePeriodClosureSnapshot, getAttendancePeriodClosureSnapshot } from '../../../../services/attendanceService';
+import { DateCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 
-import {
-  AttendancePeriodClosureSnapshot,
-  AttendancePeriodClosureStatus,
-  createAttendancePeriodClosureSnapshot,
-  getAttendancePeriodClosureSnapshot,
-  getAttendancePeriodClosureSnapshots,
-  getAttendancePeriodClosureStatus,
-  lockAttendancePeriod,
-} from '../../../services/attendanceService';
 
-import { useBusiness } from '../../../context/BusinessContext';
 
 function localDate(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, '0');
@@ -398,49 +391,11 @@ export function AdminAttendancePeriodClosure() {
 
       <View style={styles.dateRow}>
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>
-            DESDE
-          </Text>
-          <TextInput
-            value={startDate}
-            onChangeText={value => {
-              setStartDate(value);
-              setStatus(null);
-            }}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor={theme.textMuted}
-            style={[
-              styles.input,
-              {
-                color: theme.text,
-                borderColor: theme.border,
-                backgroundColor: theme.background,
-              },
-            ]}
-          />
+          <DateCalendarField label="Desde" value={startDate} maximumDate={endDate} onChange={value => { setStartDate(value); setStatus(null); }} />
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>
-            HASTA
-          </Text>
-          <TextInput
-            value={endDate}
-            onChangeText={value => {
-              setEndDate(value);
-              setStatus(null);
-            }}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor={theme.textMuted}
-            style={[
-              styles.input,
-              {
-                color: theme.text,
-                borderColor: theme.border,
-                backgroundColor: theme.background,
-              },
-            ]}
-          />
+          <DateCalendarField label="Hasta" value={endDate} minimumDate={startDate} onChange={value => { setEndDate(value); setStatus(null); }} />
         </View>
 
         <TouchableOpacity

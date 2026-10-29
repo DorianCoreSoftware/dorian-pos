@@ -14,16 +14,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendanceEmployeeReliabilityDetail, AttendanceEmployeeReliabilitySummary, syncAttendanceShiftExecution, getAttendanceEmployeeReliabilitySummary, getAttendanceEmployeeReliabilityDetail } from '../../../../services/attendanceService';
 
-import {
-  AttendanceEmployeeReliabilityDetail,
-  AttendanceEmployeeReliabilitySummary,
-  getAttendanceEmployeeReliabilityDetail,
-  getAttendanceEmployeeReliabilitySummary,
-  syncAttendanceShiftExecution,
-} from '../../../services/attendanceService';
-
-import { useBusiness } from '../../../context/BusinessContext';
 
 type RangeKey = '14' | '30' | '45';
 

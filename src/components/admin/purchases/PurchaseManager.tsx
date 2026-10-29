@@ -19,6 +19,7 @@ import {
 import {
   useBusiness,
 } from '../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../common/date-calendar-field/DateCalendarField';
 
 import {
   useCurrency,
@@ -539,7 +540,7 @@ export function PurchaseManager() {
         )
       ) {
         throw new Error(
-          'Usa una fecha válida AAAA-MM-DD.',
+          'Selecciona una fecha válida.',
         );
       }
 
@@ -1080,46 +1081,11 @@ export function PurchaseManager() {
                   s.col
                 }
               >
-                <Text
-                  style={[
-                    s.label,
-                    {
-                      color:
-                        theme.textMuted,
-                    },
-                  ]}
-                >
-                  Fecha
-                </Text>
-
-                <TextInput
-                  editable={
-                    editable
-                  }
-                  value={
-                    draft.date
-                  }
-                  onChangeText={
-                    v =>
-                      setDraft(
-                        d => ({
-                          ...d,
-                          date:
-                            v,
-                        }),
-                      )
-                  }
-                  style={[
-                    s.input,
-                    {
-                      color:
-                        theme.text,
-                      borderColor:
-                        theme.border,
-                      backgroundColor:
-                        theme.background,
-                    },
-                  ]}
+                <DateCalendarField
+                  label="Fecha"
+                  disabled={!editable}
+                  value={draft.date}
+                  onChange={v => setDraft(d => ({ ...d, date: v }))}
                 />
               </View>
 

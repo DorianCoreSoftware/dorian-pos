@@ -13,7 +13,8 @@ import {
   View,
 } from 'react-native';
 
-import { useBusiness } from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 import {
   AttendancePayrollPreviewItem,
   AttendancePayrollRun,
@@ -31,7 +32,7 @@ import {
   saveAttendancePayrollSetting,
   sendPayrollReceiptEmail,
   voidAttendancePayrollRun,
-} from '../../../services/attendanceService';
+} from '../../../../services/attendanceService';
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -187,7 +188,7 @@ export function AdminAttendancePayroll() {
 
   const generatePreview = async (): Promise<void> => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      Alert.alert('Fechas inválidas', 'Usa el formato AAAA-MM-DD.');
+      Alert.alert('Fechas inválidas', 'Selecciona un rango de fechas válido.');
       return;
     }
     if (endDate < startDate) {
@@ -455,8 +456,8 @@ export function AdminAttendancePayroll() {
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>NUEVO CORTE</Text>
       <View style={styles.filtersRow}>
-        <View style={styles.dateField}><Text style={[styles.label, { color: theme.textMuted }]}>DESDE</Text><TextInput value={startDate} onChangeText={setStartDate} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} /></View>
-        <View style={styles.dateField}><Text style={[styles.label, { color: theme.textMuted }]}>HASTA</Text><TextInput value={endDate} onChangeText={setEndDate} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} /></View>
+        <View style={styles.dateField}><DateCalendarField label="Desde" value={startDate} onChange={setStartDate} maximumDate={endDate} /></View>
+        <View style={styles.dateField}><DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate} /></View>
         <TouchableOpacity disabled={previewLoading} onPress={() => void generatePreview()} style={[styles.generateButton, { backgroundColor: theme.primary, opacity: previewLoading ? 0.55 : 1 }]}><Text style={{ color: theme.onPrimary, fontWeight: '900' }}>{previewLoading ? 'CALCULANDO...' : 'CALCULAR'}</Text></TouchableOpacity>
       </View>
 

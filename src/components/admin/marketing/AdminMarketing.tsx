@@ -43,6 +43,7 @@ import {
 import {
   useBusiness,
 } from '../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../common/date-calendar-field/DateCalendarField';
 
 import {
   styles,
@@ -177,7 +178,7 @@ function toIsoOrNull(
     )
   ) {
     throw new Error(
-      'Usa una fecha válida. Ejemplo: 2026-11-05 18:00',
+      'Selecciona una fecha y captura una hora válida.',
     );
   }
 
@@ -2710,33 +2711,9 @@ export function AdminMarketing() {
               ]}
             />
 
-            <Field
-              label="Inicio opcional"
-              value={
-                startsAt
-              }
-              onChangeText={
-                setStartsAt
-              }
-              placeholder="2026-11-05 18:00"
-              theme={
-                theme
-              }
-            />
+            <DateTimeCalendarField label="Inicio opcional" value={startsAt} onChange={setStartsAt} allowClear />
 
-            <Field
-              label="Fin opcional"
-              value={
-                endsAt
-              }
-              onChangeText={
-                setEndsAt
-              }
-              placeholder="2026-11-12 23:00"
-              theme={
-                theme
-              }
-            />
+            <DateTimeCalendarField label="Fin opcional" value={endsAt} onChange={setEndsAt} allowClear />
 
             <View
               style={

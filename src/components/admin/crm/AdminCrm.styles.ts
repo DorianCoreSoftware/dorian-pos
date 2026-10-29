@@ -13,7 +13,7 @@ export const styles =
       alignItems: 'flex-start',
       flexWrap: 'wrap',
       gap: 12,
-      marginBottom: 14,
+      marginBottom: 18,
     },
     headerText: {
       flex: 1,
@@ -32,7 +32,7 @@ export const styles =
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 9,
-      marginBottom: 14,
+      marginBottom: 18,
     },
     search: {
       flexGrow: 1,
@@ -65,8 +65,8 @@ export const styles =
     segmentBar: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 7,
-      marginBottom: 14,
+      gap: 10,
+      marginBottom: 20,
     },
     segmentButton: {
       minHeight: 34,
@@ -81,13 +81,13 @@ export const styles =
       fontWeight: '900',
     },
     list: {
-      gap: 9,
-      paddingBottom: 28,
+      gap: 14,
+      paddingBottom: 32,
     },
     card: {
       borderWidth: 1,
       borderRadius: 12,
-      padding: 13,
+      padding: 16,
     },
     cardHeader: {
       flexDirection: 'row',
@@ -127,14 +127,15 @@ export const styles =
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-      marginTop: 11,
+      marginTop: 14,
+      marginBottom: 2,
     },
     metric: {
       flexGrow: 1,
       flexBasis: 100,
       borderWidth: 1,
       borderRadius: 9,
-      padding: 9,
+      padding: 11,
     },
     metricLabel: {
       fontSize: 8,

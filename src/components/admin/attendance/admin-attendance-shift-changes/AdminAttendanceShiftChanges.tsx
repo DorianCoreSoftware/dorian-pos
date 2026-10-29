@@ -15,16 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-import {
-  AttendanceShiftChangeOffer,
-  AttendanceShiftChangeRequest,
-  getAdminShiftChangeRequests,
-  getShiftChangeOffers,
-  reviewShiftChangeRequest,
-} from '../../../services/attendanceService';
-
-import { useBusiness } from '../../../context/BusinessContext';
+import { useBusiness } from '../../../../context/BusinessContext';
+import { AttendanceShiftChangeRequest, AttendanceShiftChangeOffer, getAdminShiftChangeRequests, getShiftChangeOffers, reviewShiftChangeRequest } from '../../../../services/attendanceService';
 
 function typeLabel(value: string): string {
   if (value === 'change') return 'CAMBIO DE HORARIO';

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { useBusiness } from '../../../context/BusinessContext';
+import { DateCalendarField, DateTimeCalendarField } from '../../common/date-calendar-field/DateCalendarField';
 import {
   EventAvailabilityAdmin,
   EventAvailabilityRuleAdmin,
@@ -258,14 +259,7 @@ export function AdminEventAvailability({ isPhone }: Props) {
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>Bloquea un día completo o un rango de horas por mantenimiento, evento privado u otra razón.</Text>
 
         <View style={[styles.blockForm, { borderColor: theme.border, backgroundColor: theme.background }]}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>Fecha (AAAA-MM-DD)</Text>
-          <TextInput
-            value={blockDate}
-            onChangeText={setBlockDate}
-            placeholder="2026-11-15"
-            placeholderTextColor={theme.textMuted}
-            style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-          />
+          <DateCalendarField label="Fecha" value={blockDate} onChange={setBlockDate} />
           <View style={styles.switchRow}>
             <Text style={[styles.label, { color: theme.text }]}>Bloquear todo el día</Text>
             <Switch value={fullDay} onValueChange={setFullDay} trackColor={{ true: theme.primary }} />
