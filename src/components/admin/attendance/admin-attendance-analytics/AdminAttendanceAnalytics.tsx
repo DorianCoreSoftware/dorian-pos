@@ -11,7 +11,6 @@ import {
   Platform,
   ScrollView,
   Share,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -30,18 +29,12 @@ import {
 } from '../../../../context/BusinessContext';
 import { DateCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
 
-type PresetDays = 30 | 90 | 180 | 365;
+import { styles } from './AdminAttendanceAnalytics.styles';
 
-type MonthlyTrend = {
-  key: string;
-  label: string;
-  scheduledDays: number;
-  workedDays: number;
-  absentDays: number;
-  lateDays: number;
-  overtimeMinutes: number;
-};
 
+
+
+import type { PresetDays, MonthlyTrend } from './AdminAttendanceAnalytics.types';
 function localDateInput(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -556,45 +549,3 @@ export function AdminAttendanceAnalytics() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 14, padding: 18, gap: 16 },
-  headerRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  headerText: { flexGrow: 1, flexBasis: 280 },
-  title: { fontSize: 20, fontWeight: '900' },
-  subtitle: { marginTop: 4, fontSize: 12, lineHeight: 18 },
-  outlineButton: { minHeight: 42, borderWidth: 1, borderRadius: 9, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  presetButton: { minHeight: 38, borderWidth: 1, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  filtersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' },
-  dateField: { flexGrow: 1, flexBasis: 180, minWidth: 160 },
-  fieldLabel: { marginBottom: 5, fontSize: 11, fontWeight: '900' },
-  input: { minHeight: 42, borderWidth: 1, borderRadius: 9, paddingHorizontal: 11 },
-  primaryButton: { minHeight: 42, borderRadius: 9, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
-  loadingBox: { minHeight: 180, alignItems: 'center', justifyContent: 'center' },
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  metricCard: { flexGrow: 1, flexBasis: 170, minWidth: 150, borderWidth: 1, borderRadius: 11, padding: 13 },
-  metricLabel: { fontSize: 10, fontWeight: '900' },
-  metricValue: { marginTop: 5, fontSize: 22, fontWeight: '900' },
-  metricHelp: { marginTop: 4, fontSize: 10, lineHeight: 14 },
-  section: { gap: 10, marginTop: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: '900' },
-  sectionSubtitle: { marginTop: -6, fontSize: 11, lineHeight: 16 },
-  emptyText: { paddingVertical: 10, fontSize: 12 },
-  trendRow: { gap: 6 },
-  trendHeader: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 6 },
-  trendLabel: { fontSize: 12, fontWeight: '900', textTransform: 'capitalize' },
-  trendValue: { fontSize: 11 },
-  track: { height: 10, borderWidth: 1, borderRadius: 5, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 5 },
-  patternCard: { borderWidth: 1, borderRadius: 10, padding: 12 },
-  patternTitle: { fontSize: 12, fontWeight: '900' },
-  patternDetail: { marginTop: 3, fontSize: 11, lineHeight: 16 },
-  table: { minWidth: 970 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 52, borderBottomWidth: 1 },
-  tableHeader: { minHeight: 38 },
-  headerCell: { fontSize: 10, fontWeight: '900' },
-  employeeCell: { width: 220, paddingHorizontal: 8 },
-  numberCell: { width: 90, paddingHorizontal: 8, fontSize: 12, textAlign: 'center' },
-  timeCell: { width: 120, paddingHorizontal: 8, fontSize: 12, textAlign: 'right' },
-});

@@ -10,7 +10,6 @@ import {
   Alert,
   Modal,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TextInput,
@@ -46,6 +45,8 @@ import { AdminAttendanceShiftChanges } from '../admin-attendance-shift-changes/A
 import { AdminAttendanceShiftDrafts } from '../admin-attendance-shift-drafts/AdminAttendanceShiftDrafts';
 import { AdminAttendanceTrends } from '../admin-attendance-trends/AdminAttendanceTrends';
 
+import { localStyles } from './AdminAttendance.styles';
+import type { AttendanceSectionKey, AccordionSectionProps } from './AdminAttendance.types';
 function formatDateTime(value: string | null): string {
   if (!value) {
     return '—';
@@ -126,13 +127,7 @@ function parseEditorValue(value: string): string | null {
   return date.toISOString();
 }
 
-type AttendanceSectionKey =
-  | 'rules'
-  | 'people'
-  | 'planning'
-  | 'monitoring'
-  | 'closing'
-  | 'operations';
+
 
 function AccordionSection({
   title,
@@ -140,13 +135,7 @@ function AccordionSection({
   open,
   onToggle,
   children,
-}: {
-  title: string;
-  subtitle: string;
-  open: boolean;
-  onToggle: () => void;
-  children?: React.ReactNode;
-}) {
+}: AccordionSectionProps) {
   const { theme } = useBusiness();
   return (
     <View style={[localStyles.accordion, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -691,51 +680,3 @@ export function AdminAttendance() {
     </ScrollView>
   );
 }
-
-const localStyles = StyleSheet.create({
-  center: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
-  scrollContainer: { flex: 1, width: '100%' },
-  container: { gap: 18, paddingBottom: 36 },
-  accordion: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
-  accordionHeader: { minHeight: 72, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  accordionTitle: { fontSize: 16, fontWeight: '900' },
-  accordionSubtitle: { marginTop: 3, fontSize: 11, lineHeight: 16 },
-  accordionChevron: { width: 28, textAlign: 'center', fontSize: 24, fontWeight: '900' },
-  accordionContent: { gap: 16, padding: 14, paddingTop: 4 },
-  title: { fontSize: 24, fontWeight: '900' },
-  subtitle: { marginTop: 4, fontSize: 13, fontWeight: '600' },
-  settingsCard: { borderWidth: 1, borderRadius: 14, padding: 18, gap: 14 },
-  settingsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 14 },
-  settingsHeaderText: { flex: 1 },
-  settingsTitle: { fontSize: 18, fontWeight: '900' },
-  settingsSubtitle: { marginTop: 4, fontSize: 12, lineHeight: 18 },
-  settingsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  settingField: { flexGrow: 1, flexBasis: 190, minWidth: 180 },
-  settingHelp: { marginTop: 5, fontSize: 11, lineHeight: 16 },
-  saveSettingsButton: { alignSelf: 'flex-start', minHeight: 42, borderRadius: 9, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
-  summaryCard: { borderWidth: 1, borderRadius: 14, padding: 18 },
-  summaryNumber: { fontSize: 30, fontWeight: '900' },
-  summaryText: { marginTop: -2, marginBottom: 8, fontSize: 15, fontWeight: '800' },
-  workerLine: { marginTop: 4, fontSize: 13 },
-  filtersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  searchInput: { minWidth: 240, flexGrow: 1, borderWidth: 1, borderRadius: 9, paddingHorizontal: 12, minHeight: 44 },
-  filterButton: { minHeight: 44, borderWidth: 1, borderRadius: 9, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  table: { minWidth: 1220 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 64, borderBottomWidth: 1 },
-  tableHeader: { minHeight: 42 },
-  cellEmployee: { width: 220, paddingHorizontal: 10 },
-  cellDate: { width: 220, paddingHorizontal: 10, fontSize: 13 },
-  cellDuration: { width: 170, paddingHorizontal: 10, fontSize: 13 },
-  cellIncident: { width: 240, paddingHorizontal: 10, fontSize: 13 },
-  cellAction: { width: 130, paddingHorizontal: 10 },
-  editButton: { borderWidth: 1, borderRadius: 8, minHeight: 36, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 18 },
-  modalCard: { width: '100%', maxWidth: 560, borderWidth: 1, borderRadius: 16, padding: 20 },
-  modalTitle: { fontSize: 22, fontWeight: '900' },
-  modalSubtitle: { marginTop: 4, marginBottom: 18, fontSize: 14 },
-  fieldLabel: { marginTop: 12, marginBottom: 6, fontSize: 11, fontWeight: '900' },
-  input: { borderWidth: 1, borderRadius: 9, minHeight: 44, paddingHorizontal: 12, paddingVertical: 10 },
-  reasonInput: { minHeight: 90, textAlignVertical: 'top' },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
-  modalButton: { minHeight: 44, borderWidth: 1, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
-});
