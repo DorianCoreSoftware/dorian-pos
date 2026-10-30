@@ -6,6 +6,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
   Text,
   TouchableOpacity,
   View,
@@ -54,6 +55,14 @@ import {
 } from './src/screens/admin/AdminScreen';
 
 import {
+  EventsScreen,
+} from './src/screens/events/EventsScreen';
+
+import {
+  AttendanceScreen,
+} from './src/screens/attendance/AttendanceScreen';
+
+import {
   GlobalHeader,
   MainTab,
 } from './src/components/header/GlobalHeader';
@@ -86,10 +95,29 @@ import {
 
 import {
   getLastPushNotificationResponse,
+  isEventRequestNotification,
   isWebOrderNotification,
   listenToPushNotificationResponses,
+  listenToPushNotificationsReceived,
   registerPosPushNotifications,
 } from './src/services/pushNotificationService';
+
+import {
+  configureAttendanceNotificationChannel,
+  getAttendanceNotificationTarget,
+  isAttendanceNotification,
+  listenToAttendanceNotificationResponses,
+} from './src/services/attendancePushNavigationService';
+
+import {
+  getEventRequestsAdmin,
+} from './src/services/adminEventsService';
+
+import {
+  AttendanceStatus,
+  getAttendanceStatus,
+  syncAttendanceNotifications,
+} from './src/services/attendanceService';
 
 function MainApp() {
   const {
@@ -110,8 +138,106 @@ function MainApp() {
     activeTab,
     setActiveTab,
   ] = useState<MainTab>(
-    'pos',
+    user?.role === 'driver'
+      ? 'driver'
+      : 'pos',
   );
+
+  const [
+    attendanceFocus,
+    setAttendanceFocus,
+  ] = useState<
+    | 'attendance'
+    | 'notifications'
+    | 'requests'
+    | 'receipts'
+    | 'schedule'
+    | null
+  >(null);
+
+  const [
+    attendanceFocusToken,
+    setAttendanceFocusToken,
+  ] = useState(0);
+
+  const openAttendanceFromNotification =
+    (data: {
+      type: 'attendance_notification';
+      category?: string;
+    }): void => {
+      setAttendanceFocus(
+        getAttendanceNotificationTarget(data),
+      );
+      setAttendanceFocusToken(
+        current => current + 1,
+      );
+      setActiveTab('attendance');
+    };
+
+  const [
+    newEventRequestsCount,
+    setNewEventRequestsCount,
+  ] = useState(0);
+
+  const [
+    attendanceStatus,
+    setAttendanceStatus,
+  ] = useState<AttendanceStatus | null>(null);
+
+  const lastAttendanceAlertAt =
+    useRef(0);
+
+  const refreshAttendanceStatus =
+    async (): Promise<void> => {
+      if (!user?.id) {
+        setAttendanceStatus(null);
+        return;
+      }
+
+      try {
+        const status =
+          await getAttendanceStatus();
+        setAttendanceStatus(status);
+
+        try {
+          await syncAttendanceNotifications();
+        } catch (notificationError) {
+          console.warn(
+            'No se pudo sincronizar el monitoreo de asistencia:',
+            notificationError,
+          );
+        }
+      } catch (error) {
+        console.error(
+          'Error actualizando estado de asistencia:',
+          error,
+        );
+      }
+    };
+
+  const refreshNewEventRequestsCount =
+    async (): Promise<void> => {
+      if (
+        !user?.id ||
+        !business?.features.eventsEnabled ||
+        !canManageCatalog(user)
+      ) {
+        setNewEventRequestsCount(0);
+        return;
+      }
+
+      try {
+        const requests = await getEventRequestsAdmin();
+        setNewEventRequestsCount(
+          requests.filter(item => item.status === 'new').length,
+        );
+      } catch (error) {
+        console.error(
+          'Error actualizando contador de eventos:',
+          error,
+        );
+      }
+    };
 
   const [
     editingOrderId,
@@ -149,6 +275,101 @@ function MainApp() {
       null,
     );
 
+  useEffect(() => {
+    void refreshNewEventRequestsCount();
+
+    if (
+      !user?.id ||
+      !business?.features.eventsEnabled ||
+      !canManageCatalog(user)
+    ) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refreshNewEventRequestsCount();
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    user?.id,
+    user?.role,
+    business?.features.eventsEnabled,
+  ]);
+
+  useEffect(() => {
+    void refreshAttendanceStatus();
+
+    if (!user?.id) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refreshAttendanceStatus();
+    }, 60000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void refreshAttendanceStatus();
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (
+      !attendanceStatus ||
+      activeTab === 'attendance'
+    ) {
+      return;
+    }
+
+    const shouldWarn =
+      attendanceStatus.needsClockInReminder ||
+      attendanceStatus.needsClockOutReminder;
+
+    if (!shouldWarn) {
+      return;
+    }
+
+    const now = Date.now();
+    const intervalMs = Math.max(
+      1,
+      attendanceStatus.settings.reminderIntervalMinutes,
+    ) * 60000;
+
+    if (
+      lastAttendanceAlertAt.current > 0 &&
+      now - lastAttendanceAlertAt.current < intervalMs
+    ) {
+      return;
+    }
+
+    lastAttendanceAlertAt.current = now;
+
+    Alert.alert(
+      attendanceStatus.needsClockOutReminder
+        ? 'Salida pendiente'
+        : 'Entrada pendiente',
+      attendanceStatus.needsClockOutReminder
+        ? 'Tu jornada sigue abierta después del horario del negocio. Registra tu salida cuando termines.'
+        : 'Estás usando el sistema dentro de la ventana laboral y todavía no has registrado tu entrada.',
+      [
+        {
+          text: 'Ir a asistencia',
+          onPress: () => setActiveTab('attendance'),
+        },
+        {
+          text: 'Recordarme después',
+          style: 'cancel',
+        },
+      ],
+    );
+  }, [attendanceStatus, activeTab]);
+
   /*
    * ==========================================================
    * REGISTRO PUSH
@@ -167,6 +388,15 @@ function MainApp() {
   }, [
     user?.id,
   ]);
+
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    void configureAttendanceNotificationChannel();
+  }, [user?.id]);
 
   /*
    * ==========================================================
@@ -245,7 +475,7 @@ function MainApp() {
      */
     const subscription =
       listenToPushNotificationResponses(
-        (data) => {
+        data => {
           console.log(
             '🍔 Pedido web abierto desde notificación:',
             data,
@@ -259,6 +489,37 @@ function MainApp() {
           void openKitchenFromNotification(
             notificationKey,
           );
+        },
+        data => {
+          if (
+            business?.features.eventsEnabled &&
+            canManageCatalog(user)
+          ) {
+            console.log(
+              '🎉 Solicitud de evento abierta desde notificación:',
+              data,
+            );
+            setActiveTab('events');
+            void refreshNewEventRequestsCount();
+          }
+        },
+      );
+
+    const attendanceSubscription =
+      listenToAttendanceNotificationResponses(
+        data => {
+          console.log(
+            '🕐 Notificación laboral abierta:',
+            data,
+          );
+          openAttendanceFromNotification(data);
+        },
+      );
+
+    const receivedSubscription =
+      listenToPushNotificationsReceived(
+        () => {
+          void refreshNewEventRequestsCount();
         },
       );
 
@@ -290,11 +551,31 @@ function MainApp() {
               .content
               .data;
 
-          if (
-            !isWebOrderNotification(
+          if (isAttendanceNotification(data)) {
+            console.log(
+              '🕐 POS iniciado desde notificación laboral:',
               data,
-            )
-          ) {
+            );
+            openAttendanceFromNotification(data);
+            return;
+          }
+
+          if (isEventRequestNotification(data)) {
+            if (
+              business?.features.eventsEnabled &&
+              canManageCatalog(user)
+            ) {
+              console.log(
+                '🎉 POS iniciado desde solicitud de evento:',
+                data,
+              );
+              setActiveTab('events');
+              await refreshNewEventRequestsCount();
+            }
+            return;
+          }
+
+          if (!isWebOrderNotification(data)) {
             return;
           }
 
@@ -306,10 +587,7 @@ function MainApp() {
           const notificationKey =
             data.orderId ??
             data.trackingCode ??
-            response
-              .notification
-              .request
-              .identifier;
+            response.notification.request.identifier;
 
           await openKitchenFromNotification(
             notificationKey,
@@ -325,11 +603,15 @@ function MainApp() {
 
     return () => {
       subscription.remove();
+      attendanceSubscription.remove();
+      receivedSubscription.remove();
     };
   }, [
     user?.id,
     fetchKitchenOrders,
     business?.features.kitchenEnabled,
+    business?.features.eventsEnabled,
+    user?.role,
   ]);
 
   /*
@@ -363,10 +645,23 @@ function MainApp() {
         'pos',
       );
     }
+
+
+    if (
+      activeTab === 'events' &&
+      (
+        !business?.features.eventsEnabled ||
+        !canManageCatalog(user)
+      )
+    ) {
+      setActiveTab('pos');
+    }
   }, [
     activeTab,
     business?.features.kitchenEnabled,
     business?.features.loyaltyEnabled,
+    business?.features.eventsEnabled,
+    user?.role,
   ]);
 
   const userCanManageCash =
@@ -755,6 +1050,34 @@ function MainApp() {
 
       if (
         activeTab ===
+        'driver'
+      ) {
+        if (
+          user?.role !== 'driver' ||
+          !business?.features.deliveryEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <DriverScreen />
+        );
+      }
+
+      if (
+        activeTab ===
+        'attendance'
+      ) {
+        return (
+          <AttendanceScreen
+            focusTarget={attendanceFocus}
+            focusToken={attendanceFocusToken}
+          />
+        );
+      }
+
+      if (
+        activeTab ===
         'sales'
       ) {
         return (
@@ -803,6 +1126,25 @@ function MainApp() {
             pendingOrdersCount={
               pendingOrders.length
             }
+          />
+        );
+      }
+
+      if (
+        activeTab === 'events'
+      ) {
+        if (
+          !business?.features.eventsEnabled ||
+          !userCanManageCatalog
+        ) {
+          return renderRestricted(
+            'Solo un administrador puede gestionar solicitudes de eventos.',
+          );
+        }
+
+        return (
+          <EventsScreen
+            onRequestsChanged={refreshNewEventRequestsCount}
           />
         );
       }
@@ -860,6 +1202,9 @@ function MainApp() {
         pendingOrdersCount={
           pendingOrders.length
         }
+        newEventRequestsCount={
+          newEventRequestsCount
+        }
         user={
           user
         }
@@ -867,6 +1212,39 @@ function MainApp() {
           logout
         }
       />
+
+      {activeTab !== 'attendance' &&
+      (attendanceStatus?.needsClockInReminder ||
+        attendanceStatus?.needsClockOutReminder) ? (
+        <TouchableOpacity
+          onPress={() => setActiveTab('attendance')}
+          style={{
+            minHeight: 44,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            backgroundColor: attendanceStatus.needsClockOutReminder
+              ? theme.danger
+              : theme.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              color: attendanceStatus.needsClockOutReminder
+                ? '#FFFFFF'
+                : theme.onPrimary,
+              fontSize: 13,
+              fontWeight: '900',
+              textAlign: 'center',
+            }}
+          >
+            {attendanceStatus.needsClockOutReminder
+              ? '⚠️ Tu jornada sigue abierta. Toca para registrar salida.'
+              : '⚠️ No has registrado tu entrada. Toca para ir a Asistencia.'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
 
       {renderActiveScreen()}
     </View>
@@ -1072,12 +1450,7 @@ function NavigationGateway() {
         registerActivity
       }
     >
-      {user.role ===
-      'driver' ? (
-        <DriverScreen />
-      ) : (
-        <MainApp />
-      )}
+      <MainApp />
     </View>
   );
 }

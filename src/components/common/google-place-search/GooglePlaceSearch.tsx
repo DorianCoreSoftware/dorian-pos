@@ -1,4 +1,4 @@
-import { useBusiness } from '../../context/BusinessContext';
+import { useBusiness } from '../../../context/BusinessContext';
 
 import React, {
   useEffect,
@@ -20,7 +20,7 @@ import {
   GooglePlaceSelection,
   GooglePlaceSuggestion,
   searchGooglePlaces,
-} from '../../services/googlePlacesService';
+} from '../../../services/googlePlacesService';
 
 interface GooglePlaceSearchProps {
   disabled?: boolean;

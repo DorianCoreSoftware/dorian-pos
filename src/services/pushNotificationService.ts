@@ -22,6 +22,15 @@ const WEB_ORDERS_CHANNEL_ID =
 const DELIVERY_ORDERS_CHANNEL_ID =
   'delivery-orders';
 
+const CRITICAL_ALERTS_CHANNEL_ID =
+  'critical-alerts';
+
+const EVENT_REQUESTS_CHANNEL_ID =
+  'event-requests';
+
+const EVENT_REMINDERS_CHANNEL_ID =
+  'event-reminders';
+
 type PushDeviceType =
   | 'pos'
   | 'driver';
@@ -143,7 +152,134 @@ async function configureAndroidNotificationChannels():
             .PUBLIC,
       },
     );
+
+
+  /*
+   * Alertas operativas críticas.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      CRITICAL_ALERTS_CHANNEL_ID,
+      {
+        name:
+          'Alertas críticas',
+
+        description:
+          'Alertas operativas críticas del POS que requieren atención.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          400,
+          180,
+          400,
+          180,
+          400,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
+
+  /*
+   * Solicitudes de eventos para POS.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      EVENT_REQUESTS_CHANNEL_ID,
+      {
+        name:
+          'Eventos',
+
+        description:
+          'Avisos de nuevas solicitudes de eventos recibidas desde la web.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          300,
+          200,
+          300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
+
+  /*
+   * Recordatorios operativos de eventos.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      EVENT_REMINDERS_CHANNEL_ID,
+      {
+        name:
+          'Recordatorios de eventos',
+
+        description:
+          'Avisos de anticipos, saldos, eventos próximos y checklist.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          300,
+          200,
+          300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
 }
+
 
 /*
  * ============================================================
@@ -505,41 +641,82 @@ export function isDeliveryReadyNotification(
   );
 }
 
+
+/*
+ * ============================================================
+ * NOTIFICACIÓN DE NUEVA SOLICITUD DE EVENTO
+ * ============================================================
+ */
+export interface EventRequestNotificationData {
+  type: 'new_event_request' | 'event_reminder';
+  requestId?: string;
+  folio?: number;
+}
+
+export function isEventRequestNotification(
+  data: unknown,
+): data is EventRequestNotificationData {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  const notificationData = data as {
+    type?: unknown;
+    requestId?: unknown;
+    folio?: unknown;
+  };
+
+  return (
+    notificationData.type === 'new_event_request' ||
+    notificationData.type === 'event_reminder'
+  );
+}
+
 /*
  * ============================================================
  * LISTENER POS
  * ============================================================
  */
 export function listenToPushNotificationResponses(
-  onWebOrderPressed:
-    (
-      data:
-        WebOrderNotificationData,
-    ) => void,
+  onWebOrderPressed: (
+    data: WebOrderNotificationData,
+  ) => void,
+  onEventRequestPressed?: (
+    data: EventRequestNotificationData,
+  ) => void,
 ): Notifications.EventSubscription {
-  return Notifications
-    .addNotificationResponseReceivedListener(
-      (
-        response,
-      ) => {
-        const data =
-          response
-            .notification
-            .request
-            .content
-            .data;
+  return Notifications.addNotificationResponseReceivedListener(
+    response => {
+      const data = response.notification.request.content.data;
 
-        if (
-          isWebOrderNotification(
-            data,
-          )
-        ) {
-          onWebOrderPressed(
-            data,
-          );
-        }
-      },
-    );
+      if (isWebOrderNotification(data)) {
+        onWebOrderPressed(data);
+        return;
+      }
+
+      if (
+        onEventRequestPressed &&
+        isEventRequestNotification(data)
+      ) {
+        onEventRequestPressed(data);
+      }
+    },
+  );
+}
+
+export function listenToPushNotificationsReceived(
+  onEventRequestReceived: (
+    data: EventRequestNotificationData,
+  ) => void,
+): Notifications.EventSubscription {
+  return Notifications.addNotificationReceivedListener(
+    notification => {
+      const data = notification.request.content.data;
+      if (isEventRequestNotification(data)) {
+        onEventRequestReceived(data);
+      }
+    },
+  );
 }
 
 /*
@@ -590,4 +767,85 @@ export async function getLastPushNotificationResponse():
   > {
   return Notifications
     .getLastNotificationResponseAsync();
+}
+
+
+/*
+ * ============================================================
+ * ALERTA CRÍTICA DEL CENTRO DE NOTIFICACIONES
+ * ============================================================
+ */
+export interface CriticalPosAlertNotificationData {
+  type:
+    'critical_pos_alert';
+
+  notificationId?:
+    string;
+
+  notificationType?:
+    string;
+
+  sourceType?:
+    string;
+
+  sourceId?:
+    string;
+}
+
+export function isCriticalPosAlertNotification(
+  data:
+    unknown,
+): data is CriticalPosAlertNotificationData {
+  if (
+    !data ||
+    typeof data !==
+      'object'
+  ) {
+    return false;
+  }
+
+  const notificationData =
+    data as {
+      type?:
+        unknown;
+    };
+
+  return (
+    notificationData.type ===
+    'critical_pos_alert'
+  );
+}
+
+/*
+ * Listener independiente para no romper el listener actual
+ * de pedidos web.
+ */
+export function listenToCriticalPosAlertResponses(
+  onCriticalAlertPressed:
+    (
+      data:
+        CriticalPosAlertNotificationData,
+    ) => void,
+): Notifications.EventSubscription {
+  return Notifications
+    .addNotificationResponseReceivedListener(
+      response => {
+        const data =
+          response
+            .notification
+            .request
+            .content
+            .data;
+
+        if (
+          isCriticalPosAlertNotification(
+            data,
+          )
+        ) {
+          onCriticalAlertPressed(
+            data,
+          );
+        }
+      },
+    );
 }

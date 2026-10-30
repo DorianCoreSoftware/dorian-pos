@@ -41,6 +41,9 @@ interface CheckoutData {
   customerPhone:
   string;
 
+  marketingCode:
+  string;
+
   deliveryDetails:
   DeliveryDetails | null;
 }
@@ -178,6 +181,12 @@ export default function WebCheckoutModal({
     useState('');
 
   const [
+    marketingCode,
+    setMarketingCode,
+  ] =
+    useState('');
+
+  const [
     delivery,
     setDelivery,
   ] =
@@ -277,6 +286,10 @@ export default function WebCheckoutModal({
       );
 
       setCustomerPhone(
+        '',
+      );
+
+      setMarketingCode(
         '',
       );
 
@@ -736,6 +749,11 @@ export default function WebCheckoutModal({
       customerPhone:
         normalizedPhone,
 
+      marketingCode:
+        marketingCode
+          .trim()
+          .toUpperCase(),
+
       deliveryDetails:
         fulfillmentType ===
           'delivery'
@@ -1006,6 +1024,47 @@ export default function WebCheckoutModal({
                   )
               }
             />
+
+            <FormInput
+              label="Código de campaña (opcional)"
+              value={
+                marketingCode
+              }
+              placeholder="Ej. VIPNOV26"
+              maxLength={
+                40
+              }
+              onChangeText={
+                (
+                  value,
+                ) =>
+                  setMarketingCode(
+                    value
+                      .toUpperCase()
+                      .replace(
+                        /[^A-Z0-9_-]/g,
+                        '',
+                      ),
+                  )
+              }
+            />
+
+            <Text
+              style={{
+                marginTop:
+                  -2,
+                marginBottom:
+                  10,
+                color:
+                  businessTheme.textMuted,
+                fontSize:
+                  11,
+                lineHeight:
+                  16,
+              }}
+            >
+              Si recibiste un código de una campaña, escríbelo aquí. No modifica el precio salvo que la promoción correspondiente lo indique por separado.
+            </Text>
 
             {fulfillmentType ===
               'delivery' && (

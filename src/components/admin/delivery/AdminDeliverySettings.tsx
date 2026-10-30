@@ -22,10 +22,15 @@ import {
 
 import {
   createDeliveryZone,
+  createFulfillmentScheduleWindow,
   deleteDeliveryZone,
+  deleteFulfillmentScheduleWindow,
   DeliveryZone,
+  FulfillmentScheduleWindow,
+  FulfillmentType,
   getDeliverySettings,
   getDeliveryZones,
+  getFulfillmentScheduleWindows,
   saveDeliverySettings,
   setDeliveryZoneActive,
   updateDeliveryZone,
@@ -33,7 +38,7 @@ import {
 
 import {
   GooglePlaceSearch,
-} from '../../common/GooglePlaceSearch';
+} from '../../common/google-place-search/GooglePlaceSearch';
 
 import {
   styles,
@@ -77,6 +82,16 @@ const INITIAL_ZONE_FORM:
   isActive:
     true,
 };
+
+const DAY_NAMES = [
+  'Domingo',
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+];
 
 export function AdminDeliverySettings() {
   const { theme: businessTheme } = useBusiness();
@@ -141,6 +156,30 @@ export function AdminDeliverySettings() {
       true,
     );
 
+  const [pickupEnabled, setPickupEnabled] =
+    useState(true);
+
+  const [pickupScheduleEnabled, setPickupScheduleEnabled] =
+    useState(false);
+
+  const [deliveryScheduleEnabled, setDeliveryScheduleEnabled] =
+    useState(false);
+
+  const [scheduleWindows, setScheduleWindows] =
+    useState<FulfillmentScheduleWindow[]>([]);
+
+  const [scheduleType, setScheduleType] =
+    useState<FulfillmentType>('delivery');
+
+  const [scheduleDayOfWeek, setScheduleDayOfWeek] =
+    useState(1);
+
+  const [scheduleStartTime, setScheduleStartTime] =
+    useState('15:00');
+
+  const [scheduleEndTime, setScheduleEndTime] =
+    useState('19:00');
+
   const [
     isLoading,
     setIsLoading,
@@ -204,14 +243,28 @@ export function AdminDeliverySettings() {
           const [
             loadedSettings,
             loadedZones,
+            loadedScheduleWindows,
           ] =
             await Promise.all([
               getDeliverySettings(),
               getDeliveryZones(),
+              getFulfillmentScheduleWindows(),
             ]);
 
           setDeliveryEnabled(
             loadedSettings.isEnabled,
+          );
+
+          setPickupEnabled(
+            loadedSettings.pickupEnabled,
+          );
+
+          setPickupScheduleEnabled(
+            loadedSettings.pickupScheduleEnabled,
+          );
+
+          setDeliveryScheduleEnabled(
+            loadedSettings.deliveryScheduleEnabled,
           );
 
           setBusinessLatitude(
@@ -233,6 +286,10 @@ export function AdminDeliverySettings() {
 
           setZones(
             loadedZones,
+          );
+
+          setScheduleWindows(
+            loadedScheduleWindows,
           );
         } catch (
         error
@@ -306,11 +363,12 @@ export function AdminDeliverySettings() {
     }
 
     if (
-      businessLatitude ===
-      null ||
-      businessLongitude ===
-      null ||
-      !businessAddress.trim()
+      deliveryEnabled &&
+      (
+        businessLatitude === null ||
+        businessLongitude === null ||
+        !businessAddress.trim()
+      )
     ) {
       Alert.alert(
         'Ubicación requerida',
@@ -337,6 +395,12 @@ export function AdminDeliverySettings() {
 
         isEnabled:
           deliveryEnabled,
+
+        pickupEnabled,
+
+        pickupScheduleEnabled,
+
+        deliveryScheduleEnabled,
       });
 
       Alert.alert(
@@ -360,6 +424,69 @@ export function AdminDeliverySettings() {
         false,
       );
     }
+  }
+
+  async function handleAddScheduleWindow():
+    Promise<void> {
+    if (isProcessing) {
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      await createFulfillmentScheduleWindow({
+        fulfillmentType: scheduleType,
+        dayOfWeek: scheduleDayOfWeek,
+        startTime: scheduleStartTime,
+        endTime: scheduleEndTime,
+      });
+
+      await loadData();
+    } catch (error) {
+      Alert.alert(
+        'Horario no guardado',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el horario.',
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function confirmDeleteScheduleWindow(
+    window: FulfillmentScheduleWindow,
+  ): void {
+    Alert.alert(
+      'Eliminar horario',
+      `¿Eliminar ${DAY_NAMES[window.dayOfWeek]} ${window.startTime}–${window.endTime}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsProcessing(true);
+                await deleteFulfillmentScheduleWindow(window.id);
+                await loadData();
+              } catch (error) {
+                Alert.alert(
+                  'Error',
+                  error instanceof Error
+                    ? error.message
+                    : 'No se pudo eliminar el horario.',
+                );
+              } finally {
+                setIsProcessing(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
   }
 
   function openCreateZone():
@@ -941,9 +1068,181 @@ export function AdminDeliverySettings() {
               styles.subtitle
             }
           >
-            Define la ubicación del negocio y las zonas de reparto.
+            Controla recoger, domicilio, horarios automáticos y zonas de reparto.
           </Text>
         </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>
+          Modalidades y horarios automáticos
+        </Text>
+        <Text style={styles.cardSubtitle}>
+          El apagado manual siempre tiene prioridad. Si activas el horario automático, la modalidad solo estará disponible dentro de sus ventanas configuradas.
+        </Text>
+
+        <View style={styles.fulfillmentModeCard}>
+          <View style={styles.fulfillmentModeInfo}>
+            <Text style={styles.fulfillmentModeTitle}>🏪 Recoger</Text>
+            <Text style={styles.fulfillmentModeSubtitle}>
+              Permite que el cliente pase por su pedido.
+            </Text>
+          </View>
+          <View style={styles.fulfillmentSwitches}>
+            <View style={styles.compactSwitchRow}>
+              <Text style={styles.compactSwitchLabel}>Manual</Text>
+              <Switch
+                value={pickupEnabled}
+                disabled={isProcessing}
+                onValueChange={setPickupEnabled}
+              />
+            </View>
+            <View style={styles.compactSwitchRow}>
+              <Text style={styles.compactSwitchLabel}>Horario</Text>
+              <Switch
+                value={pickupScheduleEnabled}
+                disabled={isProcessing || !pickupEnabled}
+                onValueChange={setPickupScheduleEnabled}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.fulfillmentModeCard}>
+          <View style={styles.fulfillmentModeInfo}>
+            <Text style={styles.fulfillmentModeTitle}>🛵 Domicilio</Text>
+            <Text style={styles.fulfillmentModeSubtitle}>
+              Usa la ubicación y las zonas de reparto configuradas abajo.
+            </Text>
+          </View>
+          <View style={styles.fulfillmentSwitches}>
+            <View style={styles.compactSwitchRow}>
+              <Text style={styles.compactSwitchLabel}>Manual</Text>
+              <Switch
+                value={deliveryEnabled}
+                disabled={isProcessing}
+                onValueChange={setDeliveryEnabled}
+              />
+            </View>
+            <View style={styles.compactSwitchRow}>
+              <Text style={styles.compactSwitchLabel}>Horario</Text>
+              <Switch
+                value={deliveryScheduleEnabled}
+                disabled={isProcessing || !deliveryEnabled}
+                onValueChange={setDeliveryScheduleEnabled}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.scheduleBuilder}>
+          <Text style={styles.inputLabel}>Agregar ventana</Text>
+
+          <View style={styles.scheduleTypeRow}>
+            {(['delivery', 'pickup'] as FulfillmentType[]).map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.scheduleTypeButton,
+                  scheduleType === type && styles.scheduleTypeButtonActive,
+                ]}
+                disabled={isProcessing}
+                onPress={() => setScheduleType(type)}
+              >
+                <Text style={styles.scheduleTypeButtonText}>
+                  {type === 'delivery' ? 'Domicilio' : 'Recoger'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.dayButtons}>
+            {DAY_NAMES.map((day, index) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.dayButton,
+                  scheduleDayOfWeek === index && styles.dayButtonActive,
+                ]}
+                disabled={isProcessing}
+                onPress={() => setScheduleDayOfWeek(index)}
+              >
+                <Text style={styles.dayButtonText}>{day.slice(0, 3)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={[styles.coordinatesRow, isPhone && styles.coordinatesRowPhone]}>
+            <View style={styles.coordinateField}>
+              <Text style={styles.inputLabel}>Desde</Text>
+              <TextInput
+                value={scheduleStartTime}
+                onChangeText={setScheduleStartTime}
+                placeholder="15:00"
+                placeholderTextColor="#777777"
+                maxLength={5}
+                style={styles.input}
+              />
+            </View>
+            <View style={styles.coordinateField}>
+              <Text style={styles.inputLabel}>Hasta</Text>
+              <TextInput
+                value={scheduleEndTime}
+                onChangeText={setScheduleEndTime}
+                placeholder="19:00"
+                placeholderTextColor="#777777"
+                maxLength={5}
+                style={styles.input}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, isProcessing && styles.buttonDisabled]}
+            disabled={isProcessing}
+            onPress={() => { void handleAddScheduleWindow(); }}
+          >
+            <Text style={styles.primaryButtonText}>+ Agregar horario</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.scheduleList}>
+          {scheduleWindows.length === 0 ? (
+            <Text style={styles.scheduleEmpty}>
+              No hay ventanas configuradas. Si el horario automático está apagado, la modalidad depende únicamente del interruptor manual.
+            </Text>
+          ) : (
+            scheduleWindows.map((window) => (
+              <View key={window.id} style={styles.scheduleWindowRow}>
+                <View style={styles.scheduleWindowInfo}>
+                  <Text style={styles.scheduleWindowTitle}>
+                    {window.fulfillmentType === 'delivery' ? '🛵 Domicilio' : '🏪 Recoger'} · {DAY_NAMES[window.dayOfWeek]}
+                  </Text>
+                  <Text style={styles.scheduleWindowTime}>
+                    {window.startTime}–{window.endTime}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.scheduleDeleteButton}
+                  disabled={isProcessing}
+                  onPress={() => confirmDeleteScheduleWindow(window)}
+                >
+                  <Text style={styles.scheduleDeleteButtonText}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.primaryButton, isProcessing && styles.buttonDisabled]}
+          disabled={isProcessing}
+          onPress={() => { void handleSaveSettings(); }}
+        >
+          <Text style={styles.primaryButtonText}>
+            Guardar disponibilidad
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View
@@ -978,35 +1277,6 @@ export function AdminDeliverySettings() {
             </Text>
           </View>
 
-          <View
-            style={
-              styles.switchRow
-            }
-          >
-            <Text
-              style={
-                deliveryEnabled
-                  ? styles.enabledText
-                  : styles.disabledText
-              }
-            >
-              {deliveryEnabled
-                ? 'REPARTO ACTIVO'
-                : 'REPARTO INACTIVO'}
-            </Text>
-
-            <Switch
-              value={
-                deliveryEnabled
-              }
-              disabled={
-                isProcessing
-              }
-              onValueChange={
-                setDeliveryEnabled
-              }
-            />
-          </View>
         </View>
 
         <GooglePlaceSearch

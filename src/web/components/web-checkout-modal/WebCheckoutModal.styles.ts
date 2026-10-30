@@ -248,6 +248,27 @@ const createStyles = (
         '#666666',
     },
 
+    fulfillmentUnavailableBox: {
+      marginTop: 14,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#7D3030',
+      backgroundColor: '#2A1717',
+    },
+
+    fulfillmentUnavailableTitle: {
+      color: '#FF8A8A',
+      fontSize: 13,
+      fontWeight: '900',
+    },
+
+    fulfillmentUnavailableText: {
+      color: '#D0D0D0',
+      fontSize: 12,
+      marginTop: 4,
+    },
+
     sectionTitle: {
       color:
         '#FFFFFF',

@@ -81,15 +81,29 @@ import {
 import { AdminDashboard } from '../../components/admin/dashboard/AdminDashboard';
 import { AdminRefundSettings } from '../../components/admin/refunds/AdminRefundSettings';
 import { AdminWebBanners } from '../../components/admin/web-banners/AdminWebBanners';
+import { AdminEvents } from '../../components/admin/events/AdminEvents';
+import { AdminInvoicing } from '../../components/admin/invoicing/AdminInvoicing';
+import { AdminInventory } from '../../components/admin/inventory/AdminInventory';
+import { AdminPurchases } from '../../components/admin/purchases/AdminPurchases';
+import { AdminNotifications } from '../../components/admin/notifications/AdminNotifications';
+import { AdminCrm } from '../../components/admin/crm/AdminCrm';
+import { AdminMarketing } from '../../components/admin/marketing/AdminMarketing';
 import { appVersionLabel } from '../../Utils/appVersion';
+import { AdminAttendance } from '../../components/admin/attendance/admin-attendance/AdminAttendance';
 
 type AdminSection =
   | 'dashboard'
   | 'business'
   | 'products'
+  | 'inventory'
+  | 'purchases'
+  | 'notifications'
+  | 'crm'
+  | 'marketing'
   | 'categories'
   | 'modifiers'
   | 'users'
+  | 'attendance'
   | 'reports'
   | 'expenses'
   | 'printer'
@@ -99,6 +113,8 @@ type AdminSection =
   | 'delivery'
   | 'feedback'
   | 'web-banners'
+  | 'events'
+  | 'invoicing'
   | 'refunds';
 
 interface AdminSectionOption {
@@ -185,6 +201,46 @@ export function AdminScreen({
             },
             {
               key:
+                'inventory',
+              label:
+                'INVENTARIO',
+              icon:
+                '🧺',
+            },
+            {
+              key:
+                'purchases',
+              label:
+                'COMPRAS',
+              icon:
+                '🛒',
+            },
+            {
+              key:
+                'notifications',
+              label:
+                'NOTIFICACIONES',
+              icon:
+                '🔔',
+            },
+            {
+              key:
+                'crm',
+              label:
+                'CRM',
+              icon:
+                '👥',
+            },
+            {
+              key:
+                'marketing',
+              label:
+                'MARKETING',
+              icon:
+                '📣',
+            },
+            {
+              key:
                 'categories',
               label:
                 'CATEGORÍAS',
@@ -206,6 +262,14 @@ export function AdminScreen({
                 'USUARIOS',
               icon:
                 '👥',
+            },
+            {
+              key:
+                'attendance',
+              label:
+                'ASISTENCIA',
+              icon:
+                '🕐',
             },
             {
               key:
@@ -282,6 +346,32 @@ export function AdminScreen({
               '🚚',
           });
         }
+        if (
+          business?.features
+            .eventsEnabled
+        ) {
+          sections.push({
+            key:
+              'events',
+            label:
+              'EVENTOS',
+            icon:
+              '🎉',
+          });
+        }
+        if (
+          business?.features
+            .invoicingEnabled
+        ) {
+          sections.push({
+            key:
+              'invoicing',
+            label:
+              'FACTURACIÓN',
+            icon:
+              '🧾',
+          });
+        }
         sections.push({
           key:
             'refunds',
@@ -312,6 +402,10 @@ export function AdminScreen({
       [
         business?.features
           .deliveryEnabled,
+        business?.features
+          .eventsEnabled,
+        business?.features
+          .invoicingEnabled,
         business?.features
           .loyaltyEnabled,
         business?.features
@@ -401,6 +495,53 @@ export function AdminScreen({
       }
       if (
         activeSection ===
+        'inventory'
+      ) {
+        return (
+          <AdminInventory />
+        );
+      }
+      if (
+        activeSection ===
+        'purchases'
+      ) {
+        return (
+          <AdminPurchases />
+        );
+      }
+      if (
+        activeSection ===
+        'notifications'
+      ) {
+        return (
+          <AdminNotifications
+            onNavigateToInventory={
+              () =>
+                setActiveSection(
+                  'inventory',
+                )
+            }
+          />
+        );
+      }
+      if (
+        activeSection ===
+        'crm'
+      ) {
+        return (
+          <AdminCrm />
+        );
+      }
+      if (
+        activeSection ===
+        'marketing'
+      ) {
+        return (
+          <AdminMarketing />
+        );
+      }
+      if (
+        activeSection ===
         'categories'
       ) {
         return (
@@ -430,6 +571,14 @@ export function AdminScreen({
       ) {
         return (
           <AdminUsers />
+        );
+      }
+      if (
+        activeSection ===
+        'attendance'
+      ) {
+        return (
+          <AdminAttendance />
         );
       }
       if (
@@ -508,6 +657,38 @@ export function AdminScreen({
           <AdminDeliverySettings />
         );
       }
+      if (
+        activeSection ===
+        'events'
+      ) {
+        if (
+          !business?.features
+            .eventsEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <AdminEvents />
+        );
+      }
+
+      if (
+        activeSection ===
+        'invoicing'
+      ) {
+        if (
+          !business?.features
+            .invoicingEnabled
+        ) {
+          return null;
+        }
+
+        return (
+          <AdminInvoicing />
+        );
+      }
+
       if (
         activeSection ===
         'refunds'

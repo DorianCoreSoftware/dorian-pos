@@ -102,6 +102,7 @@ import {
 interface WebMenuScreenProps {
   onRewardsPress?: () => void;
   onAccountPress?: () => void;
+  onEventsPress?: () => void;
 }
 
 function getColumns(
@@ -137,6 +138,71 @@ function normalizeText(
       'es',
     );
 }
+const MARKETING_TRACKING_STORAGE_KEY =
+  'dorian_marketing_tracking_token';
+
+function getMarketingTrackingToken():
+  | string
+  | null {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return null;
+  }
+
+  const urlToken =
+    new URLSearchParams(
+      window.location.search,
+    )
+      .get('mkt')
+      ?.trim() ||
+    null;
+
+  if (urlToken) {
+    try {
+      window.sessionStorage.setItem(
+        MARKETING_TRACKING_STORAGE_KEY,
+        urlToken,
+      );
+    } catch {
+      // sessionStorage puede estar bloqueado.
+    }
+
+    return urlToken;
+  }
+
+  try {
+    return (
+      window.sessionStorage.getItem(
+        MARKETING_TRACKING_STORAGE_KEY,
+      )
+        ?.trim() ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function clearMarketingTrackingToken():
+void {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(
+      MARKETING_TRACKING_STORAGE_KEY,
+    );
+  } catch {
+    // sessionStorage puede estar bloqueado.
+  }
+}
+
 function getTrackingCodeFromPath():
   | string
   | null {
@@ -287,6 +353,7 @@ function openExternalUrl(
 export default function WebMenuScreen({
   onRewardsPress,
   onAccountPress,
+  onEventsPress,
 }: WebMenuScreenProps) {
   const {
     business,
@@ -484,6 +551,14 @@ export default function WebMenuScreen({
   ] = useState<
     string | null
   >(null);
+  const [
+    marketingTrackingToken,
+  ] = useState<
+    string | null
+  >(
+    () =>
+      getMarketingTrackingToken(),
+  );
   const [
     businessStatus,
     setBusinessStatus,
@@ -1045,6 +1120,7 @@ export default function WebMenuScreen({
       WebFulfillmentType;
       customerName: string;
       customerPhone: string;
+      marketingCode: string;
       deliveryDetails:
       DeliveryDetails | null;
     },
@@ -1116,10 +1192,23 @@ export default function WebMenuScreen({
             requestId,
           customerSessionToken:
             getSavedWebCustomerSessionToken(),
+          marketingCode:
+            data.marketingCode,
+          marketingToken:
+            marketingTrackingToken,
         });
       setSuccessfulOrderId(
         result.orderId,
       );
+
+      if (
+        marketingTrackingToken ||
+        data.marketingCode
+          .trim()
+      ) {
+        clearMarketingTrackingToken();
+      }
+
       const trackingCode =
         getOrderTrackingCode(
           result.orderId,

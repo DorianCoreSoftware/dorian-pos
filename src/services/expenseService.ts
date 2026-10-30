@@ -24,6 +24,9 @@ export interface ExpenseRecord {
   recordedBy: string;
   recordedByName: string;
   receiptUrl: string | null;
+  sourceType: string | null;
+  sourceId: string | null;
+  isGenerated: boolean;
 }
 
 interface ExpenseCategoryRow {
@@ -42,6 +45,8 @@ interface ExpenseRow {
   expense_at: string;
   recorded_by: string;
   receipt_url: string | null;
+  source_type: string | null;
+  source_id: string | null;
   expense_categories?: { name?: string | null } | null;
   profiles?: { first_name?: string | null; last_name?: string | null } | null;
 }
@@ -144,6 +149,8 @@ export async function getExpenses(
       expense_at,
       recorded_by,
       receipt_url,
+      source_type,
+      source_id,
       expense_categories:category_id(name),
       profiles:recorded_by(first_name,last_name)
     `)
@@ -168,6 +175,9 @@ export async function getExpenses(
       recordedBy: row.recorded_by,
       recordedByName: `${firstName} ${lastName}`.trim() || 'Usuario',
       receiptUrl: row.receipt_url,
+      sourceType: row.source_type ?? null,
+      sourceId: row.source_id ?? null,
+      isGenerated: Boolean(row.source_type),
     };
   });
 }

@@ -28,6 +28,12 @@ export interface CreateWebOrderInput {
 
   customerSessionToken?:
   string | null;
+
+  marketingCode?:
+  string | null;
+
+  marketingToken?:
+  string | null;
 }
 
 export interface CreateWebOrderResult {
@@ -42,6 +48,8 @@ export async function createWebOrder({
   deliveryDetails,
   clientRequestId,
   customerSessionToken,
+  marketingCode,
+  marketingToken,
 }: CreateWebOrderInput): Promise<CreateWebOrderResult> {
   if (
     !Array.isArray(cart) ||
@@ -272,6 +280,54 @@ export async function createWebOrder({
     throw new Error(
       'No se recibió el identificador del pedido.',
     );
+  }
+
+  const cleanMarketingCode =
+    marketingCode
+      ?.trim()
+      .toUpperCase() ||
+    null;
+
+  const cleanMarketingToken =
+    marketingToken
+      ?.trim() ||
+    null;
+
+  if (
+    cleanMarketingCode ||
+    cleanMarketingToken
+  ) {
+    /*
+     * El pedido ya existe en este punto.
+     * El tracking es complementario y nunca debe
+     * convertir un pedido exitoso en un error de checkout.
+     */
+    const {
+      error:
+        marketingTrackingError,
+    } =
+      await supabase.rpc(
+        'claim_marketing_tracking_for_web_order',
+        {
+          p_order_id:
+            data,
+          p_client_request_id:
+            clientRequestId,
+          p_code:
+            cleanMarketingCode,
+          p_token:
+            cleanMarketingToken,
+        },
+      );
+
+    if (
+      marketingTrackingError
+    ) {
+      console.warn(
+        'No se pudo asociar el tracking de Marketing al pedido:',
+        marketingTrackingError.message,
+      );
+    }
   }
 
   return {

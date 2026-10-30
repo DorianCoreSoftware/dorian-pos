@@ -35,10 +35,13 @@ import {
 
 export type MainTab =
   | 'pos'
+  | 'driver'
+  | 'attendance'
   | 'kitchen'
   | 'sales'
   | 'loyalty'
   | 'cash'
+  | 'events'
   | 'admin';
 
 interface HeaderProps {
@@ -52,6 +55,8 @@ interface HeaderProps {
 
   pendingOrdersCount: number;
 
+  newEventRequestsCount: number;
+
   user: any;
 
   logout: () => void;
@@ -62,6 +67,7 @@ export function GlobalHeader({
   setActiveTab,
   editingOrderId,
   pendingOrdersCount,
+  newEventRequestsCount,
   user,
   logout,
 }: HeaderProps) {
@@ -269,10 +275,11 @@ export function GlobalHeader({
             >
               {user?.fullName}{' '}
               (
-              {user?.role ===
-                'admin'
+              {user?.role === 'admin'
                 ? 'Admin'
-                : 'Caja'}
+                : user?.role === 'driver'
+                  ? 'Reparto'
+                  : 'Caja'}
               )
             </Text>
           ) : (
@@ -328,6 +335,28 @@ export function GlobalHeader({
           styles.tabContainerPhone,
         ]}
       >
+        {user?.role === 'driver' ? (
+          <>
+            <TouchableOpacity
+              style={getTabButtonStyle('driver')}
+              onPress={() => setActiveTab('driver')}
+            >
+              <Text style={getTabTextStyle('driver')}>
+                REPARTO
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={getTabButtonStyle('attendance')}
+              onPress={() => setActiveTab('attendance')}
+            >
+              <Text style={getTabTextStyle('attendance')}>
+                ASISTENCIA
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
         <TouchableOpacity
           style={
             getTabButtonStyle(
@@ -452,6 +481,19 @@ export function GlobalHeader({
           </TouchableOpacity>
         ) : null}
 
+
+
+        {business?.features.eventsEnabled && canManageCatalog(user) ? (
+          <TouchableOpacity
+            style={getTabButtonStyle('events')}
+            onPress={() => setActiveTab('events')}
+          >
+            <Text style={getTabTextStyle('events')}>
+              EVENTOS{newEventRequestsCount > 0 ? ` (${newEventRequestsCount})` : ''}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         {canManageCatalog(
           user,
         ) ? (
@@ -478,6 +520,17 @@ export function GlobalHeader({
             </Text>
           </TouchableOpacity>
         ) : null}
+
+            <TouchableOpacity
+              style={getTabButtonStyle('attendance')}
+              onPress={() => setActiveTab('attendance')}
+            >
+              <Text style={getTabTextStyle('attendance')}>
+                ASISTENCIA
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {editingOrderId ? (

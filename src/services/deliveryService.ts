@@ -31,6 +31,59 @@ interface DeliveryQuoteRpcRow {
     | number;
 }
 
+
+
+export interface FulfillmentAvailability {
+  pickupAvailable: boolean;
+  deliveryAvailable: boolean;
+  pickupReason: string;
+  deliveryReason: string;
+  pickupNextWindow: string | null;
+  deliveryNextWindow: string | null;
+}
+
+interface FulfillmentAvailabilityRpcRow {
+  pickup_available: boolean;
+  delivery_available: boolean;
+  pickup_reason: string | null;
+  delivery_reason: string | null;
+  pickup_next_window: string | null;
+  delivery_next_window: string | null;
+}
+
+export async function getFulfillmentAvailability():
+  Promise<FulfillmentAvailability> {
+  const { data, error } = await supabase.rpc(
+    'get_public_fulfillment_availability',
+  );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudo consultar la disponibilidad de entrega.',
+    );
+  }
+
+  const row = (
+    data as FulfillmentAvailabilityRpcRow[] | null
+  )?.[0];
+
+  if (!row) {
+    throw new Error(
+      'No se recibió la disponibilidad de entrega.',
+    );
+  }
+
+  return {
+    pickupAvailable: Boolean(row.pickup_available),
+    deliveryAvailable: Boolean(row.delivery_available),
+    pickupReason: row.pickup_reason ?? '',
+    deliveryReason: row.delivery_reason ?? '',
+    pickupNextWindow: row.pickup_next_window,
+    deliveryNextWindow: row.delivery_next_window,
+  };
+}
+
 export async function getDeliveryServiceStatus():
   Promise<boolean> {
   const {

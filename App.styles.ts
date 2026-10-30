@@ -180,13 +180,18 @@ const createStyles = (
   // BOTONES DE ACCIÓN (ENTREGAR, EDITAR, CANCELAR)
   // ==========================================
   actionBlock: {
+    width: '100%',
+    flexShrink: 0,
     gap: 8,
     marginTop: 'auto',
+    paddingTop: 4,
   },
-  actionButtonsRow: {
+  actionButtonsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  secondaryActionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    width: '100%',
     gap: 8,
+    flexShrink: 0,
   },
   logoutButton: {
     backgroundColor: '#333',
@@ -203,10 +208,14 @@ const createStyles = (
   },
   editOrderButton: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 42,
     backgroundColor: '#2A2A2A',
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#444',
   },
@@ -216,7 +225,7 @@ const createStyles = (
     fontSize: 14,
   },
   deliverButton: {
-    flex: 1.2,
+    flex: 1,
     backgroundColor: '#4CAF50',
     paddingVertical: 12,
     borderRadius: 8,
@@ -227,18 +236,35 @@ const createStyles = (
     fontWeight: 'bold',
     fontSize: 14,
   },
+  primaryStatusButton: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    alignSelf: 'stretch',
+    width: '100%',
+    minHeight: 54,
+    paddingVertical: 0,
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
   cancelOrderButton: {
-    backgroundColor: '#241414',
+    flex: 1,
+    minWidth: 0,
+    minHeight: 42,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 10,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#4A2222',
+    borderColor: '#3C2525',
   },
   cancelOrderButtonText: {
-    color: '#FF5252',
+    color: '#B87575',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
   },
 
   productSearchContainer: {

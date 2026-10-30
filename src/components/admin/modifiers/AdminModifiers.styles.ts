@@ -557,6 +557,24 @@ const createStyles = (
 
 
 
+        recipeButton: {
+            minHeight: 34,
+            paddingHorizontal: 12,
+            borderRadius: 7,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: '#5C5C5C',
+            backgroundColor: '#292929',
+        },
+
+        recipeButtonText: {
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '800',
+        },
+
+
         editButton: {
 
             minHeight: 34,

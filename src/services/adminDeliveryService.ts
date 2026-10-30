@@ -19,6 +19,15 @@ export interface DeliverySettings {
 
   isEnabled:
     boolean;
+
+  pickupEnabled:
+    boolean;
+
+  pickupScheduleEnabled:
+    boolean;
+
+  deliveryScheduleEnabled:
+    boolean;
 }
 
 export interface DeliveryZone {
@@ -59,6 +68,15 @@ interface DeliverySettingsRow {
 
   is_enabled:
     boolean;
+
+  pickup_enabled:
+    boolean;
+
+  pickup_schedule_enabled:
+    boolean;
+
+  delivery_schedule_enabled:
+    boolean;
 }
 
 interface DeliveryZoneRow {
@@ -97,6 +115,44 @@ export interface SaveDeliverySettingsInput {
 
   isEnabled:
     boolean;
+
+  pickupEnabled:
+    boolean;
+
+  pickupScheduleEnabled:
+    boolean;
+
+  deliveryScheduleEnabled:
+    boolean;
+}
+
+export type FulfillmentType =
+  | 'pickup'
+  | 'delivery';
+
+export interface FulfillmentScheduleWindow {
+  id: string;
+  fulfillmentType: FulfillmentType;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}
+
+interface FulfillmentScheduleWindowRow {
+  id: string;
+  fulfillment_type: FulfillmentType;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+}
+
+export interface SaveFulfillmentScheduleWindowInput {
+  fulfillmentType: FulfillmentType;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 export interface SaveDeliveryZoneInput {
@@ -140,6 +196,15 @@ function mapSettings(
 
     isEnabled:
       row.is_enabled,
+
+    pickupEnabled:
+      row.pickup_enabled ?? true,
+
+    pickupScheduleEnabled:
+      row.pickup_schedule_enabled ?? false,
+
+    deliveryScheduleEnabled:
+      row.delivery_schedule_enabled ?? false,
   };
 }
 
@@ -193,7 +258,10 @@ export async function getDeliverySettings():
         business_longitude,
         business_address,
         business_place_id,
-        is_enabled
+        is_enabled,
+        pickup_enabled,
+        pickup_schedule_enabled,
+        delivery_schedule_enabled
       `)
       .eq(
         'id',
@@ -241,6 +309,15 @@ export async function saveDeliverySettings(
 
         is_enabled:
           input.isEnabled,
+
+        pickup_enabled:
+          input.pickupEnabled,
+
+        pickup_schedule_enabled:
+          input.pickupScheduleEnabled,
+
+        delivery_schedule_enabled:
+          input.deliveryScheduleEnabled,
       })
       .eq(
         'id',
@@ -458,6 +535,88 @@ export async function deleteDeliveryZone(
     throw new Error(
       error.message ||
       'No se pudo eliminar la zona de entrega.',
+    );
+  }
+}
+
+function mapFulfillmentScheduleWindow(
+  row: FulfillmentScheduleWindowRow,
+): FulfillmentScheduleWindow {
+  return {
+    id: row.id,
+    fulfillmentType: row.fulfillment_type,
+    dayOfWeek: row.day_of_week,
+    startTime: row.start_time.slice(0, 5),
+    endTime: row.end_time.slice(0, 5),
+    isActive: row.is_active,
+  };
+}
+
+export async function getFulfillmentScheduleWindows():
+  Promise<FulfillmentScheduleWindow[]> {
+  const { data, error } = await supabase
+    .from('fulfillment_schedule_windows')
+    .select('id, fulfillment_type, day_of_week, start_time, end_time, is_active')
+    .eq('is_active', true)
+    .order('day_of_week', { ascending: true })
+    .order('start_time', { ascending: true });
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudieron cargar los horarios por modalidad.',
+    );
+  }
+
+  return ((data ?? []) as FulfillmentScheduleWindowRow[])
+    .map(mapFulfillmentScheduleWindow);
+}
+
+export async function createFulfillmentScheduleWindow(
+  input: SaveFulfillmentScheduleWindowInput,
+): Promise<void> {
+  const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  if (
+    input.dayOfWeek < 0 ||
+    input.dayOfWeek > 6 ||
+    !timeRegex.test(input.startTime) ||
+    !timeRegex.test(input.endTime) ||
+    input.startTime === input.endTime
+  ) {
+    throw new Error('El horario configurado no es válido.');
+  }
+
+  const { error } = await supabase
+    .from('fulfillment_schedule_windows')
+    .insert({
+      fulfillment_type: input.fulfillmentType,
+      day_of_week: input.dayOfWeek,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      is_active: true,
+    });
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudo crear el horario por modalidad.',
+    );
+  }
+}
+
+export async function deleteFulfillmentScheduleWindow(
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('fulfillment_schedule_windows')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(
+      error.message ||
+      'No se pudo eliminar el horario por modalidad.',
     );
   }
 }
