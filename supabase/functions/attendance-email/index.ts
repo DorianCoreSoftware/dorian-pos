@@ -66,7 +66,7 @@ serve(async request => {
         .select('id,user_id,employee_name,employee_role,pay_basis,base_rate,scheduled_pay,absence_deduction,late_deduction,early_leave_deduction,overtime_pay,total_pay,payment_status,paid_at,payment_method,payment_reference,payroll_run_id')
         .eq('id', itemId).maybeSingle();
       if (error || !item) throw new Error('No se encontró el recibo.');
-      if (callerProfile.role !== 'admin' && item.user_id !== authData.user.id) return json({ error: 'No autorizado.' }, 403);
+      if (!['admin', 'accountant'].includes(String(callerProfile.role)) && item.user_id !== authData.user.id) return json({ error: 'No autorizado.' }, 403);
 
       const { data: run } = await admin.from('attendance_payroll_runs').select('start_date,end_date,status,currency_code').eq('id', item.payroll_run_id).single();
       if (!run || run.status === 'voided') throw new Error('El corte no está disponible.');

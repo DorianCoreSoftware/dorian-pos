@@ -61,6 +61,12 @@ export interface KitchenOrder {
   | 'pickup'
   | 'delivery';
 
+  requestedPaymentMethod:
+  | 'cash'
+  | 'card'
+  | 'transfer'
+  | null;
+
   created_at: string;
 
   deliveryDetails:

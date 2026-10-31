@@ -13,6 +13,7 @@ import {
 } from '../../../App.styles';
 
 import {
+  canAccessAdminPanel,
   canManageCash,
   canManageCatalog,
 } from '../../Utils/permissions';
@@ -277,9 +278,11 @@ export function GlobalHeader({
               (
               {user?.role === 'admin'
                 ? 'Admin'
-                : user?.role === 'driver'
-                  ? 'Reparto'
-                  : 'Caja'}
+                : user?.role === 'accountant'
+                  ? 'Contador'
+                  : user?.role === 'driver'
+                    ? 'Reparto'
+                    : 'Caja'}
               )
             </Text>
           ) : (
@@ -335,7 +338,27 @@ export function GlobalHeader({
           styles.tabContainerPhone,
         ]}
       >
-        {user?.role === 'driver' ? (
+        {user?.role === 'accountant' ? (
+          <>
+            <TouchableOpacity
+              style={getTabButtonStyle('admin')}
+              onPress={() => setActiveTab('admin')}
+            >
+              <Text style={getTabTextStyle('admin')}>
+                NÓMINA
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={getTabButtonStyle('attendance')}
+              onPress={() => setActiveTab('attendance')}
+            >
+              <Text style={getTabTextStyle('attendance')}>
+                ASISTENCIA
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : user?.role === 'driver' ? (
           <>
             <TouchableOpacity
               style={getTabButtonStyle('driver')}
@@ -494,7 +517,7 @@ export function GlobalHeader({
           </TouchableOpacity>
         ) : null}
 
-        {canManageCatalog(
+        {canAccessAdminPanel(
           user,
         ) ? (
           <TouchableOpacity

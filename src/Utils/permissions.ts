@@ -2,6 +2,25 @@ import {
   UserSession,
 } from '../context/AuthContext';
 
+
+export function canAccessAdminPanel(
+  user: UserSession | null,
+): boolean {
+  return (
+    user?.role === 'admin' ||
+    user?.role === 'accountant'
+  );
+}
+
+export function canManagePayroll(
+  user: UserSession | null,
+): boolean {
+  return (
+    user?.role === 'admin' ||
+    user?.role === 'accountant'
+  );
+}
+
 export function canManageCash(
   user: UserSession | null,
 ): boolean {

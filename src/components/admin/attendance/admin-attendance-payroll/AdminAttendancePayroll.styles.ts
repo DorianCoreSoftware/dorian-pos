@@ -2,6 +2,8 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 18, gap: 12 },
+  tabRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tabButton: { minHeight: 38, paddingHorizontal: 12, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 22, fontWeight: '900' },
   subtitle: { fontSize: 13, lineHeight: 19 },
   sectionTitle: { marginTop: 8, fontSize: 13, fontWeight: '900', letterSpacing: 0.6 },
@@ -35,6 +37,8 @@ export const styles = StyleSheet.create({
   secondaryButton: { minHeight: 38, paddingHorizontal: 12, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   primarySmallButton: { minHeight: 38, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   paymentPanel: { width: '100%', borderWidth: 1, borderRadius: 10, padding: 10, gap: 8 },
+  bankHint: { width: '100%', borderWidth: 1, borderRadius: 9, padding: 10, gap: 4 },
+  bankClabe: { fontSize: 15, fontWeight: '900', letterSpacing: 0.8 },
   voidPanel: { borderTopWidth: 1, marginTop: 4, paddingTop: 12, gap: 8 },
   dangerButton: { minHeight: 42, paddingHorizontal: 14, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
 });

@@ -48,6 +48,12 @@ export interface OrderRecord {
   fulfillment_type:
   FulfillmentType;
 
+  requested_payment_method:
+  | 'cash'
+  | 'card'
+  | 'transfer'
+  | null;
+
   customer_name:
   string | null;
 

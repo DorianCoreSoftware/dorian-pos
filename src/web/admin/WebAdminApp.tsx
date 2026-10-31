@@ -95,7 +95,7 @@ export default function WebAdminApp() {
     );
   }
 
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' && user.role !== 'accountant') {
     return (
       <View
         style={[
@@ -138,7 +138,7 @@ export default function WebAdminApp() {
               },
             ]}
           >
-            Este panel web está disponible únicamente para administradores.
+            Este panel web está disponible únicamente para administradores y contadores autorizados.
           </Text>
 
           <TouchableOpacity

@@ -25,7 +25,8 @@ interface OrderPaymentRecord {
 
   payment_method:
     | 'cash'
-    | 'card';
+    | 'card'
+    | 'transfer';
 
   total_amount:
     | string
@@ -40,6 +41,8 @@ interface OrderPaymentRecord {
     | string
     | number
     | null;
+
+  payment_reference: string | null;
 
   created_at: string;
 }
@@ -86,6 +89,9 @@ export async function insertOrderPayment(
 
       change_amount:
         payment.changeAmount,
+
+      payment_reference:
+        payment.paymentReference ?? null,
     })
     .select()
     .single();
@@ -173,6 +179,9 @@ function mapOrderPayment(
             record.change_amount,
           ),
 
+    paymentReference:
+      record.payment_reference ?? null,
+
     createdAt:
       record.created_at,
   };
@@ -198,6 +207,7 @@ export async function fetchCompletedSales(): Promise<
         total_amount,
         amount_received,
         change_amount,
+        payment_reference,
         created_at
       )
     `)

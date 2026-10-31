@@ -159,7 +159,7 @@ export function PromotionRedemptionPanel({
         '✅ Promoción aplicada',
         [
           `Monto: ${formatCurrency(result.amount)}`,
-          `Forma de devolución: ${result.paymentMethod === 'cash' ? 'EFECTIVO' : 'TARJETA'}`,
+          `Forma de devolución: ${result.paymentMethod === 'cash' ? 'EFECTIVO' : result.paymentMethod === 'card' ? 'TARJETA' : 'TRANSFERENCIA'}`,
         ].join('\n'),
       );
     } catch (error) {

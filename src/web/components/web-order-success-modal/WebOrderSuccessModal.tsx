@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   Modal,
@@ -12,6 +12,7 @@ import styles, {
 } from './WebOrderSuccessModal.styles';
 import { useBusiness } from '../../../context/BusinessContext';
 import { getOrderTrackingCode } from '../../../Utils/orderTracking';
+import { BusinessTransferSettings, getPublicBusinessTransferSettings } from '../../../services/paymentAccountService';
 
 interface WebOrderSuccessModalProps {
   visible: boolean;
@@ -19,6 +20,8 @@ interface WebOrderSuccessModalProps {
   orderId:
   | string
   | null;
+
+  paymentMethod: 'cash' | 'transfer' | null;
 
   onClose: () => void;
 
@@ -28,6 +31,7 @@ interface WebOrderSuccessModalProps {
 export default function WebOrderSuccessModal({
   visible,
   orderId,
+  paymentMethod,
   onClose,
   onTrackOrder,
 }: WebOrderSuccessModalProps) {
@@ -39,6 +43,19 @@ export default function WebOrderSuccessModal({
   setBrandPrimaryColor(
     theme.primary,
   );
+
+  const [transferSettings, setTransferSettings] = useState<BusinessTransferSettings | null>(null);
+
+  useEffect(() => {
+    if (!visible || paymentMethod !== 'transfer') {
+      setTransferSettings(null);
+      return;
+    }
+
+    void getPublicBusinessTransferSettings()
+      .then(setTransferSettings)
+      .catch(() => setTransferSettings(null));
+  }, [visible, paymentMethod]);
 
   const businessName =
     business?.identity.businessName ??
@@ -133,6 +150,18 @@ export default function WebOrderSuccessModal({
           >
             Guarda este número para consultar el estado de tu pedido.
           </Text>
+
+          {paymentMethod === 'transfer' && transferSettings?.enabled ? (
+            <View style={styles.transferBox}>
+              <Text style={styles.transferTitle}>DATOS PARA TRANSFERENCIA</Text>
+              <Text style={styles.transferText}>Banco: {transferSettings.bankName}</Text>
+              <Text style={styles.transferText}>Titular: {transferSettings.accountHolder}</Text>
+              <Text style={styles.transferClabe}>CLABE: {transferSettings.clabe}</Text>
+              {transferSettings.accountNumber ? <Text style={styles.transferText}>Cuenta: {transferSettings.accountNumber}</Text> : null}
+              {transferSettings.instructions ? <Text style={styles.transferHint}>{transferSettings.instructions}</Text> : null}
+              <Text style={styles.transferHint}>Tu pedido queda pendiente de verificación hasta que el negocio confirme la transferencia.</Text>
+            </View>
+          ) : null}
 
           {!!shortId && (
             <Pressable

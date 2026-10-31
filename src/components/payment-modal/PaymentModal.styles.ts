@@ -86,12 +86,14 @@ const createStyles = (
 
     paymentMethodRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 10,
       paddingHorizontal: 18,
     },
 
     paymentMethodButton: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: 120,
       minHeight: 50,
       borderRadius: 8,
       borderWidth: 1,

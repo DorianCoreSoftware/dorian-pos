@@ -1,6 +1,7 @@
 export type PaymentMethod =
   | 'cash'
-  | 'card';
+  | 'card'
+  | 'transfer';
 
 export interface OrderPayment {
   id: string;
@@ -9,6 +10,7 @@ export interface OrderPayment {
   totalAmount: number;
   amountReceived: number | null;
   changeAmount: number | null;
+  paymentReference: string | null;
   createdAt: string;
 }
 
@@ -18,6 +20,7 @@ export interface CreateOrderPayment {
   totalAmount: number;
   amountReceived: number | null;
   changeAmount: number | null;
+  paymentReference?: string | null;
 }
 
 export interface CompletedSale {

@@ -99,10 +99,15 @@ export async function registerDriverPayment(
 
   paymentMethod:
     | 'cash'
-    | 'card',
+    | 'card'
+    | 'transfer',
 
   amountReceived:
     | number
+    | null,
+
+  paymentReference:
+    | string
     | null,
 ): Promise<void> {
   validateOrderId(
@@ -113,6 +118,7 @@ export async function registerDriverPayment(
     orderId,
     paymentMethod,
     amountReceived,
+    paymentReference,
   );
 }
 

@@ -6,6 +6,7 @@ import {
 
 type UserRole =
   | 'admin'
+  | 'accountant'
   | 'seller'
   | 'driver';
 
@@ -58,6 +59,7 @@ type RequestPayload =
 const ALLOWED_ROLES:
   UserRole[] = [
     'admin',
+    'accountant',
     'seller',
     'driver',
   ];

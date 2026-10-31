@@ -538,6 +538,10 @@ export default function WebMenuScreen({
     string | null
   >(null);
   const [
+    successfulPaymentMethod,
+    setSuccessfulPaymentMethod,
+  ] = useState<'cash' | 'transfer' | null>(null);
+  const [
     recentTrackingCodes,
     setRecentTrackingCodes,
   ] = useState<string[]>([]);
@@ -1116,6 +1120,7 @@ export default function WebMenuScreen({
   }
   async function handleSubmitWebOrder(
     data: {
+      paymentMethod: 'cash' | 'transfer';
       fulfillmentType:
       WebFulfillmentType;
       customerName: string;
@@ -1190,6 +1195,8 @@ export default function WebMenuScreen({
             data.deliveryDetails,
           clientRequestId:
             requestId,
+          paymentMethod:
+            data.paymentMethod,
           customerSessionToken:
             getSavedWebCustomerSessionToken(),
           marketingCode:
@@ -1200,6 +1207,7 @@ export default function WebMenuScreen({
       setSuccessfulOrderId(
         result.orderId,
       );
+      setSuccessfulPaymentMethod(data.paymentMethod);
 
       if (
         marketingTrackingToken ||
@@ -1956,13 +1964,15 @@ export default function WebMenuScreen({
         orderId={
           successfulOrderId
         }
+        paymentMethod={successfulPaymentMethod}
         onTrackOrder={
           handleTrackSuccessfulOrder
         }
         onClose={() =>
-          setSuccessfulOrderId(
-            null,
-          )
+          {
+            setSuccessfulOrderId(null);
+            setSuccessfulPaymentMethod(null);
+          }
         }
       />
       <WebOrderTrackingModal

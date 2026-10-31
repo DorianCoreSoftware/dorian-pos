@@ -73,6 +73,10 @@ export async function getCompletedSales(): Promise<
                 payment.change_amount,
               ),
 
+          paymentReference:
+            payment.payment_reference ??
+            null,
+
           createdAt:
             payment.created_at,
         },

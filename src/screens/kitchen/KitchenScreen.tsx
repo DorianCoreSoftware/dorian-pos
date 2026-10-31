@@ -15,9 +15,7 @@ import {
   View,
 } from 'react-native';
 
-import {
-  PaymentModal,
-} from '../../components/payment-modal';
+
 
 import {
   fetchOrderPaymentByOrderId,
@@ -69,6 +67,7 @@ import {
 } from '../../../App.styles';
 import { getModifierGroupLabel } from '../../Utils/modifierGroup';
 import { useCurrency } from '../../hooks/useCurrency';
+import { PaymentModal } from '../../components/payment-modal/PaymentModal';
 
 interface KitchenProps {
   pendingOrders:
@@ -373,6 +372,9 @@ Cambio: ${formatCurrency(
 
       amountReceived:
         number | null,
+
+      paymentReference:
+        string | null,
     ): Promise<void> => {
       if (
         !paymentOrder ||
@@ -403,6 +405,8 @@ Cambio: ${formatCurrency(
                 ),
 
               amountReceived,
+
+              paymentReference,
 
               currencyCode,
             },
@@ -1689,6 +1693,26 @@ Cambio: ${formatCurrency(
         </Text>
       </View>
 
+      {item.orderSource === 'web' && item.requestedPaymentMethod ? (
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            backgroundColor: item.requestedPaymentMethod === 'transfer' ? '#182C20' : '#202020',
+            borderWidth: 1,
+            borderColor: item.requestedPaymentMethod === 'transfer' ? '#4CAF50' : '#666',
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            marginTop: 4,
+            marginBottom: 2,
+          }}
+        >
+          <Text style={{ color: item.requestedPaymentMethod === 'transfer' ? '#81C784' : '#D0D0D0', fontSize: 11, fontWeight: '900' }}>
+            PAGO SOLICITADO · {item.requestedPaymentMethod === 'transfer' ? 'TRANSFERENCIA' : 'AL RECIBIR'}
+          </Text>
+        </View>
+      ) : null}
+
       <View
         style={{
           alignSelf: 'flex-start',
@@ -1784,41 +1808,95 @@ Cambio: ${formatCurrency(
           </Text>
         ) : null}
 
-        <TouchableOpacity
-          style={[
-            styles.deliverButton,
-            styles.primaryStatusButton,
-            item.status !== 'pending' && !isOrderFullyPrepared(item)
-              ? { opacity: 0.4 }
-              : null,
-          ]}
-          disabled={item.status !== 'pending' && !isOrderFullyPrepared(item)}
-          onPress={() => {
-            if (item.status === 'ready' || item.status === 'on_the_way') {
-              void handleOpenPayment(item);
-              return;
-            }
-            void handleAdvanceOrderStatus(item);
-          }}
+        <View
+          style={
+            styles.actionButtonsRow
+          }
         >
-          <Text style={styles.deliverButtonText}>{getPrimaryActionLabel(item)}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.secondaryActionsRow}>
           <TouchableOpacity
-            style={styles.editOrderButton}
-            onPress={() => handleEditOrder(item)}
+            style={
+              styles.editOrderButton
+            }
+            onPress={() =>
+              handleEditOrder(
+                item,
+              )
+            }
           >
-            <Text style={styles.editOrderButtonText}>Editar pedido</Text>
+            <Text
+              style={
+                styles.editOrderButtonText
+              }
+            >
+              Editar
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.cancelOrderButton}
-            onPress={() => handleCancelOrderPrompt(item.id)}
+            style={[
+              styles.deliverButton,
+              item.status !== 'pending' &&
+              !isOrderFullyPrepared(
+                item,
+              )
+                ? { opacity: 0.4 }
+                : null,
+            ]}
+            disabled={
+              item.status !== 'pending' &&
+              !isOrderFullyPrepared(
+                item,
+              )
+            }
+            onPress={() => {
+              if (
+                item.status ===
+                'ready' ||
+                item.status ===
+                'on_the_way'
+              ) {
+                void handleOpenPayment(
+                  item,
+                );
+
+                return;
+              }
+
+              void handleAdvanceOrderStatus(
+                item,
+              );
+            }}
           >
-            <Text style={styles.cancelOrderButtonText}>Cancelar</Text>
+            <Text
+              style={
+                styles.deliverButtonText
+              }
+            >
+              {getPrimaryActionLabel(
+                item,
+              )}
+            </Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={
+            styles.cancelOrderButton
+          }
+          onPress={() =>
+            handleCancelOrderPrompt(
+              item.id,
+            )
+          }
+        >
+          <Text
+            style={
+              styles.cancelOrderButtonText
+            }
+          >
+            ❌ Cancelar pedido
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -1879,6 +1957,11 @@ Cambio: ${formatCurrency(
           paymentOrder !==
           null
         }
+        initialPaymentMethod={
+          paymentOrder?.requestedPaymentMethod === 'transfer'
+            ? 'transfer'
+            : 'cash'
+        }
         totalAmount={
           paymentOrder
             ? Number(
@@ -1895,10 +1978,12 @@ Cambio: ${formatCurrency(
         onConfirm={(
           paymentMethod,
           amountReceived,
+          paymentReference,
         ) => {
           void handleConfirmPayment(
             paymentMethod,
             amountReceived,
+            paymentReference,
           );
         }}
       />

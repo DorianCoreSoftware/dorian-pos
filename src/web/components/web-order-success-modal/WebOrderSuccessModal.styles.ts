@@ -98,6 +98,44 @@ const createStyles = (
       marginTop: 13,
     },
 
+    transferBox: {
+      width: '100%',
+      marginTop: 16,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#3A3A3A',
+      backgroundColor: '#202020',
+    },
+
+    transferTitle: {
+      color: primaryColor,
+      fontSize: 11,
+      fontWeight: '900',
+      marginBottom: 8,
+    },
+
+    transferText: {
+      color: '#D8D8D8',
+      fontSize: 13,
+      lineHeight: 19,
+    },
+
+    transferClabe: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: '900',
+      marginVertical: 3,
+    },
+
+    transferHint: {
+      color: '#929292',
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 6,
+    },
+
     button: {
       width: '100%',
       backgroundColor:
