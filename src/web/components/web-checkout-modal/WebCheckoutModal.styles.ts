@@ -136,11 +136,20 @@ const createStyles = (
     },
 
     scroll: {
-      flexGrow:
+      flex:
+        1,
+
+      minHeight:
         0,
+
+      overflow:
+        'scroll',
     },
 
     content: {
+      width:
+        '100%',
+
       padding:
         22,
 

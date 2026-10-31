@@ -935,26 +935,14 @@ export default function WebCheckoutModal({
           </View>
 
           <ScrollView
-            style={[
-              styles.scroll,
-
-              {
-                overflow:
-                  'visible',
-              },
-            ]}
-            contentContainerStyle={[
-              styles.content,
-
-              {
-                overflow:
-                  'visible',
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={
-              false
+            style={
+              styles.scroll
             }
+            contentContainerStyle={
+              styles.content
+            }
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
           >
             <View
               style={
