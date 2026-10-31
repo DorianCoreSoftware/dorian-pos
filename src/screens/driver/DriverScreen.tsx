@@ -16,10 +16,6 @@ import {
 } from 'react-native';
 
 import {
-  PaymentModal,
-} from '../../components/payment-modal';
-
-import {
   useAuth,
 } from '../../context/AuthContext';
 
@@ -54,6 +50,7 @@ import {
 import {
   useCurrency,
 } from '../../hooks/useCurrency';
+import { PaymentModal } from '../../components/payment-modal/PaymentModal';
 
 export function DriverScreen() {
   const {
@@ -434,6 +431,8 @@ export function DriverScreen() {
 
       amountReceived:
         number | null,
+      paymentReference:
+        string | null,
     ): Promise<void> => {
       if (
         !paymentOrder ||
@@ -458,6 +457,7 @@ export function DriverScreen() {
           order.id,
           paymentMethod,
           amountReceived,
+          paymentReference,
         );
 
         /*

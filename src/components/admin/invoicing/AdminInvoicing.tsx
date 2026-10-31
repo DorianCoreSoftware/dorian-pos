@@ -528,7 +528,7 @@ export function AdminInvoicing() {
                       Ticket #{order.ticketCode || order.orderId.slice(-6).toUpperCase()}
                     </Text>
                     <Text style={[styles.orderMeta, { color: theme.textMuted }]}>
-                      {formatDateTime(order.paidAt)} · {order.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'}
+                      {formatDateTime(order.paidAt)} · {order.paymentMethod === 'cash' ? 'Efectivo' : order.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}
                     </Text>
                   </View>
                   <Text style={[styles.orderAmount, { color: theme.text }]}>
@@ -592,7 +592,7 @@ export function AdminInvoicing() {
               Ticket #{selectedOrder.ticketCode} → {selectedCustomer.legalName} ({selectedCustomer.rfc})
             </Text>
             <Text style={[styles.help, { color: theme.textMuted }]}>
-              Uso CFDI {selectedCustomer.cfdiUseCode} · PUE · {selectedOrder.paymentMethod === 'cash' ? 'Forma 01 Efectivo' : 'Forma 04 Tarjeta'}
+              Uso CFDI {selectedCustomer.cfdiUseCode} · PUE · {selectedOrder.paymentMethod === 'cash' ? 'Forma 01 Efectivo' : selectedOrder.paymentMethod === 'card' ? 'Forma 04 Tarjeta' : 'Forma 03 Transferencia'}
             </Text>
             <Text style={[styles.previewAmount, { color: theme.text }]}>
               Total {formatCurrency(selectedOrder.paymentTotal)}

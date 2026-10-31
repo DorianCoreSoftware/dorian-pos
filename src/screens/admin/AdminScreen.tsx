@@ -76,6 +76,10 @@ import {
 } from '../../context/BusinessContext';
 
 import {
+  useAuth,
+} from '../../context/AuthContext';
+
+import {
   styles,
 } from './AdminScreen.styles';
 import { AdminDashboard } from '../../components/admin/dashboard/AdminDashboard';
@@ -90,6 +94,8 @@ import { AdminCrm } from '../../components/admin/crm/AdminCrm';
 import { AdminMarketing } from '../../components/admin/marketing/AdminMarketing';
 import { appVersionLabel } from '../../Utils/appVersion';
 import { AdminAttendance } from '../../components/admin/attendance/admin-attendance/AdminAttendance';
+import { AdminPayroll } from '../../components/admin/payroll/AdminPayroll';
+import { AdminPaymentSettings } from '../../components/admin/payment-settings/AdminPaymentSettings';
 
 type AdminSection =
   | 'dashboard'
@@ -104,6 +110,8 @@ type AdminSection =
   | 'modifiers'
   | 'users'
   | 'attendance'
+  | 'payroll'
+  | 'payments'
   | 'reports'
   | 'expenses'
   | 'printer'
@@ -146,6 +154,10 @@ export function AdminScreen({
     theme,
   } = useBusiness();
 
+  const {
+    user,
+  } = useAuth();
+
   const isPhone =
     width < 700;
 
@@ -154,7 +166,9 @@ export function AdminScreen({
     setActiveSection,
   ] =
     useState<AdminSection>(
-      'dashboard',
+      user?.role === 'accountant'
+        ? 'payroll'
+        : 'dashboard',
     );
 
   const [
@@ -270,6 +284,22 @@ export function AdminScreen({
                 'ASISTENCIA',
               icon:
                 '🕐',
+            },
+            {
+              key:
+                'payroll',
+              label:
+                'NÓMINA',
+              icon:
+                '💵',
+            },
+            {
+              key:
+                'payments',
+              label:
+                'PAGOS',
+              icon:
+                '🏦',
             },
             {
               key:
@@ -397,9 +427,19 @@ export function AdminScreen({
           icon:
             '💬',
         });
+        if (
+          user?.role === 'accountant'
+        ) {
+          return sections.filter(
+            section =>
+              section.key === 'payroll',
+          );
+        }
+
         return sections;
       },
       [
+        user?.role,
         business?.features
           .deliveryEnabled,
         business?.features
@@ -579,6 +619,22 @@ export function AdminScreen({
       ) {
         return (
           <AdminAttendance />
+        );
+      }
+      if (
+        activeSection ===
+        'payroll'
+      ) {
+        return (
+          <AdminPayroll />
+        );
+      }
+      if (
+        activeSection ===
+        'payments'
+      ) {
+        return (
+          <AdminPaymentSettings />
         );
       }
       if (

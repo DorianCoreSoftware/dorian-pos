@@ -28,10 +28,13 @@ import { DeliveryQuote, getDeliveryQuote, getDeliveryServiceStatus } from '../..
 import { DeliveryDetails } from '../../../types';
 import { WebFulfillmentType } from '../../services/web-order/webOrderService';
 import { GooglePlaceSelection } from '../../models/google-place-autocomplete/google-place-selection';
+import { BusinessTransferSettings, getPublicBusinessTransferSettings } from '../../../services/paymentAccountService';
 import GooglePlaceAutocomplete from '../google-place/GooglePlaceAutocomplete';
 
 
 interface CheckoutData {
+  paymentMethod: 'cash' | 'transfer';
+
   fulfillmentType:
   WebFulfillmentType;
 
@@ -168,6 +171,10 @@ export default function WebCheckoutModal({
       'pickup',
     );
 
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
+  const [transferSettings, setTransferSettings] = useState<BusinessTransferSettings | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+
   const [
     customerName,
     setCustomerName,
@@ -260,6 +267,19 @@ export default function WebCheckoutModal({
           cleanName,
         );
 
+        setPaymentMethod('cash');
+        void (async () => {
+          try {
+            setTransferLoading(true);
+            setTransferSettings(await getPublicBusinessTransferSettings());
+          } catch (error) {
+            console.warn('No se pudieron cargar los datos de transferencia:', error);
+            setTransferSettings(null);
+          } finally {
+            setTransferLoading(false);
+          }
+        })();
+
         setCustomerPhone(
           cleanPhone,
         );
@@ -280,6 +300,8 @@ export default function WebCheckoutModal({
       setFulfillmentType(
         'pickup',
       );
+
+      setPaymentMethod('cash');
 
       setCustomerName(
         '',
@@ -441,6 +463,7 @@ export default function WebCheckoutModal({
   const isConfirmDisabled =
     submitting ||
     isQuotingDelivery ||
+    (paymentMethod === 'transfer' && (!transferSettings?.enabled || transferLoading)) ||
     (
       fulfillmentType ===
       'delivery' &&
@@ -741,6 +764,8 @@ export default function WebCheckoutModal({
         );
 
     onSubmit({
+      paymentMethod,
+
       fulfillmentType,
 
       customerName:
@@ -1337,6 +1362,38 @@ export default function WebCheckoutModal({
                   )}
                 </>
               )}
+
+            <SectionTitle>
+              Método de pago
+            </SectionTitle>
+
+            <View style={styles.deliveryModeRow}>
+              <ChoiceButton
+                title="Pagar al recibir"
+                subtitle="Efectivo o tarjeta al recoger/recibir."
+                selected={paymentMethod === 'cash'}
+                onPress={() => setPaymentMethod('cash')}
+              />
+              <ChoiceButton
+                title="Transferencia"
+                subtitle={transferSettings?.enabled ? 'Transfiere antes de que se entregue el pedido.' : 'No disponible por el momento.'}
+                selected={paymentMethod === 'transfer'}
+                disabled={!transferSettings?.enabled || transferLoading}
+                onPress={() => setPaymentMethod('transfer')}
+              />
+            </View>
+
+            {paymentMethod === 'transfer' && transferSettings?.enabled ? (
+              <View style={styles.summaryBox}>
+                <Text style={styles.sectionTitle}>Datos para transferencia</Text>
+                <SummaryRow label="Banco" value={transferSettings.bankName} />
+                <SummaryRow label="Titular" value={transferSettings.accountHolder} />
+                <SummaryRow label="CLABE" value={transferSettings.clabe} />
+                {transferSettings.accountNumber ? <SummaryRow label="Cuenta" value={transferSettings.accountNumber} /> : null}
+                {transferSettings.instructions ? <Text style={styles.serverPriceHint}>{transferSettings.instructions}</Text> : null}
+                <Text style={styles.serverPriceHint}>La selección de transferencia no marca el pedido como pagado. El negocio confirmará el depósito antes de registrar el cobro.</Text>
+              </View>
+            ) : null}
 
             <SectionTitle>
               Resumen

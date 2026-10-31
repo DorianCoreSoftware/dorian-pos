@@ -274,6 +274,9 @@ function mapOrderToKitchenOrder(
     fulfillmentType:
       order.fulfillment_type,
 
+    requestedPaymentMethod:
+      order.requested_payment_method ?? null,
+
     customerName:
       order.customer_name,
 

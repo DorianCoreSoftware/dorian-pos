@@ -72,6 +72,12 @@ const ROLE_OPTIONS: Array<{
             'Acceso a administración y operación del sistema.',
     },
     {
+        value: 'accountant',
+        label: 'Contador',
+        description:
+            'Acceso al módulo de nómina y funciones financieras autorizadas.',
+    },
+    {
         value: 'seller',
         label: 'Vendedor',
         description:
@@ -1502,6 +1508,9 @@ function getRoleLabel(
     ) {
         case 'admin':
             return 'Administrador';
+
+        case 'accountant':
+            return 'Contador';
 
         case 'driver':
             return 'Repartidor';

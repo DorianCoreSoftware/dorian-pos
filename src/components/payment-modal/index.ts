@@ -1,3 +1,0 @@
-export {
-  PaymentModal,
-} from './PaymentModal';

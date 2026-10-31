@@ -128,5 +128,6 @@ export const styles =
     adminContent: {
       flex: 1,
       minHeight: 0,
+      overflow: 'scroll',
     },
   });

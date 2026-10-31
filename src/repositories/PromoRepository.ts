@@ -45,7 +45,7 @@ export interface PromotionRefundResult {
   redemptionId: string;
   refundId: string;
   orderId: string;
-  paymentMethod: 'cash' | 'card';
+  paymentMethod: 'cash' | 'card' | 'transfer';
   amount: number;
   programId?: string;
   programName?: string;
@@ -165,7 +165,7 @@ export async function redeemOrderRefundPromotion(
     typeof result.redemptionId !== 'string' ||
     typeof result.refundId !== 'string' ||
     typeof result.orderId !== 'string' ||
-    (result.paymentMethod !== 'cash' && result.paymentMethod !== 'card') ||
+    (result.paymentMethod !== 'cash' && result.paymentMethod !== 'card' && result.paymentMethod !== 'transfer') ||
     !Number.isFinite(amount) ||
     amount <= 0
   ) {

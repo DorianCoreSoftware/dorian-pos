@@ -89,6 +89,7 @@ import {
 } from './App.styles';
 
 import {
+  canAccessAdminPanel,
   canManageCash,
   canManageCatalog,
 } from './src/Utils/permissions';
@@ -138,9 +139,11 @@ function MainApp() {
     activeTab,
     setActiveTab,
   ] = useState<MainTab>(
-    user?.role === 'driver'
-      ? 'driver'
-      : 'pos',
+    user?.role === 'accountant'
+      ? 'admin'
+      : user?.role === 'driver'
+        ? 'driver'
+        : 'pos',
   );
 
   const [
@@ -664,11 +667,27 @@ function MainApp() {
     user?.role,
   ]);
 
+  useEffect(() => {
+    if (
+      user?.role === 'accountant' &&
+      activeTab !== 'admin' &&
+      activeTab !== 'attendance'
+    ) {
+      setActiveTab('admin');
+    }
+  }, [
+    activeTab,
+    user?.role,
+  ]);
+
   const userCanManageCash =
     canManageCash(user);
 
   const userCanManageCatalog =
     canManageCatalog(user);
+
+  const userCanAccessAdminPanel =
+    canAccessAdminPanel(user);
 
   const [
     modifiersVersion,
@@ -1154,10 +1173,10 @@ function MainApp() {
         'admin'
       ) {
         if (
-          !userCanManageCatalog
+          !userCanAccessAdminPanel
         ) {
           return renderRestricted(
-            'Solo un administrador puede modificar el catálogo.',
+            'No tienes permisos para acceder al panel administrativo.',
           );
         }
 

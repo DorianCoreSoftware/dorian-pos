@@ -22,6 +22,10 @@ import {
   calculateChange,
 } from '../../services/paymentService';
 import {
+  BusinessTransferSettings,
+  getPublicBusinessTransferSettings,
+} from '../../services/paymentAccountService';
+import {
   styles,
   setBrandPrimaryColor,
 } from './PaymentModal.styles';
@@ -37,11 +41,14 @@ interface PaymentModalProps {
 
   isProcessing?: boolean;
 
+  initialPaymentMethod?: PaymentMethod;
+
   onClose: () => void;
 
   onConfirm: (
     paymentMethod: PaymentMethod,
     amountReceived: number | null,
+    paymentReference: string | null,
   ) => void;
 }
 
@@ -49,6 +56,7 @@ export function PaymentModal({
   visible,
   totalAmount,
   isProcessing = false,
+  initialPaymentMethod = 'cash',
   onClose,
   onConfirm,
 }: PaymentModalProps) {
@@ -71,14 +79,31 @@ export function PaymentModal({
     setAmountReceivedText,
   ] = useState('');
 
+  const [transferReference, setTransferReference] = useState('');
+  const [transferSettings, setTransferSettings] = useState<BusinessTransferSettings | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+
   useEffect(() => {
     if (!visible) {
       return;
     }
 
-    setPaymentMethod('cash');
+    setPaymentMethod(initialPaymentMethod);
     setAmountReceivedText(totalAmount === 0 ? '0' : '');
-  }, [visible, totalAmount]);
+    setTransferReference('');
+
+    void (async () => {
+      try {
+        setTransferLoading(true);
+        setTransferSettings(await getPublicBusinessTransferSettings());
+      } catch (error) {
+        console.warn('No se pudieron cargar los datos de transferencia:', error);
+        setTransferSettings(null);
+      } finally {
+        setTransferLoading(false);
+      }
+    })();
+  }, [visible, totalAmount, initialPaymentMethod]);
 
   const amountReceived =
     useMemo(() => {
@@ -130,7 +155,8 @@ export function PaymentModal({
     !isProcessing &&
     (
       paymentMethod === 'card' ||
-      isCashPaymentValid
+      isCashPaymentValid ||
+      (paymentMethod === 'transfer' && Boolean(transferSettings?.enabled) && transferReference.trim().length >= 3)
     );
 
   const handleAmountChange = (
@@ -172,6 +198,9 @@ export function PaymentModal({
       paymentMethod,
       paymentMethod === 'cash'
         ? amountReceived
+        : null,
+      paymentMethod === 'transfer'
+        ? transferReference.trim()
         : null,
     );
   };
@@ -293,6 +322,26 @@ export function PaymentModal({
                 💳 Tarjeta
               </Text>
             </TouchableOpacity>
+
+            {transferSettings?.enabled ? (
+              <TouchableOpacity
+                style={[
+                  styles.paymentMethodButton,
+                  paymentMethod === 'transfer' && styles.paymentMethodButtonSelected,
+                ]}
+                disabled={isProcessing || transferLoading}
+                onPress={() => setPaymentMethod('transfer')}
+              >
+                <Text
+                  style={[
+                    styles.paymentMethodText,
+                    paymentMethod === 'transfer' && styles.paymentMethodTextSelected,
+                  ]}
+                >
+                  🏦 Transferencia
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           {paymentMethod ===
@@ -367,22 +416,29 @@ export function PaymentModal({
                 </Text>
               </View>
             </View>
-          ) : (
-            <View
-              style={
-                styles.cardMessage
-              }
-            >
-              <Text
-                style={
-                  styles.cardMessageText
-                }
-              >
-                Confirma que el pago
-                con tarjeta haya sido
-                aprobado antes de
-                continuar.
+          ) : paymentMethod === 'card' ? (
+            <View style={styles.cardMessage}>
+              <Text style={styles.cardMessageText}>
+                Confirma que el pago con tarjeta haya sido aprobado antes de continuar.
               </Text>
+            </View>
+          ) : (
+            <View style={styles.cardMessage}>
+              <Text style={styles.cardMessageText}>
+                {transferSettings?.bankName} · {transferSettings?.accountHolder}
+                {'\n'}CLABE: {transferSettings?.clabe}
+                {transferSettings?.accountNumber ? `\nCuenta: ${transferSettings.accountNumber}` : ''}
+                {transferSettings?.instructions ? `\n${transferSettings.instructions}` : ''}
+              </Text>
+              <Text style={styles.inputLabel}>Referencia / folio de transferencia</Text>
+              <TextInput
+                value={transferReference}
+                onChangeText={setTransferReference}
+                editable={!isProcessing}
+                placeholder="Ej. 123456"
+                placeholderTextColor="#777777"
+                style={styles.input}
+              />
             </View>
           )}
 

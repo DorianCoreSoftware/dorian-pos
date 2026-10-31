@@ -23,6 +23,9 @@ interface RegisterPaymentParams {
   amountReceived?:
     number | null;
 
+  paymentReference?:
+    string | null;
+
   currencyCode?:
     string;
 }
@@ -32,6 +35,7 @@ export async function registerOrderPayment({
   paymentMethod,
   totalAmount,
   amountReceived = null,
+  paymentReference = null,
   currencyCode =
     DEFAULT_CURRENCY_CODE,
 }: RegisterPaymentParams): Promise<OrderPayment> {
@@ -58,6 +62,7 @@ export async function registerOrderPayment({
       paymentMethod,
       totalAmount,
       amountReceived,
+      paymentReference,
       currencyCode,
     });
 
@@ -100,12 +105,15 @@ function buildPaymentPayload({
   paymentMethod,
   totalAmount,
   amountReceived,
+  paymentReference,
   currencyCode =
     DEFAULT_CURRENCY_CODE,
 }: RegisterPaymentParams) {
   if (
     paymentMethod ===
-    'card'
+    'card' ||
+    paymentMethod ===
+    'transfer'
   ) {
     return {
       orderId,
@@ -113,6 +121,10 @@ function buildPaymentPayload({
       totalAmount,
       amountReceived: null,
       changeAmount: null,
+      paymentReference:
+        paymentMethod === 'transfer'
+          ? validateTransferReference(paymentReference)
+          : null,
     };
   }
 
@@ -139,7 +151,21 @@ function buildPaymentPayload({
         totalAmount,
         received,
       ),
+    paymentReference: null,
   };
+}
+
+
+function validateTransferReference(
+  value: string | null | undefined,
+): string {
+  const clean = value?.trim() ?? '';
+  if (clean.length < 3) {
+    throw new Error(
+      'Captura la referencia o folio de la transferencia.',
+    );
+  }
+  return clean.slice(0, 160);
 }
 
 export function calculateChange(

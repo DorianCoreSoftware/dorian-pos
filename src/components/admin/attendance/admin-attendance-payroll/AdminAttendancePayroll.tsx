@@ -34,6 +34,11 @@ import {
 } from '../../../../services/attendanceService';
 
 import { styles } from './AdminAttendancePayroll.styles';
+import {
+  EmployeeBankAccount,
+  getEmployeeBankAccounts,
+} from '../../../../services/paymentAccountService';
+import { AdminEmployeeBankAccounts } from '../../payroll/employee-bank-accounts/AdminEmployeeBankAccounts';
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
@@ -86,6 +91,38 @@ function parseNumber(value: string, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === 'object') {
+    const value = error as {
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+    };
+
+    const parts = [
+      typeof value.message === 'string' ? value.message : null,
+      typeof value.details === 'string' && value.details ? value.details : null,
+      typeof value.hint === 'string' && value.hint ? `Hint: ${value.hint}` : null,
+      typeof value.code === 'string' && value.code ? `Código: ${value.code}` : null,
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+      return parts.join('\n');
+    }
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Ocurrió un error desconocido.';
+  }
+}
+
 function formatDateTime(value: string | null): string {
   if (!value) return '—';
   const date = new Date(value);
@@ -94,6 +131,8 @@ function formatDateTime(value: string | null): string {
 
 export function AdminAttendancePayroll() {
   const { theme } = useBusiness();
+  const [activeView, setActiveView] = useState<'summary' | 'new' | 'history' | 'banking'>('summary');
+  const [bankAccounts, setBankAccounts] = useState<EmployeeBankAccount[]>([]);
 
   const [settings, setSettings] = useState<AttendancePayrollSetting[]>([]);
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -104,6 +143,7 @@ export function AdminAttendancePayroll() {
   const [notes, setNotes] = useState('');
   const [preview, setPreview] = useState<AttendancePayrollPreviewItem[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
 
   const [runs, setRuns] = useState<AttendancePayrollRun[]>([]);
@@ -136,6 +176,14 @@ export function AdminAttendancePayroll() {
     }
   };
 
+  const loadBankAccounts = async (): Promise<void> => {
+    try {
+      setBankAccounts(await getEmployeeBankAccounts());
+    } catch (error) {
+      console.warn('No se pudieron cargar los datos bancarios de empleados:', error);
+    }
+  };
+
   const loadRunDetail = async (runId: string): Promise<void> => {
     try {
       setDetailLoading(true);
@@ -153,6 +201,7 @@ export function AdminAttendancePayroll() {
   useEffect(() => {
     void loadSettings();
     void loadRuns();
+    void loadBankAccounts();
   }, []);
 
   const updateSetting = <K extends keyof AttendancePayrollSetting>(
@@ -198,9 +247,18 @@ export function AdminAttendancePayroll() {
 
     try {
       setPreviewLoading(true);
-      setPreview(await getAttendancePayrollPreview({ startDate, endDate }));
+      setPreviewError(null);
+      const result = await getAttendancePayrollPreview({ startDate, endDate });
+      setPreview(result);
+      if (result.length === 0) {
+        setPreviewError('No se encontraron empleados o jornadas para calcular en el periodo seleccionado.');
+      }
     } catch (error) {
-      Alert.alert('No se pudo calcular la nómina', error instanceof Error ? error.message : 'Ocurrió un error.');
+      const message = getErrorMessage(error);
+      console.error('No se pudo calcular la nómina:', error);
+      setPreview([]);
+      setPreviewError(message);
+      Alert.alert('No se pudo calcular la nómina', message);
     } finally {
       setPreviewLoading(false);
     }
@@ -219,6 +277,10 @@ export function AdminAttendancePayroll() {
   const currency = preview[0]?.currencyCode ?? 'MXN';
   const hasUnconfigured = preview.some(item => !item.configured);
   const openShifts = preview.reduce((sum, item) => sum + item.openShifts, 0);
+  const unconfiguredCount = settings.filter(item => !item.configured).length;
+  const paidHistorical = runs.reduce((sum, run) => sum + run.paidAmount, 0);
+  const pendingHistorical = runs.reduce((sum, run) => sum + (run.status === 'voided' ? 0 : Math.max(0, run.totalAmount - run.paidAmount)), 0);
+  const latestRun = runs[0] ?? null;
 
   const closeRun = (): void => {
     if (preview.length === 0) {
@@ -269,23 +331,51 @@ export function AdminAttendancePayroll() {
   };
 
   const confirmPayment = async (item: AttendancePayrollRunItem): Promise<void> => {
-    if (!selectedRun) return;
-    try {
-      setPayingItemId(item.itemId);
-      await markAttendancePayrollItemPaid({
-        itemId: item.itemId,
-        paymentMethod,
-        paymentReference,
-      });
-      await Promise.all([loadRunDetail(selectedRun.id), loadRuns()]);
-      setPaymentItemId(null);
-      setPaymentReference('');
-      Alert.alert('Pago registrado', `El recibo de ${item.employeeName} quedó marcado como pagado.`);
-    } catch (error) {
-      Alert.alert('No se pudo registrar el pago', error instanceof Error ? error.message : 'Ocurrió un error.');
-    } finally {
-      setPayingItemId(null);
+    if (!selectedRun || item.paymentStatus === 'paid') return;
+
+    if ((paymentMethod === 'transfer' || paymentMethod === 'card') && paymentReference.trim().length < 3) {
+      Alert.alert('Referencia obligatoria', 'Captura la referencia o folio del pago.');
+      return;
     }
+
+    if (paymentMethod === 'transfer') {
+      const bank = bankAccounts.find(account => account.userId === item.userId);
+      if (!bank?.clabe || bank.clabe.length !== 18) {
+        Alert.alert('Faltan datos bancarios', 'Registra una CLABE válida para este empleado antes de marcar el pago por transferencia.');
+        return;
+      }
+    }
+
+    Alert.alert(
+      'Confirmar pago',
+      `Vas a registrar ${money(item.totalPay, selectedRun.currencyCode)} para ${item.employeeName} mediante ${paymentMethodLabel(paymentMethod)}. Esta acción quedará auditada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Registrar pago',
+          onPress: () => {
+            void (async () => {
+              try {
+                setPayingItemId(item.itemId);
+                await markAttendancePayrollItemPaid({
+                  itemId: item.itemId,
+                  paymentMethod,
+                  paymentReference,
+                });
+                await Promise.all([loadRunDetail(selectedRun.id), loadRuns()]);
+                setPaymentItemId(null);
+                setPaymentReference('');
+                Alert.alert('Pago registrado', `El recibo de ${item.employeeName} quedó marcado como pagado.`);
+              } catch (error) {
+                Alert.alert('No se pudo registrar el pago', error instanceof Error ? error.message : 'Ocurrió un error.');
+              } finally {
+                setPayingItemId(null);
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const voidRun = (): void => {
@@ -400,6 +490,42 @@ export function AdminAttendancePayroll() {
       <Text style={[styles.title, { color: theme.text }]}>Nómina</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>Configura sueldos, congela cortes, registra pagos y conserva recibos históricos.</Text>
 
+      <View style={styles.tabRow}>
+        {([
+          ['summary', 'RESUMEN'],
+          ['new', 'NUEVO CORTE'],
+          ['history', 'HISTORIAL'],
+          ['banking', 'DATOS BANCARIOS'],
+        ] as const).map(([key, label]) => (
+          <TouchableOpacity key={key} onPress={() => setActiveView(key)} style={[styles.tabButton, { borderColor: activeView === key ? theme.primary : theme.border, backgroundColor: activeView === key ? theme.surfaceAlt : theme.background }]}>
+            <Text style={{ color: activeView === key ? theme.primary : theme.textMuted, fontWeight: '900', fontSize: 11 }}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeView === 'summary' ? (
+        <>
+          <View style={styles.totalRow}>
+            <Metric label="PAGADO HISTÓRICO" value={money(paidHistorical, latestRun?.currencyCode ?? 'MXN')} theme={theme} />
+            <Metric label="PENDIENTE" value={money(pendingHistorical, latestRun?.currencyCode ?? 'MXN')} theme={theme} strong />
+            <Metric label="CORTES" value={String(runs.filter(run => run.status !== 'voided').length)} theme={theme} />
+            <Metric label="CONFIGURACIÓN" value={unconfiguredCount === 0 ? 'COMPLETA' : `${unconfiguredCount} PENDIENTE(S)`} theme={theme} />
+          </View>
+          {latestRun ? (
+            <TouchableOpacity onPress={() => { setActiveView('history'); void loadRunDetail(latestRun.id); }} style={[styles.runRow, { borderColor: theme.border, backgroundColor: theme.background }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.employeeName, { color: theme.text }]}>Último corte · {latestRun.startDate} → {latestRun.endDate}</Text>
+                <Text style={[styles.detail, { color: theme.textMuted }]}>{statusLabel(latestRun.status)} · {latestRun.paidEmployeeCount}/{latestRun.employeeCount} pagados</Text>
+              </View>
+              <Text style={[styles.itemTotal, { color: theme.primary }]}>{money(latestRun.totalAmount, latestRun.currencyCode)}</Text>
+            </TouchableOpacity>
+          ) : <Text style={[styles.subtitle, { color: theme.textMuted }]}>Todavía no hay cortes de nómina.</Text>}
+          {unconfiguredCount > 0 ? <Text style={[styles.warning, { color: theme.danger }]}>⚠️ Hay {unconfiguredCount} empleado(s) sin configuración salarial.</Text> : null}
+        </>
+      ) : null}
+
+      {activeView === 'new' ? (
+        <>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>CONFIGURACIÓN POR EMPLEADO</Text>
       {settingsLoading ? (
         <ActivityIndicator color={theme.primary} />
@@ -460,6 +586,7 @@ export function AdminAttendancePayroll() {
         <View style={styles.dateField}><DateCalendarField label="Hasta" value={endDate} onChange={setEndDate} minimumDate={startDate} /></View>
         <TouchableOpacity disabled={previewLoading} onPress={() => void generatePreview()} style={[styles.generateButton, { backgroundColor: theme.primary, opacity: previewLoading ? 0.55 : 1 }]}><Text style={{ color: theme.onPrimary, fontWeight: '900' }}>{previewLoading ? 'CALCULANDO...' : 'CALCULAR'}</Text></TouchableOpacity>
       </View>
+      {previewError ? <Text style={[styles.warning, { color: theme.danger }]}>{previewError}</Text> : null}
 
       {preview.length > 0 ? (
         <>
@@ -489,6 +616,11 @@ export function AdminAttendancePayroll() {
         </>
       ) : null}
 
+        </>
+      ) : null}
+
+      {activeView === 'history' ? (
+        <>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>CORTES HISTÓRICOS</Text>
       {runs.length === 0 ? (
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>Todavía no hay cortes cerrados.</Text>
@@ -554,7 +686,17 @@ export function AdminAttendancePayroll() {
                       <TouchableOpacity key={method} onPress={() => setPaymentMethod(method)} style={[styles.basisButton, { borderColor: paymentMethod === method ? theme.primary : theme.border, backgroundColor: paymentMethod === method ? theme.surfaceAlt : theme.surface }]}><Text style={{ color: paymentMethod === method ? theme.primary : theme.textMuted, fontWeight: '800', fontSize: 11 }}>{paymentMethodLabel(method)}</Text></TouchableOpacity>
                     ))}
                   </View>
-                  <TextInput value={paymentReference} onChangeText={setPaymentReference} placeholder="Referencia / folio / nota (opcional)" placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]} />
+                  {paymentMethod === 'transfer' ? (() => {
+                    const bank = bankAccounts.find(account => account.userId === item.userId);
+                    return bank?.clabe ? (
+                      <View style={[styles.bankHint, { borderColor: theme.primary, backgroundColor: theme.surface }]}>
+                        <Text style={[styles.detail, { color: theme.text }]}>🏦 {bank.bankName || 'Banco'} · {bank.accountHolder || item.employeeName}</Text>
+                        <Text style={[styles.bankClabe, { color: theme.primary }]}>CLABE {bank.clabe}</Text>
+                        {bank.accountNumber ? <Text style={[styles.detail, { color: theme.textMuted }]}>Cuenta: {bank.accountNumber}</Text> : null}
+                      </View>
+                    ) : <Text style={[styles.warning, { color: theme.danger }]}>⚠️ Este empleado no tiene CLABE registrada.</Text>;
+                  })() : null}
+                  <TextInput value={paymentReference} onChangeText={setPaymentReference} placeholder={paymentMethod === 'cash' || paymentMethod === 'other' ? 'Referencia / nota (opcional)' : 'Referencia / folio (obligatorio)'} placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]} />
                   <View style={styles.actionRow}>
                     <TouchableOpacity onPress={() => setPaymentItemId(null)} style={[styles.secondaryButton, { borderColor: theme.border }]}><Text style={{ color: theme.textMuted, fontWeight: '900' }}>CANCELAR</Text></TouchableOpacity>
                     <TouchableOpacity disabled={payingItemId === item.itemId} onPress={() => void confirmPayment(item)} style={[styles.primarySmallButton, { backgroundColor: theme.primary, opacity: payingItemId === item.itemId ? 0.5 : 1 }]}><Text style={{ color: theme.onPrimary, fontWeight: '900' }}>{payingItemId === item.itemId ? 'GUARDANDO...' : 'CONFIRMAR PAGO'}</Text></TouchableOpacity>
@@ -574,6 +716,10 @@ export function AdminAttendancePayroll() {
           ) : null}
         </View>
       ) : null}
+        </>
+      ) : null}
+
+      {activeView === 'banking' ? <AdminEmployeeBankAccounts /> : null}
     </View>
   );
 }

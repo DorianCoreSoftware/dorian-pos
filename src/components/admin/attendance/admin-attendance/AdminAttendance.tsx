@@ -19,7 +19,6 @@ import {
 
 import { useBusiness } from '../../../../context/BusinessContext';
 import { DateCalendarField, DateTimeCalendarField } from '../../../common/date-calendar-field/DateCalendarField';
-import { AdminAttendancePayroll } from '../admin-attendance-payroll/AdminAttendancePayroll';
 import { AdminAttendanceEmployeeDossier } from '../admin-attendance-employee-dossier/AdminAttendanceEmployeeDossier';
 import { AdminAttendanceRequests } from '../admin-attendance-requests/AdminAttendanceRequests';
 import { AdminAttendanceAudit } from '../admin-attendance-audit/AdminAttendanceAudit';
@@ -465,8 +464,8 @@ export function AdminAttendance() {
       </AccordionSection>
 
       <AccordionSection
-        title="Expediente, reportes y nómina"
-        subtitle="Expedientes, reportes, nómina y auditoría del personal."
+        title="Expediente, reportes y auditoría"
+        subtitle="Expedientes, reportes y auditoría del personal."
         open={openSections.people}
         onToggle={() => toggleSection('people')}
       >
@@ -474,7 +473,6 @@ export function AdminAttendance() {
 
       <AdminAttendanceReports />
 
-      <AdminAttendancePayroll />
 
       <AdminAttendanceAudit />
       </AccordionSection>

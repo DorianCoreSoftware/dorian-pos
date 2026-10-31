@@ -7,6 +7,7 @@ import {
   supabase,
 } from '../../../services/supabase';
 import { getDeliveryServiceStatus } from '../../../services/deliveryService';
+import { setWebOrderPaymentIntent } from '../../../services/paymentAccountService';
 
 export type WebFulfillmentType =
   | 'pickup'
@@ -25,6 +26,8 @@ export interface CreateWebOrderInput {
   DeliveryDetails | null;
 
   clientRequestId: string;
+
+  paymentMethod: 'cash' | 'transfer';
 
   customerSessionToken?:
   string | null;
@@ -47,6 +50,7 @@ export async function createWebOrder({
   fulfillmentType,
   deliveryDetails,
   clientRequestId,
+  paymentMethod,
   customerSessionToken,
   marketingCode,
   marketingToken,
@@ -281,6 +285,12 @@ export async function createWebOrder({
       'No se recibió el identificador del pedido.',
     );
   }
+
+  await setWebOrderPaymentIntent({
+    orderId: data,
+    clientRequestId,
+    paymentMethod,
+  });
 
   const cleanMarketingCode =
     marketingCode

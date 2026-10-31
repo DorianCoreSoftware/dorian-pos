@@ -190,9 +190,13 @@ export async function registerDriverPaymentById(
     orderId: string,
     paymentMethod:
         | 'cash'
-        | 'card',
+        | 'card'
+        | 'transfer',
     amountReceived:
         | number
+        | null,
+    paymentReference:
+        | string
         | null,
 ): Promise<string> {
     const {
@@ -209,6 +213,9 @@ export async function registerDriverPaymentById(
 
             p_amount_received:
                 amountReceived,
+
+            p_payment_reference:
+                paymentReference,
         },
     );
 
