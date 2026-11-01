@@ -581,8 +581,8 @@ export function DriverScreen() {
    * ENTREGA ACTIVA
    * ==========================================================
    */
-  const activeDelivery =
-    orders.find(
+  const activeDeliveries =
+    orders.filter(
       (
         order,
       ) =>
@@ -974,7 +974,8 @@ export function DriverScreen() {
            * ENTREGA EN CURSO
            * ==================================================
            */}
-          {activeDelivery ? (
+          {activeDeliveries.length >
+          0 ? (
             <>
               <Text
                 style={{
@@ -991,38 +992,50 @@ export function DriverScreen() {
                     10,
                 }}
               >
-                ENTREGA EN CURSO
+                {activeDeliveries.length ===
+                1
+                  ? 'ENTREGA EN CURSO'
+                  : `ENTREGAS EN CURSO (${activeDeliveries.length})`}
               </Text>
 
-              <DriverOrderCard
-                order={
-                  activeDelivery
-                }
-                processing={
-                  processingOrderId ===
-                  activeDelivery.id
-                }
-                address={
-                  formatAddress(
-                    activeDelivery,
-                  )
-                }
-                formattedTotal={
-                  formatCurrency(
-                    activeDelivery.total,
-                  )
-                }
-                formattedTime={
-                  formatTime(
-                    activeDelivery.createdAt,
-                  )
-                }
-                onAction={() =>
-                  handleOpenPayment(
-                    activeDelivery,
-                  )
-                }
-              />
+              {activeDeliveries.map(
+                (
+                  order,
+                ) => (
+                  <DriverOrderCard
+                    key={
+                      order.id
+                    }
+                    order={
+                      order
+                    }
+                    processing={
+                      processingOrderId ===
+                      order.id
+                    }
+                    address={
+                      formatAddress(
+                        order,
+                      )
+                    }
+                    formattedTotal={
+                      formatCurrency(
+                        order.total,
+                      )
+                    }
+                    formattedTime={
+                      formatTime(
+                        order.createdAt,
+                      )
+                    }
+                    onAction={() =>
+                      handleOpenPayment(
+                        order,
+                      )
+                    }
+                  />
+                ),
+              )}
             </>
           ) : null}
 
@@ -1046,7 +1059,8 @@ export function DriverScreen() {
                     '900',
 
                   marginTop:
-                    activeDelivery
+                    activeDeliveries.length >
+                    0
                       ? 22
                       : 0,
 
@@ -1103,7 +1117,8 @@ export function DriverScreen() {
            * SIN ENTREGAS
            * ==================================================
            */}
-          {!activeDelivery &&
+          {activeDeliveries.length ===
+            0 &&
           availableOrders.length ===
             0 &&
           !errorMessage ? (

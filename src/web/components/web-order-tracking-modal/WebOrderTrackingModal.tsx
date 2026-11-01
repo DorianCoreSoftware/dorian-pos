@@ -17,6 +17,7 @@ import {
 import { useBusiness } from '../../../context/BusinessContext';
 import { PublicOrderTrackingStatus, PublicOrderTracking, normalizeTrackingCode, getPublicOrderTracking, subscribeToPublicOrderStatus } from '../../services/web-order-tracking/webOrderTrackingService';
 import { setBrandPrimaryColor, styles } from './WebOrderTrackingModal.styles';
+import { openWhatsAppSupport } from '../../utils/whatsappSupport';
 
 interface WebOrderTrackingModalProps {
   visible: boolean;
@@ -36,6 +37,7 @@ export function WebOrderTrackingModal({
   onClose,
 }: WebOrderTrackingModalProps) {
   const {
+    business,
     theme,
   } = useBusiness();
 
@@ -293,6 +295,28 @@ export function WebOrderTrackingModal({
         order,
       ],
     );
+
+  const whatsapp =
+    business?.socialLinks.whatsapp
+      ?.trim() ??
+    '';
+
+  const handleWhatsAppSupport =
+    (): void => {
+      if (!order) {
+        return;
+      }
+
+      const currentStatus =
+        getTrackingStatusLabel(
+          order,
+        );
+
+      openWhatsAppSupport(
+        whatsapp,
+        `Hola, tengo una duda sobre mi pedido ${order.trackingCode}. Estado actual: ${currentStatus}.`,
+      );
+    };
 
   return (
     <Modal
@@ -605,6 +629,50 @@ export function WebOrderTrackingModal({
                   </Text>
                 ) : null}
 
+                {!!whatsapp ? (
+                  <View
+                    style={
+                      styles.helpBox
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.helpTitle
+                      }
+                    >
+                      ¿Necesitas ayuda?
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.helpText
+                      }
+                    >
+                      Si tienes una duda o necesitas hacer una aclaración sobre tu pedido, escríbenos por WhatsApp.
+                    </Text>
+
+                    <Pressable
+                      onPress={
+                        handleWhatsAppSupport
+                      }
+                      style={({ pressed }) => [
+                        styles.whatsappButton,
+                        pressed
+                          ? styles.whatsappButtonPressed
+                          : null,
+                      ]}
+                    >
+                      <Text
+                        style={
+                          styles.whatsappButtonText
+                        }
+                      >
+                        Hablar por WhatsApp
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
                 <Pressable
                   onPress={() => {
                     void searchOrder(
@@ -834,6 +902,32 @@ function getStepState(
   }
 
   return 'pending';
+}
+
+function getTrackingStatusLabel(
+  order:
+    PublicOrderTracking,
+): string {
+  if (
+    order.status ===
+    'cancelled'
+  ) {
+    return 'Cancelado';
+  }
+
+  const steps =
+    buildTrackingSteps(
+      order,
+    );
+
+  return (
+    steps.find(
+      step =>
+        step.key ===
+        order.status,
+    )?.label ??
+    order.status
+  );
 }
 
 function formatOrderDate(
