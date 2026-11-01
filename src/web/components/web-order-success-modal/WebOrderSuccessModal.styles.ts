@@ -155,6 +155,27 @@ const createStyles = (
       fontSize: 14,
       fontWeight: '900',
     },
+
+    whatsappButton: {
+      width: '100%',
+      minHeight: 46,
+      borderRadius: 10,
+      backgroundColor: '#1F6B39',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      marginTop: 10,
+    },
+
+    whatsappButtonPressed: {
+      opacity: 0.85,
+    },
+
+    whatsappButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+    },
   });
 
 let styles =

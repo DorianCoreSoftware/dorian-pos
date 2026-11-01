@@ -56,6 +56,7 @@ function formatOrderStatus(
     ready: 'Listo',
     ready_for_pickup: 'Listo para recoger',
     out_for_delivery: 'En camino',
+    on_the_way: 'En camino',
     delivering: 'En reparto',
     delivered: 'Entregado',
     completed: 'Completado',

@@ -367,6 +367,70 @@ const createStyles = (
         20,
     },
 
+    helpBox: {
+      borderWidth:
+        1,
+      borderColor:
+        '#315F3A',
+      backgroundColor:
+        '#15231A',
+      borderRadius:
+        12,
+      padding:
+        16,
+    },
+
+    helpTitle: {
+      color:
+        '#FFFFFF',
+      fontSize:
+        16,
+      fontWeight:
+        '900',
+    },
+
+    helpText: {
+      color:
+        '#BDBDBD',
+      fontSize:
+        13,
+      lineHeight:
+        19,
+      marginTop:
+        6,
+    },
+
+    whatsappButton: {
+      minHeight:
+        46,
+      borderRadius:
+        10,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      backgroundColor:
+        '#1F6B39',
+      paddingHorizontal:
+        16,
+      marginTop:
+        13,
+    },
+
+    whatsappButtonPressed: {
+      opacity:
+        0.85,
+    },
+
+    whatsappButtonText: {
+      color:
+        '#FFFFFF',
+      fontWeight:
+        '900',
+      fontSize:
+        14,
+    },
+
     refreshButton: {
       minHeight:
         46,

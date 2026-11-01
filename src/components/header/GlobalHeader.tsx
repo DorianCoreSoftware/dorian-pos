@@ -14,6 +14,7 @@ import {
 
 import {
   canAccessAdminPanel,
+  canAccessDriverOrders,
   canManageCash,
   canManageCatalog,
 } from '../../Utils/permissions';
@@ -58,6 +59,8 @@ interface HeaderProps {
 
   newEventRequestsCount: number;
 
+  driverOrdersCount: number;
+
   user: any;
 
   logout: () => void;
@@ -69,6 +72,7 @@ export function GlobalHeader({
   editingOrderId,
   pendingOrdersCount,
   newEventRequestsCount,
+  driverOrdersCount,
   user,
   logout,
 }: HeaderProps) {
@@ -365,7 +369,7 @@ export function GlobalHeader({
               onPress={() => setActiveTab('driver')}
             >
               <Text style={getTabTextStyle('driver')}>
-                REPARTO
+                REPARTO{driverOrdersCount > 0 ? ` (${driverOrdersCount})` : ''}
               </Text>
             </TouchableOpacity>
 
@@ -513,6 +517,32 @@ export function GlobalHeader({
           >
             <Text style={getTabTextStyle('events')}>
               EVENTOS{newEventRequestsCount > 0 ? ` (${newEventRequestsCount})` : ''}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {business?.features.deliveryEnabled &&
+        canAccessDriverOrders(user) ? (
+          <TouchableOpacity
+            style={
+              getTabButtonStyle(
+                'driver',
+              )
+            }
+            onPress={() =>
+              setActiveTab(
+                'driver',
+              )
+            }
+          >
+            <Text
+              style={
+                getTabTextStyle(
+                  'driver',
+                )
+              }
+            >
+              REPARTO{driverOrdersCount > 0 ? ` (${driverOrdersCount})` : ''}
             </Text>
           </TouchableOpacity>
         ) : null}

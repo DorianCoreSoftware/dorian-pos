@@ -13,6 +13,7 @@ import styles, {
 import { useBusiness } from '../../../context/BusinessContext';
 import { getOrderTrackingCode } from '../../../Utils/orderTracking';
 import { BusinessTransferSettings, getPublicBusinessTransferSettings } from '../../../services/paymentAccountService';
+import { openWhatsAppSupport } from '../../utils/whatsappSupport';
 
 interface WebOrderSuccessModalProps {
   visible: boolean;
@@ -67,6 +68,23 @@ export default function WebOrderSuccessModal({
         orderId,
       )
       : '';
+
+  const whatsapp =
+    business?.socialLinks.whatsapp
+      ?.trim() ??
+    '';
+
+  const handleWhatsAppSupport =
+    (): void => {
+      if (!shortId) {
+        return;
+      }
+
+      openWhatsAppSupport(
+        whatsapp,
+        `Hola, tengo una duda sobre mi pedido ${shortId}.`,
+      );
+    };
 
   return (
     <Modal
@@ -183,6 +201,28 @@ export default function WebOrderSuccessModal({
               </Text>
             </Pressable>
           )}
+
+          {!!shortId && !!whatsapp ? (
+            <Pressable
+              onPress={
+                handleWhatsAppSupport
+              }
+              style={({ pressed }) => [
+                styles.whatsappButton,
+                pressed
+                  ? styles.whatsappButtonPressed
+                  : null,
+              ]}
+            >
+              <Text
+                style={
+                  styles.whatsappButtonText
+                }
+              >
+                Contactar por WhatsApp
+              </Text>
+            </Pressable>
+          ) : null}
 
           <Pressable
             onPress={

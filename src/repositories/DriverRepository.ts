@@ -244,14 +244,23 @@ export async function registerDriverPaymentById(
     return data;
 }
 
+let driverRealtimeSubscriptionSequence =
+    0;
+
 export function subscribeToDriverOrderChanges(
     onChange:
         () => void,
 ): () => void {
+    driverRealtimeSubscriptionSequence +=
+        1;
+
+    const channelName =
+        `driver-orders-live-${driverRealtimeSubscriptionSequence}`;
+
     const channel =
         supabase
             .channel(
-                'driver-orders-live',
+                channelName,
             )
             .on(
                 'postgres_changes',

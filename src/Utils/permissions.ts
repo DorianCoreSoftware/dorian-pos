@@ -49,7 +49,8 @@ export function canAccessDriverOrders(
   user: UserSession | null,
 ): boolean {
   return (
-    user?.role === 'driver'
+    user?.role === 'driver' ||
+    user?.role === 'admin'
   );
 }
 

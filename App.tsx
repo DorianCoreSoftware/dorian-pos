@@ -90,6 +90,7 @@ import {
 
 import {
   canAccessAdminPanel,
+  canAccessDriverOrders,
   canManageCash,
   canManageCatalog,
 } from './src/Utils/permissions';
@@ -119,6 +120,11 @@ import {
   getAttendanceStatus,
   syncAttendanceNotifications,
 } from './src/services/attendanceService';
+
+import {
+  getDriverOrders,
+  listenToDriverOrderChanges,
+} from './src/services/driverService';
 
 function MainApp() {
   const {
@@ -181,6 +187,37 @@ function MainApp() {
     newEventRequestsCount,
     setNewEventRequestsCount,
   ] = useState(0);
+
+  const [
+    driverOrdersCount,
+    setDriverOrdersCount,
+  ] = useState(0);
+
+  const refreshDriverOrdersCount =
+    async (): Promise<void> => {
+      if (
+        !user?.id ||
+        !business?.features.deliveryEnabled ||
+        !canAccessDriverOrders(user)
+      ) {
+        setDriverOrdersCount(0);
+        return;
+      }
+
+      try {
+        const orders =
+          await getDriverOrders();
+
+        setDriverOrdersCount(
+          orders.length,
+        );
+      } catch (error) {
+        console.error(
+          'Error actualizando contador de reparto:',
+          error,
+        );
+      }
+    };
 
   const [
     attendanceStatus,
@@ -303,6 +340,31 @@ function MainApp() {
   ]);
 
   useEffect(() => {
+    void refreshDriverOrdersCount();
+
+    if (
+      !user?.id ||
+      !business?.features.deliveryEnabled ||
+      !canAccessDriverOrders(user)
+    ) {
+      return;
+    }
+
+    const unsubscribe =
+      listenToDriverOrderChanges(
+        () => {
+          void refreshDriverOrdersCount();
+        },
+      );
+
+    return unsubscribe;
+  }, [
+    user?.id,
+    user?.role,
+    business?.features.deliveryEnabled,
+  ]);
+
+  useEffect(() => {
     void refreshAttendanceStatus();
 
     if (!user?.id) {
@@ -320,6 +382,7 @@ function MainApp() {
 
   useEffect(() => {
     void refreshAttendanceStatus();
+    void refreshDriverOrdersCount();
   }, [activeTab]);
 
   useEffect(() => {
@@ -629,7 +692,7 @@ function MainApp() {
   useEffect(() => {
     if (
       activeTab ===
-        'kitchen' &&
+      'kitchen' &&
       !business?.features.kitchenEnabled
     ) {
       setActiveTab(
@@ -641,7 +704,7 @@ function MainApp() {
 
     if (
       activeTab ===
-        'loyalty' &&
+      'loyalty' &&
       !business?.features.loyaltyEnabled
     ) {
       setActiveTab(
@@ -1072,7 +1135,7 @@ function MainApp() {
         'driver'
       ) {
         if (
-          user?.role !== 'driver' ||
+          !canAccessDriverOrders(user) ||
           !business?.features.deliveryEnabled
         ) {
           return null;
@@ -1224,6 +1287,9 @@ function MainApp() {
         newEventRequestsCount={
           newEventRequestsCount
         }
+        driverOrdersCount={
+          driverOrdersCount
+        }
         user={
           user
         }
@@ -1233,8 +1299,8 @@ function MainApp() {
       />
 
       {activeTab !== 'attendance' &&
-      (attendanceStatus?.needsClockInReminder ||
-        attendanceStatus?.needsClockOutReminder) ? (
+        (attendanceStatus?.needsClockInReminder ||
+          attendanceStatus?.needsClockOutReminder) ? (
         <TouchableOpacity
           onPress={() => setActiveTab('attendance')}
           style={{
@@ -1281,7 +1347,7 @@ function NavigationGateway() {
     business,
     theme,
     isLoading:
-      businessLoading,
+    businessLoading,
   } = useBusiness();
 
   const {
@@ -1345,7 +1411,7 @@ function NavigationGateway() {
 
   if (
     user.role ===
-      'driver' &&
+    'driver' &&
     !business?.features.deliveryEnabled
   ) {
     return (
