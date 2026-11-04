@@ -35,6 +35,18 @@ import { getModifierGroupLabel } from '../../Utils/modifierGroup';
 import { useCurrency } from '../../hooks/useCurrency';
 import { CartProps } from '../../types/cart/cart-props';
 
+import {
+  calculateQuantityPromotionDiscount,
+  getActiveQuantityPromotions,
+  QuantityPromotion,
+} from '../../services/quantityPromotionService';
+
+import {
+  calculatePricingPromotionDiscount,
+  getActivePricingPromotions,
+  PricingPromotion,
+} from '../../services/pricingPromotionService';
+
 export const Cart: React.FC<
   CartProps
 > = ({
@@ -65,6 +77,20 @@ export const Cart: React.FC<
     ] = useState<
       ModifierPromotion | null
     >(null);
+
+    const [
+      quantityPromotions,
+      setQuantityPromotions,
+    ] = useState<
+      QuantityPromotion[]
+    >([]);
+
+    const [
+      pricingPromotions,
+      setPricingPromotions,
+    ] = useState<
+      PricingPromotion[]
+    >([]);
 
     const deliveryItem =
       cart.find(
@@ -117,11 +143,40 @@ export const Cart: React.FC<
         )
         : 0;
 
+    const quantityPromotionSummary =
+      calculateQuantityPromotionDiscount(
+        regularItems,
+        quantityPromotions,
+      );
+
+    const quantityPromotionDiscount =
+      quantityPromotionSummary.totalDiscount;
+
+    const pricingPromotionSummary =
+      calculatePricingPromotionDiscount(
+        regularItems,
+        pricingPromotions,
+        Math.max(
+          0,
+          subtotalAmount -
+          quantityPromotionDiscount,
+        ),
+        quantityPromotions.map(
+          promotion =>
+            promotion.targetProductId,
+        ),
+      );
+
+    const pricingPromotionDiscount =
+      pricingPromotionSummary.totalDiscount;
+
     const totalAmount =
       Math.max(
         0,
         subtotalAmount -
-        modifierPromotionDiscount,
+        modifierPromotionDiscount -
+        quantityPromotionDiscount -
+        pricingPromotionDiscount,
       );
 
     const cannotCheckout =
@@ -160,7 +215,59 @@ export const Cart: React.FC<
           }
         };
 
+      const loadQuantityPromotions =
+        async () => {
+          try {
+            const data =
+              await getActiveQuantityPromotions();
+
+            if (isMounted) {
+              setQuantityPromotions(
+                data,
+              );
+            }
+          } catch (error) {
+            console.error(
+              'Error loading quantity promotions in cart:',
+              error,
+            );
+
+            if (isMounted) {
+              setQuantityPromotions(
+                [],
+              );
+            }
+          }
+        };
+
+      const loadPricingPromotions =
+        async () => {
+          try {
+            const data =
+              await getActivePricingPromotions();
+
+            if (isMounted) {
+              setPricingPromotions(
+                data,
+              );
+            }
+          } catch (error) {
+            console.error(
+              'Error loading pricing promotions in cart:',
+              error,
+            );
+
+            if (isMounted) {
+              setPricingPromotions(
+                [],
+              );
+            }
+          }
+        };
+
       void loadModifierPromotion();
+      void loadQuantityPromotions();
+      void loadPricingPromotions();
 
       return () => {
         isMounted = false;
@@ -851,6 +958,10 @@ export const Cart: React.FC<
           }
         >
           {modifierPromotionDiscount >
+            0 ||
+          quantityPromotionDiscount >
+            0 ||
+          pricingPromotionDiscount >
             0 ? (
             <>
               <View
@@ -932,6 +1043,98 @@ export const Cart: React.FC<
                   )}
                 </Text>
               </View>
+              {quantityPromotionSummary.lines.map(
+                line => (
+                  <View
+                    key={
+                      line.promotionId
+                    }
+                    style={{
+                      flexDirection:
+                        'row',
+                      alignItems:
+                        'center',
+                      justifyContent:
+                        'space-between',
+                      marginBottom:
+                        8,
+                      gap:
+                        10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          businessTheme.primary,
+                        fontSize:
+                          12,
+                        fontWeight:
+                          '800',
+                        flex:
+                          1,
+                      }}
+                    >
+                      🏷️ {line.label}
+                    </Text>
+
+                    <Text
+                      style={{
+                        color:
+                          businessTheme.primary,
+                        fontSize:
+                          12,
+                        fontWeight:
+                          '900',
+                      }}
+                    >
+                      {formatCurrency(
+                        -line.discountAmount,
+                      )}
+                    </Text>
+                  </View>
+                ),
+              )}
+
+
+              {pricingPromotionSummary.lines.map(
+                line => (
+                  <View
+                    key={
+                      line.promotionId
+                    }
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                      gap: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: businessTheme.primary,
+                        fontSize: 12,
+                        fontWeight: '800',
+                        flex: 1,
+                      }}
+                    >
+                      🏷️ {line.label}
+                    </Text>
+
+                    <Text
+                      style={{
+                        color: businessTheme.primary,
+                        fontSize: 12,
+                        fontWeight: '900',
+                      }}
+                    >
+                      {formatCurrency(
+                        -line.discountAmount,
+                      )}
+                    </Text>
+                  </View>
+                ),
+              )}
             </>
           ) : null}
 

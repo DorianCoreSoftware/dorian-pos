@@ -29,7 +29,15 @@ export function PromotionRedemptionPanel({
   const { theme } = useBusiness();
   const { formatCurrency } = useCurrency();
   const enabledPrograms = useMemo(
-    () => programs.filter(program => program.isEnabled),
+    () =>
+      programs.filter(
+        program =>
+          program.isEnabled &&
+          (
+            program.programType === 'collect_reward' ||
+            program.programType === 'order_refund'
+          ),
+      ),
     [programs],
   );
 

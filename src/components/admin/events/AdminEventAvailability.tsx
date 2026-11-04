@@ -11,6 +11,7 @@ import {
 
 import { useBusiness } from '../../../context/BusinessContext';
 import { DateCalendarField, DateTimeCalendarField } from '../../common/date-calendar-field/DateCalendarField';
+import { TimeSelect } from '../../common/time-select/TimeSelect';
 import {
   EventAvailabilityAdmin,
   EventAvailabilityRuleAdmin,
@@ -226,19 +227,23 @@ export function AdminEventAvailability({ isPhone }: Props) {
               </View>
               {rule.isEnabled ? (
                 <View style={styles.timeRow}>
-                  <TextInput
+                  <TimeSelect
                     value={rule.startTime}
-                    onChangeText={(value: string) => updateRule(rule.dayOfWeek, { startTime: value })}
-                    placeholder="12:00"
-                    placeholderTextColor={theme.textMuted}
-                    style={[styles.timeInput, { color: theme.text, borderColor: theme.border }]}
+                    onChange={(value: string) =>
+                      updateRule(
+                        rule.dayOfWeek,
+                        { startTime: value },
+                      )
+                    }
                   />
-                  <TextInput
+                  <TimeSelect
                     value={rule.endTime}
-                    onChangeText={(value: string) => updateRule(rule.dayOfWeek, { endTime: value })}
-                    placeholder="22:00"
-                    placeholderTextColor={theme.textMuted}
-                    style={[styles.timeInput, { color: theme.text, borderColor: theme.border }]}
+                    onChange={(value: string) =>
+                      updateRule(
+                        rule.dayOfWeek,
+                        { endTime: value },
+                      )
+                    }
                   />
                 </View>
               ) : null}
@@ -268,11 +273,11 @@ export function AdminEventAvailability({ isPhone }: Props) {
             <View style={[styles.row, isPhone && styles.rowPhone]}>
               <View style={styles.column}>
                 <Text style={[styles.label, { color: theme.textMuted }]}>Desde</Text>
-                <TextInput value={blockStart} onChangeText={setBlockStart} placeholder="18:00" placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.text, borderColor: theme.border }]} />
+                <TimeSelect value={blockStart || '18:00'} onChange={setBlockStart} />
               </View>
               <View style={styles.column}>
                 <Text style={[styles.label, { color: theme.textMuted }]}>Hasta</Text>
-                <TextInput value={blockEnd} onChangeText={setBlockEnd} placeholder="21:00" placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.text, borderColor: theme.border }]} />
+                <TimeSelect value={blockEnd || '21:00'} onChange={setBlockEnd} />
               </View>
             </View>
           ) : null}

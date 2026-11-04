@@ -3,8 +3,15 @@ import {
 } from 'react-native';
 
 export const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+
   container: {
+    flexGrow: 1,
     gap: 14,
+    paddingBottom: 32,
   },
   headerCard: {
     borderWidth: 1,

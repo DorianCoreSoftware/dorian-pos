@@ -4,11 +4,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useBusiness } from '../../../context/BusinessContext';
+import { TimeSelect } from '../time-select/TimeSelect';
 
 const MONTHS = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -232,18 +232,18 @@ export function DateTimeCalendarField({ value, onChange, label, disabled = false
             allowClear={allowClear}
           />
         </View>
-        <TextInput
-          editable={!disabled}
-          value={time}
-          onChangeText={text => {
-            const sanitized = text.replace(/[^0-9:]/g, '').slice(0, 5);
-            emit(date || toIsoDate(new Date()), sanitized);
-          }}
-          placeholder="HH:mm"
-          placeholderTextColor={theme.textMuted}
-          keyboardType="numbers-and-punctuation"
-          style={[styles.timeInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-        />
+        <View style={styles.timePart}>
+          <TimeSelect
+            value={time || '00:00'}
+            disabled={disabled}
+            onChange={nextTime =>
+              emit(
+                date || toIsoDate(new Date()),
+                nextTime,
+              )
+            }
+          />
+        </View>
       </View>
       {allowClear && value ? (
         <TouchableOpacity onPress={() => onChange('')} style={styles.clearLink}>
@@ -273,6 +273,6 @@ const styles = StyleSheet.create({
   footerButton: { minHeight: 36, borderWidth: 1, borderRadius: 8, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
   dateTimeRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   datePart: { flex: 1, minWidth: 160 },
-  timeInput: { width: 92, minHeight: 44, borderWidth: 1, borderRadius: 9, paddingHorizontal: 10, fontSize: 13, fontWeight: '700' },
+  timePart: { width: 150, minWidth: 130 },
   clearLink: { alignSelf: 'flex-start', marginTop: 5 },
 });

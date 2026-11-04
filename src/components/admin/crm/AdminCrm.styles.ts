@@ -6,6 +6,21 @@ export const styles =
   StyleSheet.create({
     container: {
       flex: 1,
+      minHeight: 0,
+    },
+
+    mainScroll: {
+      flex: 1,
+      minHeight: 0,
+    },
+
+    mainContent: {
+      flexGrow: 1,
+      paddingBottom: 20,
+    },
+
+    mainContentPhone: {
+      paddingBottom: 36,
     },
     header: {
       flexDirection: 'row',
@@ -18,6 +33,10 @@ export const styles =
     headerText: {
       flex: 1,
       minWidth: 220,
+    },
+
+    headerPhone: {
+      marginBottom: 10,
     },
     title: {
       fontSize: 22,
@@ -34,6 +53,17 @@ export const styles =
       gap: 9,
       marginBottom: 18,
     },
+
+    toolbarPhone: {
+      gap: 7,
+      marginBottom: 10,
+    },
+
+    toolbarActionPhone: {
+      minHeight: 36,
+      flexGrow: 1,
+      paddingHorizontal: 10,
+    },
     search: {
       flexGrow: 1,
       minWidth: 220,
@@ -42,6 +72,12 @@ export const styles =
       borderRadius: 10,
       paddingHorizontal: 12,
       fontSize: 12,
+    },
+
+    searchPhone: {
+      width: '100%',
+      minWidth: '100%',
+      minHeight: 40,
     },
     button: {
       minHeight: 42,
@@ -67,6 +103,18 @@ export const styles =
       flexWrap: 'wrap',
       gap: 10,
       marginBottom: 20,
+    },
+
+    segmentBarPhone: {
+      flexWrap: 'nowrap',
+      gap: 7,
+      paddingRight: 10,
+      marginBottom: 10,
+    },
+
+    segmentScrollPhone: {
+      flexGrow: 0,
+      flexShrink: 0,
     },
     segmentButton: {
       minHeight: 34,
@@ -129,6 +177,13 @@ export const styles =
       gap: 8,
       marginTop: 14,
       marginBottom: 2,
+    },
+
+    metricsPhone: {
+      flexWrap: 'nowrap',
+      gap: 6,
+      marginTop: 6,
+      marginBottom: 10,
     },
     metric: {
       flexGrow: 1,

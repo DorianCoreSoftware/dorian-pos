@@ -3,6 +3,7 @@ import {
   fetchOrderPromoCoupon,
   PromoCouponRecord,
   PromotionProgramRecord,
+  PromotionProgramType,
   PromotionRefundResult,
   PromotionRewardRecord,
   redeemCollectPromotion,
@@ -21,11 +22,23 @@ export interface PromotionProgram {
   id: string;
   code: string;
   displayName: string;
-  programType: 'collect_reward' | 'order_refund';
+  programType: PromotionProgramType;
   codePrefix: string;
   isEnabled: boolean;
   issueChanceDenominator: number;
   requiredCoupons: number | null;
+  targetProductId: string | null;
+  targetModifierId: string | null;
+  buyQuantity: number | null;
+  payQuantity: number | null;
+  discountAmount: number | null;
+  fixedPrice: number | null;
+  minimumOrderAmount: number | null;
+  orderDiscountKind: 'percent' | 'fixed' | null;
+  orderDiscountValue: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  activeWeekdays: number[];
   priority: number;
   rewards: PromotionReward[];
 }
@@ -37,7 +50,7 @@ export interface PromoCoupon {
   programId: string;
   programCode: string;
   programName: string;
-  programType: 'collect_reward' | 'order_refund';
+  programType: PromotionProgramType;
   codePrefix: string;
   requiredCoupons: number | null;
   redeemed: boolean;
@@ -68,12 +81,82 @@ export function mapPromotionProgram(record: PromotionProgramRecord): PromotionPr
       record.required_coupons === null
         ? null
         : Number(record.required_coupons),
+
+    targetProductId:
+      record.target_product_id ?? null,
+
+    buyQuantity:
+      record.buy_quantity === null
+        ? null
+        : Number(record.buy_quantity),
+
+    payQuantity:
+      record.pay_quantity === null
+        ? null
+        : Number(record.pay_quantity),
+
+    targetModifierId:
+      record.target_modifier_id ?? null,
+
+    discountAmount:
+      record.discount_amount === null
+        ? null
+        : Number(record.discount_amount),
+
+    fixedPrice:
+      record.fixed_price === null
+        ? null
+        : Number(record.fixed_price),
+
+    minimumOrderAmount:
+      record.minimum_order_amount === null
+        ? null
+        : Number(record.minimum_order_amount),
+
+    orderDiscountKind:
+      record.order_discount_kind ?? null,
+
+    orderDiscountValue:
+      record.order_discount_value === null
+        ? null
+        : Number(record.order_discount_value),
+
+    startsAt:
+      record.starts_at ?? null,
+
+    endsAt:
+      record.ends_at ?? null,
+
+    activeWeekdays:
+      Array.isArray(record.active_weekdays)
+        ? record.active_weekdays.map(Number)
+        : [0, 1, 2, 3, 4, 5, 6],
+
     priority: Number(record.priority ?? 100),
     rewards: (record.rewards ?? [])
       .map(mapReward)
       .filter(reward => reward.isActive)
       .sort((a, b) => a.position - b.position),
   };
+}
+
+export function isPromotionActiveNow(
+  program: PromotionProgram,
+  date: Date = new Date(),
+): boolean {
+  if (!program.isEnabled) return false;
+
+  const iso = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  if (program.startsAt && iso < program.startsAt) return false;
+  if (program.endsAt && iso > program.endsAt) return false;
+
+  return program.activeWeekdays.length === 0 ||
+    program.activeWeekdays.includes(date.getDay());
 }
 
 function mapCoupon(record: PromoCouponRecord): PromoCoupon {
