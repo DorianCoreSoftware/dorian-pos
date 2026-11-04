@@ -18,17 +18,11 @@ import {
   useBusiness,
 } from '../../../context/BusinessContext';
 
-import {
-  getPublicEventAvailableSlots,
-  getPublicEventCatalog,
-  PublicEventCatalog,
-  PublicEventExtra,
-  PublicEventPackage,
-  PublicEventSlot,
-} from '../../services/web-events/webEventsService';
+
 
 import styles from './WebEventsScreen.styles';
 import WebEventRequestSection from './WebEventRequestSection';
+import { PublicEventCatalog, PublicEventSlot, getPublicEventCatalog, PublicEventPackage, PublicEventExtra, getPublicEventAvailableSlots, PublicEventPackageItem } from '../../utils/webEventsService';
 
 interface Props {
   onBack: () => void;
@@ -977,6 +971,35 @@ export default function WebEventsScreen({
                             {item.description}
                           </Text>
                         )}
+
+                        {item.items.length > 0 ? (
+                          <Text
+                            style={[
+                              styles.packageDescription,
+                              {
+                                color:
+                                  theme.textMuted,
+                              },
+                            ]}
+                          >
+                            {item.items
+                              .map((packageItem: PublicEventPackageItem) => {
+                                const quantity =
+                                  Number.isInteger(packageItem.quantity)
+                                    ? String(packageItem.quantity)
+                                    : packageItem.quantity.toFixed(2);
+
+                                const detail =
+                                  packageItem.productDescription
+                                    ? ` — ${packageItem.productDescription}`
+                                    : '';
+
+                                return `• ${quantity} × ${packageItem.productName}${detail}`;
+                              })
+                              .join('\n')}
+                          </Text>
+                        ) : null}
+
                         <Text
                           style={[
                             styles.packageMeta,

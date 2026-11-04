@@ -510,4 +510,14 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  quantityInput: {
+    minHeight: 36,
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
 });

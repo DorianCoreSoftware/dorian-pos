@@ -24,6 +24,7 @@ import {
 import { useBusiness } from '../../../context/BusinessContext';
 import {
   DEFAULT_EVENT_SETTINGS,
+  EventCatalogProduct,
   EventExtraAdmin,
   EventExtraPricingType,
   EventPackageAdmin,
@@ -97,11 +98,16 @@ interface EventPackageForm {
   includedGuests: string;
   extraGuestPrice: string;
   durationMinutes: string;
+  items: Array<{
+    productId: string;
+    quantity: string;
+  }>;
   extraIds: string[];
   isActive: boolean;
 }
 
 interface EventExtraForm {
+  productId: string | null;
   name: string;
   description: string;
   pricingType: EventExtraPricingType;
@@ -123,11 +129,13 @@ const EMPTY_PACKAGE_FORM: EventPackageForm = {
   includedGuests: '20',
   extraGuestPrice: '',
   durationMinutes: '120',
+  items: [],
   extraIds: [],
   isActive: true,
 };
 
 const EMPTY_EXTRA_FORM: EventExtraForm = {
+  productId: null,
   name: '',
   description: '',
   pricingType: 'fixed',
@@ -317,6 +325,8 @@ export function AdminEvents() {
     useState<EventPackageAdmin[]>([]);
   const [extras, setExtras] =
     useState<EventExtraAdmin[]>([]);
+  const [catalogProducts, setCatalogProducts] =
+    useState<EventCatalogProduct[]>([]);
   const [isLoading, setIsLoading] =
     useState(true);
   const [isProcessing, setIsProcessing] =
@@ -366,6 +376,7 @@ export function AdminEvents() {
       setTypes(catalog.types);
       setPackages(catalog.packages);
       setExtras(catalog.extras);
+      setCatalogProducts(catalog.products);
     } catch (error) {
       Alert.alert(
         'Error',
@@ -651,6 +662,10 @@ export function AdminEvents() {
       includedGuests: String(item.includedGuests),
       extraGuestPrice: String(item.extraGuestPrice),
       durationMinutes: String(item.durationMinutes),
+      items: item.items.map(packageItem => ({
+        productId: packageItem.productId,
+        quantity: String(packageItem.quantity),
+      })),
       extraIds: [...item.extraIds],
       isActive: item.isActive,
     });
@@ -669,6 +684,10 @@ export function AdminEvents() {
         includedGuests: Number(packageForm.includedGuests),
         extraGuestPrice: Number(packageForm.extraGuestPrice),
         durationMinutes: Number(packageForm.durationMinutes),
+        items: packageForm.items.map(item => ({
+          productId: item.productId,
+          quantity: Number(item.quantity),
+        })),
         extraIds: packageForm.extraIds,
         isActive: packageForm.isActive,
       });
@@ -697,6 +716,7 @@ export function AdminEvents() {
   ): void => {
     setSelectedExtra(item);
     setExtraForm({
+      productId: item.productId,
       name: item.name,
       description: item.description,
       pricingType: item.pricingType,
@@ -711,6 +731,7 @@ export function AdminEvents() {
       setIsProcessing(true);
       await saveEventExtra({
         id: selectedExtra?.id,
+        productId: extraForm.productId,
         name: extraForm.name,
         description: extraForm.description,
         pricingType: extraForm.pricingType,
@@ -1257,6 +1278,94 @@ export function AdminEvents() {
           </View>
         </View>
         <Text style={[styles.label, { color: theme.textMuted }]}>
+          Productos incluidos
+        </Text>
+        <Text style={[styles.helperText, { color: theme.textMuted }]}>
+          Vincula productos del catálogo. Si cambia su precio, el paquete se recalcula automáticamente conservando el descuento actual.
+        </Text>
+        {catalogProducts.length === 0 ? (
+          <View style={[styles.inlineEmpty, { borderColor: theme.border }]}>
+            <Text style={[styles.inlineEmptyText, { color: theme.textMuted }]}>
+              No hay productos activos disponibles.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.extraSelectionList}>
+            {catalogProducts.map(product => {
+              const currentItem = packageForm.items.find(
+                item => item.productId === product.id,
+              );
+              const selected = !!currentItem;
+
+              return (
+                <View
+                  key={product.id}
+                  style={[
+                    styles.extraSelectionItem,
+                    {
+                      borderColor: selected ? theme.primary : theme.border,
+                      backgroundColor: selected ? theme.surfaceAlt : theme.surface,
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.extraSelectionInfo}
+                    onPress={() =>
+                      setPackageForm(current => ({
+                        ...current,
+                        items: selected
+                          ? current.items.filter(item => item.productId !== product.id)
+                          : [
+                              ...current.items,
+                              {
+                                productId: product.id,
+                                quantity: '1',
+                              },
+                            ],
+                      }))
+                    }
+                  >
+                    <Text style={[styles.extraSelectionName, { color: theme.text }]}>
+                      {selected ? '✓ ' : ''}{product.name}
+                    </Text>
+                    <Text style={[styles.extraSelectionMeta, { color: theme.textMuted }]}>
+                      ${product.price.toFixed(2)}
+                      {product.description ? ` · ${product.description}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {selected ? (
+                    <TextInput
+                      value={currentItem?.quantity ?? '1'}
+                      onChangeText={(value: string) =>
+                        setPackageForm(current => ({
+                          ...current,
+                          items: current.items.map(item =>
+                            item.productId === product.id
+                              ? { ...item, quantity: value }
+                              : item,
+                          ),
+                        }))
+                      }
+                      placeholder="Cant."
+                      keyboardType="numeric"
+                      style={[
+                        styles.quantityInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.border,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <Text style={[styles.label, { color: theme.textMuted }]}>
           Extras disponibles para este paquete
         </Text>
         <Text style={[styles.helperText, { color: theme.textMuted }]}>
@@ -1329,6 +1438,71 @@ export function AdminEvents() {
           void handleSaveExtra();
         }}
       >
+        <Text style={[styles.label, { color: theme.textMuted }]}>
+          Producto vinculado (opcional)
+        </Text>
+        <Text style={[styles.helperText, { color: theme.textMuted }]}>
+          Si eliges un producto, nombre, descripción y precio se mantendrán sincronizados con el catálogo.
+        </Text>
+        <View style={styles.extraSelectionList}>
+          <TouchableOpacity
+            style={[
+              styles.extraSelectionItem,
+              {
+                borderColor: !extraForm.productId ? theme.primary : theme.border,
+                backgroundColor: !extraForm.productId ? theme.surfaceAlt : theme.surface,
+              },
+            ]}
+            onPress={() =>
+              setExtraForm(current => ({
+                ...current,
+                productId: null,
+              }))
+            }
+          >
+            <View style={styles.extraSelectionInfo}>
+              <Text style={[styles.extraSelectionName, { color: theme.text }]}>
+                {!extraForm.productId ? '✓ ' : ''}Extra manual
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {catalogProducts.map(product => {
+            const selected = extraForm.productId === product.id;
+            return (
+              <TouchableOpacity
+                key={product.id}
+                style={[
+                  styles.extraSelectionItem,
+                  {
+                    borderColor: selected ? theme.primary : theme.border,
+                    backgroundColor: selected ? theme.surfaceAlt : theme.surface,
+                  },
+                ]}
+                onPress={() =>
+                  setExtraForm(current => ({
+                    ...current,
+                    productId: product.id,
+                    name: product.name,
+                    description: product.description,
+                    price: String(product.price),
+                    pricingType: 'per_unit',
+                  }))
+                }
+              >
+                <View style={styles.extraSelectionInfo}>
+                  <Text style={[styles.extraSelectionName, { color: theme.text }]}>
+                    {selected ? '✓ ' : ''}{product.name}
+                  </Text>
+                  <Text style={[styles.extraSelectionMeta, { color: theme.textMuted }]}>
+                    ${product.price.toFixed(2)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <Field
           label="Nombre"
           value={extraForm.name}
