@@ -33,6 +33,7 @@ import {
 } from '../../services/attendanceService';
 
 import { useBusiness } from '../../context/BusinessContext';
+import { TimeSelect } from '../common/time-select/TimeSelect';
 
 const DAY_NAMES = [
   'Domingo',
@@ -315,51 +316,37 @@ export function AttendanceShiftChanges() {
                 )
               }
             />
-            <TextInput
-              editable={day.isAvailable}
-              value={day.startTime}
-              onChangeText={value =>
-                setAvailability(current =>
-                  current.map(item =>
-                    item.dayOfWeek === day.dayOfWeek
-                      ? { ...item, startTime: value }
-                      : item,
-                  ),
-                )
-              }
-              style={[
-                styles.timeInput,
-                {
-                  color: theme.text,
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  opacity: day.isAvailable ? 1 : 0.45,
-                },
-              ]}
-            />
+            <View style={styles.timeSelector}>
+              <TimeSelect
+                disabled={!day.isAvailable}
+                value={day.startTime}
+                onChange={value =>
+                  setAvailability(current =>
+                    current.map(item =>
+                      item.dayOfWeek === day.dayOfWeek
+                        ? { ...item, startTime: value }
+                        : item,
+                    ),
+                  )
+                }
+              />
+            </View>
             <Text style={{ color: theme.textMuted }}>a</Text>
-            <TextInput
-              editable={day.isAvailable}
-              value={day.endTime}
-              onChangeText={value =>
-                setAvailability(current =>
-                  current.map(item =>
-                    item.dayOfWeek === day.dayOfWeek
-                      ? { ...item, endTime: value }
-                      : item,
-                  ),
-                )
-              }
-              style={[
-                styles.timeInput,
-                {
-                  color: theme.text,
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  opacity: day.isAvailable ? 1 : 0.45,
-                },
-              ]}
-            />
+            <View style={styles.timeSelector}>
+              <TimeSelect
+                disabled={!day.isAvailable}
+                value={day.endTime}
+                onChange={value =>
+                  setAvailability(current =>
+                    current.map(item =>
+                      item.dayOfWeek === day.dayOfWeek
+                        ? { ...item, endTime: value }
+                        : item,
+                    ),
+                  )
+                }
+              />
+            </View>
           </View>
         ))}
 
@@ -465,34 +452,20 @@ export function AttendanceShiftChanges() {
 
         {requestType === 'change' ? (
           <View style={styles.timeRow}>
-            <TextInput
-              value={desiredStart}
-              onChangeText={setDesiredStart}
-              placeholder="Entrada HH:mm"
-              placeholderTextColor={theme.textMuted}
-              style={[
-                styles.input,
-                {
-                  color: theme.text,
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                },
-              ]}
-            />
-            <TextInput
-              value={desiredEnd}
-              onChangeText={setDesiredEnd}
-              placeholder="Salida HH:mm"
-              placeholderTextColor={theme.textMuted}
-              style={[
-                styles.input,
-                {
-                  color: theme.text,
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                },
-              ]}
-            />
+            <View style={styles.changeTimeField}>
+              <TimeSelect
+                value={desiredStart || selectedShift?.startTime || '08:00'}
+                onChange={setDesiredStart}
+                label="Entrada"
+              />
+            </View>
+            <View style={styles.changeTimeField}>
+              <TimeSelect
+                value={desiredEnd || selectedShift?.endTime || '17:00'}
+                onChange={setDesiredEnd}
+                label="Salida"
+              />
+            </View>
           </View>
         ) : null}
 
@@ -799,4 +772,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   swapPicker: { gap: 6 },
+  timeSelector: {
+    width: 150,
+    minWidth: 125,
+  },
+  changeTimeField: {
+    flex: 1,
+    minWidth: 150,
+  },
 });

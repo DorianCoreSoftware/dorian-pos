@@ -6,6 +6,21 @@ export const styles =
   StyleSheet.create({
     container: {
       flex: 1,
+      minHeight: 0,
+    },
+
+    mainScroll: {
+      flex: 1,
+      minHeight: 0,
+    },
+
+    mainContent: {
+      flexGrow: 1,
+      paddingBottom: 20,
+    },
+
+    mainContentPhone: {
+      paddingBottom: 36,
     },
     header: {
       flexDirection: 'row',
@@ -14,6 +29,11 @@ export const styles =
       justifyContent: 'space-between',
       gap: 12,
       marginBottom: 18,
+    },
+
+    headerPhone: {
+      gap: 9,
+      marginBottom: 10,
     },
     title: {
       fontSize: 22,
@@ -31,12 +51,29 @@ export const styles =
       gap: 11,
       marginBottom: 18,
     },
+
+    toolbarPhone: {
+      flexWrap: 'nowrap',
+      gap: 7,
+      paddingRight: 10,
+      marginBottom: 10,
+    },
+
+    toolbarScrollPhone: {
+      flexGrow: 0,
+      flexShrink: 0,
+    },
     button: {
       minHeight: 40,
       paddingHorizontal: 13,
       borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+
+    buttonPhone: {
+      minHeight: 36,
+      paddingHorizontal: 12,
     },
     buttonText: {
       fontSize: 9,
@@ -98,10 +135,22 @@ export const styles =
       gap: 8,
       marginTop: 15,
     },
+
+    topMetrics: {
+      marginTop: 0,
+      marginBottom: 18,
+    },
+
+    topMetricsPhone: {
+      flexWrap: 'nowrap',
+      gap: 6,
+      marginBottom: 10,
+    },
     metric: {
-      minWidth: 120,
+      minWidth: 96,
       flexBasis: 120,
       flexGrow: 1,
+      flexShrink: 1,
       borderWidth: 1,
       borderRadius: 9,
       padding: 11,

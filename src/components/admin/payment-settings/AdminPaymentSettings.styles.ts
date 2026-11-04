@@ -1,7 +1,19 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 16, padding: 18, gap: 14 },
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+
+  card: {
+    flexGrow: 1,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 18,
+    paddingBottom: 32,
+    gap: 14,
+  },
   loading: { minHeight: 180, alignItems: 'center', justifyContent: 'center' },
   eyebrow: { fontSize: 11, fontWeight: '900', letterSpacing: 1 },
   title: { fontSize: 26, fontWeight: '900' },

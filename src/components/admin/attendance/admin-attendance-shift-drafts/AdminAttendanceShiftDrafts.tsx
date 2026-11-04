@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useBusiness } from '../../../../context/BusinessContext';
+import { TimeSelect } from '../../../common/time-select/TimeSelect';
 import { AttendanceEmployee, EmployeeScheduleDay, AttendanceShiftDraftSettings, AttendanceSalesHourlyProfile, AttendanceSalesPlanningSettings, AttendanceShiftDraft, AttendanceShiftDraftItem, AttendanceShiftPublicationStatus, getAttendanceShiftDraftSettings, getAttendanceSalesPlanningSettings, getAttendanceEmployees, getAttendanceShiftDrafts, getEmployeeSchedule, getAttendanceSalesHourlyProfile, createAttendanceShiftDraft, getAttendanceShiftDraftItems, getAttendanceShiftPublicationStatus, updateApprovedAttendanceShiftItem, updateAttendanceShiftDraftItem, approveAttendanceShiftDraft, publishAttendanceShiftPlan, discardAttendanceShiftDraft, saveAttendanceShiftDraftSettings } from '../../../../services/attendanceService';
 
 import { styles } from './AdminAttendanceShiftDrafts.styles';
@@ -715,10 +716,10 @@ export function AdminAttendanceShiftDrafts() {
           <View style={[styles.editCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Editar turno</Text>
             <Text style={[styles.subtitle, { color: theme.textMuted }]}>{editingItem?.employeeName} · {editingItem?.workDate}</Text>
-            <Text style={[styles.label, { color: theme.textMuted }]}>ENTRADA · HH:mm</Text>
-            <TextInput value={editStart} onChangeText={setEditStart} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
-            <Text style={[styles.label, { color: theme.textMuted }]}>SALIDA · HH:mm</Text>
-            <TextInput value={editEnd} onChangeText={setEditEnd} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]} />
+            <Text style={[styles.label, { color: theme.textMuted }]}>ENTRADA</Text>
+            <TimeSelect value={editStart || '08:00'} onChange={setEditStart} />
+            <Text style={[styles.label, { color: theme.textMuted }]}>SALIDA</Text>
+            <TimeSelect value={editEnd || '17:00'} onChange={setEditEnd} />
             <View style={styles.modalActions}>
               <TouchableOpacity onPress={() => setEditingItem(null)} style={[styles.secondaryButton, { borderColor: theme.border }]}>
                 <Text style={{ color: theme.text, fontWeight: '800' }}>CANCELAR</Text>

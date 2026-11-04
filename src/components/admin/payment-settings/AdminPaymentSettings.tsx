@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   Switch,
   Text,
   TextInput,
@@ -75,7 +76,23 @@ export function AdminPaymentSettings() {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <ScrollView
+      style={
+        styles.scroll
+      }
+      contentContainerStyle={[
+        styles.card,
+        {
+          backgroundColor:
+            theme.surface,
+
+          borderColor:
+            theme.border,
+        },
+      ]}
+      showsVerticalScrollIndicator
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={[styles.eyebrow, { color: theme.primary }]}>MÉTODOS DE PAGO</Text>
       <Text style={[styles.title, { color: theme.text }]}>Transferencias</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>
@@ -120,7 +137,7 @@ export function AdminPaymentSettings() {
       <TouchableOpacity disabled={saving} onPress={() => void save()} style={[styles.saveButton, { backgroundColor: theme.primary, opacity: saving ? 0.55 : 1 }]}>
         <Text style={{ color: theme.onPrimary, fontWeight: '900' }}>{saving ? 'GUARDANDO...' : 'GUARDAR MÉTODO DE TRANSFERENCIA'}</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 

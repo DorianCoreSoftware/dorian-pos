@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -190,6 +191,16 @@ export function AdminMarketing() {
     theme,
   } =
     useBusiness();
+
+  const {
+    width:
+      windowWidth,
+  } =
+    useWindowDimensions();
+
+  const isPhone =
+    windowWidth <
+    700;
 
   const [
     campaigns,
@@ -1058,10 +1069,28 @@ export function AdminMarketing() {
         styles.container
       }
     >
-      <View
+      <ScrollView
         style={
-          styles.header
+          styles.mainScroll
         }
+        contentContainerStyle={[
+          styles.mainContent,
+          isPhone
+            ? styles.mainContentPhone
+            : null,
+        ]}
+        showsVerticalScrollIndicator={
+          false
+        }
+        keyboardShouldPersistTaps="handled"
+      >
+      <View
+        style={[
+          styles.header,
+          isPhone
+            ? styles.headerPhone
+            : null,
+        ]}
       >
         <View>
           <Text
@@ -1095,6 +1124,9 @@ export function AdminMarketing() {
           }
           style={[
             styles.button,
+            isPhone
+              ? styles.buttonPhone
+              : null,
             {
               backgroundColor:
                 theme.primary,
@@ -1116,9 +1148,13 @@ export function AdminMarketing() {
       </View>
 
       <View
-        style={
-          styles.metrics
-        }
+        style={[
+          styles.metrics,
+          styles.topMetrics,
+          isPhone
+            ? styles.topMetricsPhone
+            : null,
+        ]}
       >
         <Metric
           label="Campañas"
@@ -1155,9 +1191,23 @@ export function AdminMarketing() {
         />
       </View>
 
-      <View
+      <ScrollView
+        horizontal={
+          isPhone
+        }
+        showsHorizontalScrollIndicator={
+          false
+        }
+        contentContainerStyle={[
+          styles.toolbar,
+          isPhone
+            ? styles.toolbarPhone
+            : null,
+        ]}
         style={
-          styles.toolbar
+          isPhone
+            ? styles.toolbarScrollPhone
+            : undefined
         }
       >
         {[
@@ -1225,7 +1275,7 @@ export function AdminMarketing() {
             );
           },
         )}
-      </View>
+      </ScrollView>
 
       {loading ? (
         <ActivityIndicator
@@ -1234,8 +1284,8 @@ export function AdminMarketing() {
           }
         />
       ) : (
-        <ScrollView
-          contentContainerStyle={
+        <View
+          style={
             styles.list
           }
         >
@@ -1683,8 +1733,9 @@ export function AdminMarketing() {
               </Text>
             </View>
           ) : null}
-        </ScrollView>
+        </View>
       )}
+      </ScrollView>
 
       <Modal
         visible={

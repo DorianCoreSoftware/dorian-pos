@@ -12,6 +12,16 @@ import {
   ModifierPromotion,
 } from '../../services/modifierPromotionService';
 
+import {
+  calculateQuantityPromotionDiscount,
+  QuantityPromotion,
+} from '../../services/quantityPromotionService';
+
+import {
+  calculatePricingPromotionDiscount,
+  PricingPromotion,
+} from '../../services/pricingPromotionService';
+
 export function addConfiguredProductToCart(
   cart: Cart,
   product: CartItem['product'],
@@ -195,6 +205,10 @@ export function getCartSummary(
   cart: Cart,
   modifierPromotion:
     ModifierPromotion | null,
+  quantityPromotions:
+    QuantityPromotion[] = [],
+  pricingPromotions:
+    PricingPromotion[] = [],
 ) {
   const totalItems =
     cart.reduce(
@@ -237,17 +251,52 @@ export function getCartSummary(
         )
       : 0;
 
+  const quantityPromotionSummary =
+    calculateQuantityPromotionDiscount(
+      cart,
+      quantityPromotions,
+    );
+
+  const quantityPromotionDiscount =
+    quantityPromotionSummary.totalDiscount;
+
+  const pricingPromotionSummary =
+    calculatePricingPromotionDiscount(
+      cart,
+      pricingPromotions,
+      Math.max(
+        0,
+        subtotal -
+        quantityPromotionDiscount,
+      ),
+      quantityPromotions.map(
+        promotion =>
+          promotion.targetProductId,
+      ),
+    );
+
+  const pricingPromotionDiscount =
+    pricingPromotionSummary.totalDiscount;
+
   const total =
     Math.max(
       0,
       subtotal -
-      modifierPromotionDiscount,
+      modifierPromotionDiscount -
+      quantityPromotionDiscount -
+      pricingPromotionDiscount,
     );
 
   return {
     totalItems,
     subtotal,
     modifierPromotionDiscount,
+    quantityPromotionDiscount,
+    quantityPromotionLines:
+      quantityPromotionSummary.lines,
+    pricingPromotionDiscount,
+    pricingPromotionLines:
+      pricingPromotionSummary.lines,
     total,
   };
 }

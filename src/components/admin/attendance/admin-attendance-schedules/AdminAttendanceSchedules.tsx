@@ -7,9 +7,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useBusiness } from '../../../../context/BusinessContext';
+import { TimeSelect } from '../../../common/time-select/TimeSelect';
 import { AttendanceDailySummaryItem, AttendanceEmployee, EmployeeScheduleDay, getAttendanceEmployees, getEmployeeSchedule, getAttendanceDailySummary, saveEmployeeSchedule } from '../../../../services/attendanceService';
 
 
@@ -58,6 +60,13 @@ function incidentLabel(item: AttendanceDailySummaryItem): string {
 
 export function AdminAttendanceSchedules() {
   const { theme } = useBusiness();
+
+  const {
+    width: windowWidth,
+  } = useWindowDimensions();
+
+  const isPhone =
+    windowWidth < 700;
   const [employees, setEmployees] = useState<AttendanceEmployee[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<EmployeeScheduleDay[]>([]);
@@ -212,34 +221,302 @@ export function AdminAttendanceSchedules() {
 
             <View style={{ gap: 8 }}>
               {schedule.map(day => (
-                <View key={day.dayOfWeek} style={[styles.dayRow, { borderColor: theme.border }]}> 
-                  <View style={styles.dayNameWrap}>
-                    <Text style={{ color: theme.text, fontWeight: '800' }}>{DAY_NAMES[day.dayOfWeek]}</Text>
-                    <Text style={{ color: theme.textMuted, fontSize: 11 }}>{day.isWorking ? 'Trabaja' : 'Descanso'}</Text>
-                  </View>
-                  <Switch
-                    disabled={useBusinessSchedule}
-                    value={day.isWorking}
-                    onValueChange={value => updateDay(day.dayOfWeek, { isWorking: value })}
-                    trackColor={{ true: theme.primary }}
-                  />
-                  <TextInput
-                    editable={!useBusinessSchedule && day.isWorking}
-                    value={day.startTime}
-                    onChangeText={value => updateDay(day.dayOfWeek, { startTime: value })}
-                    placeholder="17:00"
-                    placeholderTextColor={theme.textMuted}
-                    style={[styles.timeInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, opacity: !useBusinessSchedule && day.isWorking ? 1 : 0.5 }]}
-                  />
-                  <Text style={{ color: theme.textMuted }}>a</Text>
-                  <TextInput
-                    editable={!useBusinessSchedule && day.isWorking}
-                    value={day.endTime}
-                    onChangeText={value => updateDay(day.dayOfWeek, { endTime: value })}
-                    placeholder="23:00"
-                    placeholderTextColor={theme.textMuted}
-                    style={[styles.timeInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, opacity: !useBusinessSchedule && day.isWorking ? 1 : 0.5 }]}
-                  />
+                <View
+                  key={day.dayOfWeek}
+                  style={[
+                    styles.dayRow,
+                    isPhone
+                      ? styles.dayRowPhone
+                      : null,
+                    {
+                      borderColor:
+                        theme.border,
+                    },
+                  ]}
+                >
+                  {isPhone ? (
+                    <>
+                      <View
+                        style={
+                          styles.dayTopRowPhone
+                        }
+                      >
+                        <View
+                          style={
+                            styles.dayNameWrapPhone
+                          }
+                        >
+                          <Text
+                            style={{
+                              color:
+                                theme.text,
+                              fontWeight:
+                                '800',
+                            }}
+                          >
+                            {DAY_NAMES[day.dayOfWeek]}
+                          </Text>
+
+                          <Text
+                            style={{
+                              color:
+                                theme.textMuted,
+                              fontSize:
+                                11,
+                            }}
+                          >
+                            {day.isWorking
+                              ? 'Trabaja'
+                              : 'Descanso'}
+                          </Text>
+                        </View>
+
+                        <Switch
+                          disabled={
+                            useBusinessSchedule
+                          }
+                          value={
+                            day.isWorking
+                          }
+                          onValueChange={value =>
+                            updateDay(
+                              day.dayOfWeek,
+                              {
+                                isWorking:
+                                  value,
+                              },
+                            )
+                          }
+                          trackColor={{
+                            false:
+                              useBusinessSchedule
+                                ? '#4A4A4A'
+                                : '#5A5A5A',
+
+                            true:
+                              useBusinessSchedule
+                                ? '#4A4A4A'
+                                : theme.primary,
+                          }}
+                        />
+                      </View>
+
+                      <View
+                        style={
+                          styles.timeRowPhone
+                        }
+                      >
+                        <View
+                          style={
+                            styles.timeFieldPhone
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.timeLabel,
+                              {
+                                color:
+                                  theme.textMuted,
+                              },
+                            ]}
+                          >
+                            Entrada
+                          </Text>
+
+                          <TimeSelect
+                            disabled={
+                              useBusinessSchedule ||
+                              !day.isWorking
+                            }
+                            value={
+                              day.startTime
+                            }
+                            onChange={value =>
+                              updateDay(
+                                day.dayOfWeek,
+                                {
+                                  startTime:
+                                    value,
+                                },
+                              )
+                            }
+                          />
+                        </View>
+
+                        <View
+                          style={
+                            styles.timeSeparatorPhone
+                          }
+                        >
+                          <Text
+                            style={{
+                              color:
+                                theme.textMuted,
+                            }}
+                          >
+                            a
+                          </Text>
+                        </View>
+
+                        <View
+                          style={
+                            styles.timeFieldPhone
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.timeLabel,
+                              {
+                                color:
+                                  theme.textMuted,
+                              },
+                            ]}
+                          >
+                            Salida
+                          </Text>
+
+                          <TimeSelect
+                            disabled={
+                              useBusinessSchedule ||
+                              !day.isWorking
+                            }
+                            value={
+                              day.endTime
+                            }
+                            onChange={value =>
+                              updateDay(
+                                day.dayOfWeek,
+                                {
+                                  endTime:
+                                    value,
+                                },
+                              )
+                            }
+                          />
+                        </View>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View
+                        style={
+                          styles.dayNameWrap
+                        }
+                      >
+                        <Text
+                          style={{
+                            color:
+                              theme.text,
+                            fontWeight:
+                              '800',
+                          }}
+                        >
+                          {DAY_NAMES[day.dayOfWeek]}
+                        </Text>
+
+                        <Text
+                          style={{
+                            color:
+                              theme.textMuted,
+                            fontSize:
+                              11,
+                          }}
+                        >
+                          {day.isWorking
+                            ? 'Trabaja'
+                            : 'Descanso'}
+                        </Text>
+                      </View>
+
+                      <Switch
+                        disabled={
+                          useBusinessSchedule
+                        }
+                        value={
+                          day.isWorking
+                        }
+                        onValueChange={value =>
+                          updateDay(
+                            day.dayOfWeek,
+                            {
+                              isWorking:
+                                value,
+                            },
+                          )
+                        }
+                        trackColor={{
+                          false:
+                            useBusinessSchedule
+                              ? '#4A4A4A'
+                              : '#5A5A5A',
+
+                          true:
+                            useBusinessSchedule
+                              ? '#4A4A4A'
+                              : theme.primary,
+                        }}
+                      />
+
+                      <View
+                        style={
+                          styles.timeSelector
+                        }
+                      >
+                        <TimeSelect
+                          disabled={
+                            useBusinessSchedule ||
+                            !day.isWorking
+                          }
+                          value={
+                            day.startTime
+                          }
+                          onChange={value =>
+                            updateDay(
+                              day.dayOfWeek,
+                              {
+                                startTime:
+                                  value,
+                              },
+                            )
+                          }
+                        />
+                      </View>
+
+                      <Text
+                        style={{
+                          color:
+                            theme.textMuted,
+                        }}
+                      >
+                        a
+                      </Text>
+
+                      <View
+                        style={
+                          styles.timeSelector
+                        }
+                      >
+                        <TimeSelect
+                          disabled={
+                            useBusinessSchedule ||
+                            !day.isWorking
+                          }
+                          value={
+                            day.endTime
+                          }
+                          onChange={value =>
+                            updateDay(
+                              day.dayOfWeek,
+                              {
+                                endTime:
+                                  value,
+                              },
+                            )
+                          }
+                        />
+                      </View>
+                    </>
+                  )}
                 </View>
               ))}
             </View>

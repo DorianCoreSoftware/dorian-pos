@@ -12,6 +12,13 @@ import {
   Cart,
 } from '../../../../types';
 
+import {
+  QuantityPromotionDiscountLine,
+} from '../../../../services/quantityPromotionService';
+import {
+  PricingPromotionDiscountLine,
+} from '../../../../services/pricingPromotionService';
+
 import styles, {
   setBrandPrimaryColor,
 } from './WebCartModal.styles';
@@ -30,6 +37,8 @@ interface WebCartModalProps {
   subtotal: number;
   modifierPromotionDiscount: number;
   modifierPromotionName: string | null;
+  quantityPromotionLines: QuantityPromotionDiscountLine[];
+  pricingPromotionLines: PricingPromotionDiscountLine[];
   total: number;
 
   canCheckout: boolean;
@@ -60,6 +69,8 @@ export default function WebCartModal({
   subtotal,
   modifierPromotionDiscount,
   modifierPromotionName,
+  quantityPromotionLines,
+  pricingPromotionLines,
   total,
   canCheckout,
   checkoutDisabledMessage,
@@ -436,6 +447,71 @@ export default function WebCartModal({
                 </Text>
               </View>
             )}
+
+            {quantityPromotionLines.map(
+              line => (
+                <View
+                  key={
+                    line.promotionId
+                  }
+                  style={
+                    styles.summaryRow
+                  }
+                >
+                  <Text
+                    style={
+                      styles.discountLabel
+                    }
+                  >
+                    {line.label}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.discountValue
+                    }
+                  >
+                    -
+                    {formatCurrency(
+                      line.discountAmount,
+                    )}
+                  </Text>
+                </View>
+              ),
+            )}
+
+            {pricingPromotionLines.map(
+              line => (
+                <View
+                  key={
+                    line.promotionId
+                  }
+                  style={
+                    styles.summaryRow
+                  }
+                >
+                  <Text
+                    style={
+                      styles.discountLabel
+                    }
+                  >
+                    {line.label}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.discountValue
+                    }
+                  >
+                    -
+                    {formatCurrency(
+                      line.discountAmount,
+                    )}
+                  </Text>
+                </View>
+              ),
+            )}
+
 
             <View
               style={[

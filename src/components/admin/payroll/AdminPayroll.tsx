@@ -1,6 +1,7 @@
 import React from 'react';
 
 import {
+  ScrollView,
   Text,
   View,
 } from 'react-native';
@@ -23,7 +24,16 @@ export function AdminPayroll() {
   } = useBusiness();
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={
+        styles.scroll
+      }
+      contentContainerStyle={
+        styles.container
+      }
+      showsVerticalScrollIndicator
+      keyboardShouldPersistTaps="handled"
+    >
       <View
         style={[
           styles.headerCard,
@@ -68,6 +78,6 @@ export function AdminPayroll() {
       </View>
 
       <AdminAttendancePayroll />
-    </View>
+    </ScrollView>
   );
 }

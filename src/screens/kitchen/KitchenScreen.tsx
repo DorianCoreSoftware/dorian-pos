@@ -1808,9 +1808,56 @@ Cambio: ${formatCurrency(
           </Text>
         ) : null}
 
+        <TouchableOpacity
+          style={[
+            styles.deliverButton,
+            styles.primaryStatusButton,
+            item.status !== 'pending' &&
+            !isOrderFullyPrepared(
+              item,
+            )
+              ? { opacity: 0.4 }
+              : null,
+          ]}
+          disabled={
+            item.status !== 'pending' &&
+            !isOrderFullyPrepared(
+              item,
+            )
+          }
+          onPress={() => {
+            if (
+              item.status ===
+              'ready' ||
+              item.status ===
+              'on_the_way'
+            ) {
+              void handleOpenPayment(
+                item,
+              );
+
+              return;
+            }
+
+            void handleAdvanceOrderStatus(
+              item,
+            );
+          }}
+        >
+          <Text
+            style={
+              styles.deliverButtonText
+            }
+          >
+            {getPrimaryActionLabel(
+              item,
+            )}
+          </Text>
+        </TouchableOpacity>
+
         <View
           style={
-            styles.actionButtonsRow
+            styles.secondaryActionsRow
           }
         >
           <TouchableOpacity
@@ -1833,70 +1880,24 @@ Cambio: ${formatCurrency(
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.deliverButton,
-              item.status !== 'pending' &&
-              !isOrderFullyPrepared(
-                item,
-              )
-                ? { opacity: 0.4 }
-                : null,
-            ]}
-            disabled={
-              item.status !== 'pending' &&
-              !isOrderFullyPrepared(
-                item,
+            style={
+              styles.cancelOrderButton
+            }
+            onPress={() =>
+              handleCancelOrderPrompt(
+                item.id,
               )
             }
-            onPress={() => {
-              if (
-                item.status ===
-                'ready' ||
-                item.status ===
-                'on_the_way'
-              ) {
-                void handleOpenPayment(
-                  item,
-                );
-
-                return;
-              }
-
-              void handleAdvanceOrderStatus(
-                item,
-              );
-            }}
           >
             <Text
               style={
-                styles.deliverButtonText
+                styles.cancelOrderButtonText
               }
             >
-              {getPrimaryActionLabel(
-                item,
-              )}
+              Cancelar pedido
             </Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={
-            styles.cancelOrderButton
-          }
-          onPress={() =>
-            handleCancelOrderPrompt(
-              item.id,
-            )
-          }
-        >
-          <Text
-            style={
-              styles.cancelOrderButtonText
-            }
-          >
-            ❌ Cancelar pedido
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );

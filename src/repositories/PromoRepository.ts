@@ -2,7 +2,11 @@ import { supabase } from '../services/supabase';
 
 export type PromotionProgramType =
   | 'collect_reward'
-  | 'order_refund';
+  | 'order_refund'
+  | 'quantity_deal'
+  | 'modifier_discount'
+  | 'special_price'
+  | 'minimum_spend_discount';
 
 export interface PromotionRewardRecord {
   id: string;
@@ -22,6 +26,18 @@ export interface PromotionProgramRecord {
   is_enabled: boolean;
   issue_chance_denominator: number;
   required_coupons: number | null;
+  target_product_id: string | null;
+  target_modifier_id: string | null;
+  buy_quantity: number | null;
+  pay_quantity: number | null;
+  discount_amount: number | null;
+  fixed_price: number | null;
+  minimum_order_amount: number | null;
+  order_discount_kind: 'percent' | 'fixed' | null;
+  order_discount_value: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  active_weekdays: number[];
   priority: number;
   rewards?: PromotionRewardRecord[] | null;
 }
@@ -63,6 +79,18 @@ export async function fetchPromotionPrograms(): Promise<PromotionProgramRecord[]
       is_enabled,
       issue_chance_denominator,
       required_coupons,
+      target_product_id,
+      target_modifier_id,
+      buy_quantity,
+      pay_quantity,
+      discount_amount,
+      fixed_price,
+      minimum_order_amount,
+      order_discount_kind,
+      order_discount_value,
+      starts_at,
+      ends_at,
+      active_weekdays,
       priority,
       rewards:promotion_rewards(
         id,

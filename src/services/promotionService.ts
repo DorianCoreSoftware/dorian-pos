@@ -10,13 +10,25 @@ import {
 
 export interface PromotionProgramInput {
   id?: string;
-  code: string;
+  code?: string;
   displayName: string;
-  programType: 'collect_reward' | 'order_refund';
-  codePrefix: string;
+  programType: import('../repositories/PromoRepository').PromotionProgramType;
+  codePrefix?: string;
   isEnabled: boolean;
   issueChanceDenominator: number;
   requiredCoupons: number | null;
+  targetProductId?: string | null;
+  targetModifierId?: string | null;
+  buyQuantity?: number | null;
+  payQuantity?: number | null;
+  discountAmount?: number | null;
+  fixedPrice?: number | null;
+  minimumOrderAmount?: number | null;
+  orderDiscountKind?: 'percent' | 'fixed' | null;
+  orderDiscountValue?: number | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  activeWeekdays?: number[];
   priority: number;
 }
 
@@ -34,16 +46,97 @@ export async function getPromotionPrograms(): Promise<PromotionProgram[]> {
   return records.map(mapPromotionProgram);
 }
 
+function normalizePromotionCode(
+  value: string,
+): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      '_',
+    )
+    .replace(
+      /^_+|_+$/g,
+      '',
+    )
+    .slice(
+      0,
+      48,
+    );
+}
+
+function buildPromotionPrefix(
+  displayName: string,
+): string {
+  const words =
+    displayName
+      .trim()
+      .normalize('NFD')
+      .replace(
+        /[\u0300-\u036f]/g,
+        '',
+      )
+      .toUpperCase()
+      .split(
+        /[^A-Z0-9]+/,
+      )
+      .filter(
+        Boolean,
+      );
+
+  const base =
+    words
+      .slice(
+        0,
+        3,
+      )
+      .map(
+        word =>
+          word.slice(
+            0,
+            3,
+          ),
+      )
+      .join(
+        '',
+      )
+      .slice(
+        0,
+        8,
+      ) ||
+    'PROMO';
+
+  return `${base}-`;
+}
+
 export async function savePromotionProgram(
   input: PromotionProgramInput,
 ): Promise<string> {
-  const code = input.code.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
-  const displayName = input.displayName.trim();
-  const codePrefix = input.codePrefix.trim().toUpperCase().replace(/\s+/g, '');
+  const displayName =
+    input.displayName.trim();
 
-  if (!code || !displayName || !codePrefix) {
-    throw new Error('Código, nombre y prefijo son obligatorios.');
+  if (!displayName) {
+    throw new Error(
+      'El nombre de la promoción es obligatorio.',
+    );
   }
+
+  const code =
+    normalizePromotionCode(
+      input.code?.trim() ||
+      displayName,
+    );
+
+  const codePrefix =
+    buildPromotionPrefix(
+      displayName,
+    );
 
   if (!Number.isInteger(input.issueChanceDenominator) || input.issueChanceDenominator < 1) {
     throw new Error('La probabilidad debe ser un entero mayor a 0.');
@@ -54,6 +147,79 @@ export async function savePromotionProgram(
     (!Number.isInteger(input.requiredCoupons) || (input.requiredCoupons ?? 0) < 1)
   ) {
     throw new Error('La cantidad de cupones requeridos debe ser mayor a 0.');
+  }
+
+  if (
+    input.programType === 'quantity_deal'
+  ) {
+    if (
+      !input.targetProductId?.trim()
+    ) {
+      throw new Error(
+        'Selecciona el producto al que se aplicará la promoción.',
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        input.buyQuantity,
+      ) ||
+      !Number.isInteger(
+        input.payQuantity,
+      ) ||
+      (input.buyQuantity ?? 0) < 2 ||
+      (input.payQuantity ?? 0) < 1 ||
+      (input.payQuantity ?? 0) >=
+        (input.buyQuantity ?? 0)
+    ) {
+      throw new Error(
+        'Configura una promoción válida. Ejemplo: compra 2 y paga 1.',
+      );
+    }
+  }
+
+  if (input.programType === 'modifier_discount') {
+    if (!input.targetModifierId?.trim()) {
+      throw new Error('Selecciona el modificador de la promoción.');
+    }
+    if (!Number.isFinite(Number(input.discountAmount)) || (input.discountAmount ?? 0) <= 0) {
+      throw new Error('El descuento debe ser mayor a 0.');
+    }
+  }
+
+  if (input.programType === 'special_price') {
+    if (!input.targetProductId?.trim()) {
+      throw new Error('Selecciona el producto de la promoción.');
+    }
+    if (!Number.isFinite(Number(input.fixedPrice)) || (input.fixedPrice ?? 0) < 0) {
+      throw new Error('El precio especial no es válido.');
+    }
+  }
+
+  if (input.programType === 'minimum_spend_discount') {
+    if (!Number.isFinite(Number(input.minimumOrderAmount)) || (input.minimumOrderAmount ?? 0) <= 0) {
+      throw new Error('El monto mínimo debe ser mayor a 0.');
+    }
+    if (input.orderDiscountKind !== 'percent' && input.orderDiscountKind !== 'fixed') {
+      throw new Error('Selecciona el tipo de descuento.');
+    }
+    if (!Number.isFinite(Number(input.orderDiscountValue)) || (input.orderDiscountValue ?? 0) <= 0) {
+      throw new Error('El valor del descuento debe ser mayor a 0.');
+    }
+    if (input.orderDiscountKind === 'percent' && (input.orderDiscountValue ?? 0) > 100) {
+      throw new Error('El porcentaje no puede ser mayor a 100.');
+    }
+  }
+
+  const activeWeekdays = (input.activeWeekdays ?? [0,1,2,3,4,5,6])
+    .filter(value => Number.isInteger(value) && value >= 0 && value <= 6);
+
+  if (activeWeekdays.length === 0) {
+    throw new Error('Selecciona al menos un día de aplicación.');
+  }
+
+  if (input.startsAt && input.endsAt && input.endsAt < input.startsAt) {
+    throw new Error('La fecha final no puede ser anterior a la inicial.');
   }
 
   const payload = {
@@ -67,6 +233,57 @@ export async function savePromotionProgram(
       input.programType === 'collect_reward'
         ? input.requiredCoupons
         : null,
+
+    target_product_id:
+      input.programType === 'quantity_deal' ||
+      input.programType === 'special_price'
+        ? input.targetProductId
+        : null,
+
+    target_modifier_id:
+      input.programType === 'modifier_discount'
+        ? input.targetModifierId
+        : null,
+
+    buy_quantity:
+      input.programType === 'quantity_deal'
+        ? input.buyQuantity
+        : null,
+
+    pay_quantity:
+      input.programType === 'quantity_deal'
+        ? input.payQuantity
+        : null,
+
+    discount_amount:
+      input.programType === 'modifier_discount'
+        ? input.discountAmount
+        : null,
+
+    fixed_price:
+      input.programType === 'special_price'
+        ? input.fixedPrice
+        : null,
+
+    minimum_order_amount:
+      input.programType === 'minimum_spend_discount'
+        ? input.minimumOrderAmount
+        : null,
+
+    order_discount_kind:
+      input.programType === 'minimum_spend_discount'
+        ? input.orderDiscountKind
+        : null,
+
+    order_discount_value:
+      input.programType === 'minimum_spend_discount'
+        ? input.orderDiscountValue
+        : null,
+
+    starts_at: input.startsAt || null,
+    ends_at: input.endsAt || null,
+    active_weekdays: activeWeekdays,
+
     priority: Number.isInteger(input.priority) ? input.priority : 100,
   };
 

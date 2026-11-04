@@ -40,6 +40,8 @@ import {
   GooglePlaceSearch,
 } from '../../common/google-place-search/GooglePlaceSearch';
 
+import { TimeSelect } from '../../common/time-select/TimeSelect';
+
 import {
   styles,
   setBrandPrimaryColor,
@@ -1175,24 +1177,16 @@ export function AdminDeliverySettings() {
           <View style={[styles.coordinatesRow, isPhone && styles.coordinatesRowPhone]}>
             <View style={styles.coordinateField}>
               <Text style={styles.inputLabel}>Desde</Text>
-              <TextInput
+              <TimeSelect
                 value={scheduleStartTime}
-                onChangeText={setScheduleStartTime}
-                placeholder="15:00"
-                placeholderTextColor="#777777"
-                maxLength={5}
-                style={styles.input}
+                onChange={setScheduleStartTime}
               />
             </View>
             <View style={styles.coordinateField}>
               <Text style={styles.inputLabel}>Hasta</Text>
-              <TextInput
+              <TimeSelect
                 value={scheduleEndTime}
-                onChangeText={setScheduleEndTime}
-                placeholder="19:00"
-                placeholderTextColor="#777777"
-                maxLength={5}
-                style={styles.input}
+                onChange={setScheduleEndTime}
               />
             </View>
           </View>

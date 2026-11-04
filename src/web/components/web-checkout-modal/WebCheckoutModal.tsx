@@ -29,6 +29,12 @@ import { DeliveryDetails } from '../../../types';
 import { WebFulfillmentType } from '../../services/web-order/webOrderService';
 import { GooglePlaceSelection } from '../../models/google-place-autocomplete/google-place-selection';
 import { BusinessTransferSettings, getPublicBusinessTransferSettings } from '../../../services/paymentAccountService';
+import {
+  QuantityPromotionDiscountLine,
+} from '../../../services/quantityPromotionService';
+import {
+  PricingPromotionDiscountLine,
+} from '../../../services/pricingPromotionService';
 import GooglePlaceAutocomplete from '../google-place/GooglePlaceAutocomplete';
 
 
@@ -63,6 +69,12 @@ interface WebCheckoutModalProps {
 
   modifierPromotionName:
   string | null;
+
+  quantityPromotionLines:
+  QuantityPromotionDiscountLine[];
+
+  pricingPromotionLines:
+  PricingPromotionDiscountLine[];
 
   pickupTotal:
   number;
@@ -147,6 +159,8 @@ export default function WebCheckoutModal({
   subtotal,
   modifierPromotionDiscount,
   modifierPromotionName,
+  quantityPromotionLines,
+  pricingPromotionLines,
   pickupTotal,
   deliveryFee,
   initialCustomerName = '',
@@ -1411,6 +1425,40 @@ export default function WebCheckoutModal({
                     discount
                   />
                 )}
+
+              {quantityPromotionLines.map(
+                line => (
+                  <SummaryRow
+                    key={
+                      line.promotionId
+                    }
+                    label={
+                      line.label
+                    }
+                    value={formatCurrency(
+                      -line.discountAmount,
+                    )}
+                    discount
+                  />
+                ),
+              )}
+
+              {pricingPromotionLines.map(
+                line => (
+                  <SummaryRow
+                    key={
+                      line.promotionId
+                    }
+                    label={
+                      line.label
+                    }
+                    value={formatCurrency(
+                      -line.discountAmount,
+                    )}
+                    discount
+                  />
+                ),
+              )}
 
               {fulfillmentType ===
                 'delivery' && (

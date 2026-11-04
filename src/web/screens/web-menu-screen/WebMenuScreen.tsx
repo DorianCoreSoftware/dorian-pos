@@ -30,6 +30,15 @@ import {
   getActiveModifierPromotion,
   ModifierPromotion,
 } from '../../../services/modifierPromotionService';
+
+import {
+  getActiveQuantityPromotions,
+  QuantityPromotion,
+} from '../../../services/quantityPromotionService';
+import {
+  getActivePricingPromotions,
+  PricingPromotion,
+} from '../../../services/pricingPromotionService';
 import {
   isDeliveryProduct,
 } from '../../../Utils/delivery';
@@ -522,6 +531,19 @@ export default function WebMenuScreen({
     ModifierPromotion | null
   >(null);
   const [
+    quantityPromotions,
+    setQuantityPromotions,
+  ] = useState<
+    QuantityPromotion[]
+  >([]);
+  const [
+    pricingPromotions,
+    setPricingPromotions,
+  ] = useState<
+    PricingPromotion[]
+  >([]);
+
+  const [
     isSubmittingOrder,
     setIsSubmittingOrder,
   ] = useState(false);
@@ -736,6 +758,8 @@ export default function WebMenuScreen({
         loadedCategories,
         loadedProducts,
         loadedModifierPromotion,
+        loadedQuantityPromotions,
+        loadedPricingPromotions,
         loadedBusinessStatus,
         loadedWebBanners,
       ] =
@@ -745,6 +769,14 @@ export default function WebMenuScreen({
           getActiveModifierPromotion()
             .catch(
               () => null,
+            ),
+          getActiveQuantityPromotions()
+            .catch(
+              () => [],
+            ),
+          getActivePricingPromotions()
+            .catch(
+              () => [],
             ),
           getPublicBusinessStatus()
             .catch(
@@ -763,6 +795,12 @@ export default function WebMenuScreen({
       );
       setModifierPromotion(
         loadedModifierPromotion,
+      );
+      setQuantityPromotions(
+        loadedQuantityPromotions,
+      );
+      setPricingPromotions(
+        loadedPricingPromotions,
       );
       setBusinessStatus(
         loadedBusinessStatus,
@@ -960,10 +998,14 @@ export default function WebMenuScreen({
         getCartSummary(
           cart,
           modifierPromotion,
+          quantityPromotions,
+          pricingPromotions,
         ),
       [
         cart,
         modifierPromotion,
+        quantityPromotions,
+        pricingPromotions,
       ],
     );
   const columns =
@@ -1840,6 +1882,14 @@ export default function WebMenuScreen({
           modifierPromotion
             ?.display_name ?? null
         }
+        quantityPromotionLines={
+          cartSummary
+            .quantityPromotionLines
+        }
+        pricingPromotionLines={
+          cartSummary
+            .pricingPromotionLines
+        }
         total={
           cartSummary.total
         }
@@ -1902,6 +1952,14 @@ export default function WebMenuScreen({
         modifierPromotionName={
           modifierPromotion
             ?.display_name ?? null
+        }
+        quantityPromotionLines={
+          cartSummary
+            .quantityPromotionLines
+        }
+        pricingPromotionLines={
+          cartSummary
+            .pricingPromotionLines
         }
         pickupTotal={
           cartSummary.total

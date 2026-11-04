@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -61,6 +62,16 @@ export function AdminCrm() {
     formatCurrency,
   } =
     useCurrency();
+
+  const {
+    width:
+      windowWidth,
+  } =
+    useWindowDimensions();
+
+  const isPhone =
+    windowWidth <
+    700;
 
   const [
     customers,
@@ -1068,10 +1079,28 @@ export function AdminCrm() {
         styles.container
       }
     >
-      <View
+      <ScrollView
         style={
-          styles.header
+          styles.mainScroll
         }
+        contentContainerStyle={[
+          styles.mainContent,
+          isPhone
+            ? styles.mainContentPhone
+            : null,
+        ]}
+        showsVerticalScrollIndicator={
+          false
+        }
+        keyboardShouldPersistTaps="handled"
+      >
+      <View
+        style={[
+          styles.header,
+          isPhone
+            ? styles.headerPhone
+            : null,
+        ]}
       >
         <View
           style={
@@ -1105,9 +1134,12 @@ export function AdminCrm() {
       </View>
 
       <View
-        style={
-          styles.metrics
-        }
+        style={[
+          styles.metrics,
+          isPhone
+            ? styles.metricsPhone
+            : null,
+        ]}
       >
         <Metric
           label="Clientes"
@@ -1147,9 +1179,12 @@ export function AdminCrm() {
       </View>
 
       <View
-        style={
-          styles.toolbar
-        }
+        style={[
+          styles.toolbar,
+          isPhone
+            ? styles.toolbarPhone
+            : null,
+        ]}
       >
         <TextInput
           value={
@@ -1164,6 +1199,9 @@ export function AdminCrm() {
           }
           style={[
             styles.search,
+            isPhone
+              ? styles.searchPhone
+              : null,
             {
               color:
                 theme.text,
@@ -1178,6 +1216,9 @@ export function AdminCrm() {
         <TouchableOpacity
           style={[
             styles.toggle,
+            isPhone
+              ? styles.toolbarActionPhone
+              : null,
             {
               borderColor:
                 activeOnly
@@ -1222,6 +1263,9 @@ export function AdminCrm() {
           }
           style={[
             styles.toggle,
+            isPhone
+              ? styles.toolbarActionPhone
+              : null,
             {
               borderColor:
                 theme.border,
@@ -1249,6 +1293,9 @@ export function AdminCrm() {
           }
           style={[
             styles.toggle,
+            isPhone
+              ? styles.toolbarActionPhone
+              : null,
             {
               borderColor:
                 theme.border,
@@ -1279,6 +1326,9 @@ export function AdminCrm() {
           }
           style={[
             styles.button,
+            isPhone
+              ? styles.toolbarActionPhone
+              : null,
             {
               backgroundColor:
                 theme.primary,
@@ -1299,9 +1349,23 @@ export function AdminCrm() {
         </TouchableOpacity>
       </View>
 
-      <View
+      <ScrollView
+        horizontal={
+          isPhone
+        }
+        showsHorizontalScrollIndicator={
+          false
+        }
+        contentContainerStyle={[
+          styles.segmentBar,
+          isPhone
+            ? styles.segmentBarPhone
+            : null,
+        ]}
         style={
-          styles.segmentBar
+          isPhone
+            ? styles.segmentScrollPhone
+            : undefined
         }
       >
         {[
@@ -1401,7 +1465,7 @@ export function AdminCrm() {
             );
           },
         )}
-      </View>
+      </ScrollView>
 
       {loading ? (
         <ActivityIndicator
@@ -1410,12 +1474,9 @@ export function AdminCrm() {
           }
         />
       ) : (
-        <ScrollView
-          contentContainerStyle={
+        <View
+          style={
             styles.list
-          }
-          showsVerticalScrollIndicator={
-            false
           }
         >
           {filteredCustomers.map(
@@ -1658,8 +1719,9 @@ export function AdminCrm() {
               </Text>
             </View>
           ) : null}
-        </ScrollView>
+        </View>
       )}
+      </ScrollView>
 
       <Modal
         visible={
