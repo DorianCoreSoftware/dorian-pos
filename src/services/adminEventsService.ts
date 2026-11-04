@@ -28,6 +28,22 @@ export interface EventTypeAdmin {
   isActive: boolean;
 }
 
+export interface EventCatalogProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+}
+
+export interface EventPackageItemAdmin {
+  productId: string;
+  productName: string;
+  productDescription: string;
+  productPrice: number;
+  quantity: number;
+  position: number;
+}
+
 export interface EventPackageAdmin {
   id: string;
   eventTypeId: string | null;
@@ -38,6 +54,8 @@ export interface EventPackageAdmin {
   includedGuests: number;
   extraGuestPrice: number;
   durationMinutes: number;
+  items: EventPackageItemAdmin[];
+  syncCatalogPricing: boolean;
   extraIds: string[];
   position: number;
   isActive: boolean;
@@ -50,6 +68,7 @@ export type EventExtraPricingType =
 
 export interface EventExtraAdmin {
   id: string;
+  productId: string | null;
   name: string;
   description: string;
   pricingType: EventExtraPricingType;
@@ -62,6 +81,7 @@ export interface EventAdminCatalog {
   types: EventTypeAdmin[];
   packages: EventPackageAdmin[];
   extras: EventExtraAdmin[];
+  products: EventCatalogProduct[];
 }
 
 interface EventSettingsRow {
@@ -109,6 +129,20 @@ interface EventPackageRpcRow {
   extra_guest_price?: number;
   durationMinutes?: number;
   duration_minutes?: number;
+  syncCatalogPricing?: boolean;
+  sync_catalog_pricing?: boolean;
+  items?: Array<{
+    productId?: string;
+    product_id?: string;
+    productName?: string;
+    product_name?: string;
+    productDescription?: string | null;
+    product_description?: string | null;
+    productPrice?: number;
+    product_price?: number;
+    quantity?: number;
+    position?: number;
+  }>;
   extraIds?: string[];
   extra_ids?: string[];
   position: number;
@@ -118,6 +152,8 @@ interface EventPackageRpcRow {
 
 interface EventExtraRpcRow {
   id: string;
+  productId?: string | null;
+  product_id?: string | null;
   name: string;
   description?: string | null;
   pricingType?: EventExtraPricingType;
@@ -132,6 +168,12 @@ interface EventCatalogRpcResult {
   types?: EventTypeRpcRow[];
   packages?: EventPackageRpcRow[];
   extras?: EventExtraRpcRow[];
+  products?: Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    price?: number;
+  }>;
 }
 
 export const DEFAULT_EVENT_SETTINGS: EventSettings = {
@@ -249,6 +291,31 @@ function mapEventPackage(
     durationMinutes: Number(
       row.durationMinutes ?? row.duration_minutes ?? 120,
     ),
+    items: (row.items ?? []).map(item => ({
+      productId:
+        item.productId ??
+        item.product_id ??
+        '',
+      productName:
+        item.productName?.trim() ??
+        item.product_name?.trim() ??
+        '',
+      productDescription:
+        item.productDescription?.trim() ??
+        item.product_description?.trim() ??
+        '',
+      productPrice: Number(
+        item.productPrice ??
+        item.product_price ??
+        0,
+      ),
+      quantity: Number(item.quantity ?? 1),
+      position: Number(item.position ?? 0),
+    })),
+    syncCatalogPricing:
+      row.syncCatalogPricing ??
+      row.sync_catalog_pricing ??
+      false,
     extraIds: row.extraIds ?? row.extra_ids ?? [],
     position: row.position,
     isActive: row.isActive ?? row.is_active ?? true,
@@ -260,6 +327,10 @@ function mapEventExtra(
 ): EventExtraAdmin {
   return {
     id: row.id,
+    productId:
+      row.productId ??
+      row.product_id ??
+      null,
     name: row.name,
     description: row.description?.trim() ?? '',
     pricingType:
@@ -491,6 +562,12 @@ export async function getEventAdminCatalog(): Promise<EventAdminCatalog> {
     types: (result.types ?? []).map(mapEventType),
     packages: (result.packages ?? []).map(mapEventPackage),
     extras: (result.extras ?? []).map(mapEventExtra),
+    products: (result.products ?? []).map(product => ({
+      id: product.id,
+      name: product.name,
+      description: product.description?.trim() ?? '',
+      price: Number(product.price ?? 0),
+    })),
   };
 }
 
@@ -585,6 +662,10 @@ export interface SaveEventPackageInput {
   includedGuests: number;
   extraGuestPrice: number;
   durationMinutes: number;
+  items: Array<{
+    productId: string;
+    quantity: number;
+  }>;
   extraIds: string[];
   isActive: boolean;
 }
@@ -632,6 +713,13 @@ export async function saveEventPackage(
       p_duration_minutes: durationMinutes,
       p_is_active: input.isActive,
       p_extra_ids: extraIds,
+      p_items: input.items.map(item => ({
+        productId: item.productId,
+        quantity: positiveInteger(
+          item.quantity,
+          'La cantidad del producto',
+        ),
+      })),
     },
   );
 
@@ -680,6 +768,7 @@ export async function reorderEventPackages(
 
 export interface SaveEventExtraInput {
   id?: string;
+  productId?: string | null;
   name: string;
   description: string;
   pricingType: EventExtraPricingType;
@@ -701,28 +790,17 @@ export async function saveEventExtra(
     'El precio',
   );
 
-  const rpcName = input.id
-    ? 'update_event_extra'
-    : 'create_event_extra';
-
-  const baseParams = {
-    p_name: name,
-    p_description: description,
-    p_pricing_type: input.pricingType,
-    p_price: price,
-    p_is_active: input.isActive,
-  };
-
-  const params = input.id
-    ? {
-        p_extra_id: input.id,
-        ...baseParams,
-      }
-    : baseParams;
-
   const { error } = await supabase.rpc(
-    rpcName,
-    params,
+    'save_event_extra_admin',
+    {
+      p_extra_id: input.id ?? null,
+      p_product_id: input.productId ?? null,
+      p_name: name,
+      p_description: description,
+      p_pricing_type: input.pricingType,
+      p_price: price,
+      p_is_active: input.isActive,
+    },
   );
 
   if (error) {

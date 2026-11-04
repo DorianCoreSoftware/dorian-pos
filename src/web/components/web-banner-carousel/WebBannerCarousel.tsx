@@ -117,15 +117,11 @@ export default function WebBannerCarousel({
       1180,
     ) - 40;
 
- const bannerHeight =
-  Math.min(
-    640,
-    Math.max(
-      190,
-      availableWidth *
-      9 / 16,
-    ),
-  );
+  // Los banners publicitarios se administran en relación 16:7.
+  // Mantener el frame en esa misma relación evita que `cover` recorte
+  // los laterales (especialmente texto/CTAs cerca de los bordes).
+  const bannerHeight =
+    availableWidth * 7 / 16;
 
   const hasOverlayText =
     !!activeBanner.title ||
@@ -254,7 +250,7 @@ export default function WebBannerCarousel({
             style={
               styles.image
             }
-            resizeMode="cover"
+            resizeMode="contain"
           />
 
           {hasOverlayText && (
