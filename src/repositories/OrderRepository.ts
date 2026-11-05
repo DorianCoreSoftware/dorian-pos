@@ -2,6 +2,7 @@ import { supabase } from '../services/supabase';
 import {
   ComboComponentSelection,
   OrderStatus,
+  ProductCookingMethod,
 } from '../types';
 
 export type OrderSource =
@@ -91,6 +92,7 @@ export interface OrderItemRecord {
   is_prepared: boolean;
   prepared_at: string | null;
   prepared_by: string | null;
+  cooking_method?: ProductCookingMethod | null;
 }
 
 export interface OrderItemComponentRecord {
@@ -104,6 +106,7 @@ export interface OrderItemComponentRecord {
   notes: string | null;
   position: number;
   created_at: string;
+  cooking_method?: ProductCookingMethod | null;
 }
 
 /**
@@ -215,6 +218,7 @@ export interface CreateKitchenOrderRpcItem {
   quantity: number;
   price: number;
   notes: string;
+  cookingMethod?: ProductCookingMethod | null;
 
   modifiers: Array<{
     id: string;
@@ -229,6 +233,7 @@ export interface CreateKitchenOrderRpcItem {
     label: string;
     quantity: number;
     notes: string;
+    cookingMethod?: ProductCookingMethod | null;
 
     modifiers: Array<{
       id: string;

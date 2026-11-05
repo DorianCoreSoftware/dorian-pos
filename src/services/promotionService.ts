@@ -30,6 +30,12 @@ export interface PromotionProgramInput {
   endsAt?: string | null;
   activeWeekdays?: number[];
   priority: number;
+
+  ticketShowImage?: boolean;
+  ticketImageUrl?: string | null;
+  ticketImageRasterBase64?: string | null;
+  ticketImageWidth?: number | null;
+  ticketImageHeight?: number | null;
 }
 
 export interface PromotionRewardInput {
@@ -71,9 +77,49 @@ function normalizePromotionCode(
     );
 }
 
-function buildPromotionPrefix(
+function normalizePromotionPrefix(
+  value: string,
+): string {
+  const clean =
+    value
+      .trim()
+      .normalize('NFD')
+      .replace(
+        /[\u0300-\u036f]/g,
+        '',
+      )
+      .toUpperCase()
+      .replace(
+        /[^A-Z0-9]/g,
+        '',
+      )
+      .slice(
+        0,
+        5,
+      );
+
+  return clean
+    ? `${clean}-`
+    : '';
+}
+
+export function buildPromotionPrefixSuggestion(
   displayName: string,
 ): string {
+  const stopWords =
+    new Set([
+      'DE',
+      'DEL',
+      'LA',
+      'LAS',
+      'EL',
+      'LOS',
+      'Y',
+      'EN',
+      'PARA',
+      'POR',
+    ]);
+
   const words =
     displayName
       .trim()
@@ -87,32 +133,36 @@ function buildPromotionPrefix(
         /[^A-Z0-9]+/,
       )
       .filter(
-        Boolean,
+        word =>
+          Boolean(word) &&
+          !stopWords.has(word),
       );
 
-  const base =
+  if (words.length === 0) {
+    return 'PROMO-';
+  }
+
+  if (words.length === 1) {
+    return `${words[0].slice(0, 3)}-`;
+  }
+
+  const initials =
     words
-      .slice(
-        0,
-        3,
-      )
       .map(
         word =>
-          word.slice(
-            0,
-            3,
-          ),
+          word.charAt(0),
       )
-      .join(
-        '',
-      )
+      .join('')
       .slice(
         0,
-        8,
-      ) ||
-    'PROMO';
+        5,
+      );
 
-  return `${base}-`;
+  if (initials.length >= 2) {
+    return `${initials}-`;
+  }
+
+  return `${words[0].slice(0, 3)}-`;
 }
 
 export async function savePromotionProgram(
@@ -133,8 +183,14 @@ export async function savePromotionProgram(
       displayName,
     );
 
+  const requestedPrefix =
+    normalizePromotionPrefix(
+      input.codePrefix ?? '',
+    );
+
   const codePrefix =
-    buildPromotionPrefix(
+    requestedPrefix ||
+    buildPromotionPrefixSuggestion(
       displayName,
     );
 
@@ -283,6 +339,29 @@ export async function savePromotionProgram(
     starts_at: input.startsAt || null,
     ends_at: input.endsAt || null,
     active_weekdays: activeWeekdays,
+
+    ticket_show_image:
+      input.ticketShowImage ?? false,
+
+    ticket_image_url:
+      input.ticketShowImage
+        ? input.ticketImageUrl ?? null
+        : null,
+
+    ticket_image_raster_base64:
+      input.ticketShowImage
+        ? input.ticketImageRasterBase64 ?? null
+        : null,
+
+    ticket_image_width:
+      input.ticketShowImage
+        ? input.ticketImageWidth ?? null
+        : null,
+
+    ticket_image_height:
+      input.ticketShowImage
+        ? input.ticketImageHeight ?? null
+        : null,
 
     priority: Number.isInteger(input.priority) ? input.priority : 100,
   };

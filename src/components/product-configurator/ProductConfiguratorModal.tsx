@@ -21,6 +21,7 @@ import {
 import {
   ComboComponentSelection,
   Product,
+  ProductCookingMethod,
   SelectedModifier,
 } from '../../types';
 import {
@@ -52,6 +53,7 @@ import { useCurrency } from '../../hooks/useCurrency';
 export interface ProductConfigurationResult {
   selectedModifiers: SelectedModifier[];
   comboComponents: ComboComponentSelection[];
+  cookingMethod: ProductCookingMethod | null;
 }
 interface ProductConfiguratorModalProps {
   visible: boolean;
@@ -147,6 +149,12 @@ export const ProductConfiguratorModal:
       setComboDetectionError,
     ] = useState<
       string | null
+    >(null);
+    const [
+      selectedCookingMethod,
+      setSelectedCookingMethod,
+    ] = useState<
+      ProductCookingMethod | null
     >(null);
     const notesPlaceholder =
       'Ej: Indicaciones especiales para tu producto...';
@@ -244,6 +252,17 @@ export const ProductConfiguratorModal:
           return false;
         }
 
+        const cookingChoiceRequired =
+          product.allows_oil_fryer === true &&
+          product.allows_air_fryer === true;
+
+        if (
+          cookingChoiceRequired &&
+          !selectedCookingMethod
+        ) {
+          return false;
+        }
+
         for (
           const association of
           configurableProductModifierGroups
@@ -289,6 +308,7 @@ export const ProductConfiguratorModal:
         productGroupsError,
         configurableProductModifierGroups,
         selectedModifierIdsByGroup,
+        selectedCookingMethod,
       ]);
 
     useEffect(() => {
@@ -314,6 +334,25 @@ export const ProductConfiguratorModal:
       setComboDetectionError(
         null,
       );
+
+      const allowsOil =
+        product.allows_oil_fryer ===
+        true;
+
+      const allowsAir =
+        product.allows_air_fryer ===
+        true;
+
+      setSelectedCookingMethod(
+        allowsOil &&
+        !allowsAir
+          ? 'oil'
+          : allowsAir &&
+            !allowsOil
+            ? 'air_fryer'
+            : null,
+      );
+
       const detectCombo =
         async () => {
           try {
@@ -674,6 +713,8 @@ export const ProductConfiguratorModal:
               ...comboSelection
                 .components,
             ],
+            cookingMethod:
+              null,
           });
           return;
         }
@@ -681,6 +722,8 @@ export const ProductConfiguratorModal:
           selectedModifiers,
           comboComponents:
             [],
+          cookingMethod:
+            selectedCookingMethod,
         });
       };
     return (
@@ -1191,6 +1234,101 @@ export const ProductConfiguratorModal:
                     );
                   },
                 )}
+              {comboCheckedProductId === product.id &&
+              !isCombo &&
+              (
+                product.allows_oil_fryer === true ||
+                product.allows_air_fryer === true
+              ) ? (
+                <View
+                  style={
+                    styles.cookingSection
+                  }
+                >
+                  <Text
+                    style={
+                      styles.sectionLabel
+                    }
+                  >
+                    Método de cocción
+                  </Text>
+
+                  <View
+                    style={
+                      styles.cookingOptions
+                    }
+                  >
+                    {product.allows_oil_fryer === true ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.cookingOption,
+                          selectedCookingMethod === 'oil' &&
+                          styles.optionButtonSelected,
+                        ]}
+                        onPress={() =>
+                          setSelectedCookingMethod(
+                            'oil',
+                          )
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
+                            selectedCookingMethod === 'oil' &&
+                            styles.optionTextSelected,
+                          ]}
+                        >
+                          Aceite
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    {product.allows_air_fryer === true ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.cookingOption,
+                          selectedCookingMethod === 'air_fryer' &&
+                          styles.optionButtonSelected,
+                        ]}
+                        onPress={() =>
+                          setSelectedCookingMethod(
+                            'air_fryer',
+                          )
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
+                            selectedCookingMethod === 'air_fryer' &&
+                            styles.optionTextSelected,
+                          ]}
+                        >
+                          Freidora de aire
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
+                  {selectedCookingMethod === 'air_fryer' ? (
+                    <Text
+                      style={
+                        styles.airFryerWarning
+                      }
+                    >
+                      Puede tardar aproximadamente{' '}
+                      {Math.max(
+                        0,
+                        Number(
+                          product.air_fryer_extra_minutes ??
+                          0,
+                        ),
+                      )}{' '}
+                      min adicionales.
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+
               {comboCheckedProductId === product.id && !isCombo && (
                 <>
                   <Text

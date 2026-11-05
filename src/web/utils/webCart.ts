@@ -6,7 +6,7 @@ import {
 
 import {
   ProductConfigurationResult,
-} from '../../components/ProductConfigurator/ProductConfiguratorModal';
+} from '../../components/product-configurator/ProductConfiguratorModal';
 
 import {
   ModifierPromotion,
@@ -32,6 +32,7 @@ export function addConfiguredProductToCart(
   const {
     selectedModifiers = [],
     comboComponents = [],
+    cookingMethod = null,
   } = configuration;
 
   const cleanNotes =
@@ -57,6 +58,7 @@ export function addConfiguredProductToCart(
     cleanNotes,
     modifierIdentifier,
     comboIdentifier,
+    cookingMethod ?? 'default',
   ].join('-');
 
   const itemToAdd:
@@ -79,6 +81,8 @@ export function addConfiguredProductToCart(
           ...modifier,
         }),
       ),
+
+    cookingMethod,
 
     comboComponents:
       normalizedComponents

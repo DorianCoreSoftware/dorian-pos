@@ -80,6 +80,10 @@ export async function createKitchenOrder(
         notes:
           item.notes.trim(),
 
+        cookingMethod:
+          item.cookingMethod ??
+          null,
+
         modifiers: (
           item.selectedModifiers ??
           []
@@ -115,6 +119,10 @@ export async function createKitchenOrder(
 
             notes:
               component.notes.trim(),
+
+            cookingMethod:
+              component.cookingMethod ??
+              null,
 
             modifiers: (
               component.selectedModifiers ??
@@ -390,6 +398,9 @@ function mapOrderToKitchenOrder(
         prepared_by:
           item.prepared_by ?? null,
 
+        cooking_method:
+          item.cooking_method ?? null,
+
         products:
           item.products
             ? {
@@ -455,6 +466,10 @@ function mapOrderToKitchenOrder(
 
               position:
                 component.position ??
+                null,
+
+              cooking_method:
+                component.cooking_method ??
                 null,
 
               products:
@@ -832,6 +847,10 @@ export async function updateKitchenOrder(
         notes:
           item.notes.trim(),
 
+        cookingMethod:
+          item.cookingMethod ??
+          null,
+
         modifiers: (
           item.selectedModifiers ??
           []
@@ -867,6 +886,10 @@ export async function updateKitchenOrder(
 
             notes:
               component.notes.trim(),
+
+            cookingMethod:
+              component.cookingMethod ??
+              null,
 
             modifiers: (
               component.selectedModifiers ??

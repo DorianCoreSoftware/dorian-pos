@@ -11,6 +11,7 @@ import {
 import { useBusiness } from '../../context/BusinessContext';
 import { useCurrency } from '../../hooks/useCurrency';
 import { RewardOrderLinkModal } from '../rewards/RewardOrderLinkModal';
+import { PromotionQrScannerModal } from './PromotionQrScannerModal';
 import {
   PromotionProgram,
   redeemPromotionCodes,
@@ -49,6 +50,12 @@ export function PromotionRedemptionPanel({
   const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderLinkVisible, setOrderLinkVisible] = useState(false);
+  const [
+    scannerTarget,
+    setScannerTarget,
+  ] = useState<
+    number | 'single' | null
+  >(null);
 
   const selectedProgram = useMemo(
     () => enabledPrograms.find(program => program.id === selectedProgramId) ?? enabledPrograms[0] ?? null,
@@ -65,11 +72,11 @@ export function PromotionRedemptionPanel({
 
     if (selectedProgram.programType === 'collect_reward') {
       const required = selectedProgram.requiredCoupons ?? 0;
-      setCodes(Array.from({ length: required }, () => selectedProgram.codePrefix));
+      setCodes(Array.from({ length: required }, () => ''));
       setSelectedRewardId(selectedProgram.rewards[0]?.id ?? null);
       setSingleCode('');
     } else {
-      setSingleCode(selectedProgram.codePrefix);
+      setSingleCode('');
       setCodes([]);
       setSelectedRewardId(null);
     }
@@ -93,39 +100,133 @@ export function PromotionRedemptionPanel({
     paddingVertical: 10,
   } as const;
 
-  const normalizeCodeInput = (value: string) => {
-    const prefix = selectedProgram.codePrefix.toUpperCase().replace(/\s/g, '');
-    const normalized = value.toUpperCase().replace(/\s/g, '');
+  const normalizeCodeInput = (
+    value: string,
+  ): string =>
+    value
+      .trim()
+      .toUpperCase()
+      .replace(
+        /\s/g,
+        '',
+      );
 
-    if (!prefix) {
-      return normalized;
-    }
+  const updateCode = (
+    index: number,
+    value: string,
+  ): void => {
+    const normalized =
+      normalizeCodeInput(
+        value,
+      );
 
-    if (normalized.startsWith(prefix)) {
-      return normalized;
-    }
-
-    // Si el usuario intenta borrar parte del prefijo, lo restauramos.
-    if (prefix.startsWith(normalized)) {
-      return prefix;
-    }
-
-    return `${prefix}${normalized}`;
+    setCodes(
+      current =>
+        current.map(
+          (
+            code,
+            currentIndex,
+          ) =>
+            currentIndex ===
+            index
+              ? normalized
+              : code,
+        ),
+    );
   };
 
-  const updateCode = (index: number, value: string) => {
-    const normalized = normalizeCodeInput(value);
-    setCodes(current => current.map((code, currentIndex) => currentIndex === index ? normalized : code));
-  };
-
-  const hasCodeSuffix = (value: string) => {
-    const prefix = selectedProgram.codePrefix.toUpperCase().replace(/\s/g, '');
-    const normalized = value.toUpperCase().replace(/\s/g, '');
-    return normalized.length > prefix.length;
-  };
+  const hasCodeValue = (
+    value: string,
+  ): boolean =>
+    normalizeCodeInput(
+      value,
+    ).length > 0;
 
   const collectCodesComplete =
-    codes.length > 0 && codes.every(hasCodeSuffix);
+    codes.length > 0 &&
+    codes.every(
+      hasCodeValue,
+    );
+
+  const handleScannedCode = (
+    rawValue: string,
+  ): void => {
+    const normalized =
+      normalizeCodeInput(
+        rawValue,
+      );
+
+    if (!normalized) {
+      Alert.alert(
+        'QR inválido',
+        'El QR no contiene un código promocional.',
+      );
+      setScannerTarget(
+        null,
+      );
+      return;
+    }
+
+    if (
+      scannerTarget ===
+      'single'
+    ) {
+      setSingleCode(
+        normalized,
+      );
+      setScannerTarget(
+        null,
+      );
+      return;
+    }
+
+    if (
+      typeof scannerTarget ===
+      'number'
+    ) {
+      setCodes(
+        current => {
+          const duplicate =
+            current.some(
+              (
+                code,
+                index,
+              ) =>
+                index !==
+                  scannerTarget &&
+                normalizeCodeInput(
+                  code,
+                ) ===
+                  normalized,
+            );
+
+          if (duplicate) {
+            Alert.alert(
+              'Código repetido',
+              'Ese cupón ya fue capturado en otro campo.',
+            );
+            return current;
+          }
+
+          const next =
+            [
+              ...current,
+            ];
+
+          next[
+            scannerTarget
+          ] =
+            normalized;
+
+          return next;
+        },
+      );
+
+      setScannerTarget(
+        null,
+      );
+    }
+  };
 
   const executeCollectRedemption = async (orderId: string | null) => {
     if (!selectedRewardId) {
@@ -143,7 +244,7 @@ export function PromotionRedemptionPanel({
       });
 
       const reward = selectedProgram.rewards.find(item => item.id === selectedRewardId);
-      setCodes(Array.from({ length: selectedProgram.requiredCoupons ?? 0 }, () => selectedProgram.codePrefix));
+      setCodes(Array.from({ length: selectedProgram.requiredCoupons ?? 0 }, () => ''));
       setOrderLinkVisible(false);
       Alert.alert(
         '✅ Canje realizado',
@@ -160,7 +261,7 @@ export function PromotionRedemptionPanel({
     try {
       setIsProcessing(true);
       const result = await redeemRefundPromotion(selectedProgram, singleCode);
-      setSingleCode(selectedProgram.codePrefix);
+      setSingleCode('');
       await onRefundRedeemed();
 
       Alert.alert(
@@ -219,20 +320,71 @@ export function PromotionRedemptionPanel({
             <View style={{ gap: 10 }}>
               {codes.map((code, index) => (
                 <View key={index}>
-                  <Text style={{ color: theme.text, fontWeight: '600', marginBottom: 5 }}>Código {index + 1}</Text>
-                  <TextInput
-                    value={code}
-                    onChangeText={value => updateCode(index, value)}
-                    style={inputStyle}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    placeholder={`${selectedProgram.codePrefix}...`}
-                    placeholderTextColor={theme.textMuted}
-                    editable={!isProcessing}
-                  />
+                  <Text style={{ color: theme.text, fontWeight: '600', marginBottom: 5 }}>
+                    Código {index + 1}
+                  </Text>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      gap: 8,
+                      alignItems: 'stretch',
+                    }}
+                  >
+                    <TextInput
+                      value={code}
+                      onChangeText={value => updateCode(index, value)}
+                      style={[
+                        inputStyle,
+                        {
+                          flex: 1,
+                        },
+                      ]}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      placeholder={`${selectedProgram.codePrefix}...`}
+                      placeholderTextColor={theme.textMuted}
+                      editable={!isProcessing}
+                    />
+
+                    <TouchableOpacity
+                      disabled={isProcessing}
+                      onPress={() => setScannerTarget(index)}
+                      style={{
+                        minWidth: 105,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.primary,
+                        paddingHorizontal: 10,
+                        opacity: isProcessing ? 0.5 : 1,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.primary,
+                          fontSize: 12,
+                          fontWeight: '800',
+                        }}
+                      >
+                        ESCANEAR QR
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
+
+            <Text
+              style={{
+                color: theme.textMuted,
+                marginTop: 10,
+                fontSize: 12,
+              }}
+            >
+              {codes.filter(hasCodeValue).length} de {codes.length} códigos capturados
+            </Text>
 
             <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8 }}>Premio</Text>
             <View style={{ gap: 8 }}>
@@ -269,16 +421,54 @@ export function PromotionRedemptionPanel({
           </>
         ) : (
           <>
-            <TextInput
-              value={singleCode}
-              onChangeText={value => setSingleCode(normalizeCodeInput(value))}
-              style={inputStyle}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              placeholder={`${selectedProgram.codePrefix}...`}
-              placeholderTextColor={theme.textMuted}
-              editable={!isProcessing}
-            />
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 8,
+                alignItems: 'stretch',
+              }}
+            >
+              <TextInput
+                value={singleCode}
+                onChangeText={value => setSingleCode(normalizeCodeInput(value))}
+                style={[
+                  inputStyle,
+                  {
+                    flex: 1,
+                  },
+                ]}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                placeholder={`${selectedProgram.codePrefix}...`}
+                placeholderTextColor={theme.textMuted}
+                editable={!isProcessing}
+              />
+
+              <TouchableOpacity
+                disabled={isProcessing}
+                onPress={() => setScannerTarget('single')}
+                style={{
+                  minWidth: 105,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: theme.primary,
+                  paddingHorizontal: 10,
+                  opacity: isProcessing ? 0.5 : 1,
+                }}
+              >
+                <Text
+                  style={{
+                    color: theme.primary,
+                    fontSize: 12,
+                    fontWeight: '800',
+                  }}
+                >
+                  ESCANEAR QR
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={{ backgroundColor: theme.surfaceAlt, borderRadius: 10, padding: 12, marginTop: 14 }}>
               <Text style={{ color: theme.textMuted }}>
@@ -287,9 +477,9 @@ export function PromotionRedemptionPanel({
             </View>
 
             <TouchableOpacity
-              disabled={isProcessing || !hasCodeSuffix(singleCode)}
+              disabled={isProcessing || !hasCodeValue(singleCode)}
               onPress={() => void executeRefundRedemption()}
-              style={{ backgroundColor: theme.primary, opacity: isProcessing || !hasCodeSuffix(singleCode) ? 0.5 : 1, borderRadius: 10, padding: 13, marginTop: 20 }}
+              style={{ backgroundColor: theme.primary, opacity: isProcessing || !hasCodeValue(singleCode) ? 0.5 : 1, borderRadius: 10, padding: 13, marginTop: 20 }}
             >
               <Text style={{ color: theme.onPrimary, textAlign: 'center', fontWeight: '800' }}>
                 {isProcessing ? 'VALIDANDO...' : 'VALIDAR PROMOCIÓN'}
@@ -299,6 +489,30 @@ export function PromotionRedemptionPanel({
         )}
       </View>
     </ScrollView>
+
+      <PromotionQrScannerModal
+        visible={
+          scannerTarget !==
+          null
+        }
+        title={
+          selectedProgram.displayName
+        }
+        helperText={
+          typeof scannerTarget ===
+          'number'
+            ? `Escanea el cupón para Código ${scannerTarget + 1}.`
+            : 'Escanea el código promocional presentado por el cliente.'
+        }
+        onClose={() =>
+          setScannerTarget(
+            null,
+          )
+        }
+        onScanned={
+          handleScannedCode
+        }
+      />
 
       <RewardOrderLinkModal
         visible={orderLinkVisible}

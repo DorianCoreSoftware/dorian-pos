@@ -39,6 +39,11 @@ export interface PromotionProgramRecord {
   ends_at: string | null;
   active_weekdays: number[];
   priority: number;
+  ticket_show_image: boolean;
+  ticket_image_url: string | null;
+  ticket_image_raster_base64: string | null;
+  ticket_image_width: number | null;
+  ticket_image_height: number | null;
   rewards?: PromotionRewardRecord[] | null;
 }
 
@@ -92,6 +97,11 @@ export async function fetchPromotionPrograms(): Promise<PromotionProgramRecord[]
       ends_at,
       active_weekdays,
       priority,
+      ticket_show_image,
+      ticket_image_url,
+      ticket_image_raster_base64,
+      ticket_image_width,
+      ticket_image_height,
       rewards:promotion_rewards(
         id,
         program_id,

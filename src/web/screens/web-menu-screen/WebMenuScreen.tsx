@@ -19,7 +19,7 @@ import {
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
-} from '../../../components/ProductConfigurator/ProductConfiguratorModal';
+} from '../../../components/product-configurator/ProductConfiguratorModal';
 import {
   getActiveCategories,
 } from '../../../services/categoryService';

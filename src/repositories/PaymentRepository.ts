@@ -5,6 +5,7 @@ import {
 import {
   CreateOrderPayment,
   OrderPayment,
+  PaymentTiming,
 } from '../types';
 
 export interface CompletedSaleRecord {
@@ -43,6 +44,9 @@ interface OrderPaymentRecord {
     | null;
 
   payment_reference: string | null;
+
+  payment_timing:
+    PaymentTiming;
 
   created_at: string;
 }
@@ -92,6 +96,9 @@ export async function insertOrderPayment(
 
       payment_reference:
         payment.paymentReference ?? null,
+
+      payment_timing:
+        payment.paymentTiming ?? 'final',
     })
     .select()
     .single();
@@ -182,6 +189,9 @@ function mapOrderPayment(
     paymentReference:
       record.payment_reference ?? null,
 
+    paymentTiming:
+      record.payment_timing ?? 'final',
+
     createdAt:
       record.created_at,
   };
@@ -208,6 +218,7 @@ export async function fetchCompletedSales(): Promise<
         amount_received,
         change_amount,
         payment_reference,
+        payment_timing,
         created_at
       )
     `)

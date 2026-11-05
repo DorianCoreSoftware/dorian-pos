@@ -7,6 +7,7 @@ import {
 import {
   OrderPayment,
   PaymentMethod,
+  PaymentTiming,
 } from '../types';
 
 import {
@@ -26,6 +27,9 @@ interface RegisterPaymentParams {
   paymentReference?:
     string | null;
 
+  paymentTiming?:
+    PaymentTiming;
+
   currencyCode?:
     string;
 }
@@ -36,6 +40,7 @@ export async function registerOrderPayment({
   totalAmount,
   amountReceived = null,
   paymentReference = null,
+  paymentTiming = 'final',
   currencyCode =
     DEFAULT_CURRENCY_CODE,
 }: RegisterPaymentParams): Promise<OrderPayment> {
@@ -63,6 +68,7 @@ export async function registerOrderPayment({
       totalAmount,
       amountReceived,
       paymentReference,
+      paymentTiming,
       currencyCode,
     });
 
@@ -106,6 +112,7 @@ function buildPaymentPayload({
   totalAmount,
   amountReceived,
   paymentReference,
+  paymentTiming = 'final',
   currencyCode =
     DEFAULT_CURRENCY_CODE,
 }: RegisterPaymentParams) {
@@ -125,6 +132,8 @@ function buildPaymentPayload({
         paymentMethod === 'transfer'
           ? validateTransferReference(paymentReference)
           : null,
+
+      paymentTiming,
     };
   }
 
@@ -152,6 +161,7 @@ function buildPaymentPayload({
         received,
       ),
     paymentReference: null,
+    paymentTiming,
   };
 }
 
