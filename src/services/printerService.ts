@@ -10,6 +10,10 @@ import RNBluetoothClassic, {
 import {
   getActivePrinterSettings,
 } from './printerSettingsService';
+
+import {
+  supabase,
+} from './supabase';
 import { KitchenOrder, PaymentMethod } from '../types';
 
 import { PromoCoupon } from './promoService';
@@ -28,7 +32,6 @@ import {
 } from '../Utils/currency';
 
 import {
-  getPromotionImageForProgram,
   PrinterRasterImage,
   runtimeBranding,
 } from '../generated/runtimeClientBranding';
@@ -480,6 +483,16 @@ export async function printOrderTicket({
       false,
     );
 
+    if (item.cooking_method) {
+      await printer.write(
+        `  Coccion: ${
+          item.cooking_method === 'air_fryer'
+            ? 'Freidora de aire'
+            : 'Aceite'
+        }\n`,
+      );
+    }
+
     const modifiers =
       item.modifiers ?? [];
 
@@ -511,6 +524,16 @@ export async function printOrderTicket({
           componentName,
         )}\n`,
       );
+
+      if (component.cooking_method) {
+        await printer.write(
+          `     Coccion: ${
+            component.cooking_method === 'air_fryer'
+              ? 'Freidora de aire'
+              : 'Aceite'
+          }\n`,
+        );
+      }
 
       for (
         const modifier of
@@ -1649,6 +1672,139 @@ function roundCurrency(
   );
 }
 
+function getEmbeddedImageData(
+  value:
+    string | null | undefined,
+): {
+  base64: string;
+  mimeType: string;
+} | null {
+  if (!value) {
+    return null;
+  }
+
+  const match =
+    value.match(
+      /^data:(image\/(?:jpeg|png));base64,(.+)$/i,
+    );
+
+  if (
+    !match?.[1] ||
+    !match?.[2]
+  ) {
+    return null;
+  }
+
+  return {
+    mimeType:
+      match[1]
+        .toLowerCase(),
+    base64:
+      match[2],
+  };
+}
+
+async function getPromotionQrRaster(
+  code: string,
+  centerImageUrl:
+    string | null | undefined,
+): Promise<
+  PrinterRasterImage | null
+> {
+  try {
+    const embeddedImage =
+      getEmbeddedImageData(
+        centerImageUrl,
+      );
+
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .functions
+        .invoke(
+          'promotion-ticket-image',
+          {
+            body: {
+              qrText:
+                code,
+              qrSize:
+                280,
+              centerImageBase64:
+                embeddedImage
+                  ?.base64 ??
+                null,
+              centerImageMimeType:
+                embeddedImage
+                  ?.mimeType ??
+                null,
+            },
+          },
+        );
+
+    if (error) {
+      console.warn(
+        'No se pudo generar el QR promocional:',
+        error,
+      );
+      return null;
+    }
+
+    const result =
+      data as {
+        base64?:
+          string;
+        width?:
+          number;
+        height?:
+          number;
+        error?:
+          string;
+      };
+
+    if (
+      result.error ||
+      !result.base64 ||
+      !Number.isFinite(
+        Number(
+          result.width,
+        ),
+      ) ||
+      !Number.isFinite(
+        Number(
+          result.height,
+        ),
+      )
+    ) {
+      console.warn(
+        'Respuesta inválida al generar QR promocional:',
+        result.error,
+      );
+      return null;
+    }
+
+    return {
+      base64:
+        result.base64,
+      width:
+        Number(
+          result.width,
+        ),
+      height:
+        Number(
+          result.height,
+        ),
+    };
+  } catch (error) {
+    console.warn(
+      'Error generando QR promocional:',
+      error,
+    );
+    return null;
+  }
+}
+
 async function printPromoCoupon(
   printer:
     BluetoothDevice,
@@ -1668,18 +1824,6 @@ async function printPromoCoupon(
     separator(),
   );
 
-  const promotionImage =
-    getPromotionImageForProgram(
-      promoCoupon.programName,
-    );
-
-  if (promotionImage) {
-    await printRasterImage(
-      printer,
-      promotionImage,
-    );
-  }
-
   const programs =
     await getPromotionPrograms();
 
@@ -1689,6 +1833,37 @@ async function printPromoCoupon(
         item.id ===
         promoCoupon.programId,
     );
+
+  const promotionImage:
+    PrinterRasterImage | null =
+    program?.ticketShowImage &&
+    program.ticketImageRasterBase64 &&
+    program.ticketImageWidth &&
+    program.ticketImageHeight
+      ? {
+          base64:
+            program.ticketImageRasterBase64,
+          width:
+            program.ticketImageWidth,
+          height:
+            program.ticketImageHeight,
+        }
+      : null;
+
+  const promotionQr =
+    await getPromotionQrRaster(
+      promoCoupon.code,
+      program?.ticketShowImage
+        ? program.ticketImageUrl
+        : null,
+    );
+
+  if (promotionQr) {
+    await printRasterImage(
+      printer,
+      promotionQr,
+    );
+  }
 
   await setBold(
     printer,

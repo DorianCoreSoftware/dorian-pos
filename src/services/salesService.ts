@@ -74,8 +74,10 @@ export async function getCompletedSales(): Promise<
               ),
 
           paymentReference:
-            payment.payment_reference ??
-            null,
+            payment.payment_reference ?? null,
+
+          paymentTiming:
+            payment.payment_timing ?? 'final',
 
           createdAt:
             payment.created_at,

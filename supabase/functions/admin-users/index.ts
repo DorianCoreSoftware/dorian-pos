@@ -7,6 +7,7 @@ import {
 type UserRole =
   | 'admin'
   | 'accountant'
+  | 'operator'
   | 'seller'
   | 'driver';
 
@@ -60,6 +61,7 @@ const ALLOWED_ROLES:
   UserRole[] = [
     'admin',
     'accountant',
+    'operator',
     'seller',
     'driver',
   ];

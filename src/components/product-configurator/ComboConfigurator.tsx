@@ -22,6 +22,7 @@ import {
 
 import {
   Product,
+  ProductCookingMethod,
   SelectedModifier,
 } from '../../types';
 
@@ -125,6 +126,14 @@ export const ComboConfigurator: React.FC<
     selectedModifierIdsByComponent,
     setSelectedModifierIdsByComponent,
   ] = useState<SelectedModifierIdsByComponent>({});
+
+  const [
+    cookingMethodByComponent,
+    setCookingMethodByComponent,
+  ] = useState<Record<
+    string,
+    ProductCookingMethod
+  >>({});
 
   const [
     loadedModifierProductIds,
@@ -428,7 +437,6 @@ export const ComboConfigurator: React.FC<
       if (
         !recipe ||
         isLoading ||
-        areModifiersLoading ||
         error
       ) {
         return false;
@@ -448,6 +456,24 @@ export const ComboConfigurator: React.FC<
           if (
             !loadedModifierProductIds[
               selectedProduct.id
+            ]
+          ) {
+            return false;
+          }
+
+          const allowsOil =
+            selectedProduct.allowsOilFryer ===
+            true;
+
+          const allowsAir =
+            selectedProduct.allowsAirFryer ===
+            true;
+
+          if (
+            allowsOil &&
+            allowsAir &&
+            !cookingMethodByComponent[
+              component.id
             ]
           ) {
             return false;
@@ -490,12 +516,12 @@ export const ComboConfigurator: React.FC<
     }, [
       recipe,
       isLoading,
-      areModifiersLoading,
       error,
       selectedOptionIds,
       loadedModifierProductIds,
       modifierGroupsByProductId,
       selectedModifierIdsByComponent,
+      cookingMethodByComponent,
     ]);
 
   const selectedComponents =
@@ -595,6 +621,16 @@ export const ComboConfigurator: React.FC<
                   component.id
                 ]?.trim() ?? '',
               selectedModifiers,
+              cookingMethod:
+                selectedProduct.allowsOilFryer &&
+                !selectedProduct.allowsAirFryer
+                  ? 'oil'
+                  : selectedProduct.allowsAirFryer &&
+                    !selectedProduct.allowsOilFryer
+                    ? 'air_fryer'
+                    : cookingMethodByComponent[
+                        component.id
+                      ] ?? null,
             },
           ];
         },
@@ -606,6 +642,7 @@ export const ComboConfigurator: React.FC<
       modifierGroupsByProductId,
       modifiersByGroupId,
       selectedModifierIdsByComponent,
+      cookingMethodByComponent,
     ]);
 
   useEffect(() => {
@@ -642,6 +679,20 @@ export const ComboConfigurator: React.FC<
         delete nextSelections[
           componentId
         ];
+
+        setCookingMethodByComponent(
+          current => {
+            const next = {
+              ...current,
+            };
+
+            delete next[
+              componentId
+            ];
+
+            return next;
+          },
+        );
 
         return nextSelections;
       },
@@ -785,6 +836,12 @@ export const ComboConfigurator: React.FC<
         comboProduct.isAvailable,
       is_active:
         comboProduct.isActive,
+      allows_oil_fryer:
+        comboProduct.allowsOilFryer,
+      allows_air_fryer:
+        comboProduct.allowsAirFryer,
+      air_fryer_extra_minutes:
+        comboProduct.airFryerExtraMinutes,
       created_at:
         new Date().toISOString(),
     };
@@ -975,6 +1032,179 @@ export const ComboConfigurator: React.FC<
             },
           )
         )}
+      </View>
+    );
+  }
+
+  function renderCookingMethod(
+    component: ComboRecipeComponent,
+  ): React.ReactNode {
+    const selectedProduct =
+      getSelectedProduct(
+        component,
+      );
+
+    if (!selectedProduct) {
+      return null;
+    }
+
+    const allowsOil =
+      selectedProduct.allowsOilFryer ===
+      true;
+
+    const allowsAir =
+      selectedProduct.allowsAirFryer ===
+      true;
+
+    if (
+      !allowsOil &&
+      !allowsAir
+    ) {
+      return null;
+    }
+
+    const selectedMethod =
+      allowsOil &&
+      !allowsAir
+        ? 'oil'
+        : allowsAir &&
+          !allowsOil
+          ? 'air_fryer'
+          : cookingMethodByComponent[
+              component.id
+            ];
+
+    return (
+      <View
+        style={{
+          marginTop: 12,
+        }}
+      >
+        <Text
+          style={{
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: '700',
+            marginBottom: 8,
+          }}
+        >
+          Método de cocción
+        </Text>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: 8,
+          }}
+        >
+          {allowsOil ? (
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                minHeight: 42,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 10,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor:
+                  selectedMethod === 'oil'
+                    ? businessTheme.primary
+                    : '#555555',
+                backgroundColor:
+                  selectedMethod === 'oil'
+                    ? '#463800'
+                    : '#292929',
+              }}
+              onPress={() =>
+                setCookingMethodByComponent(
+                  current => ({
+                    ...current,
+                    [component.id]:
+                      'oil',
+                  }),
+                )
+              }
+            >
+              <Text
+                style={{
+                  color:
+                    selectedMethod === 'oil'
+                      ? businessTheme.primary
+                      : '#FFFFFF',
+                  fontWeight: '700',
+                }}
+              >
+                Aceite
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {allowsAir ? (
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                minHeight: 42,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 10,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor:
+                  selectedMethod === 'air_fryer'
+                    ? businessTheme.primary
+                    : '#555555',
+                backgroundColor:
+                  selectedMethod === 'air_fryer'
+                    ? '#463800'
+                    : '#292929',
+              }}
+              onPress={() =>
+                setCookingMethodByComponent(
+                  current => ({
+                    ...current,
+                    [component.id]:
+                      'air_fryer',
+                  }),
+                )
+              }
+            >
+              <Text
+                style={{
+                  color:
+                    selectedMethod === 'air_fryer'
+                      ? businessTheme.primary
+                      : '#FFFFFF',
+                  fontWeight: '700',
+                }}
+              >
+                Freidora de aire
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {selectedMethod === 'air_fryer' ? (
+          <Text
+            style={{
+              color: businessTheme.primary,
+              fontSize: 11,
+              lineHeight: 16,
+              fontWeight: '700',
+              marginTop: 6,
+            }}
+          >
+            Puede tardar aproximadamente{' '}
+            {Math.max(
+              0,
+              Number(
+                selectedProduct.airFryerExtraMinutes ??
+                0,
+              ),
+            )}{' '}
+            min adicionales.
+          </Text>
+        ) : null}
       </View>
     );
   }
@@ -1326,6 +1556,10 @@ export const ComboConfigurator: React.FC<
                   component,
                 )}
 
+            {renderCookingMethod(
+              component,
+            )}
+
             {renderModifierGroups(
               component,
             )}
@@ -1337,18 +1571,6 @@ export const ComboConfigurator: React.FC<
         ),
       )}
 
-      {areModifiersLoading && (
-        <Text
-          style={{
-            color: '#AAAAAA',
-            fontSize: 12,
-            textAlign: 'center',
-            marginTop: 4,
-          }}
-        >
-          Cargando opciones...
-        </Text>
-      )}
     </View>
   );
 };

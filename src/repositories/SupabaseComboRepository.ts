@@ -51,6 +51,9 @@ interface ProductRow {
     is_available: boolean | null;
     is_active: boolean | null;
     is_combo_option: boolean | null;
+    allows_oil_fryer: boolean | null;
+    allows_air_fryer: boolean | null;
+    air_fryer_extra_minutes: number | null;
 }
 
 export class SupabaseComboRepository implements ComboRepository {
@@ -370,7 +373,10 @@ export class SupabaseComboRepository implements ComboRepository {
         image_url,
         is_available,
         is_active,
-        is_combo_option
+        is_combo_option,
+        allows_oil_fryer,
+        allows_air_fryer,
+        air_fryer_extra_minutes
       `)
             .in('id', productIds);
 
@@ -403,7 +409,10 @@ export class SupabaseComboRepository implements ComboRepository {
         image_url,
         is_available,
         is_active,
-        is_combo_option
+        is_combo_option,
+        allows_oil_fryer,
+        allows_air_fryer,
+        air_fryer_extra_minutes
       `)
             .in('category_id', categoryIds)
             .eq('is_active', true)
@@ -680,6 +689,9 @@ export class SupabaseComboRepository implements ComboRepository {
             isAvailable: row.is_available ?? false,
             isActive: row.is_active ?? false,
             isComboOption: row.is_combo_option ?? false,
+            allowsOilFryer: row.allows_oil_fryer ?? false,
+            allowsAirFryer: row.allows_air_fryer ?? false,
+            airFryerExtraMinutes: Number(row.air_fryer_extra_minutes ?? 0),
         };
     }
 

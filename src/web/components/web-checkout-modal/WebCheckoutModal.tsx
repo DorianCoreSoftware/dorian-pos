@@ -36,6 +36,9 @@ import {
   PricingPromotionDiscountLine,
 } from '../../../services/pricingPromotionService';
 import GooglePlaceAutocomplete from '../google-place/GooglePlaceAutocomplete';
+import {
+  WebCustomerAddress,
+} from '../../services/web-customer/webCustomerService';
 
 
 interface CheckoutData {
@@ -55,6 +58,9 @@ interface CheckoutData {
 
   deliveryDetails:
   DeliveryDetails | null;
+
+  saveDeliveryAddress:
+  boolean;
 }
 
 interface WebCheckoutModalProps {
@@ -87,6 +93,12 @@ interface WebCheckoutModalProps {
 
   initialCustomerPhone?:
   string;
+
+  savedAddress?:
+  WebCustomerAddress | null;
+
+  canSaveAddress?:
+  boolean;
 
   submitting:
   boolean;
@@ -165,6 +177,8 @@ export default function WebCheckoutModal({
   deliveryFee,
   initialCustomerName = '',
   initialCustomerPhone = '',
+  savedAddress = null,
+  canSaveAddress = false,
   submitting,
   submitError,
   onClose,
@@ -214,6 +228,12 @@ export default function WebCheckoutModal({
     useState<DeliveryDetails>({
       ...EMPTY_DELIVERY,
     });
+
+  const [
+    saveDeliveryAddress,
+    setSaveDeliveryAddress,
+  ] =
+    useState(false);
 
   const [
     deliveryQuote,
@@ -298,6 +318,10 @@ export default function WebCheckoutModal({
           cleanPhone,
         );
 
+        setSaveDeliveryAddress(
+          false,
+        );
+
         setDelivery(
           (current) => ({
             ...current,
@@ -327,6 +351,10 @@ export default function WebCheckoutModal({
 
       setMarketingCode(
         '',
+      );
+
+      setSaveDeliveryAddress(
+        false,
       );
 
       setDelivery({
@@ -634,6 +662,110 @@ export default function WebCheckoutModal({
     }
   }
 
+  async function handleUseSavedAddress():
+    Promise<void> {
+    if (
+      !savedAddress
+    ) {
+      return;
+    }
+
+    const nextDelivery:
+      DeliveryDetails = {
+      ...delivery,
+
+      street:
+        savedAddress.street,
+
+      exteriorNumber:
+        savedAddress.exteriorNumber,
+
+      interiorNumber:
+        savedAddress.interiorNumber,
+
+      neighborhood:
+        savedAddress.neighborhood,
+
+      postalCode:
+        savedAddress.postalCode,
+
+      deliveryReferences:
+        savedAddress.deliveryReferences,
+
+      latitude:
+        savedAddress.latitude,
+
+      longitude:
+        savedAddress.longitude,
+    };
+
+    setDelivery(
+      nextDelivery,
+    );
+
+    setErrors(
+      current => ({
+        ...current,
+        street:
+          undefined,
+        exteriorNumber:
+          undefined,
+        neighborhood:
+          undefined,
+      }),
+    );
+
+    setSaveDeliveryAddress(
+      false,
+    );
+
+    setDeliveryQuote(
+      null,
+    );
+
+    setDeliveryQuoteError(
+      null,
+    );
+
+    try {
+      setIsQuotingDelivery(
+        true,
+      );
+
+      const quote =
+        await getDeliveryQuote(
+          savedAddress.latitude,
+          savedAddress.longitude,
+        );
+
+      setDeliveryQuote(
+        quote,
+      );
+
+      if (
+        !quote.available
+      ) {
+        setDeliveryQuoteError(
+          'Tu dirección guardada está fuera de nuestra zona de reparto actual.',
+        );
+      }
+    } catch (error) {
+      setDeliveryQuote(
+        null,
+      );
+
+      setDeliveryQuoteError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo validar tu dirección guardada.',
+      );
+    } finally {
+      setIsQuotingDelivery(
+        false,
+      );
+    }
+  }
+
   function validate():
     FormErrors {
     const next:
@@ -792,6 +924,12 @@ export default function WebCheckoutModal({
         marketingCode
           .trim()
           .toUpperCase(),
+
+      saveDeliveryAddress:
+        fulfillmentType ===
+          'delivery' &&
+        canSaveAddress &&
+        saveDeliveryAddress,
 
       deliveryDetails:
         fulfillmentType ===
@@ -1100,6 +1238,65 @@ export default function WebCheckoutModal({
                     Dirección
                   </SectionTitle>
 
+                  {canSaveAddress &&
+                    savedAddress ? (
+                      <Pressable
+                        disabled={
+                          submitting ||
+                          isQuotingDelivery
+                        }
+                        onPress={() => {
+                          void handleUseSavedAddress();
+                        }}
+                        style={({
+                          pressed,
+                        }) => [
+                          styles.savedAddressCard,
+                          pressed &&
+                          styles.savedAddressCardPressed,
+                        ]}
+                      >
+                        <View
+                          style={
+                            styles.savedAddressHeader
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.savedAddressTitle
+                            }
+                          >
+                            📍 Usar mi dirección guardada
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.savedAddressAction
+                            }
+                          >
+                            AUTOCOMPLETAR
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={
+                            styles.savedAddressText
+                          }
+                        >
+                          {savedAddress.street}{' '}
+                          {savedAddress.exteriorNumber}
+                          {savedAddress.interiorNumber
+                            ? ` Int. ${savedAddress.interiorNumber}`
+                            : ''}
+                          {' · '}
+                          {savedAddress.neighborhood}
+                          {savedAddress.postalCode
+                            ? ` · C.P. ${savedAddress.postalCode}`
+                            : ''}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+
                   <View
                     style={{
                       position:
@@ -1360,6 +1557,67 @@ export default function WebCheckoutModal({
                           )
                         }
                       />
+
+                      {canSaveAddress ? (
+                        <Pressable
+                          disabled={
+                            submitting
+                          }
+                          onPress={() =>
+                            setSaveDeliveryAddress(
+                              current =>
+                                !current,
+                            )
+                          }
+                          style={({
+                            pressed,
+                          }) => [
+                            styles.saveAddressRow,
+                            pressed &&
+                            styles.saveAddressRowPressed,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.checkbox,
+                              saveDeliveryAddress &&
+                              styles.checkboxChecked,
+                            ]}
+                          >
+                            {saveDeliveryAddress ? (
+                              <Text
+                                style={
+                                  styles.checkboxMark
+                                }
+                              >
+                                ✓
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          <View
+                            style={
+                              styles.saveAddressTextBox
+                            }
+                          >
+                            <Text
+                              style={
+                                styles.saveAddressTitle
+                              }
+                            >
+                              Guardar esta dirección para futuros pedidos
+                            </Text>
+
+                            <Text
+                              style={
+                                styles.saveAddressHint
+                              }
+                            >
+                              Se guardará como tu dirección principal y podrás reutilizarla en tu próximo pedido.
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ) : null}
                     </>
                   )}
                 </>

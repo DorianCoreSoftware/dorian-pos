@@ -1,4 +1,4 @@
-import { Product } from '../product';
+import { Product, ProductCookingMethod } from '../product';
 import { SelectedModifier } from '../modifier';
 import {
   ComboComponentSelection,
@@ -12,6 +12,8 @@ export interface CartItem {
   notes: string;
 
   selectedModifiers: SelectedModifier[];
+
+  cookingMethod?: ProductCookingMethod | null;
 
   comboComponents?: ComboComponentSelection[];
 

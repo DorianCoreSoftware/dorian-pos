@@ -388,6 +388,39 @@ const createStyles = (
      * ============================
      */
 
+
+    cookingSection: {
+      marginTop: 10,
+      marginBottom: 4,
+      width: '100%',
+    },
+
+    cookingOptions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+
+    cookingOption: {
+      flex: 1,
+      minHeight: 44,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: '#121212',
+      borderWidth: 1.5,
+      borderColor: '#333',
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    airFryerWarning: {
+      marginTop: 8,
+      color: primaryColor,
+      fontSize: 12,
+      lineHeight: 17,
+      fontWeight: '700',
+    },
+
     notesLabel: {
       marginTop:
         16,

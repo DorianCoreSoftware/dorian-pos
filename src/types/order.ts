@@ -1,7 +1,7 @@
 import { ComboComponentType } from './combo';
 import { OrderDeliveryDetails } from './delivery';
 import { Modifier } from './modifier';
-import { Product } from './product';
+import { Product, ProductCookingMethod } from './product';
 
 export type OrderStatus =
   | 'pending'
@@ -23,6 +23,7 @@ export interface KitchenOrderItemComponent {
   quantity: number;
   notes: string | null;
   position?: number | null;
+  cooking_method?: ProductCookingMethod | null;
 
   products: Product | null;
   modifiers: Modifier[];
@@ -41,6 +42,7 @@ export interface KitchenOrderItem {
   is_prepared: boolean;
   prepared_at: string | null;
   prepared_by: string | null;
+  cooking_method?: ProductCookingMethod | null;
 
   products: Product | null;
   modifiers: Modifier[];

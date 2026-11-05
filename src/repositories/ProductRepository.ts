@@ -20,6 +20,9 @@ export interface AdminUpdateProductData {
   categoryId: string;
   isAvailable: boolean;
   imageUrl?: string | null;
+  allowsOilFryer: boolean;
+  allowsAirFryer: boolean;
+  airFryerExtraMinutes: number;
 }
 
 export interface CreateProductData {
@@ -27,6 +30,9 @@ export interface CreateProductData {
   description: string | null;
   price: number;
   categoryId: string;
+  allowsOilFryer: boolean;
+  allowsAirFryer: boolean;
+  airFryerExtraMinutes: number;
 }
 
 export async function fetchCategories(): Promise<
@@ -144,6 +150,15 @@ export async function insertProduct(
 
       is_available:
         true,
+
+      allows_oil_fryer:
+        productData.allowsOilFryer,
+
+      allows_air_fryer:
+        productData.allowsAirFryer,
+
+      air_fryer_extra_minutes:
+        productData.airFryerExtraMinutes,
     })
     .select()
     .single();
@@ -205,6 +220,9 @@ export async function adminUpdateProductById(
     category_id: string;
     is_available: boolean;
     image_url?: string | null;
+    allows_oil_fryer: boolean;
+    allows_air_fryer: boolean;
+    air_fryer_extra_minutes: number;
   } = {
     name:
       productData.name,
@@ -220,6 +238,15 @@ export async function adminUpdateProductById(
 
     is_available:
       productData.isAvailable,
+
+    allows_oil_fryer:
+      productData.allowsOilFryer,
+
+    allows_air_fryer:
+      productData.allowsAirFryer,
+
+    air_fryer_extra_minutes:
+      productData.airFryerExtraMinutes,
   };
 
   if (

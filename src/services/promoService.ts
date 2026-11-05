@@ -40,6 +40,11 @@ export interface PromotionProgram {
   endsAt: string | null;
   activeWeekdays: number[];
   priority: number;
+  ticketShowImage: boolean;
+  ticketImageUrl: string | null;
+  ticketImageRasterBase64: string | null;
+  ticketImageWidth: number | null;
+  ticketImageHeight: number | null;
   rewards: PromotionReward[];
 }
 
@@ -133,6 +138,20 @@ export function mapPromotionProgram(record: PromotionProgramRecord): PromotionPr
         : [0, 1, 2, 3, 4, 5, 6],
 
     priority: Number(record.priority ?? 100),
+    ticketShowImage:
+      Boolean(record.ticket_show_image),
+    ticketImageUrl:
+      record.ticket_image_url ?? null,
+    ticketImageRasterBase64:
+      record.ticket_image_raster_base64 ?? null,
+    ticketImageWidth:
+      record.ticket_image_width === null
+        ? null
+        : Number(record.ticket_image_width),
+    ticketImageHeight:
+      record.ticket_image_height === null
+        ? null
+        : Number(record.ticket_image_height),
     rewards: (record.rewards ?? [])
       .map(mapReward)
       .filter(reward => reward.isActive)

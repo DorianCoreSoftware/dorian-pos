@@ -82,6 +82,9 @@ interface ProductFormState {
     price: string;
     categoryId: string;
     isAvailable: boolean;
+    allowsOilFryer: boolean;
+    allowsAirFryer: boolean;
+    airFryerExtraMinutes: string;
 }
 
 interface ProductModifierGroupForm {
@@ -104,6 +107,9 @@ const INITIAL_FORM: ProductFormState = {
     price: '',
     categoryId: '',
     isAvailable: true,
+    allowsOilFryer: false,
+    allowsAirFryer: false,
+    airFryerExtraMinutes: '5',
 };
 
 export function AdminProducts({
@@ -445,6 +451,20 @@ export function AdminProducts({
                 isAvailable:
                     product.is_available !==
                     false,
+
+                allowsOilFryer:
+                    product.allows_oil_fryer ===
+                    true,
+
+                allowsAirFryer:
+                    product.allows_air_fryer ===
+                    true,
+
+                airFryerExtraMinutes:
+                    String(
+                        product.air_fryer_extra_minutes ??
+                        5,
+                    ),
             });
 
             setProductModifierGroups(
@@ -1380,6 +1400,29 @@ export function AdminProducts({
                 return;
             }
 
+            const airFryerExtraMinutes =
+                Number(
+                    form.airFryerExtraMinutes,
+                );
+
+            if (
+                form.allowsAirFryer &&
+                (
+                    !Number.isInteger(
+                        airFryerExtraMinutes,
+                    ) ||
+                    airFryerExtraMinutes < 0 ||
+                    airFryerExtraMinutes > 120
+                )
+            ) {
+                Alert.alert(
+                    'Tiempo inválido',
+                    'Los minutos extra de freidora de aire deben ser un entero entre 0 y 120.',
+                );
+
+                return;
+            }
+
             const validatedGroups =
                 getValidatedModifierGroups();
 
@@ -1433,6 +1476,17 @@ export function AdminProducts({
                                 form.isAvailable,
 
                             imageUrl,
+
+                            allowsOilFryer:
+                                form.allowsOilFryer,
+
+                            allowsAirFryer:
+                                form.allowsAirFryer,
+
+                            airFryerExtraMinutes:
+                                form.allowsAirFryer
+                                    ? airFryerExtraMinutes
+                                    : 0,
 
                             allowZeroPrice:
                                 isComboComplement,
@@ -1489,6 +1543,17 @@ export function AdminProducts({
 
                             categoryId:
                                 form.categoryId,
+
+                            allowsOilFryer:
+                                form.allowsOilFryer,
+
+                            allowsAirFryer:
+                                form.allowsAirFryer,
+
+                            airFryerExtraMinutes:
+                                form.allowsAirFryer
+                                    ? airFryerExtraMinutes
+                                    : 0,
 
                             allowZeroPrice:
                                 isComboComplement,
@@ -2657,6 +2722,159 @@ export function AdminProducts({
                                     JPG, PNG o WEBP · máximo 5 MB
                                 </Text>
                             </View>
+                        </View>
+
+                        <View
+                            style={
+                                styles.cookingMethodsCard
+                            }
+                        >
+                            <Text
+                                style={
+                                    styles.cookingMethodsTitle
+                                }
+                            >
+                                Método de cocción
+                            </Text>
+
+                            <Text
+                                style={
+                                    styles.cookingMethodsSubtitle
+                                }
+                            >
+                                Activa las opciones que el cliente puede elegir en POS y web.
+                            </Text>
+
+                            <View
+                                style={
+                                    styles.cookingMethodRow
+                                }
+                            >
+                                <View
+                                    style={
+                                        styles.cookingMethodText
+                                    }
+                                >
+                                    <Text
+                                        style={
+                                            styles.availableTitle
+                                        }
+                                    >
+                                        Aceite
+                                    </Text>
+
+                                    <Text
+                                        style={
+                                            styles.availableSubtitle
+                                        }
+                                    >
+                                        Preparación tradicional en aceite.
+                                    </Text>
+                                </View>
+
+                                <Switch
+                                    value={
+                                        form.allowsOilFryer
+                                    }
+                                    onValueChange={(
+                                        value,
+                                    ) =>
+                                        setForm(
+                                            current => ({
+                                                ...current,
+                                                allowsOilFryer:
+                                                    value,
+                                            }),
+                                        )
+                                    }
+                                />
+                            </View>
+
+                            <View
+                                style={
+                                    styles.cookingMethodRow
+                                }
+                            >
+                                <View
+                                    style={
+                                        styles.cookingMethodText
+                                    }
+                                >
+                                    <Text
+                                        style={
+                                            styles.availableTitle
+                                        }
+                                    >
+                                        Freidora de aire
+                                    </Text>
+
+                                    <Text
+                                        style={
+                                            styles.availableSubtitle
+                                        }
+                                    >
+                                        Mostrará un aviso de mayor tiempo de preparación.
+                                    </Text>
+                                </View>
+
+                                <Switch
+                                    value={
+                                        form.allowsAirFryer
+                                    }
+                                    onValueChange={(
+                                        value,
+                                    ) =>
+                                        setForm(
+                                            current => ({
+                                                ...current,
+                                                allowsAirFryer:
+                                                    value,
+                                            }),
+                                        )
+                                    }
+                                />
+                            </View>
+
+                            {form.allowsAirFryer ? (
+                                <>
+                                    <Text
+                                        style={
+                                            styles.inputLabel
+                                        }
+                                    >
+                                        Minutos extra aproximados
+                                    </Text>
+
+                                    <TextInput
+                                        value={
+                                            form.airFryerExtraMinutes
+                                        }
+                                        onChangeText={(
+                                            value,
+                                        ) =>
+                                            setForm(
+                                                current => ({
+                                                    ...current,
+                                                    airFryerExtraMinutes:
+                                                        value.replace(
+                                                            /[^0-9]/g,
+                                                            '',
+                                                        ),
+                                                }),
+                                            )
+                                        }
+                                        style={
+                                            styles.input
+                                        }
+                                        keyboardType="number-pad"
+                                        placeholder="5"
+                                        placeholderTextColor="#777777"
+                                        editable={
+                                            !isProcessing
+                                        }
+                                    />
+                                </>
+                            ) : null}
                         </View>
 
                         <Text

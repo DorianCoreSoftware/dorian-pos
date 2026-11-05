@@ -149,6 +149,12 @@ const createStyles = (
     fontSize: 16,
     fontWeight: '700',
   },
+
+  orderPaidText: {
+    color: '#81C784',
+    fontSize: 13,
+    fontWeight: '800',
+  },
   timeText: {
     color: '#777',
     fontSize: 13,
@@ -187,6 +193,20 @@ const createStyles = (
     paddingTop: 4,
   },
   actionButtonsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+
+  advancePaymentLink: {
+    alignSelf: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 2,
+  },
+
+  advancePaymentLinkText: {
+    color: primaryColor,
+    fontSize: 12,
+    fontWeight: '800',
+    textDecorationLine: 'underline',
+  },
   secondaryActionsRow: {
     flexDirection: 'row',
     width: '100%',
