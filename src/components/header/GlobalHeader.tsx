@@ -284,9 +284,11 @@ export function GlobalHeader({
                 ? 'Admin'
                 : user?.role === 'accountant'
                   ? 'Contador'
-                  : user?.role === 'driver'
-                    ? 'Reparto'
-                    : 'Caja'}
+                  : user?.role === 'operator'
+                    ? 'Operador'
+                    : user?.role === 'driver'
+                      ? 'Reparto'
+                      : 'Caja'}
               )
             </Text>
           ) : (

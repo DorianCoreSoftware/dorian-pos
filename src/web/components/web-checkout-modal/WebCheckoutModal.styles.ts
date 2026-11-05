@@ -712,6 +712,105 @@ const createStyles = (
         17,
     },
 
+    savedAddressCard: {
+      marginBottom: 14,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: withAlpha(primaryColor, 0.48),
+      backgroundColor: withAlpha(primaryColor, 0.08),
+    },
+
+    savedAddressCardPressed: {
+      opacity: 0.88,
+    },
+
+    savedAddressHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+
+    savedAddressTitle: {
+      flex: 1,
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
+    savedAddressAction: {
+      color: primaryColor,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+
+    savedAddressText: {
+      color: '#AFAFAF',
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 8,
+    },
+
+    saveAddressRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      marginTop: 6,
+      marginBottom: 8,
+      padding: 13,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#1B1B1B',
+    },
+
+    saveAddressRowPressed: {
+      opacity: 0.88,
+    },
+
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#666666',
+      backgroundColor: '#111111',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 1,
+    },
+
+    checkboxChecked: {
+      borderColor: primaryColor,
+      backgroundColor: primaryColor,
+    },
+
+    checkboxMark: {
+      color: '#111111',
+      fontSize: 14,
+      fontWeight: '900',
+      lineHeight: 16,
+    },
+
+    saveAddressTextBox: {
+      flex: 1,
+    },
+
+    saveAddressTitle: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+
+    saveAddressHint: {
+      color: '#8F8F8F',
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 3,
+    },
+
     footer: {
       borderTopWidth:
         1,

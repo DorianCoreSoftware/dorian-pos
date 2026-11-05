@@ -103,8 +103,11 @@ import {
   getSavedWebCustomerSessionToken,
 } from '../../utils/webCustomerStorage';
 import {
+  getMyDefaultWebCustomerAddress,
   getMyWebCustomer,
   isInvalidWebCustomerSessionError,
+  saveMyDefaultWebCustomerAddress,
+  WebCustomerAddress,
   WebCustomerProfile,
 } from '../../services/web-customer/webCustomerService';
 
@@ -446,6 +449,13 @@ export default function WebMenuScreen({
     null,
   );
 
+  const [
+    savedCustomerAddress,
+    setSavedCustomerAddress,
+  ] = useState<WebCustomerAddress | null>(
+    null,
+  );
+
   useEffect(
     () => {
       let mounted = true;
@@ -460,19 +470,33 @@ export default function WebMenuScreen({
               setWebCustomerProfile(
                 null,
               );
+              setSavedCustomerAddress(
+                null,
+              );
             }
             return;
           }
 
           try {
-            const customer =
-              await getMyWebCustomer(
-                token,
-              );
+            const [
+              customer,
+              customerAddress,
+            ] =
+              await Promise.all([
+                getMyWebCustomer(
+                  token,
+                ),
+                getMyDefaultWebCustomerAddress(
+                  token,
+                ),
+              ]);
 
             if (mounted) {
               setWebCustomerProfile(
                 customer,
+              );
+              setSavedCustomerAddress(
+                customerAddress,
               );
             }
           } catch (error) {
@@ -1170,6 +1194,8 @@ export default function WebMenuScreen({
       marketingCode: string;
       deliveryDetails:
       DeliveryDetails | null;
+      saveDeliveryAddress:
+      boolean;
     },
   ) {
     if (
@@ -1246,6 +1272,56 @@ export default function WebMenuScreen({
           marketingToken:
             marketingTrackingToken,
         });
+      if (
+        data.saveDeliveryAddress &&
+        data.deliveryDetails
+      ) {
+        const token =
+          getSavedWebCustomerSessionToken();
+
+        if (
+          token &&
+          data.deliveryDetails.latitude !== null &&
+          data.deliveryDetails.longitude !== null
+        ) {
+          try {
+            const savedAddress =
+              await saveMyDefaultWebCustomerAddress(
+                token,
+                {
+                  street:
+                    data.deliveryDetails.street,
+                  exteriorNumber:
+                    data.deliveryDetails.exteriorNumber,
+                  interiorNumber:
+                    data.deliveryDetails.interiorNumber,
+                  neighborhood:
+                    data.deliveryDetails.neighborhood,
+                  postalCode:
+                    data.deliveryDetails.postalCode,
+                  deliveryReferences:
+                    data.deliveryDetails.deliveryReferences,
+                  latitude:
+                    data.deliveryDetails.latitude,
+                  longitude:
+                    data.deliveryDetails.longitude,
+                },
+              );
+
+            setSavedCustomerAddress(
+              savedAddress,
+            );
+          } catch (
+            addressError
+          ) {
+            console.warn(
+              'Pedido creado, pero no se pudo guardar la dirección:',
+              addressError,
+            );
+          }
+        }
+      }
+
       setSuccessfulOrderId(
         result.orderId,
       );
@@ -1972,6 +2048,12 @@ export default function WebMenuScreen({
         }
         initialCustomerPhone={
           webCustomerProfile?.phone ?? ''
+        }
+        savedAddress={
+          savedCustomerAddress
+        }
+        canSaveAddress={
+          webCustomerProfile !== null
         }
         submitting={
           isSubmittingOrder
