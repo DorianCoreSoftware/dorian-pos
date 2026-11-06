@@ -96,6 +96,7 @@ import { appVersionLabel } from '../../Utils/appVersion';
 import { AdminAttendance } from '../../components/admin/attendance/admin-attendance/AdminAttendance';
 import { AdminPayroll } from '../../components/admin/payroll/AdminPayroll';
 import { AdminPaymentSettings } from '../../components/admin/payment-settings/AdminPaymentSettings';
+import { AdminAiOrders } from '../../components/admin/ai-orders/AdminAiOrders';
 
 type AdminSection =
   | 'dashboard'
@@ -112,6 +113,7 @@ type AdminSection =
   | 'attendance'
   | 'payroll'
   | 'payments'
+  | 'ai-orders'
   | 'reports'
   | 'expenses'
   | 'printer'
@@ -124,6 +126,29 @@ type AdminSection =
   | 'events'
   | 'invoicing'
   | 'refunds';
+
+const lastAdminSectionByRole:
+  Record<string, AdminSection | undefined> =
+  {};
+
+function getInitialAdminSection(
+  role:
+    string | null | undefined,
+): AdminSection {
+  const roleKey =
+    role ?? 'unknown';
+
+  return (
+    lastAdminSectionByRole[
+      roleKey
+    ] ??
+    (
+      role === 'accountant'
+        ? 'payroll'
+        : 'dashboard'
+    )
+  );
+}
 
 interface AdminSectionOption {
   key: AdminSection;
@@ -166,9 +191,10 @@ export function AdminScreen({
     setActiveSection,
   ] =
     useState<AdminSection>(
-      user?.role === 'accountant'
-        ? 'payroll'
-        : 'dashboard',
+      () =>
+        getInitialAdminSection(
+          user?.role,
+        ),
     );
 
   const [
@@ -300,6 +326,14 @@ export function AdminScreen({
                 'PAGOS',
               icon:
                 '🏦',
+            },
+            {
+              key:
+                'ai-orders',
+              label:
+                'IA ORDERS',
+              icon:
+                '🤖',
             },
             {
               key:
@@ -468,6 +502,20 @@ export function AdminScreen({
       ],
     );
 
+  useEffect(
+    () => {
+      lastAdminSectionByRole[
+        user?.role ??
+        'unknown'
+      ] =
+        activeSection;
+    },
+    [
+      activeSection,
+      user?.role,
+    ],
+  );
+
   useEffect(() => {
     const activeSectionExists =
       availableSections.some(
@@ -635,6 +683,14 @@ export function AdminScreen({
       ) {
         return (
           <AdminPaymentSettings />
+        );
+      }
+      if (
+        activeSection ===
+        'ai-orders'
+      ) {
+        return (
+          <AdminAiOrders />
         );
       }
       if (

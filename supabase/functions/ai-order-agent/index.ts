@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
+const GOOGLE_MAPS_SERVER_API_KEY = Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
@@ -179,17 +180,70 @@ async function getProductDetails(productId: string) {
     .order('position');
   if (groupsError) throw groupsError;
 
-  const groupIds = (groups ?? []).map((row: any) => row.modifier_group_id);
+  const groupIds = (groups ?? [])
+    .map((row: any) => row.modifier_group_id)
+    .filter(Boolean);
+
   let modifiers: any[] = [];
+
   if (groupIds.length > 0) {
-    const { data: options, error: optionsError } = await admin
-      .from('product_modifier_options')
-      .select('modifier_id,position,modifiers(id,name,extra_price,is_available,group_id)')
-      .eq('product_id', productId)
-      .eq('is_available', true)
-      .order('position');
+    const [
+      { data: options, error: optionsError },
+      { data: groupModifiers, error: modifiersError },
+    ] = await Promise.all([
+      admin
+        .from('product_modifier_options')
+        .select('modifier_id,position')
+        .eq('product_id', productId)
+        .eq('is_available', true)
+        .order('position'),
+      admin
+        .from('modifiers')
+        .select('id,name,extra_price,is_available,group_id')
+        .in('group_id', groupIds)
+        .eq('is_available', true)
+        .order('name'),
+    ]);
+
     if (optionsError) throw optionsError;
-    modifiers = options ?? [];
+    if (modifiersError) throw modifiersError;
+
+    const optionPositionByModifierId = new Map(
+      (options ?? []).map((row: any) => [
+        row.modifier_id,
+        Number(row.position ?? 0),
+      ]),
+    );
+
+    for (const groupId of groupIds) {
+      const availableInGroup = (groupModifiers ?? [])
+        .filter((modifier: any) => modifier.group_id === groupId);
+
+      const configured = availableInGroup
+        .filter((modifier: any) =>
+          optionPositionByModifierId.has(modifier.id),
+        )
+        .sort(
+          (left: any, right: any) =>
+            (optionPositionByModifierId.get(left.id) ?? 0) -
+            (optionPositionByModifierId.get(right.id) ?? 0),
+        );
+
+      const allowed =
+        configured.length > 0
+          ? configured
+          : availableInGroup;
+
+      modifiers.push(
+        ...allowed.map((modifier: any, index: number) => ({
+          modifier_id: modifier.id,
+          position:
+            optionPositionByModifierId.get(modifier.id) ??
+            index,
+          modifiers: modifier,
+        })),
+      );
+    }
   }
 
   const { data: comboRecipe, error: comboError } = await admin
@@ -210,6 +264,454 @@ async function getProductDetails(productId: string) {
       : null,
   };
 }
+
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function getGoogleAddressComponent(
+  components: any[],
+  type: string,
+): string | null {
+  const component = (components ?? []).find(
+    (item: any) =>
+      Array.isArray(item?.types) &&
+      item.types.includes(type),
+  );
+
+  return (
+    component?.long_name ??
+    component?.short_name ??
+    null
+  );
+}
+
+async function getDeliveryBaseProduct() {
+  const { data, error } = await admin
+    .from('products')
+    .select('id,name,price,is_active,is_available,categories(name)')
+    .eq('is_active', true)
+    .eq('is_available', true);
+
+  if (error) throw error;
+
+  const product = (data ?? []).find((row: any) => {
+    const category = Array.isArray(row.categories)
+      ? row.categories[0]
+      : row.categories;
+
+    const categoryName = normalizeText(
+      String(category?.name ?? ''),
+    );
+
+    const productName = normalizeText(
+      String(row.name ?? ''),
+    );
+
+    return (
+      categoryName === 'domicilio' ||
+      productName === 'envio a domicilio' ||
+      productName === 'envio' ||
+      productName === 'domicilio'
+    );
+  });
+
+  if (!product) {
+    throw new Error(
+      'No se encontró el producto activo de envío a domicilio.',
+    );
+  }
+
+  return {
+    id: product.id,
+    name: product.name,
+    baseFee: Number(product.price ?? 0),
+  };
+}
+
+async function getDeliveryQuoteByCoordinates(
+  latitude: number,
+  longitude: number,
+) {
+  if (
+    !Number.isFinite(latitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    !Number.isFinite(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    throw new Error(
+      'Las coordenadas de entrega no son válidas.',
+    );
+  }
+
+  const { data: serviceEnabled, error: serviceError } =
+    await admin.rpc('get_delivery_service_status');
+
+  if (serviceError) throw serviceError;
+
+  if (!serviceEnabled) {
+    return {
+      available: false,
+      reason: 'El servicio a domicilio está desactivado.',
+      distanceKm: null,
+      zoneId: null,
+      zoneName: null,
+      extraFee: 0,
+      baseFee: 0,
+      totalFee: 0,
+    };
+  }
+
+  const { data, error } = await admin.rpc(
+    'get_delivery_quote',
+    {
+      p_latitude: latitude,
+      p_longitude: longitude,
+    },
+  );
+
+  if (error) throw error;
+
+  const row =
+    Array.isArray(data)
+      ? data[0] ?? null
+      : data ?? null;
+
+  if (!row) {
+    throw new Error(
+      'No se recibió información de la zona de entrega.',
+    );
+  }
+
+  const deliveryProduct =
+    await getDeliveryBaseProduct();
+
+  const available =
+    Boolean(row.available);
+
+  const extraFee =
+    available
+      ? Number(row.extra_fee ?? 0)
+      : 0;
+
+  const baseFee =
+    available
+      ? deliveryProduct.baseFee
+      : 0;
+
+  return {
+    available,
+    reason:
+      available
+        ? null
+        : 'Esta ubicación está fuera de nuestra zona de reparto.',
+    distanceKm:
+      row.distance_km !== null &&
+      row.distance_km !== undefined
+        ? Number(row.distance_km)
+        : null,
+    zoneId:
+      row.zone_id ?? null,
+    zoneName:
+      row.zone_name ?? null,
+    extraFee:
+      Number(extraFee.toFixed(2)),
+    baseFee:
+      Number(baseFee.toFixed(2)),
+    totalFee:
+      Number(
+        (
+          baseFee +
+          extraFee
+        ).toFixed(2),
+      ),
+    deliveryProductId:
+      deliveryProduct.id,
+    deliveryProductName:
+      deliveryProduct.name,
+  };
+}
+
+async function quoteDeliveryAddress(
+  address: string,
+  postalCode?: string | null,
+) {
+  if (!GOOGLE_MAPS_SERVER_API_KEY) {
+    throw new Error(
+      'GOOGLE_MAPS_SERVER_API_KEY no está configurada en Supabase Secrets.',
+    );
+  }
+
+  const cleanAddress =
+    String(address ?? '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 300);
+
+  const cleanPostalCode =
+    typeof postalCode === 'string'
+      ? postalCode
+        .trim()
+        .replace(/\s+/g, ' ')
+        .slice(0, 20)
+      : '';
+
+  if (!cleanAddress) {
+    throw new Error(
+      'Se necesita una dirección completa para cotizar el envío.',
+    );
+  }
+
+  const query = [
+    cleanAddress,
+    cleanPostalCode,
+    'México',
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const url =
+    new URL(
+      'https://maps.googleapis.com/maps/api/geocode/json',
+    );
+
+  url.searchParams.set(
+    'address',
+    query,
+  );
+
+  url.searchParams.set(
+    'key',
+    GOOGLE_MAPS_SERVER_API_KEY,
+  );
+
+  url.searchParams.set(
+    'region',
+    'mx',
+  );
+
+  url.searchParams.set(
+    'language',
+    'es',
+  );
+
+  const response =
+    await fetch(
+      url.toString(),
+    );
+
+  const payload =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      'No se pudo consultar Google Maps para validar la dirección.',
+    );
+  }
+
+  if (
+    payload?.status !== 'OK' ||
+    !Array.isArray(payload?.results) ||
+    payload.results.length === 0
+  ) {
+    const suffix =
+      payload?.error_message
+        ? `: ${payload.error_message}`
+        : '';
+
+    throw new Error(
+      `No se pudo localizar la dirección en Google Maps${suffix}`,
+    );
+  }
+
+  const result =
+    payload.results[0];
+
+  const latitude =
+    Number(
+      result?.geometry?.location?.lat,
+    );
+
+  const longitude =
+    Number(
+      result?.geometry?.location?.lng,
+    );
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    throw new Error(
+      'Google Maps no devolvió coordenadas válidas para la dirección.',
+    );
+  }
+
+  const components =
+    Array.isArray(
+      result.address_components,
+    )
+      ? result.address_components
+      : [];
+
+  const route =
+    getGoogleAddressComponent(
+      components,
+      'route',
+    );
+
+  const streetNumber =
+    getGoogleAddressComponent(
+      components,
+      'street_number',
+    );
+
+  const neighborhood =
+    getGoogleAddressComponent(
+      components,
+      'sublocality_level_1',
+    ) ??
+    getGoogleAddressComponent(
+      components,
+      'neighborhood',
+    ) ??
+    getGoogleAddressComponent(
+      components,
+      'locality',
+    );
+
+  const resolvedPostalCode =
+    (
+      getGoogleAddressComponent(
+        components,
+        'postal_code',
+      ) ??
+      cleanPostalCode
+    ) ||
+    null;
+
+  const quote =
+    await getDeliveryQuoteByCoordinates(
+      latitude,
+      longitude,
+    );
+
+  return {
+    geocoded: true,
+    formattedAddress:
+      result.formatted_address ??
+      cleanAddress,
+    address: {
+      street:
+        route ??
+        cleanAddress,
+      exteriorNumber:
+        streetNumber,
+      interiorNumber:
+        null,
+      neighborhood,
+      postalCode:
+        resolvedPostalCode,
+      deliveryReferences:
+        null,
+      latitude,
+      longitude,
+    },
+    quote,
+  };
+}
+
+async function validateDeliveryForDraft(
+  fulfillmentType: string | null,
+  delivery: any,
+) {
+  if (fulfillmentType !== 'delivery') {
+    return {
+      delivery: null,
+      deliveryFee: 0,
+    };
+  }
+
+  const latitude =
+    Number(
+      delivery?.latitude,
+    );
+
+  const longitude =
+    Number(
+      delivery?.longitude,
+    );
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    throw new Error(
+      'El domicilio todavía no tiene una ubicación validada. Usa quote_delivery antes de actualizar el borrador.',
+    );
+  }
+
+  const quote =
+    await getDeliveryQuoteByCoordinates(
+      latitude,
+      longitude,
+    );
+
+  if (!quote.available) {
+    throw new Error(
+      quote.reason ??
+      'La ubicación está fuera de la zona de reparto.',
+    );
+  }
+
+  const normalizedDelivery = {
+    street:
+      typeof delivery?.street === 'string'
+        ? delivery.street.trim().slice(0, 160)
+        : null,
+    exteriorNumber:
+      typeof delivery?.exteriorNumber === 'string'
+        ? delivery.exteriorNumber.trim().slice(0, 30)
+        : null,
+    interiorNumber:
+      typeof delivery?.interiorNumber === 'string'
+        ? delivery.interiorNumber.trim().slice(0, 30)
+        : null,
+    neighborhood:
+      typeof delivery?.neighborhood === 'string'
+        ? delivery.neighborhood.trim().slice(0, 160)
+        : null,
+    postalCode:
+      typeof delivery?.postalCode === 'string'
+        ? delivery.postalCode.trim().slice(0, 20)
+        : null,
+    deliveryReferences:
+      typeof delivery?.deliveryReferences === 'string'
+        ? delivery.deliveryReferences.trim().slice(0, 500)
+        : null,
+    latitude,
+    longitude,
+    quote: {
+      ...quote,
+      quotedAt:
+        new Date().toISOString(),
+    },
+  };
+
+  return {
+    delivery:
+      normalizedDelivery,
+    deliveryFee:
+      quote.totalFee,
+  };
+}
+
 
 async function getBusinessStatus() {
   const { data: settings, error } = await admin
@@ -268,18 +770,100 @@ async function validateDraftItems(items: DraftItemInput[]) {
     let modifiers: any[] = [];
 
     if (modifierIds.length > 0) {
-      const { data: options, error: modifierError } = await admin
-        .from('product_modifier_options')
-        .select('modifier_id,modifiers(id,name,extra_price,is_available)')
+      const { data: groupLinks, error: groupLinksError } = await admin
+        .from('product_modifier_groups')
+        .select('modifier_group_id')
         .eq('product_id', product.id)
-        .eq('is_available', true)
-        .in('modifier_id', modifierIds);
-      if (modifierError) throw modifierError;
-      if ((options ?? []).length !== modifierIds.length) {
+        .eq('is_active', true);
+
+      if (groupLinksError) throw groupLinksError;
+
+      const allowedGroupIds = (groupLinks ?? [])
+        .map((row: any) => row.modifier_group_id)
+        .filter(Boolean);
+
+      if (allowedGroupIds.length === 0) {
+        throw new Error(`${product.name} no tiene grupos de modificadores configurados.`);
+      }
+
+      const [
+        { data: configuredOptions, error: configuredOptionsError },
+        { data: requestedModifiers, error: requestedModifiersError },
+      ] = await Promise.all([
+        admin
+          .from('product_modifier_options')
+          .select('modifier_id,modifiers(group_id)')
+          .eq('product_id', product.id)
+          .eq('is_available', true),
+        admin
+          .from('modifiers')
+          .select('id,name,extra_price,is_available,group_id')
+          .in('id', modifierIds)
+          .eq('is_available', true),
+      ]);
+
+      if (configuredOptionsError) throw configuredOptionsError;
+      if (requestedModifiersError) throw requestedModifiersError;
+
+      const optionIds = new Set(
+        (configuredOptions ?? []).map((row: any) => row.modifier_id),
+      );
+
+      const requestedById = new Map(
+        (requestedModifiers ?? []).map((modifier: any) => [
+          modifier.id,
+          modifier,
+        ]),
+      );
+
+      const requestedGroupIds = [
+        ...new Set(
+          (requestedModifiers ?? [])
+            .map((modifier: any) => modifier.group_id)
+            .filter(Boolean),
+        ),
+      ];
+
+      const invalidModifier = modifierIds.some((modifierId) => {
+        const modifier: any = requestedById.get(modifierId);
+
+        if (
+          !modifier ||
+          !allowedGroupIds.includes(modifier.group_id)
+        ) {
+          return true;
+        }
+
+        const groupHasConfiguredOptions =
+          (configuredOptions ?? []).some((row: any) => {
+            const relation =
+              Array.isArray(row.modifiers)
+                ? row.modifiers[0]
+                : row.modifiers;
+
+            return relation?.group_id === modifier.group_id;
+          });
+
+        if (!groupHasConfiguredOptions) {
+          return false;
+        }
+
+        return !optionIds.has(modifierId);
+      });
+
+      if (invalidModifier) {
         throw new Error(`Uno o más modificadores no son válidos para ${product.name}.`);
       }
-      modifiers = (options ?? []).map((row: any) => row.modifiers).filter(Boolean);
-      modifierTotal = modifiers.reduce((sum, modifier) => sum + Number(modifier.extra_price ?? 0), 0);
+
+      modifiers = modifierIds
+        .map((modifierId) => requestedById.get(modifierId))
+        .filter(Boolean);
+
+      modifierTotal = modifiers.reduce(
+        (sum, modifier) =>
+          sum + Number(modifier.extra_price ?? 0),
+        0,
+      );
     }
 
     const unitPrice = Number(product.price) + modifierTotal;
@@ -301,31 +885,94 @@ async function validateDraftItems(items: DraftItemInput[]) {
 }
 
 async function updateDraft(conversationId: string, args: any) {
-  const validated = await validateDraftItems(Array.isArray(args.items) ? args.items : []);
+  const validated =
+    await validateDraftItems(
+      Array.isArray(args.items)
+        ? args.items
+        : [],
+    );
+
+  const fulfillmentType =
+    ['pickup', 'delivery'].includes(
+      args.fulfillment_type,
+    )
+      ? args.fulfillment_type
+      : null;
+
+  const deliveryValidation =
+    await validateDeliveryForDraft(
+      fulfillmentType,
+      args.delivery,
+    );
+
+  const estimatedTotal =
+    Number(
+      (
+        validated.estimatedTotal +
+        deliveryValidation.deliveryFee
+      ).toFixed(2),
+    );
+
   const payload = {
-    conversation_id: conversationId,
-    status: 'building',
-    customer_name: typeof args.customer_name === 'string' ? args.customer_name.trim().slice(0, 120) : null,
-    customer_phone: typeof args.customer_phone === 'string' ? args.customer_phone.replace(/\D/g, '').slice(0, 15) : null,
-    fulfillment_type: ['pickup', 'delivery'].includes(args.fulfillment_type) ? args.fulfillment_type : null,
-    delivery: args.delivery && typeof args.delivery === 'object' ? args.delivery : null,
-    items: validated.items,
-    estimated_total: validated.estimatedTotal,
+    conversation_id:
+      conversationId,
+    status:
+      'building',
+    customer_name:
+      typeof args.customer_name === 'string'
+        ? args.customer_name.trim().slice(0, 120)
+        : null,
+    customer_phone:
+      typeof args.customer_phone === 'string'
+        ? args.customer_phone.replace(/\D/g, '').slice(0, 15)
+        : null,
+    fulfillment_type:
+      fulfillmentType,
+    delivery:
+      deliveryValidation.delivery,
+    items:
+      validated.items,
+    estimated_total:
+      estimatedTotal,
   };
 
   const { data, error } = await admin
     .from('ai_order_drafts')
-    .upsert(payload, { onConflict: 'conversation_id' })
+    .upsert(
+      payload,
+      {
+        onConflict:
+          'conversation_id',
+      },
+    )
     .select('*')
     .single();
+
   if (error) throw error;
 
-  await admin.from('ai_order_conversations').update({
-    customer_name: payload.customer_name,
-    customer_phone: payload.customer_phone,
-  }).eq('id', conversationId);
+  await admin
+    .from('ai_order_conversations')
+    .update({
+      customer_name:
+        payload.customer_name,
+      customer_phone:
+        payload.customer_phone,
+    })
+    .eq(
+      'id',
+      conversationId,
+    );
 
-  return data;
+  return {
+    ...data,
+    pricing: {
+      productsTotal:
+        validated.estimatedTotal,
+      deliveryFee:
+        deliveryValidation.deliveryFee,
+      estimatedTotal,
+    },
+  };
 }
 
 async function getDraft(conversationId: string) {
@@ -358,6 +1005,24 @@ async function confirmOrder(conversationId: string, settings: Settings) {
     return { ok: false, reason: 'No hay un pedido armado.' };
   }
 
+  if (draft.fulfillment_type === 'delivery') {
+    const deliveryQuote = draft.delivery?.quote;
+
+    if (
+      !deliveryQuote?.available ||
+      !Number.isFinite(Number(deliveryQuote?.totalFee)) ||
+      !Number.isFinite(Number(draft.delivery?.latitude)) ||
+      !Number.isFinite(Number(draft.delivery?.longitude))
+    ) {
+      return {
+        ok: false,
+        blocked: true,
+        reason: 'El domicilio todavía no tiene una cotización de entrega válida. Valida la dirección antes de confirmar.',
+        draftId: draft.id,
+      };
+    }
+  }
+
   if (!settings.order_creation_enabled) {
     await admin.from('ai_order_drafts').update({ status: 'awaiting_confirmation' }).eq('id', draft.id);
     return {
@@ -380,7 +1045,7 @@ const tools = [
   {
     type: 'function', name: 'search_menu',
     description: 'Busca productos reales disponibles en el menú. Úsala antes de asumir que un producto existe.',
-    parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 15 } }, required: ['query'], additionalProperties: false },
+    parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 15 } }, required: ['query', 'limit'], additionalProperties: false },
     strict: true,
   },
   {
@@ -393,6 +1058,20 @@ const tools = [
     type: 'function', name: 'get_business_status',
     description: 'Consulta configuración general de pedidos, recoger y domicilio.',
     parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    strict: true,
+  },
+  {
+    type: 'function', name: 'quote_delivery',
+    description: 'Valida una dirección con Google Maps y calcula cobertura y costo real de reparto usando DorianCore. Úsala antes de guardar cualquier pedido a domicilio.',
+    parameters: {
+      type: 'object',
+      properties: {
+        address: { type: 'string' },
+        postal_code: { type: ['string', 'null'] },
+      },
+      required: ['address', 'postal_code'],
+      additionalProperties: false,
+    },
     strict: true,
   },
   {
@@ -472,6 +1151,7 @@ async function runTool(conversationId: string, call: ToolCall, settings: Setting
       case 'search_menu': result = await searchMenu(args.query ?? '', args.limit ?? 8); break;
       case 'get_product_details': result = await getProductDetails(args.product_id); break;
       case 'get_business_status': result = await getBusinessStatus(); break;
+      case 'quote_delivery': result = await quoteDeliveryAddress(args.address ?? '', args.postal_code ?? null); break;
       case 'update_draft': result = await updateDraft(conversationId, args); break;
       case 'get_order_summary': result = await getDraft(conversationId); break;
       case 'request_human': result = await requestHuman(conversationId, args.reason); break;
@@ -530,9 +1210,14 @@ REGLAS OBLIGATORIAS:
 - Busca el producto antes de agregarlo y consulta detalles cuando necesites modificadores.
 - Si get_product_details indica combo.requiresConfiguration=true, no lo agregues al borrador en esta fase; explica la limitación o solicita apoyo humano.
 - No calcules totales mentalmente: usa update_draft y get_order_summary.
+- Si el cliente pide domicilio, solicita una dirección suficientemente completa y usa quote_delivery antes de guardar el domicilio.
+- Nunca inventes coordenadas, cobertura ni costo de envío. Usa exactamente el resultado de quote_delivery.
+- Después de quote_delivery, copia sus campos address al objeto delivery de update_draft.
+- El total estimado de update_draft ya incluye la tarifa real de entrega cuando el domicilio fue validado; no sumes nada por tu cuenta.
 - Conserva notas como "sin tocino" como notes cuando no exista un modificador estructurado apropiado.
 - Si falta información importante, pregunta una sola cosa concreta a la vez.
 - Antes de confirm_order, muestra resumen, total estimado y pide confirmación explícita.
+- Mientras order_creation_enabled sea false, habla siempre de "borrador", "actualizar el borrador" o "dejar listo para revisión". No digas "registraré", "crearé", "levantaré" ni afirmes que un pedido será creado.
 - En esta Fase 1, si confirm_order informa que la creación está bloqueada, explica que el pedido quedó listo para revisión, no digas que fue creado.
 - Si no puedes resolver algo con seguridad o el cliente pide humano, usa request_human.
 ${settings.system_instructions || ''}`;
