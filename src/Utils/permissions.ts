@@ -25,7 +25,8 @@ export function canManageCash(
   user: UserSession | null,
 ): boolean {
   return (
-    user?.role === 'admin'
+    user?.role === 'admin' ||
+    user?.role === 'operator'
   );
 }
 
@@ -50,6 +51,7 @@ export function canAccessDriverOrders(
 ): boolean {
   return (
     user?.role === 'driver' ||
+    user?.role === 'operator' ||
     user?.role === 'admin'
   );
 }

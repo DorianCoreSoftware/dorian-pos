@@ -78,6 +78,12 @@ const ROLE_OPTIONS: Array<{
             'Acceso al módulo de nómina y funciones financieras autorizadas.',
     },
     {
+        value: 'operator',
+        label: 'Operador',
+        description:
+            'Acceso a la operación diaria: punto de venta, cocina, ventas, caja, reparto, recompensas y asistencia, sin acceso administrativo.',
+    },
+    {
         value: 'seller',
         label: 'Vendedor',
         description:
@@ -1511,6 +1517,9 @@ function getRoleLabel(
 
         case 'accountant':
             return 'Contador';
+
+        case 'operator':
+            return 'Operador';
 
         case 'driver':
             return 'Repartidor';

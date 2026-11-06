@@ -3,12 +3,14 @@ import { withAlpha } from '../../theme/brandStyles';
 import { useBusiness } from '../../context/BusinessContext';
 
 import React, {
+  useEffect,
   useState,
 } from 'react';
 
 import {
   Alert,
   FlatList,
+  Modal,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -128,6 +130,24 @@ export function KitchenScreen({
     );
 
   const [
+    paymentIntent,
+    setPaymentIntent,
+  ] = useState<
+    'advance' | 'final'
+  >('final');
+
+  const [
+    productInfo,
+    setProductInfo,
+  ] = useState<{
+    name: string;
+    description:
+      string | null;
+  } | null>(
+    null,
+  );
+
+  const [
     isProcessingPayment,
     setIsProcessingPayment,
   ] =
@@ -139,6 +159,67 @@ export function KitchenScreen({
   ] = useState<Set<string>>(
     () => new Set(),
   );
+
+  const [
+    paidOrderIds,
+    setPaidOrderIds,
+  ] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const refreshPaidOrders =
+      async (): Promise<void> => {
+        const results =
+          await Promise.all(
+            pendingOrders.map(
+              async order => {
+                try {
+                  const payment =
+                    await fetchOrderPaymentByOrderId(
+                      order.id,
+                    );
+
+                  return payment
+                    ? order.id
+                    : null;
+                } catch (error) {
+                  console.error(
+                    'No se pudo consultar el pago de la orden:',
+                    order.id,
+                    error,
+                  );
+
+                  return null;
+                }
+              },
+            ),
+          );
+
+        if (!active) {
+          return;
+        }
+
+        setPaidOrderIds(
+          new Set(
+            results.filter(
+              (
+                orderId,
+              ): orderId is string =>
+                Boolean(orderId),
+            ),
+          ),
+        );
+      };
+
+    void refreshPaidOrders();
+
+    return () => {
+      active = false;
+    };
+  }, [pendingOrders]);
 
   const isOrderFullyPrepared = (
     order: KitchenOrder,
@@ -245,6 +326,19 @@ export function KitchenScreen({
           order.id,
         );
 
+        setPaidOrderIds(
+          current => {
+            const next =
+              new Set(current);
+
+            next.delete(
+              order.id,
+            );
+
+            return next;
+          },
+        );
+
         if (
           editingOrderId ===
           order.id
@@ -269,15 +363,40 @@ export function KitchenScreen({
   const handleOpenPayment =
     async (
       order: KitchenOrder,
+      intent:
+        'advance' | 'final',
     ): Promise<void> => {
+      const alreadyPaid =
+        paidOrderIds.has(
+          order.id,
+        );
+
+      if (alreadyPaid) {
+        if (
+          intent === 'final'
+        ) {
+          await handleDeliverPaidOrder(
+            order,
+          );
+        } else {
+          Alert.alert(
+            'Orden ya pagada',
+            'Esta orden ya tiene un pago registrado.',
+          );
+        }
+
+        return;
+      }
+
       if (
+        intent === 'final' &&
         !isOrderFullyPrepared(
           order,
         )
       ) {
         Alert.alert(
           'Pedido incompleto',
-          'Marca todos los productos como preparados antes de cobrar la orden.',
+          'Marca todos los productos como preparados antes de cobrar y entregar la orden.',
         );
         return;
       }
@@ -289,50 +408,33 @@ export function KitchenScreen({
           );
 
         if (existingPayment) {
-          Alert.alert(
-            'Orden ya pagada',
-
-            existingPayment
-              .paymentMethod ===
-              'cash'
-              ? `Esta orden ya fue pagada en efectivo.
-
-Recibido: ${formatCurrency(
-                existingPayment
-                  .amountReceived ??
-                0,
-              )}
-Cambio: ${formatCurrency(
-                existingPayment
-                  .changeAmount ??
-                0,
-              )}`
-              : 'Esta orden ya fue pagada con tarjeta.',
-
-            [
-              {
-                text:
-                  'Cancelar',
-
-                style:
-                  'cancel',
-              },
-              {
-                text:
-                  'Entregar',
-
-                onPress:
-                  () => {
-                    void handleDeliverPaidOrder(
-                      order,
-                    );
-                  },
-              },
-            ],
+          setPaidOrderIds(
+            current =>
+              new Set([
+                ...current,
+                order.id,
+              ]),
           );
+
+          if (
+            intent === 'final'
+          ) {
+            await handleDeliverPaidOrder(
+              order,
+            );
+          } else {
+            Alert.alert(
+              'Orden ya pagada',
+              'Esta orden ya tiene un pago registrado.',
+            );
+          }
 
           return;
         }
+
+        setPaymentIntent(
+          intent,
+        );
 
         setPaymentOrder(
           order,
@@ -362,6 +464,10 @@ Cambio: ${formatCurrency(
 
       setPaymentOrder(
         null,
+      );
+
+      setPaymentIntent(
+        'final',
       );
     };
 
@@ -408,6 +514,12 @@ Cambio: ${formatCurrency(
 
               paymentReference,
 
+              paymentTiming:
+                paymentIntent ===
+                'advance'
+                  ? 'advance'
+                  : 'final',
+
               currencyCode,
             },
           );
@@ -450,6 +562,9 @@ Cambio: ${formatCurrency(
           );
         }
 
+        let ticketPrinted =
+          true;
+
         try {
           await printOrderTicket({
             order:
@@ -464,6 +579,9 @@ Cambio: ${formatCurrency(
             currencyCode,
           });
         } catch (error) {
+          ticketPrinted =
+            false;
+
           console.error(
             'Pago registrado, pero falló la impresión del ticket:',
             error,
@@ -475,41 +593,42 @@ Cambio: ${formatCurrency(
           );
         }
 
-        try {
-          await deliverOrder(
-            orderToPay.id,
-          );
-        } catch (error) {
-          console.error(
-            'Pago registrado, pero no se pudo entregar la orden:',
-            error,
+        setPaidOrderIds(
+          current =>
+            new Set([
+              ...current,
+              orderToPay.id,
+            ]),
+        );
+
+        setPaymentOrder(
+          null,
+        );
+
+        if (
+          paymentIntent ===
+          'final'
+        ) {
+          setPaymentIntent(
+            'final',
           );
 
-          setPaymentOrder(
-            null,
-          );
-
-          Alert.alert(
-            'Pago registrado',
-            'El pago se guardó correctamente, pero no se pudo marcar la orden como entregada.\n\nLa orden seguirá apareciendo como pendiente. Presiona "Cobrar / Entregar" nuevamente para completar la entrega.',
+          await handleDeliverPaidOrder(
+            orderToPay,
           );
 
           return;
         }
 
-        removeOrderFromPendingList(
-          orderToPay.id,
+        setPaymentIntent(
+          'final',
         );
 
-        if (
-          editingOrderId ===
-          orderToPay.id
-        ) {
-          clearEditingOrder();
-        }
-
-        setPaymentOrder(
-          null,
+        Alert.alert(
+          'Pago anticipado registrado',
+          ticketPrinted
+            ? 'El cobro se guardó y el ticket fue generado. La orden conservará su estado actual y seguirá visible en cocina.'
+            : 'El cobro se guardó. La orden conservará su estado actual y seguirá visible en cocina.',
         );
       } finally {
         setIsProcessingPayment(
@@ -649,7 +768,11 @@ Cambio: ${formatCurrency(
           : 'Listo para recoger';
       }
 
-      return 'Cobrar / Entregar';
+      return paidOrderIds.has(
+        order.id,
+      )
+        ? 'Entregar'
+        : 'Cobrar / Entregar';
     };
 
   const handleCancelOrderPrompt =
@@ -910,6 +1033,10 @@ Cambio: ${formatCurrency(
                         ...modifier,
                       }),
                     ),
+
+                  cookingMethod:
+                    component.cooking_method ??
+                    null,
                 }),
               )
               : undefined,
@@ -1020,6 +1147,29 @@ Cambio: ${formatCurrency(
       );
     };
 
+  const handleOpenProductInfo = (
+    name: string,
+    description:
+      string | null | undefined,
+  ): void => {
+    setProductInfo({
+      name:
+        name.trim() ||
+        'Producto',
+      description:
+        description
+          ?.trim() ||
+        null,
+    });
+  };
+
+  const handleCloseProductInfo =
+    (): void => {
+      setProductInfo(
+        null,
+      );
+    };
+
   const renderComboComponent = (
     component:
       KitchenOrderItemComponent,
@@ -1041,25 +1191,75 @@ Cambio: ${formatCurrency(
             14,
         }}
       >
-        <Text
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Ver descripción de ${
+            component.products
+              ?.name ??
+            component.label
+          }`}
+          onPress={() =>
+            handleOpenProductInfo(
+              component.products
+                ?.name ??
+                component.label,
+              component.products
+                ?.description,
+            )
+          }
+          activeOpacity={
+            0.65
+          }
           style={{
-            color:
-              '#FFFFFF',
-
-            fontSize:
-              13,
-
-            fontWeight:
-              '600',
+            alignSelf:
+              'flex-start',
           }}
         >
-          ↳{' '}
-          {component.quantity}
-          x{' '}
-          {component.products
-            ?.name ??
-            component.label}
-        </Text>
+          <Text
+            style={{
+              color:
+                '#FFFFFF',
+
+              fontSize:
+                13,
+
+              fontWeight:
+                '600',
+
+              textDecorationLine:
+                'underline',
+
+              textDecorationStyle:
+                'dotted',
+            }}
+          >
+            ↳{' '}
+            {component.quantity}
+            x{' '}
+            {component.products
+              ?.name ??
+              component.label}
+          </Text>
+        </TouchableOpacity>
+
+        {component.cooking_method ? (
+          <Text
+            style={{
+              color:
+                component.cooking_method === 'air_fryer'
+                  ? businessTheme.primary
+                  : '#BBBBBB',
+              fontSize: 12,
+              fontWeight: '700',
+              paddingLeft: 12,
+              marginTop: 3,
+            }}
+          >
+            {component.cooking_method === 'air_fryer'
+              ? '♨ Freidora de aire'
+              : '🔥 Aceite'}
+          </Text>
+        ) : null}
 
         {modifiers.map(
           (
@@ -1201,28 +1401,76 @@ Cambio: ${formatCurrency(
             ) : null}
           </TouchableOpacity>
 
-          <Text
-            style={[
-              styles.itemText,
-              {
-                flex: 1,
-                opacity:
-                  line.is_prepared
-                    ? 0.72
-                    : 1,
-              },
-            ]}
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`Ver descripción de ${
+              line.products
+                ?.name ??
+              'Producto'
+            }`}
+            onPress={() =>
+              handleOpenProductInfo(
+                line.products
+                  ?.name ??
+                  'Producto',
+                line.products
+                  ?.description,
+              )
+            }
+            activeOpacity={
+              0.65
+            }
+            style={{
+              flex: 1,
+            }}
           >
-            {line.quantity}
-            x{' '}
-            {line.products
-              ?.name ??
-              'Producto'}
-            {line.reward_source
-              ? ' · PREMIO $0'
-              : ''}
-          </Text>
+            <Text
+              style={[
+                styles.itemText,
+                {
+                  opacity:
+                    line.is_prepared
+                      ? 0.72
+                      : 1,
+
+                  textDecorationLine:
+                    'underline',
+
+                  textDecorationStyle:
+                    'dotted',
+                },
+              ]}
+            >
+              {line.quantity}
+              x{' '}
+              {line.products
+                ?.name ??
+                'Producto'}
+              {line.reward_source
+                ? ' · PREMIO $0'
+                : ''}
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {line.cooking_method ? (
+          <Text
+            style={{
+              color:
+                line.cooking_method === 'air_fryer'
+                  ? businessTheme.primary
+                  : '#BBBBBB',
+              fontSize: 12,
+              fontWeight: '800',
+              marginTop: 4,
+              paddingLeft: 44,
+            }}
+          >
+            {line.cooking_method === 'air_fryer'
+              ? '♨ Freidora de aire'
+              : '🔥 Aceite'}
+          </Text>
+        ) : null}
 
         {modifiers.length >
           0 && (
@@ -1639,6 +1887,17 @@ Cambio: ${formatCurrency(
               item.total,
             ),
           )}
+          {paidOrderIds.has(
+            item.id,
+          ) ? (
+            <Text
+              style={
+                styles.orderPaidText
+              }
+            >
+              {' '}(Pagado)
+            </Text>
+          ) : null}
         </Text>
       </View>
 
@@ -1791,6 +2050,32 @@ Cambio: ${formatCurrency(
           styles.actionBlock
         }
       >
+        {!paidOrderIds.has(
+          item.id,
+        ) &&
+        item.status !== 'ready' &&
+        item.status !== 'on_the_way' ? (
+          <TouchableOpacity
+            style={
+              styles.advancePaymentLink
+            }
+            onPress={() => {
+              void handleOpenPayment(
+                item,
+                'advance',
+              );
+            }}
+          >
+            <Text
+              style={
+                styles.advancePaymentLinkText
+              }
+            >
+              ¿Pago anticipado?
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         {item.status !== 'pending' &&
         !isOrderFullyPrepared(
           item,
@@ -1834,6 +2119,7 @@ Cambio: ${formatCurrency(
             ) {
               void handleOpenPayment(
                 item,
+                'final',
               );
 
               return;
@@ -1952,6 +2238,232 @@ Cambio: ${formatCurrency(
           renderOrder
         }
       />
+
+      <Modal
+        visible={
+          productInfo !==
+          null
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={
+          handleCloseProductInfo
+        }
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor:
+              'rgba(0,0,0,0.72)',
+            alignItems:
+              'center',
+            justifyContent:
+              'center',
+            padding: 24,
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={
+              1
+            }
+            onPress={
+              handleCloseProductInfo
+            }
+            style={{
+              position:
+                'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+            }}
+          />
+
+          <View
+            style={{
+              width:
+                '100%',
+              maxWidth:
+                520,
+              maxHeight:
+                '78%',
+              backgroundColor:
+                '#1E1E1E',
+              borderRadius:
+                18,
+              borderWidth:
+                1,
+              borderColor:
+                '#4A4A4A',
+              overflow:
+                'hidden',
+            }}
+          >
+            <View
+              style={{
+                paddingHorizontal:
+                  20,
+                paddingTop:
+                  20,
+                paddingBottom:
+                  16,
+                borderBottomWidth:
+                  1,
+                borderBottomColor:
+                  '#353535',
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    '#FFFFFF',
+                  fontSize:
+                    22,
+                  fontWeight:
+                    '900',
+                  paddingRight:
+                    44,
+                }}
+              >
+                {productInfo
+                  ?.name ??
+                  'Producto'}
+              </Text>
+
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar descripción"
+                onPress={
+                  handleCloseProductInfo
+                }
+                style={{
+                  position:
+                    'absolute',
+                  top: 14,
+                  right: 14,
+                  width: 38,
+                  height: 38,
+                  borderRadius:
+                    19,
+                  backgroundColor:
+                    '#2A2A2A',
+                  alignItems:
+                    'center',
+                  justifyContent:
+                    'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      '#FFFFFF',
+                    fontSize:
+                      22,
+                    fontWeight:
+                      '700',
+                  }}
+                >
+                  ×
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{
+                maxHeight:
+                  420,
+              }}
+              contentContainerStyle={{
+                padding:
+                  20,
+              }}
+              showsVerticalScrollIndicator={
+                false
+              }
+            >
+              <Text
+                style={{
+                  color:
+                    businessTheme.primary,
+                  fontSize:
+                    12,
+                  fontWeight:
+                    '900',
+                  letterSpacing:
+                    0.7,
+                  marginBottom:
+                    8,
+                }}
+              >
+                DESCRIPCIÓN / INGREDIENTES
+              </Text>
+
+              <Text
+                selectable
+                style={{
+                  color:
+                    productInfo
+                      ?.description
+                      ? '#F2F2F2'
+                      : '#A5A5A5',
+                  fontSize:
+                    16,
+                  lineHeight:
+                    24,
+                }}
+              >
+                {productInfo
+                  ?.description ??
+                  'Este producto todavía no tiene una descripción registrada.'}
+              </Text>
+            </ScrollView>
+
+            <View
+              style={{
+                padding:
+                  16,
+                borderTopWidth:
+                  1,
+                borderTopColor:
+                  '#353535',
+              }}
+            >
+              <TouchableOpacity
+                onPress={
+                  handleCloseProductInfo
+                }
+                style={{
+                  minHeight:
+                    48,
+                  borderRadius:
+                    10,
+                  backgroundColor:
+                    businessTheme.primary,
+                  alignItems:
+                    'center',
+                  justifyContent:
+                    'center',
+                  paddingHorizontal:
+                    18,
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      businessTheme.onPrimary,
+                    fontSize:
+                      15,
+                    fontWeight:
+                      '900',
+                  }}
+                >
+                  CERRAR
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <PaymentModal
         visible={

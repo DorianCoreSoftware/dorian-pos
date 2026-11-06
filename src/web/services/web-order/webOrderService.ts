@@ -110,6 +110,10 @@ export async function createWebOrder({
         notes:
           item.notes.trim(),
 
+        cookingMethod:
+          item.cookingMethod ??
+          null,
+
         modifiers: (
           item.selectedModifiers ??
           []
@@ -139,6 +143,10 @@ export async function createWebOrder({
 
             notes:
               component.notes.trim(),
+
+            cookingMethod:
+              component.cookingMethod ??
+              null,
 
             modifiers: (
               component

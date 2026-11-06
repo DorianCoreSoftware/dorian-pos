@@ -18,6 +18,9 @@ export interface ComboProductOption {
   isAvailable: boolean;
   isActive: boolean;
   isComboOption: boolean;
+  allowsOilFryer: boolean;
+  allowsAirFryer: boolean;
+  airFryerExtraMinutes: number;
 }
 
 export interface ComboComponentProductRule {

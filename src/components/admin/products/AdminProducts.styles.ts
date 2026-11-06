@@ -395,6 +395,46 @@ const createStyles = (
       color: primaryColor,
     },
 
+
+    cookingMethodsCard: {
+      marginTop: 16,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#3D3D3D',
+      backgroundColor: '#202020',
+    },
+
+    cookingMethodsTitle: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
+    cookingMethodsSubtitle: {
+      color: '#888888',
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 4,
+      marginBottom: 8,
+    },
+
+    cookingMethodRow: {
+      minHeight: 58,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingVertical: 8,
+      borderTopWidth: 1,
+      borderTopColor: '#303030',
+    },
+
+    cookingMethodText: {
+      flex: 1,
+      minWidth: 0,
+    },
+
     availableRow: {
       flexDirection: 'row',
       alignItems: 'center',

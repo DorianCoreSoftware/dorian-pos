@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   ScrollView,
   Switch,
@@ -23,6 +24,7 @@ import { getAllProducts } from '../../../services/products';
 import {
   deletePromotionProgram,
   deletePromotionReward,
+  buildPromotionPrefixSuggestion,
   getPromotionPrograms,
   savePromotionProgram,
   savePromotionReward,
@@ -36,6 +38,11 @@ import {
   DateCalendarField,
 } from '../../common/date-calendar-field/DateCalendarField';
 import { Product } from '../../../types';
+
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+
+import { supabase } from '../../../services/supabase';
 
 
 interface ProgramDraft {
@@ -60,6 +67,11 @@ interface ProgramDraft {
   endsAt: string;
   activeWeekdays: number[];
   priority: string;
+  ticketShowImage: boolean;
+  ticketImageUrl: string | null;
+  ticketImageRasterBase64: string | null;
+  ticketImageWidth: number | null;
+  ticketImageHeight: number | null;
 }
 
 const emptyProgram = (): ProgramDraft => ({
@@ -83,6 +95,11 @@ const emptyProgram = (): ProgramDraft => ({
   endsAt: '',
   activeWeekdays: [0, 1, 2, 3, 4, 5, 6],
   priority: '100',
+  ticketShowImage: false,
+  ticketImageUrl: null,
+  ticketImageRasterBase64: null,
+  ticketImageWidth: null,
+  ticketImageHeight: null,
 });
 
 function draftFromProgram(program: PromotionProgram): ProgramDraft {
@@ -108,6 +125,11 @@ function draftFromProgram(program: PromotionProgram): ProgramDraft {
     endsAt: program.endsAt ?? '',
     activeWeekdays: program.activeWeekdays.length > 0 ? program.activeWeekdays : [0,1,2,3,4,5,6],
     priority: String(program.priority),
+    ticketShowImage: program.ticketShowImage,
+    ticketImageUrl: program.ticketImageUrl,
+    ticketImageRasterBase64: program.ticketImageRasterBase64,
+    ticketImageWidth: program.ticketImageWidth,
+    ticketImageHeight: program.ticketImageHeight,
   };
 }
 
@@ -124,6 +146,11 @@ export function AdminPromotions() {
   const [draft, setDraft] = useState<ProgramDraft>(emptyProgram());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [
+    isProcessingTicketImage,
+    setIsProcessingTicketImage,
+  ] = useState(false);
+
   const [
     productSelectorMode,
     setProductSelectorMode,
@@ -214,7 +241,291 @@ export function AdminPromotions() {
     setDraft(emptyProgram());
   };
 
+  const handlePickTicketImage =
+    async (): Promise<void> => {
+      if (
+        isSaving ||
+        isProcessingTicketImage
+      ) {
+        return;
+      }
+
+      try {
+        setIsProcessingTicketImage(
+          true,
+        );
+
+        const permission =
+          await ImagePicker
+            .requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert(
+            'Permiso requerido',
+            'Necesitamos acceso a tus fotos para seleccionar la imagen del ticket.',
+          );
+          return;
+        }
+
+        const result =
+          await ImagePicker
+            .launchImageLibraryAsync({
+              mediaTypes:
+                ImagePicker
+                  .MediaTypeOptions
+                  .Images,
+              allowsEditing: false,
+              quality: 0.9,
+            });
+
+        if (result.canceled) {
+          return;
+        }
+
+        const asset =
+          result.assets[0];
+
+        if (
+          asset.fileSize &&
+          asset.fileSize >
+            8 * 1024 * 1024
+        ) {
+          Alert.alert(
+            'Imagen demasiado grande',
+            'Selecciona una imagen de máximo 8 MB.',
+          );
+          return;
+        }
+
+        const targetWidth =
+          Math.min(
+            Math.max(
+              Number(
+                asset.width,
+              ) || 384,
+              1,
+            ),
+            384,
+          );
+
+        const processed =
+          await ImageManipulator
+            .manipulateAsync(
+              asset.uri,
+              [
+                {
+                  resize: {
+                    width:
+                      targetWidth,
+                  },
+                },
+              ],
+              {
+                compress: 1,
+                format:
+                  ImageManipulator
+                    .SaveFormat
+                    .PNG,
+                base64: true,
+              },
+            );
+
+        if (!processed.base64) {
+          throw new Error(
+            'No se pudo preparar la imagen seleccionada.',
+          );
+        }
+
+        const {
+          data,
+          error,
+        } =
+          await supabase
+            .functions
+            .invoke(
+              'promotion-ticket-image',
+              {
+                body: {
+                  imageBase64:
+                    processed.base64,
+                  mimeType:
+                    'image/png',
+                  maxWidth:
+                    384,
+                },
+              },
+            );
+
+        if (error) {
+          let detail =
+            error.message;
+
+          const context =
+            (
+              error as {
+                context?:
+                  Response;
+              }
+            ).context;
+
+          if (context) {
+            try {
+              const payload =
+                await context
+                  .clone()
+                  .json() as {
+                    error?:
+                      string;
+                  };
+
+              if (
+                payload?.error
+              ) {
+                detail =
+                  payload.error;
+              }
+            } catch {
+              try {
+                const responseText =
+                  await context
+                    .clone()
+                    .text();
+
+                if (
+                  responseText
+                    .trim()
+                ) {
+                  detail =
+                    responseText;
+                }
+              } catch {
+                // Conserva el mensaje original.
+              }
+            }
+          }
+
+          throw new Error(
+            `No se pudo convertir la imagen para la impresora: ${detail}`,
+          );
+        }
+
+        const raster =
+          data as {
+            base64?: string;
+            width?: number;
+            height?: number;
+            error?: string;
+          };
+
+        if (
+          raster.error ||
+          !raster.base64 ||
+          !Number.isFinite(
+            Number(
+              raster.width,
+            ),
+          ) ||
+          !Number.isFinite(
+            Number(
+              raster.height,
+            ),
+          )
+        ) {
+          throw new Error(
+            raster.error ||
+              'La función de imagen devolvió una respuesta inválida.',
+          );
+        }
+
+        setDraft(
+          current => ({
+            ...current,
+            ticketShowImage:
+              true,
+            ticketImageUrl:
+              `data:image/png;base64,${processed.base64}`,
+            ticketImageRasterBase64:
+              raster.base64 ??
+              null,
+            ticketImageWidth:
+              Number(
+                raster.width,
+              ),
+            ticketImageHeight:
+              Number(
+                raster.height,
+              ),
+          }),
+        );
+      } catch (error) {
+        console.error(
+          'Error preparando imagen promocional:',
+          error,
+        );
+
+        Alert.alert(
+          'Imagen del ticket',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo procesar la imagen.',
+        );
+      } finally {
+        setIsProcessingTicketImage(
+          false,
+        );
+      }
+    };
+
+  const handleRemoveTicketImage =
+    (): void => {
+      if (
+        isSaving ||
+        isProcessingTicketImage
+      ) {
+        return;
+      }
+
+      setDraft(
+        current => ({
+          ...current,
+          ticketShowImage:
+            false,
+          ticketImageUrl:
+            null,
+          ticketImageRasterBase64:
+            null,
+          ticketImageWidth:
+            null,
+          ticketImageHeight:
+            null,
+        }),
+      );
+    };
+
   const handleSaveProgram = async () => {
+    const cleanPrefix =
+      draft.codePrefix
+        .replace(
+          /[^A-Z0-9]/gi,
+          '',
+        )
+        .toUpperCase()
+        .slice(
+          0,
+          5,
+        );
+
+    if (
+      cleanPrefix.length <
+      1
+    ) {
+      Alert.alert(
+        'Prefijo requerido',
+        'Configura un prefijo de 1 a 5 caracteres para los cupones.',
+      );
+      return;
+    }
+
     const chance = Number(draft.issueChanceDenominator);
     const required = draft.programType === 'collect_reward' ? Number(draft.requiredCoupons) : null;
     const priority = Number(draft.priority);
@@ -226,7 +537,8 @@ export function AdminPromotions() {
         code: draft.code,
         displayName: draft.displayName,
         programType: draft.programType,
-        codePrefix: draft.codePrefix,
+        codePrefix:
+          `${cleanPrefix}-`,
         isEnabled: draft.isEnabled,
         issueChanceDenominator: chance,
         requiredCoupons: required,
@@ -271,6 +583,16 @@ export function AdminPromotions() {
         endsAt: draft.endsAt || null,
         activeWeekdays: draft.activeWeekdays,
         priority,
+        ticketShowImage:
+          draft.ticketShowImage,
+        ticketImageUrl:
+          draft.ticketImageUrl,
+        ticketImageRasterBase64:
+          draft.ticketImageRasterBase64,
+        ticketImageWidth:
+          draft.ticketImageWidth,
+        ticketImageHeight:
+          draft.ticketImageHeight,
       });
 
       await load(id);
@@ -450,7 +772,132 @@ export function AdminPromotions() {
           </Text>
 
           <Text style={labelStyle}>Nombre visible</Text>
-          <TextInput value={draft.displayName} onChangeText={displayName => setDraft(current => ({ ...current, displayName }))} style={inputStyle} placeholder="Programa de cliente frecuente" placeholderTextColor={theme.textMuted} />
+          <TextInput
+            value={
+              draft.displayName
+            }
+            onChangeText={
+              displayName =>
+                setDraft(
+                  current => {
+                    const previousSuggestion =
+                      buildPromotionPrefixSuggestion(
+                        current.displayName,
+                      );
+
+                    const shouldRefreshPrefix =
+                      !current.id &&
+                      (
+                        !current.codePrefix ||
+                        current.codePrefix ===
+                          previousSuggestion
+                      );
+
+                    return {
+                      ...current,
+                      displayName,
+                      codePrefix:
+                        shouldRefreshPrefix
+                          ? buildPromotionPrefixSuggestion(
+                              displayName,
+                            )
+                          : current.codePrefix,
+                    };
+                  },
+                )
+            }
+            style={
+              inputStyle
+            }
+            placeholder="Programa de cliente frecuente"
+            placeholderTextColor={
+              theme.textMuted
+            }
+          />
+
+          <Text
+            style={
+              labelStyle
+            }
+          >
+            Prefijo de cupones
+          </Text>
+
+          <TextInput
+            value={
+              draft.codePrefix
+                .replace(
+                  /-+$/g,
+                  '',
+                )
+            }
+            onChangeText={
+              value =>
+                setDraft(
+                  current => ({
+                    ...current,
+                    codePrefix:
+                      value
+                        .toUpperCase()
+                        .normalize(
+                          'NFD',
+                        )
+                        .replace(
+                          /[\u0300-\u036f]/g,
+                          '',
+                        )
+                        .replace(
+                          /[^A-Z0-9]/g,
+                          '',
+                        )
+                        .slice(
+                          0,
+                          5,
+                        ) +
+                      (
+                        value
+                          .replace(
+                            /[^A-Za-z0-9]/g,
+                            '',
+                          )
+                          .slice(
+                            0,
+                            5,
+                          )
+                          .length >
+                        0
+                          ? '-'
+                          : ''
+                      ),
+                  }))
+            }
+            style={
+              inputStyle
+            }
+            autoCapitalize="characters"
+            autoCorrect={
+              false
+            }
+            maxLength={
+              5
+            }
+            placeholder="Ej. BK, DOR, VIP"
+            placeholderTextColor={
+              theme.textMuted
+            }
+          />
+
+          <Text
+            style={{
+              color:
+                theme.textMuted,
+              marginTop: 5,
+              fontSize: 11,
+              lineHeight: 16,
+            }}
+          >
+            De 1 a 5 caracteres. El guion se agrega automáticamente. Cambiar este prefijo solo afecta cupones nuevos; los ya emitidos conservan su código original.
+          </Text>
 
           <Text style={labelStyle}>
             Tipo de promoción
@@ -843,13 +1290,260 @@ export function AdminPromotions() {
             </View>
           </View>
 
+          <View
+            style={{
+              marginTop: 18,
+              padding: 14,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor:
+                theme.border,
+              backgroundColor:
+                theme.background,
+            }}
+          >
+            <View
+              style={{
+                flexDirection:
+                  'row',
+                alignItems:
+                  'center',
+                justifyContent:
+                  'space-between',
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      theme.text,
+                    fontSize: 15,
+                    fontWeight:
+                      '700',
+                  }}
+                >
+                  Mostrar imagen en ticket
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      theme.textMuted,
+                    fontSize: 11,
+                    lineHeight: 16,
+                    marginTop: 3,
+                  }}
+                >
+                  Imprime una imagen promocional antes del código del cupón.
+                </Text>
+              </View>
+
+              <Switch
+                value={
+                  draft.ticketShowImage
+                }
+                onValueChange={
+                  ticketShowImage =>
+                    setDraft(
+                      current => ({
+                        ...current,
+                        ticketShowImage,
+                      }),
+                    )
+                }
+                disabled={
+                  isSaving ||
+                  isProcessingTicketImage
+                }
+                trackColor={{
+                  false:
+                    theme.border,
+                  true:
+                    theme.primary,
+                }}
+              />
+            </View>
+
+            {draft.ticketShowImage ? (
+              <View
+                style={{
+                  marginTop: 14,
+                  flexDirection:
+                    'row',
+                  flexWrap:
+                    'wrap',
+                  gap: 12,
+                  alignItems:
+                    'center',
+                }}
+              >
+                <View
+                  style={{
+                    width: 150,
+                    height: 100,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor:
+                      theme.border,
+                    backgroundColor:
+                      theme.surfaceAlt,
+                    overflow:
+                      'hidden',
+                    alignItems:
+                      'center',
+                    justifyContent:
+                      'center',
+                  }}
+                >
+                  {draft.ticketImageUrl ? (
+                    <Image
+                      source={{
+                        uri:
+                          draft.ticketImageUrl,
+                      }}
+                      style={{
+                        width:
+                          '100%',
+                        height:
+                          '100%',
+                      }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text
+                      style={{
+                        color:
+                          theme.textMuted,
+                        fontSize: 11,
+                        textAlign:
+                          'center',
+                        paddingHorizontal:
+                          10,
+                      }}
+                    >
+                      Sin imagen seleccionada
+                    </Text>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: 180,
+                    gap: 8,
+                  }}
+                >
+                  <TouchableOpacity
+                    disabled={
+                      isSaving ||
+                      isProcessingTicketImage
+                    }
+                    onPress={() => {
+                      void handlePickTicketImage();
+                    }}
+                    style={{
+                      minHeight: 42,
+                      alignItems:
+                        'center',
+                      justifyContent:
+                        'center',
+                      borderRadius: 9,
+                      borderWidth: 1,
+                      borderColor:
+                        theme.primary,
+                      paddingHorizontal:
+                        12,
+                      opacity:
+                        isProcessingTicketImage
+                          ? 0.6
+                          : 1,
+                    }}
+                  >
+                    {isProcessingTicketImage ? (
+                      <ActivityIndicator
+                        color={
+                          theme.primary
+                        }
+                      />
+                    ) : (
+                      <Text
+                        style={{
+                          color:
+                            theme.primary,
+                          fontWeight:
+                            '700',
+                        }}
+                      >
+                        {draft.ticketImageUrl
+                          ? 'CAMBIAR IMAGEN'
+                          : 'SELECCIONAR IMAGEN'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {draft.ticketImageUrl ? (
+                    <TouchableOpacity
+                      disabled={
+                        isSaving ||
+                        isProcessingTicketImage
+                      }
+                      onPress={
+                        handleRemoveTicketImage
+                      }
+                      style={{
+                        minHeight: 38,
+                        alignItems:
+                          'center',
+                        justifyContent:
+                          'center',
+                        borderRadius: 9,
+                        borderWidth: 1,
+                        borderColor:
+                          theme.danger,
+                        paddingHorizontal:
+                          12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color:
+                            theme.danger,
+                          fontWeight:
+                            '700',
+                        }}
+                      >
+                        QUITAR IMAGEN
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  <Text
+                    style={{
+                      color:
+                        theme.textMuted,
+                      fontSize: 10,
+                      lineHeight: 14,
+                    }}
+                  >
+                    JPG, PNG o WEBP · máximo 8 MB. Se adapta automáticamente al ancho de la impresora térmica.
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <Text style={{ color: theme.text, fontWeight: '600' }}>Promoción activa</Text>
             <Switch value={draft.isEnabled} onValueChange={isEnabled => setDraft(current => ({ ...current, isEnabled }))} trackColor={{ false: theme.border, true: theme.primary }} />
           </View>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            <TouchableOpacity disabled={isSaving} onPress={() => void handleSaveProgram()} style={{ flex: 1, backgroundColor: theme.primary, borderRadius: 10, padding: 12 }}>
+            <TouchableOpacity disabled={isSaving || isProcessingTicketImage} onPress={() => void handleSaveProgram()} style={{ flex: 1, backgroundColor: theme.primary, borderRadius: 10, padding: 12, opacity: isProcessingTicketImage ? 0.6 : 1 }}>
               <Text style={{ color: theme.onPrimary, textAlign: 'center', fontWeight: '700' }}>{isSaving ? 'GUARDANDO...' : 'GUARDAR PROMOCIÓN'}</Text>
             </TouchableOpacity>
             {selectedProgram && (

@@ -85,26 +85,23 @@ async function main() {
     'utf8',
   );
 
-  const promotionExports = (branding.promotionImages || [])
-    .map(item => item.export)
-    .filter(Boolean);
+  const source = `import { CLIENT_TICKET_LOGO } from './clientPrinterAssets';
 
-  const promotionImport = promotionExports.length > 0
-    ? `import { ${promotionExports.join(', ')} } from './printerAssets';\n`
-    : '';
+export interface PrinterRasterImage {
+  width: number;
+  height: number;
+  base64: string;
+}
 
-  const promotionRules = JSON.stringify(
-    (branding.promotionImages || []).map(item => ({
-      match: item.match,
-      export: item.export,
-    })),
-    null,
-    2,
-  );
-
-  const source = `import { CLIENT_TICKET_LOGO } from './clientPrinterAssets';\n${promotionImport}\nexport interface PrinterRasterImage {\n  width: number;\n  height: number;\n  base64: string;\n}\n\nexport const runtimeBranding = {\n  clientId: ${JSON.stringify(client.clientId)},\n  businessName: ${JSON.stringify(client.businessName)},\n  headerLogoSource: require(${JSON.stringify('../../' + headerLogo.replace(/^\.\//, ''))}),\n  printer: {\n    ticketLogo: CLIENT_TICKET_LOGO as PrinterRasterImage | null,\n  },\n} as const;\n\nconst promotionRules = ${promotionRules};\n\nexport function getPromotionImageForProgram(\n  programName: string | null | undefined,\n): PrinterRasterImage | null {\n  const normalized = (programName ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n\n  for (const rule of promotionRules) {\n    if (!rule.match || !normalized.includes(String(rule.match).toLowerCase())) {\n      continue;\n    }\n\n    switch (rule.export) {\n${(branding.promotionImages || [])
-  .map(item => `      case ${JSON.stringify(item.export)}:\n        return ${item.export} as PrinterRasterImage;`)
-  .join('\n')}\n      default:\n        return null;\n    }\n  }\n\n  return null;\n}\n`;
+export const runtimeBranding = {
+  clientId: ${JSON.stringify(client.clientId)},
+  businessName: ${JSON.stringify(client.businessName)},
+  headerLogoSource: require(${JSON.stringify('../../' + headerLogo.replace(/^\.\//, ''))}),
+  printer: {
+    ticketLogo: CLIENT_TICKET_LOGO as PrinterRasterImage | null,
+  },
+} as const;
+`;
 
   fs.writeFileSync(
     path.join(generatedDir, 'runtimeClientBranding.ts'),

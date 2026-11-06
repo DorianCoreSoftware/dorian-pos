@@ -3,6 +3,10 @@ export type PaymentMethod =
   | 'card'
   | 'transfer';
 
+export type PaymentTiming =
+  | 'final'
+  | 'advance';
+
 export interface OrderPayment {
   id: string;
   orderId: string;
@@ -11,6 +15,7 @@ export interface OrderPayment {
   amountReceived: number | null;
   changeAmount: number | null;
   paymentReference: string | null;
+  paymentTiming: PaymentTiming;
   createdAt: string;
 }
 
@@ -21,6 +26,7 @@ export interface CreateOrderPayment {
   amountReceived: number | null;
   changeAmount: number | null;
   paymentReference?: string | null;
+  paymentTiming?: PaymentTiming;
 }
 
 export interface CompletedSale {

@@ -1,5 +1,7 @@
 import { Category } from "./category";
 
+export type ProductCookingMethod = "oil" | "air_fryer";
+
 export interface Product {
   id: string;
   category_id: string;
@@ -9,6 +11,9 @@ export interface Product {
   image_url: string | null;
   is_available: boolean;
   is_active: boolean;
+  allows_oil_fryer?: boolean;
+  allows_air_fryer?: boolean;
+  air_fryer_extra_minutes?: number;
   created_at: string;
   category?: Category;
 }

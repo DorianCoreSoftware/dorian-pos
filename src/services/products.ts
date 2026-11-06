@@ -30,6 +30,9 @@ export interface AdminUpdateProductInput {
   categoryId: string;
   isAvailable: boolean;
   imageUrl?: string | null;
+  allowsOilFryer: boolean;
+  allowsAirFryer: boolean;
+  airFryerExtraMinutes: number;
   allowZeroPrice?: boolean;
 }
 
@@ -38,6 +41,9 @@ export interface CreateProductInput {
   description: string;
   price: number;
   categoryId: string;
+  allowsOilFryer: boolean;
+  allowsAirFryer: boolean;
+  airFryerExtraMinutes: number;
   allowZeroPrice?: boolean;
 }
 
@@ -190,6 +196,15 @@ export async function createProduct(
 
         categoryId:
           input.categoryId,
+
+        allowsOilFryer:
+          input.allowsOilFryer,
+
+        allowsAirFryer:
+          input.allowsAirFryer,
+
+        airFryerExtraMinutes:
+          input.airFryerExtraMinutes,
       });
 
     return normalizeProduct(
@@ -300,6 +315,15 @@ export async function adminUpdateProduct(
 
           imageUrl:
             input.imageUrl,
+
+          allowsOilFryer:
+            input.allowsOilFryer,
+
+          allowsAirFryer:
+            input.allowsAirFryer,
+
+          airFryerExtraMinutes:
+            input.airFryerExtraMinutes,
         },
       );
 

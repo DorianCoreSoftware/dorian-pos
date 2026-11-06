@@ -1,4 +1,4 @@
-import { Product } from './product';
+import { Product, ProductCookingMethod } from './product';
 import { SelectedModifier } from './modifier';
 
 export type ComboComponentType = string;
@@ -11,4 +11,5 @@ export interface ComboComponentSelection {
   quantity: number;
   notes: string;
   selectedModifiers: SelectedModifier[];
+  cookingMethod?: ProductCookingMethod | null;
 }

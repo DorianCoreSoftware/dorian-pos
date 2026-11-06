@@ -24,7 +24,7 @@ import {
 import {
   ProductConfiguratorModal,
   ProductConfigurationResult,
-} from '../../components/ProductConfigurator/ProductConfiguratorModal';
+} from '../../components/product-configurator/ProductConfiguratorModal';
 import {
   createKitchenOrder,
   updateKitchenOrder,
@@ -501,6 +501,7 @@ export function POSScreen({
       const {
         selectedModifiers = [],
         comboComponents = [],
+        cookingMethod = null,
       } = configuration;
       const productToAdd =
         selectedProduct;
@@ -523,6 +524,7 @@ export function POSScreen({
         cleanNotes,
         modifierIdentifier,
         comboIdentifier,
+        cookingMethod ?? 'default',
       ].join('-');
       const itemToAdd:
         CartItem = {
@@ -539,6 +541,9 @@ export function POSScreen({
               ...modifier,
             }),
           ),
+
+        cookingMethod,
+
         comboComponents:
           normalizedComponents
             .length > 0
@@ -1239,6 +1244,10 @@ function createOrderFingerprint(
             item.quantity,
           notes:
             item.notes.trim(),
+          cookingMethod:
+            item.cookingMethod ??
+            null,
+
           modifiers: (
             item.selectedModifiers ??
             []
@@ -1261,6 +1270,11 @@ function createOrderFingerprint(
                 component.quantity,
               notes:
                 component.notes.trim(),
+
+              cookingMethod:
+                component.cookingMethod ??
+                null,
+
               modifiers: (
                 component
                   .selectedModifiers ??

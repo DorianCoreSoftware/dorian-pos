@@ -1190,7 +1190,7 @@ function MainApp() {
           !userCanManageCash
         ) {
           return renderRestricted(
-            'Solo un administrador puede administrar la caja.',
+            'Solo un administrador u operador puede administrar la caja.',
           );
         }
 
