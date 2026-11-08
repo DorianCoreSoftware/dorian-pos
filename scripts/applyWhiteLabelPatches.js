@@ -17,19 +17,33 @@ function replaceSection(source, startMarker, endMarker, replacement, errorMessag
 }
 
 function ensurePrinterBrandingImport(source) {
-  if (source.includes("from '../generated/runtimeClientBranding'")) {
-    return source;
+  const importRegex =
+    /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\.\/generated\/runtimeClientBranding['"];\s*/m;
+
+  const desiredImport =
+    `import {\n  PrinterRasterImage,\n  runtimeBranding,\n} from '../generated/runtimeClientBranding';\n\n`;
+
+  if (importRegex.test(source)) {
+    return source.replace(
+      importRegex,
+      desiredImport,
+    );
   }
 
   const marker = 'let connectedPrinter';
   const index = source.indexOf(marker);
+
   if (index < 0) {
-    throw new Error('No se encontró connectedPrinter para insertar branding.');
+    throw new Error(
+      'No se encontró connectedPrinter para insertar branding.',
+    );
   }
 
-  const importBlock = `import {\n  getPromotionImageForProgram,\n  PrinterRasterImage,\n  runtimeBranding,\n} from '../generated/runtimeClientBranding';\n\n`;
-
-  return source.slice(0, index) + importBlock + source.slice(index);
+  return (
+    source.slice(0, index) +
+    desiredImport +
+    source.slice(index)
+  );
 }
 
 function patchBusinessHeaderCalls(source) {
@@ -69,25 +83,25 @@ function replaceBusinessHeader(source) {
   );
 }
 
-function ensurePromotionImage(source) {
-  if (source.includes('getPromotionImageForProgram(\n      promoCoupon.programName')) {
-    return source;
-  }
 
-  const promoIndex = source.indexOf('async function printPromoCoupon(');
-  if (promoIndex < 0) {
-    throw new Error('No se encontró printPromoCoupon.');
-  }
+function removeLegacyPromotionImagePatch(source) {
+  // El sistema actual obtiene la imagen promocional desde Supabase/promociones
+  // dinámicas. Este bloque pertenecía al sistema legacy hardcodeado por nombre.
+  const legacyBlock =
+    /[ \t]*const\s+promotionImage\s*=\s*getPromotionImageForProgram\(\s*promoCoupon\.programName,\s*\);\s*if\s*\(promotionImage\)\s*\{\s*await\s+printRasterImage\(\s*printer,\s*promotionImage,\s*\);\s*\}\s*/g;
 
-  const programsIndex = source.indexOf('const programs =', promoIndex);
-  if (programsIndex < 0) {
-    throw new Error('No se encontró const programs dentro de printPromoCoupon.');
-  }
+  source = source.replace(
+    legacyBlock,
+    '',
+  );
 
-  const lineStart = source.lastIndexOf('\n', programsIndex) + 1;
-  const promoBlock = `  const promotionImage =\n    getPromotionImageForProgram(\n      promoCoupon.programName,\n    );\n\n  if (promotionImage) {\n    await printRasterImage(\n      printer,\n      promotionImage,\n    );\n  }\n\n`;
+  // Limpia cualquier referencia residual al helper legacy.
+  source = source.replace(
+    /\s*getPromotionImageForProgram,\s*/g,
+    '\n',
+  );
 
-  return source.slice(0, lineStart) + promoBlock + source.slice(lineStart);
+  return source;
 }
 
 function patchPrinterService(root) {
@@ -95,14 +109,14 @@ function patchPrinterService(root) {
   if (!fs.existsSync(file)) throw new Error(`No existe ${file}`);
 
   let source = normalizeEol(fs.readFileSync(file, 'utf8'));
+  source = removeLegacyPromotionImagePatch(source);
   source = ensurePrinterBrandingImport(source);
   source = patchBusinessHeaderCalls(source);
   source = ensureRasterHelper(source);
   source = replaceBusinessHeader(source);
-  source = ensurePromotionImage(source);
 
   fs.writeFileSync(file, source, 'utf8');
-  console.log('OK: printerService.ts actualizado/reparado.');
+  console.log('OK: printerService.ts actualizado/reparado sin promociones legacy.');
 }
 
 function patchGlobalHeader(root) {
