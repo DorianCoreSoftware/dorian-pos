@@ -7,12 +7,16 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
+
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   supabase,
@@ -41,12 +45,26 @@ interface AiOrderSettings {
   order_creation_enabled: boolean;
   model: string;
   require_explicit_confirmation: boolean;
+  assistant_avatar_url: string | null;
 }
 
 interface DraftModifier {
   id?: string;
   name?: string;
   extraPrice?: number;
+}
+
+interface DraftComboComponent {
+  slotId?: string;
+  slotKey?: string;
+  type?: string;
+  label?: string;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  notes?: string;
+  modifiers?: DraftModifier[];
+  cookingMethod?: 'oil' | 'air_fryer' | null;
 }
 
 interface DraftItem {
@@ -56,6 +74,7 @@ interface DraftItem {
   quantity?: number;
   notes?: string;
   modifiers?: DraftModifier[];
+  comboComponents?: DraftComboComponent[];
   unitPrice?: number;
   lineTotal?: number;
 }
@@ -76,6 +95,160 @@ interface AgentResponse {
   conversationId: string;
   message: string;
   draft: AiOrderDraft | null;
+  pricing?: Record<string, unknown> | null;
+}
+
+interface SimulatorSessionSnapshot {
+  conversationId: string | null;
+  messages: ChatMessage[];
+  draft: AiOrderDraft | null;
+  input: string;
+  lastToolHint: string | null;
+}
+
+const simulatorSessionStorageKey =
+  'doriancore.ai-orders.admin-simulator.v1';
+
+let simulatorSessionMemory:
+  SimulatorSessionSnapshot = {
+  conversationId:
+    null,
+  messages:
+    [],
+  draft:
+    null,
+  input:
+    '',
+  lastToolHint:
+    null,
+};
+
+function readSimulatorSession():
+  SimulatorSessionSnapshot {
+  try {
+    const storage =
+      (
+        globalThis as
+          typeof globalThis & {
+            sessionStorage?: {
+              getItem:
+                (
+                  key: string,
+                ) => string | null;
+            };
+          }
+      ).sessionStorage;
+
+    const raw =
+      storage?.getItem(
+        simulatorSessionStorageKey,
+      );
+
+    if (
+      raw
+    ) {
+      const parsed =
+        JSON.parse(
+          raw,
+        ) as
+          Partial<SimulatorSessionSnapshot>;
+
+      simulatorSessionMemory = {
+        conversationId:
+          typeof parsed.conversationId ===
+            'string'
+            ? parsed.conversationId
+            : null,
+        messages:
+          Array.isArray(
+            parsed.messages,
+          )
+            ? parsed.messages
+                .filter(
+                  message =>
+                    message &&
+                    (
+                      message.role ===
+                        'user' ||
+                      message.role ===
+                        'assistant'
+                    ) &&
+                    typeof message.content ===
+                      'string',
+                )
+                .slice(
+                  -100,
+                ) as
+                ChatMessage[]
+            : [],
+        draft:
+          parsed.draft &&
+          typeof parsed.draft ===
+            'object'
+            ? parsed.draft as
+              AiOrderDraft
+            : null,
+        input:
+          typeof parsed.input ===
+            'string'
+            ? parsed.input
+            : '',
+        lastToolHint:
+          typeof parsed.lastToolHint ===
+            'string'
+            ? parsed.lastToolHint
+            : null,
+      };
+    }
+  } catch {
+    // En móvil o almacenamiento restringido usamos memoria del módulo.
+  }
+
+  return {
+    ...simulatorSessionMemory,
+    messages:
+      [
+        ...simulatorSessionMemory.messages,
+      ],
+  };
+}
+
+function persistSimulatorSession(
+  snapshot:
+    SimulatorSessionSnapshot,
+): void {
+  simulatorSessionMemory = {
+    ...snapshot,
+    messages:
+      snapshot.messages.slice(
+        -100,
+      ),
+  };
+
+  try {
+    const storage =
+      (
+        globalThis as
+          typeof globalThis & {
+            sessionStorage?: {
+              setItem:
+                (
+                  key: string,
+                  value: string,
+                ) => void;
+            };
+          }
+      ).sessionStorage;
+
+    storage?.setItem(
+      simulatorSessionStorageKey,
+      JSON.stringify(
+        simulatorSessionMemory,
+      ),
+    );
+  } catch {
+    // La memoria del módulo conserva la sesión mientras la app siga abierta.
+  }
 }
 
 function createLocalId():
@@ -134,6 +307,11 @@ export function AdminAiOrders() {
       null,
     );
 
+  const initialSession =
+    useRef(
+      readSimulatorSession(),
+    ).current;
+
   const [
     settings,
     setSettings,
@@ -148,12 +326,28 @@ export function AdminAiOrders() {
   ] =
     useState(true);
 
+
+  const [
+    avatarSaving,
+    setAvatarSaving,
+  ] =
+    useState(false);
+
+  const [
+    avatarError,
+    setAvatarError,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
   const [
     conversationId,
     setConversationId,
   ] =
     useState<string | null>(
-      null,
+      initialSession
+        .conversationId,
     );
 
   const [
@@ -161,7 +355,8 @@ export function AdminAiOrders() {
     setMessages,
   ] =
     useState<ChatMessage[]>(
-      [],
+      initialSession
+        .messages,
     );
 
   const [
@@ -169,14 +364,18 @@ export function AdminAiOrders() {
     setDraft,
   ] =
     useState<AiOrderDraft | null>(
-      null,
+      initialSession
+        .draft,
     );
 
   const [
     input,
     setInput,
   ] =
-    useState('');
+    useState(
+      initialSession
+        .input,
+    );
 
   const [
     sending,
@@ -197,8 +396,28 @@ export function AdminAiOrders() {
     setLastToolHint,
   ] =
     useState<string | null>(
-      null,
+      initialSession
+        .lastToolHint,
     );
+
+  useEffect(
+    () => {
+      persistSimulatorSession({
+        conversationId,
+        messages,
+        draft,
+        input,
+        lastToolHint,
+      });
+    },
+    [
+      conversationId,
+      messages,
+      draft,
+      input,
+      lastToolHint,
+    ],
+  );
 
   useEffect(
     () => {
@@ -221,7 +440,7 @@ export function AdminAiOrders() {
                   'ai_order_settings',
                 )
                 .select(
-                  'enabled,order_creation_enabled,model,require_explicit_confirmation',
+                  'enabled,order_creation_enabled,model,require_explicit_confirmation,assistant_avatar_url',
                 )
                 .eq(
                   'id',
@@ -327,6 +546,243 @@ export function AdminAiOrders() {
       ],
     );
 
+  const updateAssistantAvatarSetting =
+    async (
+      avatarUrl:
+        string | null,
+    ): Promise<void> => {
+      const {
+        error,
+      } =
+        await supabase
+          .from(
+            'ai_order_settings',
+          )
+          .update({
+            assistant_avatar_url:
+              avatarUrl,
+            updated_at:
+              new Date()
+                .toISOString(),
+          })
+          .eq(
+            'id',
+            1,
+          );
+
+      if (error) {
+        throw error;
+      }
+
+      setSettings(
+        current =>
+          current
+            ? {
+                ...current,
+                assistant_avatar_url:
+                  avatarUrl,
+              }
+            : current,
+      );
+    };
+
+  const pickAssistantAvatar =
+    async (): Promise<void> => {
+      if (avatarSaving) {
+        return;
+      }
+
+      try {
+        setAvatarSaving(true);
+
+        const result =
+          await ImagePicker
+            .launchImageLibraryAsync({
+              mediaTypes:
+                ImagePicker
+                  .MediaTypeOptions
+                  .Images,
+              allowsEditing:
+                true,
+              aspect: [1, 1],
+              quality:
+                0.85,
+            });
+
+        if (
+          result.canceled ||
+          !result.assets?.[0]
+        ) {
+          return;
+        }
+
+        const asset =
+          result.assets[0];
+
+        setAvatarError(
+          null,
+        );
+
+        const webFile =
+          (
+            asset as
+              typeof asset & {
+                file?:
+                  Blob;
+              }
+          ).file;
+
+        let uploadBody:
+          Blob;
+
+        if (
+          webFile
+        ) {
+          uploadBody =
+            webFile;
+        } else {
+          const response =
+            await fetch(
+              asset.uri,
+            );
+
+          if (
+            !response.ok
+          ) {
+            throw new Error(
+              `No se pudo leer la imagen seleccionada (${response.status}).`,
+            );
+          }
+
+          uploadBody =
+            await response.blob();
+        }
+
+        const mimeType =
+          asset.mimeType ||
+          uploadBody.type ||
+          'image/jpeg';
+
+        const extension =
+          mimeType.includes(
+            'png',
+          )
+            ? 'png'
+            : mimeType.includes(
+                  'webp',
+                )
+              ? 'webp'
+              : 'jpg';
+
+        const path =
+          `assistant/avatar-${Date.now()}.${extension}`;
+
+        const {
+          error: uploadError,
+        } =
+          await supabase
+            .storage
+            .from(
+              'ai-order-assistant',
+            )
+            .upload(
+              path,
+              uploadBody,
+              {
+                contentType:
+                  mimeType,
+                cacheControl:
+                  '3600',
+                upsert:
+                  false,
+              },
+            );
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const {
+          data:
+            publicUrlData,
+        } =
+          supabase
+            .storage
+            .from(
+              'ai-order-assistant',
+            )
+            .getPublicUrl(path);
+
+        const publicUrl =
+          `${publicUrlData.publicUrl}?v=${Date.now()}`;
+
+        await updateAssistantAvatarSetting(
+          publicUrl,
+        );
+
+        setAvatarError(
+          null,
+        );
+      } catch (error) {
+        console.error(
+          'Error guardando avatar de Dorian AI:',
+          error,
+        );
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'No se pudo guardar la foto del asistente.';
+
+        setAvatarError(
+          message,
+        );
+
+        Alert.alert(
+          'Dorian AI',
+          message,
+        );
+      } finally {
+        setAvatarSaving(false);
+      }
+    };
+
+  const removeAssistantAvatar =
+    async (): Promise<void> => {
+      if (
+        avatarSaving ||
+        !settings?.assistant_avatar_url
+      ) {
+        return;
+      }
+
+      try {
+        setAvatarSaving(true);
+
+        await updateAssistantAvatarSetting(
+          null,
+        );
+
+        setAvatarError(
+          null,
+        );
+      } catch (error) {
+        console.error(
+          'Error eliminando avatar de Dorian AI:',
+          error,
+        );
+
+        Alert.alert(
+          'Dorian AI',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo quitar la foto del asistente.',
+        );
+      } finally {
+        setAvatarSaving(false);
+      }
+    };
+
   const resetConversation =
     (): void => {
       if (
@@ -358,6 +814,19 @@ export function AdminAiOrders() {
       setLastToolHint(
         null,
       );
+
+      persistSimulatorSession({
+        conversationId:
+          null,
+        messages:
+          [],
+        draft:
+          null,
+        input:
+          '',
+        lastToolHint:
+          null,
+      });
     };
 
   const sendMessage =
@@ -741,6 +1210,182 @@ export function AdminAiOrders() {
           </View>
         ) : null}
 
+        {settings ? (
+          <View
+            style={[
+              styles.assistantAppearance,
+              {
+                backgroundColor:
+                  theme.surfaceAlt,
+                borderColor:
+                  theme.border,
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.assistantAppearanceIdentity
+              }
+            >
+              {settings.assistant_avatar_url ? (
+                <Image
+                  source={{
+                    uri:
+                      settings.assistant_avatar_url,
+                  }}
+                  style={
+                    styles.assistantAppearanceAvatar
+                  }
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.assistantAppearanceAvatarFallback,
+                    {
+                      borderColor:
+                        theme.primary,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.assistantAppearanceAvatarText,
+                      {
+                        color:
+                          theme.primary,
+                      },
+                    ]}
+                  >
+                    AI
+                  </Text>
+                </View>
+              )}
+
+              <View
+                style={{
+                  flex:
+                    1,
+                }}
+              >
+                <Text
+                  style={[
+                    styles.assistantAppearanceTitle,
+                    {
+                      color:
+                        theme.text,
+                    },
+                  ]}
+                >
+                  DORIAN AI
+                </Text>
+
+                <Text
+                  style={[
+                    styles.assistantAppearanceText,
+                    {
+                      color:
+                        theme.textMuted,
+                    },
+                  ]}
+                >
+                  Identidad visual del asistente. El nombre DORIAN AI se mantiene como marca; puedes personalizar su foto de perfil.
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={
+                styles.assistantAppearanceActions
+              }
+            >
+              <Pressable
+                disabled={
+                  avatarSaving
+                }
+                onPress={() =>
+                  void pickAssistantAvatar()
+                }
+                style={[
+                  styles.assistantAppearanceButton,
+                  {
+                    borderColor:
+                      theme.primary,
+                  },
+                ]}
+              >
+                {avatarSaving ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={
+                      theme.primary
+                    }
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.assistantAppearanceButtonText,
+                      {
+                        color:
+                          theme.primary,
+                      },
+                    ]}
+                  >
+                    {settings.assistant_avatar_url
+                      ? 'Cambiar foto'
+                      : 'Agregar foto'}
+                  </Text>
+                )}
+              </Pressable>
+
+              {settings.assistant_avatar_url ? (
+                <Pressable
+                  disabled={
+                    avatarSaving
+                  }
+                  onPress={() =>
+                    void removeAssistantAvatar()
+                  }
+                  style={[
+                    styles.assistantAppearanceButton,
+                    {
+                      borderColor:
+                        theme.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.assistantAppearanceButtonText,
+                      {
+                        color:
+                          theme.textMuted,
+                      },
+                    ]}
+                  >
+                    Quitar
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {avatarError ? (
+              <Text
+                selectable
+                style={{
+                  color:
+                    '#FF6B6B',
+                  fontSize:
+                    11,
+                  lineHeight:
+                    16,
+                }}
+              >
+                Error al guardar foto: {avatarError}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         <View
           style={[
             styles.safetyNotice,
@@ -888,52 +1533,121 @@ export function AdminAiOrders() {
                         message.id
                       }
                       style={[
-                        styles.messageBubble,
+                        styles.messageRow,
                         isUser
-                          ? styles.userBubble
-                          : styles.assistantBubble,
-                        {
-                          backgroundColor:
-                            isUser
-                              ? theme.primary
-                              : theme.surfaceAlt,
-                          borderColor:
-                            isUser
-                              ? theme.primary
-                              : theme.border,
-                        },
+                          ? styles.userMessageRow
+                          : styles.assistantMessageRow,
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.messageRole,
-                          {
-                            color:
-                              isUser
-                                ? theme.onPrimary
-                                : theme.primary,
-                          },
-                        ]}
-                      >
-                        {isUser
-                          ? 'TÚ'
-                          : 'DORIAN AI'}
-                      </Text>
+                      {!isUser ? (
+                        settings?.assistant_avatar_url ? (
+                          <Image
+                            source={{
+                              uri:
+                                settings.assistant_avatar_url,
+                            }}
+                            style={
+                              styles.messageAvatar
+                            }
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.messageAvatarFallback,
+                              {
+                                borderColor:
+                                  theme.primary,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.messageAvatarText,
+                                {
+                                  color:
+                                    theme.primary,
+                                },
+                              ]}
+                            >
+                              AI
+                            </Text>
+                          </View>
+                        )
+                      ) : null}
 
-                      <Text
-                        selectable
+                      <View
                         style={[
-                          styles.messageText,
+                          styles.messageBubble,
+                          isUser
+                            ? styles.userBubble
+                            : styles.assistantBubble,
                           {
-                            color:
+                            backgroundColor:
                               isUser
-                                ? theme.onPrimary
-                                : theme.text,
+                                ? theme.primary
+                                : theme.surfaceAlt,
+                            borderColor:
+                              isUser
+                                ? theme.primary
+                                : theme.border,
                           },
                         ]}
                       >
-                        {message.content}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.messageRole,
+                            {
+                              color:
+                                isUser
+                                  ? theme.onPrimary
+                                  : theme.primary,
+                            },
+                          ]}
+                        >
+                          {isUser
+                            ? 'TÚ'
+                            : 'DORIAN AI'}
+                        </Text>
+
+                        <Text
+                          selectable
+                          style={[
+                            styles.messageText,
+                            {
+                              color:
+                                isUser
+                                  ? theme.onPrimary
+                                  : theme.text,
+                            },
+                          ]}
+                        >
+                          {message.content}
+                        </Text>
+                      </View>
+
+                      {isUser ? (
+                        <View
+                          style={[
+                            styles.messageAvatarFallback,
+                            {
+                              borderColor:
+                                theme.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.messageAvatarText,
+                              {
+                                color:
+                                  theme.textMuted,
+                              },
+                            ]}
+                          >
+                            👤
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                   );
                 },
@@ -1362,6 +2076,94 @@ export function AdminAiOrders() {
                                 ' · ',
                               )}
                           </Text>
+                        ) : null}
+
+                        {Array.isArray(
+                          item.comboComponents,
+                        ) &&
+                        item.comboComponents.length >
+                          0 ? (
+                          <View
+                            style={
+                              styles.comboComponentsBox
+                            }
+                          >
+                            {item.comboComponents.map(
+                              (
+                                component,
+                                componentIndex,
+                              ) => (
+                                <View
+                                  key={`${component.slotId ?? componentIndex}-${component.productId ?? componentIndex}`}
+                                  style={
+                                    styles.comboComponentRow
+                                  }
+                                >
+                                  <Text
+                                    style={[
+                                      styles.comboComponentLabel,
+                                      {
+                                        color:
+                                          theme.textMuted,
+                                      },
+                                    ]}
+                                  >
+                                    {component.label ||
+                                      component.type ||
+                                      'Componente'}
+                                    {': '}
+                                    {component.productName ||
+                                      'Producto'}
+                                    {component.cookingMethod ===
+                                    'air_fryer'
+                                      ? ' · Freidora de aire'
+                                      : component.cookingMethod ===
+                                          'oil'
+                                        ? ' · Aceite'
+                                        : ''}
+                                  </Text>
+
+                                  {Array.isArray(
+                                    component.modifiers,
+                                  ) &&
+                                  component.modifiers.length >
+                                    0 ? (
+                                    <Text
+                                      style={[
+                                        styles.comboComponentMeta,
+                                        {
+                                          color:
+                                            theme.textMuted,
+                                        },
+                                      ]}
+                                    >
+                                      {component.modifiers
+                                        .map(
+                                          modifier =>
+                                            modifier.name,
+                                        )
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                    </Text>
+                                  ) : null}
+
+                                  {component.notes ? (
+                                    <Text
+                                      style={[
+                                        styles.comboComponentMeta,
+                                        {
+                                          color:
+                                            theme.textMuted,
+                                        },
+                                      ]}
+                                    >
+                                      Nota: {component.notes}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              ),
+                            )}
+                          </View>
                         ) : null}
 
                         {item.notes ? (

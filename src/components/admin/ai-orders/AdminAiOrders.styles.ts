@@ -80,6 +80,71 @@ export const styles =
       fontWeight: '900',
     },
 
+    assistantAppearance: {
+      marginTop: 14,
+      borderWidth: 1,
+      borderRadius: 14,
+      padding: 12,
+      gap: 12,
+    },
+
+    assistantAppearanceIdentity: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+
+    assistantAppearanceAvatar: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+    },
+
+    assistantAppearanceAvatarFallback: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    assistantAppearanceAvatarText: {
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
+    assistantAppearanceTitle: {
+      fontSize: 13,
+      fontWeight: '900',
+    },
+
+    assistantAppearanceText: {
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 3,
+    },
+
+    assistantAppearanceActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+
+    assistantAppearanceButton: {
+      minHeight: 36,
+      borderWidth: 1,
+      borderRadius: 9,
+      paddingHorizontal: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    assistantAppearanceButtonText: {
+      fontSize: 11,
+      fontWeight: '900',
+    },
+
     safetyNotice: {
       marginTop: 14,
       borderWidth: 1,
@@ -172,8 +237,45 @@ export const styles =
       textAlign: 'center',
     },
 
+    messageRow: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+
+    userMessageRow: {
+      justifyContent: 'flex-end',
+    },
+
+    assistantMessageRow: {
+      justifyContent: 'flex-start',
+    },
+
+    messageAvatar: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      flexShrink: 0,
+    },
+
+    messageAvatarFallback: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+
+    messageAvatarText: {
+      fontSize: 11,
+      fontWeight: '900',
+    },
+
     messageBubble: {
-      maxWidth: '88%',
+      maxWidth: '82%',
       borderWidth: 1,
       borderRadius: 14,
       padding: 12,
@@ -317,6 +419,29 @@ export const styles =
       fontSize: 11,
       lineHeight: 17,
       marginTop: 6,
+    },
+
+    comboComponentsBox: {
+      marginTop: 9,
+      gap: 7,
+    },
+
+    comboComponentRow: {
+      paddingLeft: 8,
+      borderLeftWidth: 2,
+      borderLeftColor: '#555555',
+    },
+
+    comboComponentLabel: {
+      fontSize: 10,
+      lineHeight: 15,
+      fontWeight: '800',
+    },
+
+    comboComponentMeta: {
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 2,
     },
 
     totalRow: {

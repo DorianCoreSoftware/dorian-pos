@@ -34,11 +34,20 @@ type Settings = {
   system_instructions: string;
 };
 
+type DraftComboComponentInput = {
+  slot_id: string;
+  product_id: string;
+  notes?: string;
+  modifier_ids?: string[];
+  cooking_method?: 'oil' | 'air_fryer' | null;
+};
+
 type DraftItemInput = {
   product_id: string;
   quantity: number;
   notes?: string;
   modifier_ids?: string[];
+  combo_components?: DraftComboComponentInput[];
 };
 
 type ToolCall = {
@@ -144,23 +153,320 @@ async function saveMessage(conversationId: string, role: 'user' | 'assistant' | 
   await admin.from('ai_order_conversations').update({ last_message_at: new Date().toISOString() }).eq('id', conversationId);
 }
 
-async function searchMenu(query: string, limit = 8) {
-  const safeLimit = Math.max(1, Math.min(15, Math.floor(limit || 8)));
-  let request = admin
-    .from('products')
-    .select('id,name,description,price,is_available,is_active,is_combo_option,categories(name)')
-    .eq('is_active', true)
-    .eq('is_available', true)
-    .eq('is_combo_option', false)
-    .order('name')
-    .limit(safeLimit);
+function getProductCategoryName(product: any): string {
+  const category =
+    Array.isArray(product?.categories)
+      ? product.categories[0] ?? null
+      : product?.categories ?? null;
 
-  const clean = query?.trim().replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').slice(0, 80);
-  if (clean) request = request.or(`name.ilike.%${clean}%,description.ilike.%${clean}%`);
+  return String(category?.name ?? '');
+}
 
-  const { data, error } = await request;
+function getMenuSearchTokens(query: string) {
+  const normalized =
+    normalizeText(
+      String(query ?? '')
+        .replace(/[,%()]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .slice(0, 120),
+    );
+
+  const stopWords = new Set([
+    'quiero', 'quisiera', 'dame', 'deseo', 'agrega', 'agregame',
+    'una', 'uno', 'unos', 'unas', 'un', 'de', 'del', 'la', 'las',
+    'el', 'los', 'con', 'sin', 'por', 'para', 'favor', 'orden',
+    'pedido', 'presentacion', 'presentaciones', 'pieza', 'piezas',
+    'gramo', 'gramos', 'gr', 'g', 'kg',
+  ]);
+
+  const tokens =
+    normalized
+      .split(/\s+/)
+      .filter(Boolean);
+
+  return {
+    normalized,
+    words:
+      tokens.filter(
+        token =>
+          !/^\d+(?:[.,]\d+)?$/.test(token) &&
+          !stopWords.has(token),
+      ),
+    numbers:
+      tokens.filter(
+        token =>
+          /^\d+(?:[.,]\d+)?$/.test(token),
+      ),
+  };
+}
+
+async function getAvailableMenuProducts() {
+  const { data, error } =
+    await admin
+      .from('products')
+      .select('id,name,description,price,is_available,is_active,is_combo_option,categories(id,name)')
+      .eq('is_active', true)
+      .eq('is_available', true)
+      .eq('is_combo_option', false)
+      .order('name');
+
   if (error) throw error;
-  return { products: data ?? [] };
+
+  return data ?? [];
+}
+
+async function searchMenu(query: string, limit = 20) {
+  const safeLimit =
+    Math.max(
+      1,
+      Math.min(
+        50,
+        Math.floor(
+          Number(limit) || 20,
+        ),
+      ),
+    );
+
+  const products =
+    await getAvailableMenuProducts();
+
+  const search =
+    getMenuSearchTokens(
+      query,
+    );
+
+  if (!search.normalized) {
+    return {
+      query: '',
+      totalMatches:
+        products.length,
+      truncated:
+        products.length >
+        safeLimit,
+      products:
+        products.slice(
+          0,
+          safeLimit,
+        ),
+    };
+  }
+
+  const ranked =
+    products
+      .map((product: any) => {
+        const name =
+          normalizeText(
+            String(
+              product.name ??
+              '',
+            ),
+          );
+
+        const description =
+          normalizeText(
+            String(
+              product.description ??
+              '',
+            ),
+          );
+
+        const category =
+          normalizeText(
+            getProductCategoryName(
+              product,
+            ),
+          );
+
+        const haystack =
+          `${name} ${description} ${category}`;
+
+        let score = 0;
+
+        if (
+          haystack.includes(
+            search.normalized,
+          )
+        ) {
+          score += 100;
+        }
+
+        for (
+          const word of
+          search.words
+        ) {
+          if (
+            name.includes(
+              word,
+            )
+          ) {
+            score += 30;
+          } else if (
+            category.includes(
+              word,
+            )
+          ) {
+            score += 22;
+          } else if (
+            description.includes(
+              word,
+            )
+          ) {
+            score += 10;
+          }
+        }
+
+        for (
+          const numericToken of
+          search.numbers
+        ) {
+          if (
+            name.includes(
+              numericToken,
+            )
+          ) {
+            score += 35;
+          } else if (
+            description.includes(
+              numericToken,
+            )
+          ) {
+            score += 12;
+          }
+        }
+
+        if (
+          search.words.length >
+            0 &&
+          search.words.every(
+            word =>
+              haystack.includes(
+                word,
+              ),
+          )
+        ) {
+          score += 45;
+        }
+
+        return {
+          product,
+          score,
+        };
+      })
+      .filter(
+        entry =>
+          entry.score > 0,
+      )
+      .sort(
+        (left, right) =>
+          right.score -
+            left.score ||
+          String(
+            left.product.name ??
+            '',
+          ).localeCompare(
+            String(
+              right.product.name ??
+              '',
+            ),
+            'es',
+            {
+              sensitivity:
+                'base',
+            },
+          ),
+      );
+
+  return {
+    query:
+      search.normalized,
+    totalMatches:
+      ranked.length,
+    truncated:
+      ranked.length >
+      safeLimit,
+    products:
+      ranked
+        .slice(
+          0,
+          safeLimit,
+        )
+        .map(
+          entry =>
+            entry.product,
+        ),
+  };
+}
+
+async function listMenuCategory(
+  categoryQuery: string,
+) {
+  const products =
+    await getAvailableMenuProducts();
+
+  const search =
+    getMenuSearchTokens(
+      categoryQuery,
+    );
+
+  const normalizedQuery =
+    search.normalized;
+
+  const matches =
+    products.filter(
+      (product: any) => {
+        const category =
+          normalizeText(
+            getProductCategoryName(
+              product,
+            ),
+          );
+
+        const name =
+          normalizeText(
+            String(
+              product.name ??
+              '',
+            ),
+          );
+
+        if (
+          !normalizedQuery
+        ) {
+          return true;
+        }
+
+        if (
+          category ===
+            normalizedQuery ||
+          category.includes(
+            normalizedQuery,
+          )
+        ) {
+          return true;
+        }
+
+        return search.words.length >
+          0 &&
+          search.words.every(
+            word =>
+              category.includes(
+                word,
+              ) ||
+              name.includes(
+                word,
+              ),
+          );
+      },
+    );
+
+  return {
+    query:
+      normalizedQuery,
+    count:
+      matches.length,
+    products:
+      matches,
+  };
 }
 
 async function getProductDetails(productId: string) {
@@ -208,12 +514,23 @@ async function getProductDetails(productId: string) {
     if (optionsError) throw optionsError;
     if (modifiersError) throw modifiersError;
 
-    const optionPositionByModifierId = new Map(
-      (options ?? []).map((row: any) => [
-        row.modifier_id,
-        Number(row.position ?? 0),
-      ]),
-    );
+    const optionPositionByModifierId =
+      new Map<string, number>(
+        (options ?? []).map(
+          (row: any) => [
+            String(
+              row.modifier_id,
+            ),
+            Number(
+              row.position ??
+              0,
+            ),
+          ] as [
+            string,
+            number,
+          ],
+        ),
+      );
 
     for (const groupId of groupIds) {
       const availableInGroup = (groupModifiers ?? [])
@@ -260,7 +577,12 @@ async function getProductDetails(productId: string) {
     groups: groups ?? [],
     modifiers,
     combo: comboRecipe
-      ? { requiresConfiguration: true, supportedInPhase1: false }
+      ? {
+          requiresConfiguration: true,
+          supportedInPhase1: true,
+          configurationTool:
+            'get_combo_configuration',
+        }
       : null,
   };
 }
@@ -731,6 +1053,1661 @@ async function getBusinessStatus() {
   };
 }
 
+
+function getMexicoCityDateContext() {
+  const now =
+    new Date();
+
+  const dateParts =
+    new Intl.DateTimeFormat(
+      'en-US',
+      {
+        timeZone:
+          'America/Mexico_City',
+        year:
+          'numeric',
+        month:
+          '2-digit',
+        day:
+          '2-digit',
+        weekday:
+          'short',
+      },
+    ).formatToParts(
+      now,
+    );
+
+  const byType =
+    new Map(
+      dateParts.map(
+        part => [
+          part.type,
+          part.value,
+        ],
+      ),
+    );
+
+  const weekdayMap:
+    Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+
+  return {
+    date:
+      `${byType.get('year')}-${byType.get('month')}-${byType.get('day')}`,
+    weekday:
+      weekdayMap[
+        byType.get('weekday') ??
+        ''
+      ] ?? 0,
+  };
+}
+
+function isCouponProgramActiveToday(
+  program: any,
+): boolean {
+  if (
+    !program?.is_enabled
+  ) {
+    return false;
+  }
+
+  const context =
+    getMexicoCityDateContext();
+
+  const startsAt =
+    typeof program.starts_at ===
+      'string'
+      ? program.starts_at.slice(
+        0,
+        10,
+      )
+      : null;
+
+  const endsAt =
+    typeof program.ends_at ===
+      'string'
+      ? program.ends_at.slice(
+        0,
+        10,
+      )
+      : null;
+
+  if (
+    startsAt &&
+    context.date <
+      startsAt
+  ) {
+    return false;
+  }
+
+  if (
+    endsAt &&
+    context.date >
+      endsAt
+  ) {
+    return false;
+  }
+
+  const weekdays =
+    Array.isArray(
+      program.active_weekdays,
+    )
+      ? program.active_weekdays.map(
+        (value: unknown) =>
+          Number(
+            value,
+          ),
+      )
+      : [];
+
+  return (
+    weekdays.length ===
+      0 ||
+    weekdays.includes(
+      context.weekday,
+    )
+  );
+}
+
+async function getActivePromotions() {
+  const [
+    modifierResult,
+    quantityResult,
+    pricingResult,
+    couponResult,
+  ] =
+    await Promise.all([
+      admin.rpc(
+        'get_active_modifier_promotion',
+      ),
+      admin.rpc(
+        'get_active_quantity_promotions',
+      ),
+      admin.rpc(
+        'get_active_pricing_promotions',
+      ),
+      admin
+        .from(
+          'promotion_programs',
+        )
+        .select(`
+          id,
+          display_name,
+          program_type,
+          required_coupons,
+          issue_chance_denominator,
+          starts_at,
+          ends_at,
+          active_weekdays,
+          is_enabled,
+          rewards:promotion_rewards(
+            id,
+            display_name,
+            is_active,
+            position
+          )
+        `)
+        .eq(
+          'is_enabled',
+          true,
+        )
+        .in(
+          'program_type',
+          [
+            'collect_reward',
+            'order_refund',
+          ],
+        )
+        .order(
+          'priority',
+          {
+            ascending:
+              true,
+          },
+        ),
+    ]);
+
+  if (
+    modifierResult.error
+  ) {
+    throw modifierResult.error;
+  }
+
+  if (
+    quantityResult.error
+  ) {
+    throw quantityResult.error;
+  }
+
+  if (
+    pricingResult.error
+  ) {
+    throw pricingResult.error;
+  }
+
+  if (
+    couponResult.error
+  ) {
+    throw couponResult.error;
+  }
+
+  const modifierRow =
+    Array.isArray(
+      modifierResult.data,
+    )
+      ? modifierResult.data[0] ??
+        null
+      : modifierResult.data ??
+        null;
+
+  const modifierPromotion =
+    modifierRow
+      ? {
+        id:
+          modifierRow.id,
+        displayName:
+          modifierRow.display_name,
+        modifierId:
+          modifierRow.modifier_id,
+        modifierName:
+          modifierRow.modifier_name,
+        discountAmount:
+          Number(
+            modifierRow.discount_amount ??
+            0,
+          ),
+        startsAt:
+          modifierRow.starts_at ??
+          null,
+        endsAt:
+          modifierRow.ends_at ??
+          null,
+      }
+      : null;
+
+  const quantityPromotions =
+    (
+      quantityResult.data ??
+      []
+    ).map(
+      (row: any) => ({
+        id:
+          row.id,
+        displayName:
+          row.display_name,
+        targetProductId:
+          row.target_product_id,
+        productName:
+          row.product_name,
+        buyQuantity:
+          Number(
+            row.buy_quantity,
+          ),
+        payQuantity:
+          Number(
+            row.pay_quantity,
+          ),
+        priority:
+          Number(
+            row.priority,
+          ),
+      }),
+    );
+
+  const pricingPromotions =
+    (
+      pricingResult.data ??
+      []
+    ).map(
+      (row: any) => ({
+        id:
+          row.id,
+        displayName:
+          row.display_name,
+        programType:
+          row.program_type,
+        targetProductId:
+          row.target_product_id ??
+          null,
+        productName:
+          row.product_name ??
+          null,
+        fixedPrice:
+          row.fixed_price ===
+            null
+            ? null
+            : Number(
+              row.fixed_price,
+            ),
+        minimumOrderAmount:
+          row.minimum_order_amount ===
+            null
+            ? null
+            : Number(
+              row.minimum_order_amount,
+            ),
+        orderDiscountKind:
+          row.order_discount_kind ??
+          null,
+        orderDiscountValue:
+          row.order_discount_value ===
+            null
+            ? null
+            : Number(
+              row.order_discount_value,
+            ),
+        priority:
+          Number(
+            row.priority,
+          ),
+      }),
+    );
+
+  const couponPrograms =
+    (
+      couponResult.data ??
+      []
+    )
+      .filter(
+        isCouponProgramActiveToday,
+      )
+      .map(
+        (program: any) => ({
+          id:
+            program.id,
+          displayName:
+            program.display_name,
+          programType:
+            program.program_type,
+          requiredCoupons:
+            program.required_coupons ??
+            null,
+          issueChanceDenominator:
+            Number(
+              program.issue_chance_denominator ??
+              1,
+            ),
+          rewards:
+            (
+              program.rewards ??
+              []
+            )
+              .filter(
+                (reward: any) =>
+                  reward.is_active !==
+                  false,
+              )
+              .sort(
+                (
+                  left: any,
+                  right: any,
+                ) =>
+                  Number(
+                    left.position ??
+                    0,
+                  ) -
+                  Number(
+                    right.position ??
+                    0,
+                  ),
+              )
+              .map(
+                (reward: any) => ({
+                  id:
+                    reward.id,
+                  displayName:
+                    reward.display_name,
+                }),
+              ),
+        }),
+      );
+
+  return {
+    modifierPromotion,
+    quantityPromotions,
+    pricingPromotions,
+    couponPrograms,
+  };
+}
+
+function roundMoney(
+  value: number,
+): number {
+  return Number(
+    (
+      Math.round(
+        (
+          value +
+          Number.EPSILON
+        ) *
+        100,
+      ) /
+      100
+    ).toFixed(
+      2,
+    ),
+  );
+}
+
+async function calculateDraftPromotionSummary(
+  items: any[],
+) {
+  const promotions =
+    await getActivePromotions();
+
+  const productSubtotal =
+    roundMoney(
+      (
+        items ??
+        []
+      ).reduce(
+        (
+          total,
+          item,
+        ) =>
+          total +
+          Number(
+            item.basePrice ??
+            item.unitPrice ??
+            0,
+          ) *
+          Number(
+            item.quantity ??
+            0,
+          ),
+        0,
+      ),
+    );
+
+  const modifierExtrasTotal =
+    roundMoney(
+      (
+        items ??
+        []
+      ).reduce(
+        (
+          total,
+          item,
+        ) => {
+          const extrasPerUnit =
+            (
+              item.modifiers ??
+              []
+            ).reduce(
+              (
+                subtotal: number,
+                modifier: any,
+              ) =>
+                subtotal +
+                Number(
+                  modifier.extraPrice ??
+                  0,
+                ),
+              0,
+            );
+
+          return (
+            total +
+            extrasPerUnit *
+              Number(
+                item.quantity ??
+                0,
+              )
+          );
+        },
+        0,
+      ),
+    );
+
+  let modifierDiscount =
+    0;
+
+  const modifierLines:
+    any[] = [];
+
+  if (
+    promotions.modifierPromotion
+  ) {
+    const promotion =
+      promotions.modifierPromotion;
+
+    for (
+      const item of
+      items ??
+      []
+    ) {
+      const directEligible =
+        (
+          item.modifiers ??
+          []
+        ).some(
+          (modifier: any) =>
+            modifier.id ===
+            promotion.modifierId,
+        )
+          ? Number(item.quantity ?? 0)
+          : 0;
+
+      const comboEligiblePerUnit =
+        (
+          item.comboComponents ??
+          []
+        ).reduce(
+          (
+            total: number,
+            component: any,
+          ) =>
+            total +
+            (
+              (
+                component.modifiers ??
+                []
+              ).some(
+                (modifier: any) =>
+                  modifier.id ===
+                  promotion.modifierId,
+              )
+                ? Number(component.quantity ?? 1)
+                : 0
+            ),
+          0,
+        );
+
+      const eligibleUnits =
+        directEligible +
+        comboEligiblePerUnit *
+          Number(item.quantity ?? 0);
+
+      if (eligibleUnits <= 0) {
+        continue;
+      }
+
+      const amount =
+        roundMoney(
+          promotion.discountAmount *
+          eligibleUnits,
+        );
+
+      if (amount <= 0) {
+        continue;
+      }
+
+      modifierDiscount +=
+        amount;
+
+      modifierLines.push({
+        promotionId:
+          promotion.id,
+        promotionName:
+          promotion.displayName,
+        modifierName:
+          promotion.modifierName,
+        productName:
+          item.productName,
+        eligibleUnits,
+        discountAmount:
+          amount,
+      });
+    }
+  }
+
+  const quantityLines:
+    any[] = [];
+
+  let quantityDiscount =
+    0;
+
+  for (
+    const promotion of
+    promotions.quantityPromotions
+  ) {
+    const matchingItems =
+      (
+        items ??
+        []
+      ).filter(
+        item =>
+          item.productId ===
+          promotion.targetProductId,
+      );
+
+    if (
+      matchingItems.length ===
+      0 ||
+      promotion.buyQuantity <
+        2 ||
+      promotion.payQuantity <
+        1 ||
+      promotion.payQuantity >=
+        promotion.buyQuantity
+    ) {
+      continue;
+    }
+
+    const quantity =
+      matchingItems.reduce(
+        (
+          total,
+          item,
+        ) =>
+          total +
+          Number(
+            item.quantity ??
+            0,
+          ),
+        0,
+      );
+
+    const basePrice =
+      Math.min(
+        ...matchingItems.map(
+          item =>
+            Number(
+              item.basePrice ??
+              item.unitPrice ??
+              0,
+            ),
+        ),
+      );
+
+    const groups =
+      Math.floor(
+        quantity /
+        promotion.buyQuantity,
+      );
+
+    if (
+      groups <= 0
+    ) {
+      continue;
+    }
+
+    const freeQuantity =
+      groups *
+      (
+        promotion.buyQuantity -
+        promotion.payQuantity
+      );
+
+    const amount =
+      roundMoney(
+        freeQuantity *
+        basePrice,
+      );
+
+    if (
+      amount <= 0
+    ) {
+      continue;
+    }
+
+    quantityDiscount +=
+      amount;
+
+    quantityLines.push({
+      promotionId:
+        promotion.id,
+      promotionName:
+        promotion.displayName,
+      productId:
+        promotion.targetProductId,
+      productName:
+        promotion.productName,
+      qualifyingQuantity:
+        groups *
+        promotion.buyQuantity,
+      freeQuantity,
+      discountAmount:
+        amount,
+    });
+  }
+
+  const quantityProductIds =
+    new Set(
+      promotions.quantityPromotions.map(
+        promotion =>
+          promotion.targetProductId,
+      ),
+    );
+
+  const specialPriceByProduct =
+    new Map<string, any>();
+
+  const minimumSpendPromotions:
+    any[] = [];
+
+  for (
+    const promotion of
+    promotions.pricingPromotions
+  ) {
+    if (
+      promotion.programType ===
+        'special_price' &&
+      promotion.targetProductId &&
+      promotion.fixedPrice !==
+        null &&
+      !quantityProductIds.has(
+        promotion.targetProductId,
+      )
+    ) {
+      const previous =
+        specialPriceByProduct.get(
+          promotion.targetProductId,
+        );
+
+      if (
+        !previous ||
+        promotion.priority <
+          previous.priority
+      ) {
+        specialPriceByProduct.set(
+          promotion.targetProductId,
+          promotion,
+        );
+      }
+
+      continue;
+    }
+
+    if (
+      promotion.programType ===
+      'minimum_spend_discount'
+    ) {
+      minimumSpendPromotions.push(
+        promotion,
+      );
+    }
+  }
+
+  const pricingLines:
+    any[] = [];
+
+  let pricingDiscount =
+    0;
+
+  for (
+    const [
+      productId,
+      promotion,
+    ] of
+    specialPriceByProduct.entries()
+  ) {
+    const matchingItems =
+      (
+        items ??
+        []
+      ).filter(
+        item =>
+          item.productId ===
+          productId,
+      );
+
+    if (
+      matchingItems.length ===
+      0
+    ) {
+      continue;
+    }
+
+    const quantity =
+      matchingItems.reduce(
+        (
+          total,
+          item,
+        ) =>
+          total +
+          Number(
+            item.quantity ??
+            0,
+          ),
+        0,
+      );
+
+    const basePrice =
+      Math.min(
+        ...matchingItems.map(
+          item =>
+            Number(
+              item.basePrice ??
+              item.unitPrice ??
+              0,
+            ),
+        ),
+      );
+
+    const discountPerUnit =
+      Math.max(
+        0,
+        basePrice -
+        Number(
+          promotion.fixedPrice ??
+          basePrice,
+        ),
+      );
+
+    const amount =
+      roundMoney(
+        discountPerUnit *
+        quantity,
+      );
+
+    if (
+      amount <= 0
+    ) {
+      continue;
+    }
+
+    pricingDiscount +=
+      amount;
+
+    pricingLines.push({
+      promotionId:
+        promotion.id,
+      promotionName:
+        promotion.displayName,
+      productId,
+      productName:
+        promotion.productName,
+      discountAmount:
+        amount,
+      type:
+        'special_price',
+    });
+  }
+
+  const selectedMinimum =
+    minimumSpendPromotions
+      .filter(
+        promotion =>
+          promotion.minimumOrderAmount !==
+            null &&
+          productSubtotal >=
+            promotion.minimumOrderAmount,
+      )
+      .sort(
+        (
+          left,
+          right,
+        ) =>
+          left.priority -
+          right.priority,
+      )[0] ??
+    null;
+
+  if (
+    selectedMinimum &&
+    selectedMinimum.orderDiscountKind &&
+    selectedMinimum.orderDiscountValue !==
+      null
+  ) {
+    const eligibleAmount =
+      Math.max(
+        0,
+        productSubtotal -
+          quantityDiscount -
+          pricingDiscount,
+      );
+
+    const amount =
+      roundMoney(
+        selectedMinimum.orderDiscountKind ===
+          'percent'
+          ? eligibleAmount *
+            (
+              selectedMinimum.orderDiscountValue /
+              100
+            )
+          : Math.min(
+            eligibleAmount,
+            selectedMinimum.orderDiscountValue,
+          ),
+      );
+
+    if (
+      amount > 0
+    ) {
+      pricingDiscount +=
+        amount;
+
+      pricingLines.push({
+        promotionId:
+          selectedMinimum.id,
+        promotionName:
+          selectedMinimum.displayName,
+        discountAmount:
+          amount,
+        type:
+          'minimum_spend_discount',
+      });
+    }
+  }
+
+  modifierDiscount =
+    roundMoney(
+      modifierDiscount,
+    );
+
+  quantityDiscount =
+    roundMoney(
+      quantityDiscount,
+    );
+
+  pricingDiscount =
+    roundMoney(
+      pricingDiscount,
+    );
+
+  const totalDiscount =
+    roundMoney(
+      modifierDiscount +
+      quantityDiscount +
+      pricingDiscount,
+    );
+
+  const productsBeforePromotions =
+    roundMoney(
+      productSubtotal +
+      modifierExtrasTotal,
+    );
+
+  const productsAfterPromotions =
+    roundMoney(
+      Math.max(
+        0,
+        productsBeforePromotions -
+        totalDiscount,
+      ),
+    );
+
+  return {
+    activePromotions:
+      promotions,
+    productSubtotal,
+    modifierExtrasTotal,
+    productsBeforePromotions,
+    modifierDiscount,
+    modifierLines,
+    quantityDiscount,
+    quantityLines,
+    pricingDiscount,
+    pricingLines,
+    totalDiscount,
+    productsAfterPromotions,
+  };
+}
+
+
+async function getProductModifierConfiguration(
+  productId: string,
+) {
+  const { data: groups, error: groupsError } =
+    await admin
+      .from('product_modifier_groups')
+      .select(`
+        modifier_group_id,
+        is_required,
+        min_selections,
+        max_selections,
+        allow_duplicates,
+        position,
+        modifier_groups(id,code,name,is_active)
+      `)
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('position');
+
+  if (groupsError) throw groupsError;
+
+  const groupIds =
+    (groups ?? [])
+      .map((row: any) => row.modifier_group_id)
+      .filter(Boolean);
+
+  if (groupIds.length === 0) {
+    return [];
+  }
+
+  const [
+    { data: configuredOptions, error: optionsError },
+    { data: modifiers, error: modifiersError },
+  ] =
+    await Promise.all([
+      admin
+        .from('product_modifier_options')
+        .select('modifier_id,position')
+        .eq('product_id', productId)
+        .eq('is_available', true)
+        .order('position'),
+      admin
+        .from('modifiers')
+        .select('id,name,extra_price,is_available,group_id')
+        .in('group_id', groupIds)
+        .eq('is_available', true)
+        .order('name'),
+    ]);
+
+  if (optionsError) throw optionsError;
+  if (modifiersError) throw modifiersError;
+
+  const configuredModifierIds =
+    new Set(
+      (configuredOptions ?? []).map(
+        (row: any) =>
+          String(
+            row.modifier_id,
+          ),
+      ),
+    );
+
+  return (groups ?? []).map((row: any) => {
+    const relation =
+      Array.isArray(row.modifier_groups)
+        ? row.modifier_groups[0]
+        : row.modifier_groups;
+
+    const groupId =
+      String(row.modifier_group_id);
+
+    const availableInGroup =
+      (modifiers ?? [])
+        .filter(
+          (modifier: any) =>
+            String(
+              modifier.group_id,
+            ) ===
+            groupId,
+        );
+
+    const configured =
+      availableInGroup.filter(
+        (modifier: any) =>
+          configuredModifierIds.has(
+            String(
+              modifier.id,
+            ),
+          ),
+      );
+
+    const available =
+      configured.length > 0
+        ? configured
+        : availableInGroup;
+
+    return {
+      groupId,
+      code:
+        relation?.code ?? null,
+      name:
+        relation?.name ?? 'Opciones',
+      isRequired:
+        Boolean(row.is_required),
+      minSelections:
+        Number(row.min_selections ?? 0),
+      maxSelections:
+        Number(row.max_selections ?? 1),
+      allowDuplicates:
+        Boolean(row.allow_duplicates),
+      position:
+        Number(row.position ?? 0),
+      options:
+        available.map((modifier: any) => ({
+          id: modifier.id,
+          name: modifier.name,
+          extraPrice:
+            Number(modifier.extra_price ?? 0),
+        })),
+    };
+  });
+}
+
+async function getComboConfiguration(
+  comboProductId: string,
+) {
+  const { data: recipe, error: recipeError } =
+    await admin
+      .from('combo_recipes')
+      .select('id,combo_product_id,enabled')
+      .eq('combo_product_id', comboProductId)
+      .eq('enabled', true)
+      .maybeSingle();
+
+  if (recipeError) throw recipeError;
+
+  if (!recipe) {
+    return {
+      isCombo: false,
+      recipe: null,
+      components: [],
+    };
+  }
+
+  const { data: componentRows, error: componentError } =
+    await admin
+      .from('combo_recipe_components')
+      .select(`
+        id,
+        combo_recipe_id,
+        slot_key,
+        component_type,
+        label,
+        selection_mode,
+        fixed_product_id,
+        product_category_id,
+        allows_notes,
+        position
+      `)
+      .eq('combo_recipe_id', recipe.id)
+      .order('position');
+
+  if (componentError) throw componentError;
+
+  const componentIds =
+    (componentRows ?? []).map(
+      (row: any) => row.id,
+    );
+
+  const { data: rules, error: rulesError } =
+    componentIds.length > 0
+      ? await admin
+          .from('combo_component_products')
+          .select('combo_component_id,product_id,rule_type')
+          .in('combo_component_id', componentIds)
+      : { data: [], error: null };
+
+  if (rulesError) throw rulesError;
+
+  const categoryIds =
+    [
+      ...new Set(
+        (componentRows ?? [])
+          .map((row: any) => row.product_category_id)
+          .filter(Boolean),
+      ),
+    ];
+
+  const fixedIds =
+    [
+      ...new Set(
+        (componentRows ?? [])
+          .map((row: any) => row.fixed_product_id)
+          .filter(Boolean),
+      ),
+    ];
+
+  const ruleProductIds =
+    [
+      ...new Set(
+        (rules ?? [])
+          .map((row: any) => row.product_id)
+          .filter(Boolean),
+      ),
+    ];
+
+  const referencedIds =
+    [
+      ...new Set([
+        ...fixedIds,
+        ...ruleProductIds,
+      ]),
+    ];
+
+  const [
+    referencedResult,
+    categoryResult,
+  ] =
+    await Promise.all([
+      referencedIds.length > 0
+        ? admin
+            .from('products')
+            .select(`
+              id,
+              category_id,
+              name,
+              description,
+              price,
+              is_available,
+              is_active,
+              is_combo_option,
+              allows_oil_fryer,
+              allows_air_fryer,
+              air_fryer_extra_minutes
+            `)
+            .in('id', referencedIds)
+        : Promise.resolve({
+            data: [],
+            error: null,
+          } as any),
+      categoryIds.length > 0
+        ? admin
+            .from('products')
+            .select(`
+              id,
+              category_id,
+              name,
+              description,
+              price,
+              is_available,
+              is_active,
+              is_combo_option,
+              allows_oil_fryer,
+              allows_air_fryer,
+              air_fryer_extra_minutes
+            `)
+            .in('category_id', categoryIds)
+            .eq('is_active', true)
+            .eq('is_available', true)
+            .eq('is_combo_option', true)
+            .order('name')
+        : Promise.resolve({
+            data: [],
+            error: null,
+          } as any),
+    ]);
+
+  if (referencedResult.error) {
+    throw referencedResult.error;
+  }
+
+  if (categoryResult.error) {
+    throw categoryResult.error;
+  }
+
+  const allProducts =
+    [
+      ...(referencedResult.data ?? []),
+      ...(categoryResult.data ?? []),
+    ];
+
+  const productsById =
+    new Map(
+      allProducts.map((product: any) => [
+        String(product.id),
+        product,
+      ]),
+    );
+
+  const modifierConfigByProductId =
+    new Map<string, any[]>();
+
+  async function enrichProduct(
+    product: any,
+  ) {
+    if (!product) return null;
+
+    const productId =
+      String(product.id);
+
+    if (
+      !modifierConfigByProductId.has(productId)
+    ) {
+      modifierConfigByProductId.set(
+        productId,
+        await getProductModifierConfiguration(
+          productId,
+        ),
+      );
+    }
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price ?? 0),
+      isAvailable:
+        product.is_available !== false &&
+        product.is_active !== false,
+      allowsOilFryer:
+        product.allows_oil_fryer === true,
+      allowsAirFryer:
+        product.allows_air_fryer === true,
+      airFryerExtraMinutes:
+        Number(
+          product.air_fryer_extra_minutes ?? 0,
+        ),
+      modifierGroups:
+        modifierConfigByProductId.get(
+          productId,
+        ) ?? [],
+    };
+  }
+
+  const components: any[] = [];
+
+  for (const component of componentRows ?? []) {
+    const componentRules =
+      (rules ?? []).filter(
+        (rule: any) =>
+          String(rule.combo_component_id) ===
+          String((component as any).id),
+      );
+
+    const allowedIds =
+      new Set(
+        componentRules
+          .filter((rule: any) =>
+            rule.rule_type === 'allowed',
+          )
+          .map((rule: any) =>
+            String(rule.product_id),
+          ),
+      );
+
+    const excludedIds =
+      new Set(
+        componentRules
+          .filter((rule: any) =>
+            rule.rule_type === 'excluded',
+          )
+          .map((rule: any) =>
+            String(rule.product_id),
+          ),
+      );
+
+    let rawOptions: any[] = [];
+
+    if (
+      (component as any).selection_mode ===
+      'fixed'
+    ) {
+      const fixed =
+        productsById.get(
+          String(
+            (component as any).fixed_product_id ?? '',
+          ),
+        );
+
+      rawOptions =
+        fixed
+          ? [fixed]
+          : [];
+    } else {
+      rawOptions =
+        (categoryResult.data ?? [])
+          .filter((product: any) =>
+            String(product.category_id) ===
+            String(
+              (component as any).product_category_id ?? '',
+            ),
+          )
+          .filter((product: any) => {
+            const id =
+              String(product.id);
+
+            if (excludedIds.has(id)) {
+              return false;
+            }
+
+            if (
+              allowedIds.size > 0 &&
+              !allowedIds.has(id)
+            ) {
+              return false;
+            }
+
+            return true;
+          });
+    }
+
+    const options: any[] = [];
+
+    for (const rawOption of rawOptions) {
+      const enriched =
+        await enrichProduct(rawOption);
+
+      if (
+        enriched &&
+        enriched.isAvailable
+      ) {
+        options.push(enriched);
+      }
+    }
+
+    components.push({
+      id: (component as any).id,
+      slotKey: (component as any).slot_key,
+      type: (component as any).component_type,
+      label: (component as any).label,
+      selectionMode:
+        (component as any).selection_mode,
+      fixedProductId:
+        (component as any).fixed_product_id,
+      selectableCategoryId:
+        (component as any).product_category_id,
+      allowsNotes:
+        Boolean((component as any).allows_notes),
+      requiresMeat:
+        false,
+      requiresSauce:
+        false,
+      requiresDrinkFlavor:
+        options.some(
+          (option: any) =>
+            (
+              option.modifierGroups ??
+              []
+            ).some(
+              (group: any) =>
+                group.code ===
+                'drink_flavor',
+            ),
+        ),
+      position:
+        Number((component as any).position ?? 0),
+      options,
+    });
+  }
+
+  return {
+    isCombo: true,
+    recipe: {
+      id: recipe.id,
+      comboProductId:
+        recipe.combo_product_id,
+    },
+    components,
+  };
+}
+
+async function validateComboComponents(
+  comboProduct: any,
+  rawComponents:
+    DraftComboComponentInput[] |
+    undefined,
+) {
+  const configuration =
+    await getComboConfiguration(
+      comboProduct.id,
+    );
+
+  if (!configuration.isCombo) {
+    return {
+      components: [],
+    };
+  }
+
+  const requested =
+    Array.isArray(rawComponents)
+      ? rawComponents
+      : [];
+
+  const requestedBySlot =
+    new Map(
+      requested.map(
+        component => [
+          String(component.slot_id),
+          component,
+        ],
+      ),
+    );
+
+  const normalized: any[] = [];
+
+  for (const component of configuration.components) {
+    const raw =
+      requestedBySlot.get(
+        String(component.id),
+      );
+
+    if (!raw) {
+      throw new Error(
+        `Falta configurar "${component.label}" del combo ${comboProduct.name}.`,
+      );
+    }
+
+    const option =
+      component.options.find(
+        (candidate: any) =>
+          String(candidate.id) ===
+          String(raw.product_id),
+      );
+
+    if (!option) {
+      throw new Error(
+        `La opción elegida para "${component.label}" no es válida en ${comboProduct.name}.`,
+      );
+    }
+
+    const modifierIds =
+      Array.isArray(raw.modifier_ids)
+        ? raw.modifier_ids.map(String)
+        : [];
+
+    const allAllowedModifierIds =
+      new Set(
+        (option.modifierGroups ?? [])
+          .flatMap(
+            (group: any) =>
+              (group.options ?? []).map(
+                (modifier: any) =>
+                  String(modifier.id),
+              ),
+          ),
+      );
+
+    const unknownIds =
+      modifierIds.filter(
+        modifierId =>
+          !allAllowedModifierIds.has(
+            String(modifierId),
+          ),
+      );
+
+    if (unknownIds.length > 0) {
+      throw new Error(
+        `Hay modificadores no válidos para ${option.name}.`,
+      );
+    }
+
+    const normalizedModifiers: any[] = [];
+
+    for (const group of option.modifierGroups ?? []) {
+      const availableById =
+        new Map(
+          (group.options ?? []).map(
+            (modifier: any) => [
+              String(modifier.id),
+              modifier,
+            ],
+          ),
+        );
+
+      const selectedIds =
+        modifierIds.filter(
+          modifierId =>
+            availableById.has(
+              String(modifierId),
+            ),
+        );
+
+      if (
+        !group.allowDuplicates &&
+        new Set(selectedIds).size !==
+          selectedIds.length
+      ) {
+        throw new Error(
+          `El grupo "${group.name}" no permite repetir opciones.`,
+        );
+      }
+
+      const minimum =
+        group.isRequired
+          ? Math.max(
+              1,
+              Number(group.minSelections ?? 0),
+            )
+          : Number(group.minSelections ?? 0);
+
+      const maximum =
+        Math.max(
+          1,
+          Number(group.maxSelections ?? 1),
+        );
+
+      if (
+        selectedIds.length < minimum ||
+        selectedIds.length > maximum
+      ) {
+        throw new Error(
+          `"${group.name}" en ${option.name} requiere entre ${minimum} y ${maximum} selecciones.`,
+        );
+      }
+
+      for (const modifierId of selectedIds) {
+        const modifier =
+          availableById.get(
+            String(modifierId),
+          );
+
+        if (!modifier) continue;
+
+        normalizedModifiers.push({
+          id: modifier.id,
+          name: modifier.name,
+          groupId: group.groupId,
+          groupName: group.name,
+          extraPrice:
+            Number(modifier.extraPrice ?? 0),
+        });
+      }
+    }
+
+    let cookingMethod:
+      'oil' |
+      'air_fryer' |
+      null = null;
+
+    if (
+      option.allowsOilFryer &&
+      option.allowsAirFryer
+    ) {
+      if (
+        raw.cooking_method !== 'oil' &&
+        raw.cooking_method !== 'air_fryer'
+      ) {
+        throw new Error(
+          `Falta elegir método de cocción para ${option.name}.`,
+        );
+      }
+
+      cookingMethod =
+        raw.cooking_method;
+    } else if (
+      option.allowsOilFryer
+    ) {
+      cookingMethod = 'oil';
+    } else if (
+      option.allowsAirFryer
+    ) {
+      cookingMethod = 'air_fryer';
+    }
+
+    normalized.push({
+      slotId: component.id,
+      slotKey: component.slotKey,
+      type: component.type,
+      label: component.label,
+      productId: option.id,
+      productName: option.name,
+      quantity: 1,
+      notes:
+        component.allowsNotes
+          ? String(raw.notes ?? '')
+              .trim()
+              .slice(0, 250)
+          : '',
+      modifiers:
+        normalizedModifiers,
+      cookingMethod,
+      airFryerExtraMinutes:
+        cookingMethod === 'air_fryer'
+          ? Number(
+              option.airFryerExtraMinutes ?? 0,
+            )
+          : 0,
+    });
+  }
+
+  if (
+    requested.length !==
+    configuration.components.length
+  ) {
+    throw new Error(
+      `El combo ${comboProduct.name} tiene una configuración incompleta o contiene componentes adicionales.`,
+    );
+  }
+
+  return {
+    components: normalized,
+  };
+}
+
 async function validateDraftItems(items: DraftItemInput[]) {
   if (!Array.isArray(items) || items.length === 0) return { items: [], estimatedTotal: 0 };
   if (items.length > 30) throw new Error('El borrador no puede tener más de 30 renglones.');
@@ -760,9 +2737,8 @@ async function validateDraftItems(items: DraftItemInput[]) {
     if (!product || !product.is_active || !product.is_available || product.is_combo_option) {
       throw new Error(`Producto no disponible: ${raw.product_id}`);
     }
-    if (comboProductIds.has(product.id)) {
-      throw new Error(`El combo ${product.name} requiere configurar componentes y todavía no está soportado en la Fase 1.`);
-    }
+    const isCombo =
+      comboProductIds.has(product.id);
 
     const quantity = Math.max(1, Math.min(50, Math.floor(Number(raw.quantity) || 1)));
     const modifierIds = [...new Set(Array.isArray(raw.modifier_ids) ? raw.modifier_ids : [])];
@@ -866,18 +2842,47 @@ async function validateDraftItems(items: DraftItemInput[]) {
       );
     }
 
-    const unitPrice = Number(product.price) + modifierTotal;
-    const lineTotal = unitPrice * quantity;
-    estimatedTotal += lineTotal;
+    const comboValidation =
+      isCombo
+        ? await validateComboComponents(
+            product,
+            raw.combo_components,
+          )
+        : {
+            components: [],
+          };
+
+    const unitPrice =
+      Number(product.price) +
+      modifierTotal;
+
+    const lineTotal =
+      unitPrice * quantity;
+
+    estimatedTotal +=
+      lineTotal;
+
     normalized.push({
       productId: product.id,
       productName: product.name,
       productDescription: product.description,
       quantity,
       notes: String(raw.notes ?? '').trim().slice(0, 500),
-      modifiers: modifiers.map((m) => ({ id: m.id, name: m.name, extraPrice: Number(m.extra_price ?? 0) })),
-      unitPrice: Number(unitPrice.toFixed(2)),
-      lineTotal: Number(lineTotal.toFixed(2)),
+      modifiers: modifiers.map((m) => ({
+        id: m.id,
+        name: m.name,
+        extraPrice:
+          Number(m.extra_price ?? 0),
+      })),
+      comboComponents:
+        comboValidation.components,
+      isCombo,
+      basePrice:
+        Number(Number(product.price).toFixed(2)),
+      unitPrice:
+        Number(unitPrice.toFixed(2)),
+      lineTotal:
+        Number(lineTotal.toFixed(2)),
     });
   }
 
@@ -905,12 +2910,15 @@ async function updateDraft(conversationId: string, args: any) {
       args.delivery,
     );
 
+  const promotionSummary =
+    await calculateDraftPromotionSummary(
+      validated.items,
+    );
+
   const estimatedTotal =
-    Number(
-      (
-        validated.estimatedTotal +
-        deliveryValidation.deliveryFee
-      ).toFixed(2),
+    roundMoney(
+      promotionSummary.productsAfterPromotions +
+      deliveryValidation.deliveryFee,
     );
 
   const payload = {
@@ -966,8 +2974,7 @@ async function updateDraft(conversationId: string, args: any) {
   return {
     ...data,
     pricing: {
-      productsTotal:
-        validated.estimatedTotal,
+      ...promotionSummary,
       deliveryFee:
         deliveryValidation.deliveryFee,
       estimatedTotal,
@@ -976,13 +2983,67 @@ async function updateDraft(conversationId: string, args: any) {
 }
 
 async function getDraft(conversationId: string) {
-  const { data, error } = await admin
-    .from('ai_order_drafts')
-    .select('*')
-    .eq('conversation_id', conversationId)
-    .maybeSingle();
+  const { data, error } =
+    await admin
+      .from('ai_order_drafts')
+      .select('*')
+      .eq(
+        'conversation_id',
+        conversationId,
+      )
+      .maybeSingle();
+
   if (error) throw error;
-  return { draft: data };
+
+  if (!data) {
+    return {
+      draft:
+        null,
+      pricing:
+        null,
+    };
+  }
+
+  const promotionSummary =
+    await calculateDraftPromotionSummary(
+      Array.isArray(
+        data.items,
+      )
+        ? data.items
+        : [],
+    );
+
+  const deliveryFee =
+    data.fulfillment_type ===
+      'delivery'
+      ? Number(
+        data.delivery?.quote
+          ?.totalFee ??
+        0,
+      )
+      : 0;
+
+  const estimatedTotal =
+    roundMoney(
+      promotionSummary.productsAfterPromotions +
+      deliveryFee,
+    );
+
+  return {
+    draft: {
+      ...data,
+      estimated_total:
+        estimatedTotal,
+    },
+    pricing: {
+      ...promotionSummary,
+      deliveryFee:
+        roundMoney(
+          deliveryFee,
+        ),
+      estimatedTotal,
+    },
+  };
 }
 
 async function requestHuman(conversationId: string, reason: string) {
@@ -1044,14 +3105,39 @@ async function confirmOrder(conversationId: string, settings: Settings) {
 const tools = [
   {
     type: 'function', name: 'search_menu',
-    description: 'Busca productos reales disponibles en el menú. Úsala antes de asumir que un producto existe.',
-    parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 15 } }, required: ['query', 'limit'], additionalProperties: false },
+    description: 'Busca productos reales disponibles con coincidencia flexible por nombre, descripción, categoría y presentación. Para listar una categoría completa usa list_menu_category.',
+    parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 50 } }, required: ['query', 'limit'], additionalProperties: false },
+    strict: true,
+  },
+  {
+    type: 'function', name: 'list_menu_category',
+    description: 'Lista todos los productos disponibles de una categoría o familia del menú, por ejemplo alitas, papas, boneless, hamburguesas o bebidas. Úsala cuando el cliente pregunte qué presentaciones u opciones existen.',
+    parameters: { type: 'object', properties: { category_query: { type: 'string' } }, required: ['category_query'], additionalProperties: false },
+    strict: true,
+  },
+  {
+    type: 'function', name: 'get_active_promotions',
+    description: 'Consulta las promociones vigentes reales de DorianCore: descuentos de modificador, promociones por cantidad, precios especiales, descuentos por monto y programas de cupones activos.',
+    parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     strict: true,
   },
   {
     type: 'function', name: 'get_product_details',
     description: 'Obtiene precio, descripción y modificadores válidos de un producto.',
     parameters: { type: 'object', properties: { product_id: { type: 'string' } }, required: ['product_id'], additionalProperties: false },
+    strict: true,
+  },
+  {
+    type: 'function', name: 'get_combo_configuration',
+    description: 'Obtiene la receta real de un combo, sus componentes, opciones válidas, modificadores requeridos y métodos de cocción. Debes usarla antes de agregar o modificar cualquier combo.',
+    parameters: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string' },
+      },
+      required: ['product_id'],
+      additionalProperties: false,
+    },
     strict: true,
   },
   {
@@ -1108,10 +3194,34 @@ const tools = [
           items: {
             type: 'object',
             properties: {
-              product_id: { type: 'string' }, quantity: { type: 'integer', minimum: 1, maximum: 50 },
-              notes: { type: 'string' }, modifier_ids: { type: 'array', items: { type: 'string' } },
+              product_id: { type: 'string' },
+              quantity: { type: 'integer', minimum: 1, maximum: 50 },
+              notes: { type: 'string' },
+              modifier_ids: { type: 'array', items: { type: 'string' } },
+              combo_components: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    slot_id: { type: 'string' },
+                    product_id: { type: 'string' },
+                    notes: { type: 'string' },
+                    modifier_ids: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                    cooking_method: {
+                      type: ['string', 'null'],
+                      enum: ['oil', 'air_fryer', null],
+                    },
+                  },
+                  required: ['slot_id', 'product_id', 'notes', 'modifier_ids', 'cooking_method'],
+                  additionalProperties: false,
+                },
+              },
             },
-            required: ['product_id', 'quantity', 'notes', 'modifier_ids'], additionalProperties: false,
+            required: ['product_id', 'quantity', 'notes', 'modifier_ids', 'combo_components'],
+            additionalProperties: false,
           },
         },
       },
@@ -1140,6 +3250,87 @@ const tools = [
   },
 ];
 
+function formatToolError(
+  error: unknown,
+): string {
+  if (
+    error instanceof Error
+  ) {
+    return error.message;
+  }
+
+  if (
+    error &&
+    typeof error ===
+      'object'
+  ) {
+    const candidate =
+      error as
+        Record<
+          string,
+          unknown
+        >;
+
+    const message =
+      candidate.message;
+
+    const details =
+      candidate.details;
+
+    const hint =
+      candidate.hint;
+
+    const code =
+      candidate.code;
+
+    const parts =
+      [
+        typeof message ===
+          'string'
+          ? message
+          : null,
+        typeof details ===
+          'string' &&
+        details
+          ? `Detalles: ${details}`
+          : null,
+        typeof hint ===
+          'string' &&
+        hint
+          ? `Hint: ${hint}`
+          : null,
+        typeof code ===
+          'string' &&
+        code
+          ? `Código: ${code}`
+          : null,
+      ].filter(
+        Boolean,
+      );
+
+    if (
+      parts.length >
+      0
+    ) {
+      return parts.join(
+        ' | ',
+      );
+    }
+
+    try {
+      return JSON.stringify(
+        error,
+      );
+    } catch {
+      return '[Error no serializable]';
+    }
+  }
+
+  return String(
+    error,
+  );
+}
+
 async function runTool(conversationId: string, call: ToolCall, settings: Settings) {
   const started = performance.now();
   let args: any = {};
@@ -1148,8 +3339,11 @@ async function runTool(conversationId: string, call: ToolCall, settings: Setting
   try {
     let result: unknown;
     switch (call.name) {
-      case 'search_menu': result = await searchMenu(args.query ?? '', args.limit ?? 8); break;
+      case 'search_menu': result = await searchMenu(args.query ?? '', args.limit ?? 20); break;
+      case 'list_menu_category': result = await listMenuCategory(args.category_query ?? ''); break;
+      case 'get_active_promotions': result = await getActivePromotions(); break;
       case 'get_product_details': result = await getProductDetails(args.product_id); break;
+      case 'get_combo_configuration': result = await getComboConfiguration(args.product_id); break;
       case 'get_business_status': result = await getBusinessStatus(); break;
       case 'quote_delivery': result = await quoteDeliveryAddress(args.address ?? '', args.postal_code ?? null); break;
       case 'update_draft': result = await updateDraft(conversationId, args); break;
@@ -1165,7 +3359,16 @@ async function runTool(conversationId: string, call: ToolCall, settings: Setting
     });
     return result;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message =
+      formatToolError(
+        error,
+      );
+
+    console.error(
+      `AI tool ${call.name} failed:`,
+      error,
+    );
+
     await admin.from('ai_order_tool_runs').insert({
       conversation_id: conversationId, tool_name: call.name, arguments: args,
       succeeded: false, error_message: message, duration_ms: Math.round(performance.now() - started),
@@ -1208,14 +3411,20 @@ REGLAS OBLIGATORIAS:
 - DorianCore es la única fuente de verdad para productos, disponibilidad, modificadores y precios.
 - Nunca inventes productos, precios, promociones, horarios ni opciones.
 - Busca el producto antes de agregarlo y consulta detalles cuando necesites modificadores.
-- Si get_product_details indica combo.requiresConfiguration=true, no lo agregues al borrador en esta fase; explica la limitación o solicita apoyo humano.
-- No calcules totales mentalmente: usa update_draft y get_order_summary.
+- search_menu es flexible, pero si el cliente pregunta por todas las opciones, presentaciones o productos de una familia usa list_menu_category. No concluyas que algo no existe tras una sola búsqueda estrecha: prueba una búsqueda más amplia o lista la categoría correspondiente.
+- Si el cliente pregunta por promociones, descuentos, ofertas o qué conviene comprar, usa get_active_promotions antes de responder. Nunca afirmes que no hay promociones sin consultar esa herramienta.
+- update_draft aplica automáticamente las promociones vigentes al total estimado. Usa get_order_summary para consultar el desglose de descuentos; no calcules descuentos ni totales mentalmente.
+- Si get_product_details indica combo.requiresConfiguration=true, usa get_combo_configuration. Debes completar exactamente cada componente del combo con una opción válida antes de update_draft.
+- Para combos, pregunta solo por la siguiente decisión faltante: opción del componente, modificadores obligatorios o método de cocción. No inventes componentes ni sustituciones.
+- Los sabores de bebida son modificadores normales. Si una opción tiene un modifierGroup con code='drink_flavor', trata ese grupo como la selección de sabor y envía el modifier.id elegido dentro de modifier_ids.
+- En update_draft envía combo_components estructurados con slot_id, product_id, modifier_ids, notes y cooking_method. Si el cliente cambia un componente, reconstruye el combo completo conservando los demás componentes confirmados.
 - Si el cliente pide domicilio, solicita una dirección suficientemente completa y usa quote_delivery antes de guardar el domicilio.
 - Nunca inventes coordenadas, cobertura ni costo de envío. Usa exactamente el resultado de quote_delivery.
 - Después de quote_delivery, copia sus campos address al objeto delivery de update_draft.
 - El total estimado de update_draft ya incluye la tarifa real de entrega cuando el domicilio fue validado; no sumes nada por tu cuenta.
 - Conserva notas como "sin tocino" como notes cuando no exista un modificador estructurado apropiado.
 - Si falta información importante, pregunta una sola cosa concreta a la vez.
+- No preguntes "¿recoger o domicilio?" después de cada producto o modificación. Espera a que el cliente parezca haber terminado de armar los productos, diga que eso es todo, pida cerrar/confirmar, o indique explícitamente la modalidad.
 - Antes de confirm_order, muestra resumen, total estimado y pide confirmación explícita.
 - Mientras order_creation_enabled sea false, habla siempre de "borrador", "actualizar el borrador" o "dejar listo para revisión". No digas "registraré", "crearé", "levantaré" ni afirmes que un pedido será creado.
 - En esta Fase 1, si confirm_order informa que la creación está bloqueada, explica que el pedido quedó listo para revisión, no digas que fue creado.
@@ -1269,7 +3478,15 @@ Deno.serve(async (request) => {
     await saveMessage(conversationId, 'assistant', assistantText);
     const draft = await getDraft(conversationId);
 
-    return json({ conversationId, message: assistantText, draft: draft.draft });
+    return json({
+      conversationId,
+      message:
+        assistantText,
+      draft:
+        draft.draft,
+      pricing:
+        draft.pricing,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message === 'UNAUTHORIZED') return json({ error: 'No autorizado.' }, 401);
