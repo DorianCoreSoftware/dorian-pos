@@ -1834,22 +1834,6 @@ async function printPromoCoupon(
         promoCoupon.programId,
     );
 
-  const promotionImage:
-    PrinterRasterImage | null =
-    program?.ticketShowImage &&
-    program.ticketImageRasterBase64 &&
-    program.ticketImageWidth &&
-    program.ticketImageHeight
-      ? {
-          base64:
-            program.ticketImageRasterBase64,
-          width:
-            program.ticketImageWidth,
-          height:
-            program.ticketImageHeight,
-        }
-      : null;
-
   const promotionQr =
     await getPromotionQrRaster(
       promoCoupon.code,
@@ -1870,11 +1854,9 @@ async function printPromoCoupon(
     true,
   );
 
-  if (!promotionImage) {
-    await printer.write(
-      `${promoCoupon.programName.toUpperCase()}\n`,
-    );
-  }
+  await printer.write(
+    `${promoCoupon.programName.toUpperCase()}\n`,
+  );
 
   await printer.write(
     `${promoCoupon.code}\n`,
