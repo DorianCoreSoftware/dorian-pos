@@ -1036,20 +1036,75 @@ async function validateDeliveryForDraft(
 
 
 async function getBusinessStatus() {
-  const { data: settings, error } = await admin
-    .from('business_settings')
-    .select('business_name,short_name,currency_code,web_orders_enabled,delivery_enabled')
-    .eq('id', 1)
-    .maybeSingle();
+  const {
+    data: settings,
+    error,
+  } =
+    await admin
+      .from(
+        'business_settings',
+      )
+      .select(
+        'business_name,short_name,currency_code,web_orders_enabled,delivery_enabled',
+      )
+      .eq(
+        'id',
+        1,
+      )
+      .maybeSingle();
+
   if (error) throw error;
 
-  const { data: fulfillment, error: fulfillmentError } = await admin
-    .rpc('get_public_fulfillment_availability');
-  if (fulfillmentError) throw fulfillmentError;
+  const {
+    data: fulfillment,
+    error:
+      fulfillmentError,
+  } =
+    await admin
+      .rpc(
+        'get_public_fulfillment_availability',
+      );
+
+  if (fulfillmentError) {
+    throw fulfillmentError;
+  }
+
+  const rawFulfillment =
+    Array.isArray(
+      fulfillment,
+    )
+      ? fulfillment[0] ??
+        null
+      : fulfillment ??
+        null;
 
   return {
     settings,
-    fulfillment: Array.isArray(fulfillment) ? fulfillment[0] ?? null : fulfillment ?? null,
+    fulfillment:
+      rawFulfillment
+        ? {
+            pickupAvailable:
+              Boolean(
+                rawFulfillment.pickup_available,
+              ),
+            deliveryAvailable:
+              Boolean(
+                rawFulfillment.delivery_available,
+              ),
+            pickupReason:
+              rawFulfillment.pickup_reason ??
+              null,
+            deliveryReason:
+              rawFulfillment.delivery_reason ??
+              null,
+            pickupNextWindow:
+              rawFulfillment.pickup_next_window ??
+              null,
+            deliveryNextWindow:
+              rawFulfillment.delivery_next_window ??
+              null,
+          }
+        : null,
   };
 }
 
@@ -3055,50 +3110,755 @@ async function requestHuman(conversationId: string, reason: string) {
   return { handoffRequested: true };
 }
 
-async function confirmOrder(conversationId: string, settings: Settings) {
-  const { data: draft, error } = await admin
-    .from('ai_order_drafts')
-    .select('*')
-    .eq('conversation_id', conversationId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!draft || !Array.isArray(draft.items) || draft.items.length === 0) {
-    return { ok: false, reason: 'No hay un pedido armado.' };
+function normalizePhone(
+  value: unknown,
+): string {
+  return String(
+    value ?? '',
+  ).replace(
+    /\D/g,
+    '',
+  );
+}
+
+async function getLastUserMessage(
+  conversationId: string,
+): Promise<string> {
+  const {
+    data,
+    error,
+  } =
+    await admin
+      .from(
+        'ai_order_messages',
+      )
+      .select(
+        'content,created_at',
+      )
+      .eq(
+        'conversation_id',
+        conversationId,
+      )
+      .eq(
+        'role',
+        'user',
+      )
+      .order(
+        'created_at',
+        {
+          ascending:
+            false,
+        },
+      )
+      .limit(
+        1,
+      )
+      .maybeSingle();
+
+  if (error) {
+    throw error;
   }
 
-  if (draft.fulfillment_type === 'delivery') {
-    const deliveryQuote = draft.delivery?.quote;
+  return String(
+    data?.content ??
+    '',
+  ).trim();
+}
 
+function isExplicitOrderConfirmation(
+  message: string,
+): boolean {
+  const normalized =
+    normalizeText(
+      message,
+    )
+      .replace(
+        /[.!?¡¿,;:]+/g,
+        ' ',
+      )
+      .replace(
+        /\s+/g,
+        ' ',
+      )
+      .trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  /*
+   * Rechazos explícitos.
+   *
+   * Se evalúan antes que las afirmaciones para evitar casos
+   * como "no, todavía no" o "espera".
+   */
+  const negativePatterns = [
+    /^no$/,
+    /\bno gracias\b/,
+    /\bno confirmo\b/,
+    /\btodavia no\b/,
+    /\baun no\b/,
+    /\bmejor no\b/,
+    /\bespera\b/,
+    /\baguanta\b/,
+    /\bcancel/,
+    /\bdeten/,
+    /\bno esta bien\b/,
+    /\bno asi\b/,
+    /\bcambialo\b/,
+    /\bcambia\b/,
+    /\bquita\b/,
+    /\bagrega\b/,
+    /\bmodifica\b/,
+  ];
+
+  if (
+    negativePatterns.some(
+      pattern =>
+        pattern.test(
+          normalized,
+        ),
+    )
+  ) {
+    return false;
+  }
+
+  /*
+   * Confirmaciones humanas/naturales.
+   *
+   * No exigimos "confirmo". En una conversación real el cliente
+   * normalmente responde con frases cortas como "sí", "va",
+   * "claro", "dale", "está bien", "perfecto", etc.
+   */
+  const positivePatterns = [
+    /^si$/,
+    /^sí$/,
+    /^si porfa$/,
+    /^si por favor$/,
+    /^sí porfa$/,
+    /^sí por favor$/,
+    /^claro$/,
+    /^claro que si$/,
+    /^claro que sí$/,
+    /^va$/,
+    /^va esta bien$/,
+    /^va está bien$/,
+    /^dale$/,
+    /^dale asi$/,
+    /^dale así$/,
+    /^ok$/,
+    /^okay$/,
+    /^oki$/,
+    /^perfecto$/,
+    /^correcto$/,
+    /^de acuerdo$/,
+    /^esta bien$/,
+    /^está bien$/,
+    /^asi esta bien$/,
+    /^así está bien$/,
+    /^si esta bien$/,
+    /^si está bien$/,
+    /^sí esta bien$/,
+    /^sí está bien$/,
+    /^si asi$/,
+    /^si así$/,
+    /^sí asi$/,
+    /^sí así$/,
+    /^adelante$/,
+    /^hazlo$/,
+    /^crealo$/,
+    /^créalo$/,
+    /^registralo$/,
+    /^regístralo$/,
+    /^mandalo$/,
+    /^mándalo$/,
+    /^levantalo$/,
+    /^levántalo$/,
+    /^eso es todo$/,
+    /^seria todo$/,
+    /^sería todo$/,
+    /^ya quedo$/,
+    /^ya quedó$/,
+    /^todo bien$/,
+    /^todo correcto$/,
+    /^listo$/,
+    /^listo asi$/,
+    /^listo así$/,
+    /\bconfirmo\b/,
+    /\bconfirmado\b/,
+    /\bpedido confirmado\b/,
+  ];
+
+  return positivePatterns.some(
+    pattern =>
+      pattern.test(
+        normalized,
+      ),
+  );
+}
+
+
+function buildWebOrderItems(
+  draftItems: any[],
+) {
+  return (
+    draftItems ??
+    []
+  ).map(
+    (item: any) => ({
+      productId:
+        item.productId,
+      quantity:
+        Number(
+          item.quantity ??
+          1,
+        ),
+      notes:
+        String(
+          item.notes ??
+          '',
+        ).trim(),
+      modifiers:
+        (
+          item.modifiers ??
+          []
+        ).map(
+          (modifier: any) => ({
+            id:
+              modifier.id,
+          }),
+        ),
+      components:
+        (
+          item.comboComponents ??
+          []
+        ).map(
+          (component: any) => ({
+            productId:
+              component.productId,
+            type:
+              component.type,
+            label:
+              component.label,
+            quantity:
+              Number(
+                component.quantity ??
+                1,
+              ),
+            notes:
+              String(
+                component.notes ??
+                '',
+              ).trim(),
+            modifiers:
+              (
+                component.modifiers ??
+                []
+              ).map(
+                (modifier: any) => ({
+                  id:
+                    modifier.id,
+                }),
+              ),
+          }),
+        ),
+    }),
+  );
+}
+
+function buildWebOrderDelivery(
+  draft: any,
+) {
+  if (
+    draft.fulfillment_type !==
+    'delivery'
+  ) {
+    return null;
+  }
+
+  const delivery =
+    draft.delivery ??
+    {};
+
+  return {
+    street:
+      String(
+        delivery.street ??
+        '',
+      ).trim(),
+    exteriorNumber:
+      String(
+        delivery.exteriorNumber ??
+        '',
+      ).trim(),
+    interiorNumber:
+      String(
+        delivery.interiorNumber ??
+        '',
+      ).trim(),
+    neighborhood:
+      String(
+        delivery.neighborhood ??
+        '',
+      ).trim(),
+    postalCode:
+      String(
+        delivery.postalCode ??
+        '',
+      ).trim(),
+    deliveryReferences:
+      String(
+        delivery.deliveryReferences ??
+        '',
+      ).trim(),
+    latitude:
+      Number(
+        delivery.latitude,
+      ),
+    longitude:
+      Number(
+        delivery.longitude,
+      ),
+  };
+}
+
+function getOrderTrackingCodeFromId(
+  orderId: string,
+): string {
+  return String(
+    orderId ??
+    '',
+  )
+    .replace(
+      /-/g,
+      '',
+    )
+    .slice(
+      0,
+      8,
+    )
+    .toUpperCase();
+}
+
+async function confirmOrder(
+  conversationId: string,
+  settings: Settings,
+) {
+  const {
+    data: draft,
+    error,
+  } =
+    await admin
+      .from(
+        'ai_order_drafts',
+      )
+      .select(
+        '*',
+      )
+      .eq(
+        'conversation_id',
+        conversationId,
+      )
+      .maybeSingle();
+
+  if (error) throw error;
+
+  if (
+    !draft ||
+    !Array.isArray(
+      draft.items,
+    ) ||
+    draft.items.length ===
+      0
+  ) {
+    return {
+      ok:
+        false,
+      reason:
+        'No hay un pedido armado.',
+    };
+  }
+
+  const customerName =
+    String(
+      draft.customer_name ??
+      '',
+    ).trim();
+
+  const customerPhone =
+    normalizePhone(
+      draft.customer_phone,
+    );
+
+  if (!customerName) {
+    return {
+      ok:
+        false,
+      blocked:
+        true,
+      reason:
+        'Falta el nombre del cliente antes de confirmar.',
+      missing:
+        'customer_name',
+      draftId:
+        draft.id,
+    };
+  }
+
+  if (
+    customerPhone.length !==
+    10
+  ) {
+    return {
+      ok:
+        false,
+      blocked:
+        true,
+      reason:
+        'Falta un teléfono válido de exactamente 10 dígitos antes de confirmar.',
+      missing:
+        'customer_phone',
+      draftId:
+        draft.id,
+    };
+  }
+
+  const fulfillmentType =
+    draft.fulfillment_type;
+
+  if (
+    fulfillmentType !==
+      'pickup' &&
+    fulfillmentType !==
+      'delivery'
+  ) {
+    return {
+      ok:
+        false,
+      blocked:
+        true,
+      reason:
+        'Falta elegir si el pedido es para recoger o a domicilio.',
+      missing:
+        'fulfillment_type',
+      draftId:
+        draft.id,
+    };
+  }
+
+  const businessStatus =
+    await getBusinessStatus();
+
+  if (
+    fulfillmentType ===
+      'pickup' &&
+    businessStatus
+      .fulfillment &&
+    !businessStatus
+      .fulfillment
+      .pickupAvailable
+  ) {
+    return {
+      ok:
+        false,
+      blocked:
+        true,
+      reason:
+        businessStatus
+          .fulfillment
+          .pickupReason ||
+        'La opción para recoger no está disponible en este momento.',
+      nextWindow:
+        businessStatus
+          .fulfillment
+          .pickupNextWindow,
+      draftId:
+        draft.id,
+    };
+  }
+
+  if (
+    fulfillmentType ===
+    'delivery'
+  ) {
     if (
-      !deliveryQuote?.available ||
-      !Number.isFinite(Number(deliveryQuote?.totalFee)) ||
-      !Number.isFinite(Number(draft.delivery?.latitude)) ||
-      !Number.isFinite(Number(draft.delivery?.longitude))
+      businessStatus
+        .fulfillment &&
+      !businessStatus
+        .fulfillment
+        .deliveryAvailable
     ) {
       return {
-        ok: false,
-        blocked: true,
-        reason: 'El domicilio todavía no tiene una cotización de entrega válida. Valida la dirección antes de confirmar.',
-        draftId: draft.id,
+        ok:
+          false,
+        blocked:
+          true,
+        reason:
+          businessStatus
+            .fulfillment
+            .deliveryReason ||
+          'El servicio a domicilio no está disponible en este momento.',
+        nextWindow:
+          businessStatus
+            .fulfillment
+            .deliveryNextWindow,
+        draftId:
+          draft.id,
+      };
+    }
+
+    const deliveryQuote =
+      draft.delivery
+        ?.quote;
+
+    if (
+      !deliveryQuote
+        ?.available ||
+      !Number.isFinite(
+        Number(
+          deliveryQuote
+            ?.totalFee,
+        ),
+      ) ||
+      !Number.isFinite(
+        Number(
+          draft.delivery
+            ?.latitude,
+        ),
+      ) ||
+      !Number.isFinite(
+        Number(
+          draft.delivery
+            ?.longitude,
+        ),
+      )
+    ) {
+      return {
+        ok:
+          false,
+        blocked:
+          true,
+        reason:
+          'El domicilio todavía no tiene una cotización de entrega válida. Valida la dirección antes de confirmar.',
+        draftId:
+          draft.id,
       };
     }
   }
 
-  if (!settings.order_creation_enabled) {
-    await admin.from('ai_order_drafts').update({ status: 'awaiting_confirmation' }).eq('id', draft.id);
+  if (
+    settings
+      .require_explicit_confirmation
+  ) {
+    const lastUserMessage =
+      await getLastUserMessage(
+        conversationId,
+      );
+
+    if (
+      !isExplicitOrderConfirmation(
+        lastUserMessage,
+      )
+    ) {
+      return {
+        ok:
+          false,
+        blocked:
+          true,
+        reason:
+          'Necesito una confirmación explícita del cliente antes de crear el pedido.',
+        confirmationRequired:
+          true,
+        draftId:
+          draft.id,
+      };
+    }
+  }
+
+  if (
+    !settings
+      .order_creation_enabled
+  ) {
+    await admin
+      .from(
+        'ai_order_drafts',
+      )
+      .update({
+        status:
+          'awaiting_confirmation',
+      })
+      .eq(
+        'id',
+        draft.id,
+      );
+
     return {
-      ok: false,
-      blocked: true,
-      reason: 'La creación real de pedidos está deshabilitada en esta fase. El borrador quedó listo para revisión humana.',
-      draftId: draft.id,
+      ok:
+        false,
+      blocked:
+        true,
+      reason:
+        'La creación real de pedidos está deshabilitada. El borrador quedó listo para revisión humana.',
+      draftId:
+        draft.id,
     };
   }
 
+  const rpcItems =
+    buildWebOrderItems(
+      draft.items,
+    );
+
+  const rpcDelivery =
+    buildWebOrderDelivery(
+      draft,
+    );
+
+  const {
+    data: orderId,
+    error:
+      orderError,
+  } =
+    await admin.rpc(
+      'create_web_order',
+      {
+        p_items:
+          rpcItems,
+        p_delivery:
+          rpcDelivery,
+        p_client_request_id:
+          draft.id,
+        p_customer_name:
+          customerName,
+        p_customer_phone:
+          customerPhone,
+        p_fulfillment_type:
+          fulfillmentType,
+      },
+    );
+
+  if (orderError) {
+    throw orderError;
+  }
+
+  if (
+    !orderId ||
+    typeof orderId !==
+      'string'
+  ) {
+    throw new Error(
+      'create_web_order no devolvió un identificador de pedido válido.',
+    );
+  }
+
+  const confirmedAt =
+    new Date()
+      .toISOString();
+
+  const {
+    error:
+      draftUpdateError,
+  } =
+    await admin
+      .from(
+        'ai_order_drafts',
+      )
+      .update({
+        status:
+          'converted',
+        explicit_confirmation_at:
+          confirmedAt,
+        order_id:
+          orderId,
+      })
+      .eq(
+        'id',
+        draft.id,
+      );
+
+  if (draftUpdateError) {
+    throw draftUpdateError;
+  }
+
+  const {
+    error:
+      conversationUpdateError,
+  } =
+    await admin
+      .from(
+        'ai_order_conversations',
+      )
+      .update({
+        status:
+          'completed',
+        customer_name:
+          customerName,
+        customer_phone:
+          customerPhone,
+        updated_at:
+          confirmedAt,
+      })
+      .eq(
+        'id',
+        conversationId,
+      );
+
+  if (
+    conversationUpdateError
+  ) {
+    throw conversationUpdateError;
+  }
+
+  const trackingCode =
+    getOrderTrackingCodeFromId(
+      orderId,
+    );
+
+  const {
+    data:
+      createdOrder,
+    error:
+      createdOrderError,
+  } =
+    await admin
+      .from(
+        'orders',
+      )
+      .select(
+        'total',
+      )
+      .eq(
+        'id',
+        orderId,
+      )
+      .maybeSingle();
+
+  if (
+    createdOrderError
+  ) {
+    console.warn(
+      'No se pudo consultar el total final del pedido creado:',
+      createdOrderError,
+    );
+  }
+
   return {
-    ok: false,
-    blocked: true,
-    reason: 'El adaptador final hacia create_web_order se habilitará en la siguiente fase después de validar el simulador.',
-    draftId: draft.id,
+    ok:
+      true,
+    created:
+      true,
+    orderId,
+    trackingCode,
+    draftId:
+      draft.id,
+    fulfillmentType,
+    customerName,
+    total:
+      Number(
+        createdOrder?.total ??
+        draft.estimated_total ??
+        0,
+      ),
   };
 }
 
@@ -3425,10 +4185,24 @@ REGLAS OBLIGATORIAS:
 - Conserva notas como "sin tocino" como notes cuando no exista un modificador estructurado apropiado.
 - Si falta información importante, pregunta una sola cosa concreta a la vez.
 - No preguntes "¿recoger o domicilio?" después de cada producto o modificación. Espera a que el cliente parezca haber terminado de armar los productos, diga que eso es todo, pida cerrar/confirmar, o indique explícitamente la modalidad.
-- Antes de confirm_order, muestra resumen, total estimado y pide confirmación explícita.
-- Mientras order_creation_enabled sea false, habla siempre de "borrador", "actualizar el borrador" o "dejar listo para revisión". No digas "registraré", "crearé", "levantaré" ni afirmes que un pedido será creado.
-- En esta Fase 1, si confirm_order informa que la creación está bloqueada, explica que el pedido quedó listo para revisión, no digas que fue creado.
+- Antes de confirm_order, asegúrate de tener nombre del cliente, teléfono de exactamente 10 dígitos, modalidad pickup/delivery y, para delivery, domicilio cotizado.
+- CONFIRMACIÓN ÚNICA: para cada versión final del pedido existe exactamente un solo punto de confirmación.
+- Cuando ya estén completos productos, nombre, teléfono, modalidad y domicilio/cotización si aplica, muestra UNA sola vez un resumen breve con el total y pregunta algo natural como "¿Está bien así?" o "¿Lo dejamos así?".
+- Considera válidas respuestas afirmativas naturales como "sí", "claro", "va", "dale", "está bien", "así está bien", "perfecto", "ok", "de acuerdo", "sí porfa" y equivalentes.
+- Si el cliente responde afirmativamente a ese resumen y NO pide ningún cambio en el mismo mensaje, llama INMEDIATAMENTE a confirm_order. No vuelvas a resumir, no vuelvas a preguntar, no llames update_draft y no llames get_order_summary antes de confirm_order.
+- Nunca pidas una segunda confirmación solo para pasar de "revisión" a "crear pedido". La confirmación natural del resumen final es suficiente para crear.
+- Si el cliente modifica, corrige, agrega o quita algo después del resumen final, actualiza el borrador y entonces pide UNA nueva confirmación para esa nueva versión. Esa nueva confirmación sustituye a la anterior.
+- Un cambio de nombre, teléfono, dirección, modalidad, producto, cantidad, modificador o nota invalida la confirmación anterior y permite pedir una nueva; si no hubo cambios, repetir la confirmación está prohibido.
+- Si el cliente ya proporcionó nombre, teléfono, dirección o modalidad en mensajes anteriores o en el mismo mensaje inicial, reutiliza esos datos y no vuelvas a pedirlos.
+- Si el cliente elige recoger, usa get_business_status para consultar pickupAvailable y pickupReason. No confundas pickup con delivery y no inventes que recoger está desactivado: usa exactamente pickupAvailable/pickupReason.
+- Cuando order_creation_enabled sea false, habla de "borrador" o "listo para revisión" y nunca afirmes que crearás la orden.
+- Cuando order_creation_enabled sea true, NO uses frases como "dejarlo listo para revisión". Tras la única confirmación afirmativa llama confirm_order y crea el pedido.
+- Si confirm_order devuelve created=true, responde una sola vez con una confirmación breve de creación e incluye siempre el número visible devuelto en trackingCode con formato #XXXXXXXX y el total final devuelto por la herramienta. No vuelvas a pedir confirmación después de created=true.
+- Si confirm_order informa que la creación está bloqueada, explica el motivo exacto y no digas que fue creado.
 - Si no puedes resolver algo con seguridad o el cliente pide humano, usa request_human.
+${settings.order_creation_enabled
+  ? '- ESTADO ACTUAL: order_creation_enabled=true. Puedes crear pedidos reales. Después de una respuesta afirmativa al único resumen final, llama confirm_order inmediatamente y no vuelvas a pedir confirmación.'
+  : '- ESTADO ACTUAL: order_creation_enabled=false. No puedes crear pedidos reales; solo deja el borrador listo para revisión.'}
 ${settings.system_instructions || ''}`;
 }
 
