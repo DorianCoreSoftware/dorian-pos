@@ -65,6 +65,30 @@ export const styles =
       fontWeight: '800',
     },
 
+
+    sectionTabContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+
+    sectionBadge: {
+      minWidth: 20,
+      height: 20,
+      paddingHorizontal: 5,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    sectionBadgeText: {
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: '900',
+      textAlign: 'center',
+    },
+
     mobileSectionSelector: {
       minHeight: 58,
       flexDirection: 'row',
@@ -114,7 +138,10 @@ export const styles =
 
     content: {
       flex: 1,
+      width: '100%',
+      minWidth: 0,
       minHeight: 0,
+      overflow: 'hidden',
     },
 
     modalBackdrop: {

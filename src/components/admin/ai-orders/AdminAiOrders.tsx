@@ -13,6 +13,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -299,8 +300,19 @@ function formatMoney(
 
 export function AdminAiOrders() {
   const {
+    width,
+  } = useWindowDimensions();
+
+  const {
     theme,
   } = useBusiness();
+
+  const isPhone =
+    width < 700;
+
+  const isTablet =
+    width >= 700 &&
+    width < 1100;
 
   const scrollRef =
     useRef<ScrollView | null>(
@@ -1016,14 +1028,24 @@ export function AdminAiOrders() {
     };
 
   return (
-    <View
+    <ScrollView
       style={[
-        styles.container,
+        styles.rootScroll,
         {
           backgroundColor:
             theme.background,
         },
       ]}
+      contentContainerStyle={[
+        styles.container,
+        isTablet &&
+        styles.containerTablet,
+        isPhone &&
+        styles.containerPhone,
+      ]}
+      showsVerticalScrollIndicator
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
     >
       <View
         style={[
@@ -1037,9 +1059,11 @@ export function AdminAiOrders() {
         ]}
       >
         <View
-          style={
-            styles.heroTop
-          }
+          style={[
+            styles.heroTop,
+            isPhone &&
+            styles.heroTopPhone,
+          ]}
         >
           <View
             style={{
@@ -1078,6 +1102,8 @@ export function AdminAiOrders() {
             }
             style={[
               styles.newConversationButton,
+              isPhone &&
+              styles.fullWidthButton,
               {
                 borderColor:
                   theme.primary,
@@ -1307,6 +1333,8 @@ export function AdminAiOrders() {
                 }
                 style={[
                   styles.assistantAppearanceButton,
+                  isPhone &&
+                  styles.fullWidthButton,
                   {
                     borderColor:
                       theme.primary,
@@ -1424,13 +1452,19 @@ export function AdminAiOrders() {
       </View>
 
       <View
-        style={
-          styles.mainGrid
-        }
+        style={[
+          styles.mainGrid,
+          (isTablet || isPhone) &&
+          styles.mainGridStacked,
+        ]}
       >
         <View
           style={[
             styles.chatCard,
+            (isTablet || isPhone) &&
+            styles.cardStacked,
+            isPhone &&
+            styles.cardPhone,
             {
               backgroundColor:
                 theme.surface,
@@ -1578,6 +1612,8 @@ export function AdminAiOrders() {
                       <View
                         style={[
                           styles.messageBubble,
+                          isPhone &&
+                          styles.messageBubblePhone,
                           isUser
                             ? styles.userBubble
                             : styles.assistantBubble,
@@ -1658,6 +1694,8 @@ export function AdminAiOrders() {
               <View
                 style={[
                   styles.messageBubble,
+                  isPhone &&
+                  styles.messageBubblePhone,
                   styles.assistantBubble,
                   {
                     backgroundColor:
@@ -1729,6 +1767,8 @@ export function AdminAiOrders() {
           <View
             style={[
               styles.composer,
+              isPhone &&
+              styles.composerPhone,
               {
                 borderTopColor:
                   theme.border,
@@ -1784,6 +1824,8 @@ export function AdminAiOrders() {
               }
               style={[
                 styles.sendButton,
+                isPhone &&
+                styles.sendButtonPhone,
                 {
                   backgroundColor:
                     theme.primary,
@@ -1826,6 +1868,10 @@ export function AdminAiOrders() {
         <View
           style={[
             styles.draftCard,
+            (isTablet || isPhone) &&
+            styles.cardStacked,
+            isPhone &&
+            styles.cardPhone,
             {
               backgroundColor:
                 theme.surface,
@@ -2226,6 +2272,6 @@ export function AdminAiOrders() {
           </ScrollView>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }

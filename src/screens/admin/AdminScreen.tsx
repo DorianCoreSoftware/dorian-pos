@@ -97,6 +97,11 @@ import { AdminAttendance } from '../../components/admin/attendance/admin-attenda
 import { AdminPayroll } from '../../components/admin/payroll/AdminPayroll';
 import { AdminPaymentSettings } from '../../components/admin/payment-settings/AdminPaymentSettings';
 import { AdminAiOrders } from '../../components/admin/ai-orders/AdminAiOrders';
+import { AdminAiHandoffInbox } from '../../components/admin/ai-handoff/AdminAiHandoffInbox';
+import {
+  getAiHandoffPendingCount,
+  subscribeAiHandoffRealtime,
+} from '../../services/aiHandoffService';
 
 type AdminSection =
   | 'dashboard'
@@ -114,6 +119,7 @@ type AdminSection =
   | 'payroll'
   | 'payments'
   | 'ai-orders'
+  | 'ai-inbox'
   | 'reports'
   | 'expenses'
   | 'printer'
@@ -154,6 +160,7 @@ interface AdminSectionOption {
   key: AdminSection;
   label: string;
   icon: string;
+  badge?: number;
 }
 
 interface AdminScreenProps {
@@ -203,10 +210,75 @@ export function AdminScreen({
   ] =
     useState(false);
 
+
+  const [
+    aiHandoffPendingCount,
+    setAiHandoffPendingCount,
+  ] =
+    useState(0);
+
   const businessName =
     business?.identity
       .businessName ??
     'Dorian POS';
+
+  useEffect(
+    () => {
+      if (
+        user?.role !==
+        'admin'
+      ) {
+        setAiHandoffPendingCount(
+          0,
+        );
+
+        return;
+      }
+
+      let active =
+        true;
+
+      const refreshCount =
+        async (): Promise<void> => {
+          try {
+            const count =
+              await getAiHandoffPendingCount();
+
+            if (active) {
+              setAiHandoffPendingCount(
+                count,
+              );
+            }
+          } catch (
+            error
+          ) {
+            console.warn(
+              'No se pudo actualizar el contador de Inbox IA:',
+              error,
+            );
+          }
+        };
+
+      void refreshCount();
+
+      const unsubscribe =
+        subscribeAiHandoffRealtime(
+          () => {
+            void refreshCount();
+          },
+        );
+
+      return () => {
+        active =
+          false;
+
+        unsubscribe();
+      };
+    },
+    [
+      user?.role,
+    ],
+  );
 
   const availableSections =
     useMemo<
@@ -334,6 +406,16 @@ export function AdminScreen({
                 'IA ORDERS',
               icon:
                 '🤖',
+            },
+            {
+              key:
+                'ai-inbox',
+              label:
+                'INBOX IA',
+              icon:
+                '💬',
+              badge:
+                aiHandoffPendingCount,
             },
             {
               key:
@@ -474,6 +556,7 @@ export function AdminScreen({
       },
       [
         user?.role,
+        aiHandoffPendingCount,
         business?.features
           .deliveryEnabled,
         business?.features
@@ -695,6 +778,14 @@ export function AdminScreen({
       }
       if (
         activeSection ===
+        'ai-inbox'
+      ) {
+        return (
+          <AdminAiHandoffInbox />
+        );
+      }
+      if (
+        activeSection ===
         'reports'
       ) {
         return (
@@ -862,19 +953,60 @@ export function AdminScreen({
             )
           }
         >
-          <Text
-            style={[
-              styles.sectionTabText,
-              {
-                color:
-                  isActive
-                    ? theme.primary
-                    : theme.textMuted,
-              },
-            ]}
+          <View
+            style={
+              styles.sectionTabContent
+            }
           >
-            {option.label}
-          </Text>
+            <Text
+              style={[
+                styles.sectionTabText,
+                {
+                  color:
+                    isActive
+                      ? theme.primary
+                      : theme.textMuted,
+                },
+              ]}
+            >
+              {option.label}
+            </Text>
+
+            {
+              option.badge &&
+              option.badge >
+                0
+                ? (
+                  <View
+                    style={[
+                      styles.sectionBadge,
+                      {
+                        backgroundColor:
+                          theme.primary,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.sectionBadgeText,
+                        {
+                          color:
+                            theme.background,
+                        },
+                      ]}
+                    >
+                      {
+                        option.badge >
+                        99
+                          ? '99+'
+                          : option.badge
+                      }
+                    </Text>
+                  </View>
+                )
+                : null
+            }
+          </View>
         </TouchableOpacity>
       );
     };
@@ -999,9 +1131,20 @@ export function AdminScreen({
                   },
                 ]}
               >
-                {activeSectionOption
-                  ?.label ??
-                  'DASHBOARD'}
+                {
+                  activeSectionOption
+                    ?.label ??
+                  'DASHBOARD'
+                }
+                {
+                  activeSectionOption
+                    ?.badge &&
+                  activeSectionOption
+                    .badge >
+                    0
+                    ? ` (${activeSectionOption.badge})`
+                    : ''
+                }
               </Text>
             </View>
           </View>
@@ -1224,6 +1367,41 @@ export function AdminScreen({
                         >
                           {option.label}
                         </Text>
+
+                        {
+                          option.badge &&
+                          option.badge >
+                            0
+                            ? (
+                              <View
+                                style={[
+                                  styles.sectionBadge,
+                                  {
+                                    backgroundColor:
+                                      theme.primary,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.sectionBadgeText,
+                                    {
+                                      color:
+                                        theme.background,
+                                    },
+                                  ]}
+                                >
+                                  {
+                                    option.badge >
+                                    99
+                                      ? '99+'
+                                      : option.badge
+                                  }
+                                </Text>
+                              </View>
+                            )
+                            : null
+                        }
 
                         {isActive ? (
                           <Text

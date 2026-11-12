@@ -4,10 +4,30 @@ import {
 
 export const styles =
   StyleSheet.create({
+    rootScroll: {
+      flex: 1,
+      width: '100%',
+      minWidth: 0,
+      minHeight: 0,
+    },
+
     container: {
       width: '100%',
+      maxWidth: 1400,
+      alignSelf: 'center',
+      flexGrow: 1,
       gap: 16,
-      paddingBottom: 24,
+      paddingBottom: 32,
+    },
+
+    containerTablet: {
+      maxWidth: '100%',
+    },
+
+    containerPhone: {
+      maxWidth: '100%',
+      gap: 12,
+      paddingBottom: 48,
     },
 
     hero: {
@@ -21,6 +41,16 @@ export const styles =
       flexWrap: 'wrap',
       alignItems: 'flex-start',
       gap: 14,
+    },
+
+    heroTopPhone: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
+
+    fullWidthButton: {
+      width: '100%',
+      alignSelf: 'stretch',
     },
 
     title: {
@@ -92,6 +122,10 @@ export const styles =
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+    },
+
+    assistantAppearanceIdentityPhone: {
+      alignItems: 'flex-start',
     },
 
     assistantAppearanceAvatar: {
@@ -168,6 +202,23 @@ export const styles =
       flexWrap: 'wrap',
       gap: 16,
       alignItems: 'stretch',
+    },
+
+    mainGridStacked: {
+      flexDirection: 'column',
+      flexWrap: 'nowrap',
+      alignItems: 'stretch',
+    },
+
+    cardStacked: {
+      width: '100%',
+      flexGrow: 0,
+      flexBasis: 'auto',
+    },
+
+    cardPhone: {
+      minHeight: 500,
+      borderRadius: 14,
     },
 
     chatCard: {
@@ -281,6 +332,10 @@ export const styles =
       padding: 12,
     },
 
+    messageBubblePhone: {
+      maxWidth: '92%',
+    },
+
     userBubble: {
       alignSelf: 'flex-end',
       borderBottomRightRadius: 4,
@@ -334,6 +389,11 @@ export const styles =
       gap: 10,
     },
 
+    composerPhone: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
+
     input: {
       flex: 1,
       minHeight: 46,
@@ -352,6 +412,11 @@ export const styles =
       paddingHorizontal: 15,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+
+    sendButtonPhone: {
+      width: '100%',
+      minWidth: 0,
     },
 
     sendButtonText: {
