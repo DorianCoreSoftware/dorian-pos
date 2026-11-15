@@ -80,7 +80,15 @@ export const styles = StyleSheet.create({
   saveButton: { alignSelf: 'flex-start', minHeight: 42, borderRadius: 9, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
   incidentHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   refreshButton: { borderWidth: 1, borderRadius: 8, minHeight: 38, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  incidentRow: { minWidth: 850, minHeight: 58, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },  timeSelector: {
+  incidentRow: { minWidth: 850, minHeight: 58, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  incidentRowCompact: { minWidth: 0, width: '100%', minHeight: 0, flexWrap: 'wrap', alignItems: 'flex-start', gap: 8, paddingVertical: 12 },
+  incidentEmployee: { flex: 1, minWidth: 180 },
+  incidentEmployeeCompact: { width: '100%', minWidth: 0 },
+  incidentTime: { width: 190 },
+  incidentTimeCompact: { flexGrow: 1, flexBasis: 145, minWidth: 0 },
+  incidentStatus: { width: 240 },
+  incidentStatusCompact: { width: '100%', minWidth: 0, paddingTop: 2 },
+  timeSelector: {
     width: 150,
     minWidth: 130,
   },

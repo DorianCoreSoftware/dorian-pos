@@ -9,6 +9,7 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const GOOGLE_MAPS_SERVER_API_KEY = Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const DORIAN_CHANNEL_SECRET = Deno.env.get('DORIAN_CHANNEL_SECRET') ?? '';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing Supabase environment variables.');
@@ -21,7 +22,14 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 type RequestBody = {
   conversationId?: string;
   message?: string;
-  channel?: 'internal';
+  channel?:
+    | 'internal'
+    | 'whatsapp'
+    | 'web';
+  externalConversationId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  channelMessageId?: string;
 };
 
 type Settings = {
@@ -96,6 +104,120 @@ async function requireAdmin(request: Request): Promise<{ userId: string }> {
   return { userId: userData.user.id };
 }
 
+async function authorizeRequest(
+  request: Request,
+  body: RequestBody,
+): Promise<
+  | {
+      mode:
+        'admin';
+      userId:
+        string;
+    }
+  | {
+      mode:
+        'channel';
+      channel:
+        | 'whatsapp'
+        | 'web';
+    }
+> {
+  const channel =
+    body.channel ??
+    'internal';
+
+  if (
+    channel ===
+    'internal'
+  ) {
+    const adminAuth =
+      await requireAdmin(
+        request,
+      );
+
+    return {
+      mode:
+        'admin',
+      userId:
+        adminAuth.userId,
+    };
+  }
+
+  if (
+    channel ===
+      'whatsapp' ||
+    channel ===
+      'web'
+  ) {
+    if (
+      !DORIAN_CHANNEL_SECRET
+    ) {
+      throw new Error(
+        'CHANNEL_AUTH_NOT_CONFIGURED',
+      );
+    }
+
+    const receivedSecret =
+      request.headers.get(
+        'x-dorian-channel-secret',
+      ) ??
+      '';
+
+    if (
+      receivedSecret !==
+      DORIAN_CHANNEL_SECRET
+    ) {
+      throw new Error(
+        'UNAUTHORIZED_CHANNEL',
+      );
+    }
+
+    if (
+      !body.externalConversationId
+        ?.trim()
+    ) {
+      throw new Error(
+        'EXTERNAL_CONVERSATION_ID_REQUIRED',
+      );
+    }
+
+    return {
+      mode:
+        'channel',
+      channel,
+    };
+  }
+
+  throw new Error(
+    'UNSUPPORTED_CHANNEL',
+  );
+}
+
+function normalizeExternalCustomerPhone(
+  rawPhone: unknown,
+): string | null {
+  const digits =
+    String(
+      rawPhone ??
+      '',
+    )
+      .replace(
+        /\D/g,
+        '',
+      );
+
+  if (
+    digits.length <
+    10
+  ) {
+    return null;
+  }
+
+  return digits.slice(
+    -10,
+  );
+}
+
 async function getSettings(): Promise<Settings> {
   const { data, error } = await admin
     .from('ai_order_settings')
@@ -106,37 +228,213 @@ async function getSettings(): Promise<Settings> {
   return data as Settings;
 }
 
-async function ensureConversation(id?: string): Promise<string> {
+async function ensureConversation(
+  id?: string,
+  options?: {
+    channel?:
+      | 'internal'
+      | 'whatsapp'
+      | 'web';
+    externalConversationId?:
+      string;
+    customerName?:
+      string;
+    customerPhone?:
+      string;
+  },
+): Promise<string> {
   if (id) {
-    const { data, error } = await admin
-      .from('ai_order_conversations')
-      .select('id')
-      .eq('id', id)
-      .maybeSingle();
+    const {
+      data,
+      error,
+    } =
+      await admin
+        .from(
+          'ai_order_conversations',
+        )
+        .select(
+          'id',
+        )
+        .eq(
+          'id',
+          id,
+        )
+        .maybeSingle();
 
-    if (error) throw error;
-    if (!data) throw new Error('Conversación no encontrada.');
+    if (error) {
+      throw error;
+    }
 
-    /*
-     * No evaluamos status aquí.
-     * Toda la política de ciclo de vida se resuelve después
-     * en un solo guard central.
-     */
+    if (!data) {
+      throw new Error(
+        'Conversación no encontrada.',
+      );
+    }
+
     return data.id;
   }
 
-  const { data, error } = await admin
-    .from('ai_order_conversations')
-    .insert({
-      channel: 'internal',
-      metadata: {
-        source: 'admin_simulator',
-      },
-    })
-    .select('id')
-    .single();
+  const channel =
+    options?.channel ??
+    'internal';
 
-  if (error) throw error;
+  const externalConversationId =
+    options
+      ?.externalConversationId
+      ?.trim() ||
+    null;
+
+  const customerName =
+    options
+      ?.customerName
+      ?.trim()
+      .slice(
+        0,
+        160,
+      ) ||
+    null;
+
+  const customerPhone =
+    normalizeExternalCustomerPhone(
+      options?.customerPhone,
+    );
+
+  if (
+    channel !==
+      'internal' &&
+    externalConversationId
+  ) {
+    const {
+      data:
+        existing,
+      error:
+        existingError,
+    } =
+      await admin
+        .from(
+          'ai_order_conversations',
+        )
+        .select(
+          'id,customer_name,customer_phone',
+        )
+        .eq(
+          'channel',
+          channel,
+        )
+        .eq(
+          'external_conversation_id',
+          externalConversationId,
+        )
+        .order(
+          'created_at',
+          {
+            ascending:
+              false,
+          },
+        )
+        .limit(
+          1,
+        )
+        .maybeSingle();
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (existing) {
+      const updates:
+        Record<
+          string,
+          unknown
+        > =
+        {};
+
+      if (
+        customerName &&
+        !existing
+          .customer_name
+      ) {
+        updates.customer_name =
+          customerName;
+      }
+
+      if (
+        customerPhone &&
+        !existing
+          .customer_phone
+      ) {
+        updates.customer_phone =
+          customerPhone;
+      }
+
+      if (
+        Object.keys(
+          updates,
+        ).length >
+        0
+      ) {
+        await admin
+          .from(
+            'ai_order_conversations',
+          )
+          .update(
+            updates,
+          )
+          .eq(
+            'id',
+            existing.id,
+          );
+      }
+
+      return existing.id;
+    }
+  }
+
+  const metadata =
+    channel ===
+      'whatsapp'
+      ? {
+          source:
+            'whatsapp_cloud_api',
+        }
+      : channel ===
+          'web'
+        ? {
+            source:
+              'web_chat',
+          }
+        : {
+            source:
+              'admin_simulator',
+          };
+
+  const {
+    data,
+    error,
+  } =
+    await admin
+      .from(
+        'ai_order_conversations',
+      )
+      .insert({
+        channel,
+        external_conversation_id:
+          externalConversationId,
+        customer_name:
+          customerName,
+        customer_phone:
+          customerPhone,
+        metadata,
+      })
+      .select(
+        'id',
+      )
+      .single();
+
+  if (error) {
+    throw error;
+  }
+
   return data.id;
 }
 
@@ -170,6 +468,14 @@ type ConversationLifecycleState = {
     | null;
   last_message_at:
     string;
+  channel:
+    string;
+  external_conversation_id:
+    string | null;
+  customer_name:
+    string | null;
+  customer_phone:
+    string | null;
   metadata:
     Record<string, unknown>;
 };
@@ -186,7 +492,7 @@ async function getConversationLifecycleState(
         'ai_order_conversations',
       )
       .select(
-        'id,status,human_handoff_requested,human_handoff_reason,last_message_at,metadata',
+        'id,status,human_handoff_requested,human_handoff_reason,last_message_at,channel,external_conversation_id,customer_name,customer_phone,metadata',
       )
       .eq(
         'id',
@@ -323,6 +629,54 @@ async function createRecoveredConversation(
   previousConversationId: string,
 ): Promise<string> {
   const {
+    data:
+      previousConversation,
+    error:
+      previousError,
+  } =
+    await admin
+      .from(
+        'ai_order_conversations',
+      )
+      .select(
+        'channel,external_conversation_id,customer_name,customer_phone,metadata',
+      )
+      .eq(
+        'id',
+        previousConversationId,
+      )
+      .single();
+
+  if (previousError) {
+    throw previousError;
+  }
+
+  const metadata = {
+    ...(
+      previousConversation
+        ?.metadata ??
+      {}
+    ),
+    source:
+      previousConversation
+        ?.channel ===
+        'whatsapp'
+        ? 'whatsapp_cloud_api'
+        : previousConversation
+            ?.channel ===
+            'web'
+          ? 'web_chat'
+          : 'admin_simulator',
+    recoveredFromConversationId:
+      previousConversationId,
+    recoveryReason:
+      'idle_timeout',
+    recoveredAt:
+      new Date()
+        .toISOString(),
+  };
+
+  const {
     data,
     error,
   } =
@@ -332,18 +686,22 @@ async function createRecoveredConversation(
       )
       .insert({
         channel:
+          previousConversation
+            ?.channel ??
           'internal',
-        metadata: {
-          source:
-            'admin_simulator',
-          recoveredFromConversationId:
-            previousConversationId,
-          recoveryReason:
-            'idle_timeout',
-          recoveredAt:
-            new Date()
-              .toISOString(),
-        },
+        external_conversation_id:
+          previousConversation
+            ?.external_conversation_id ??
+          null,
+        customer_name:
+          previousConversation
+            ?.customer_name ??
+          null,
+        customer_phone:
+          previousConversation
+            ?.customer_phone ??
+          null,
+        metadata,
       })
       .select(
         'id',
@@ -6702,6 +7060,83 @@ async function getCurrentOrderEta(
 }
 
 
+function buildChannelContext(
+  lifecycleState:
+    ConversationLifecycleState,
+): string | null {
+  if (
+    lifecycleState.channel ===
+    'web'
+  ) {
+    const knownPhone =
+      normalizeExternalCustomerPhone(
+        lifecycleState
+          .customer_phone,
+      );
+
+    const knownName =
+      lifecycleState
+        .customer_name
+        ?.trim() ||
+      null;
+
+    return [
+      'CANAL ACTUAL: CHAT WEB.',
+      'El cliente está conversando desde la web pública del negocio.',
+      'Responde con mensajes breves, claros y fáciles de leer en móvil.',
+      knownName
+        ? `Cliente web autenticado. Nombre conocido: ${knownName}. Reutilízalo como customer_name y no lo vuelvas a pedir salvo que el cliente quiera usar otro.`
+        : 'No hay un nombre autenticado disponible para este visitante.',
+      knownPhone
+        ? `Cliente web autenticado. Teléfono conocido: ${knownPhone}. Reutilízalo como customer_phone y no lo vuelvas a pedir salvo que el cliente quiera usar otro.`
+        : 'No hay un teléfono autenticado disponible para este visitante.',
+      'No inventes información de cuenta, teléfono o identidad que no esté presente en este contexto o en el historial.',
+      'Si ya existe nombre o teléfono conocido en este contexto, consérvalo al llamar update_draft aunque el cliente no lo repita en el mensaje actual.',
+      'Si necesitas otros datos para completar el pedido, pídelos únicamente cuando sean necesarios.',
+    ]
+      .join(
+        '\n',
+      );
+  }
+
+  if (
+    lifecycleState.channel !==
+    'whatsapp'
+  ) {
+    return null;
+  }
+
+  const knownPhone =
+    normalizeExternalCustomerPhone(
+      lifecycleState
+        .customer_phone,
+    );
+
+  const knownName =
+    lifecycleState
+      .customer_name
+      ?.trim() ||
+    null;
+
+  return [
+    'CANAL ACTUAL: WHATSAPP.',
+    'El mensaje proviene de un contacto real de WhatsApp Business.',
+    knownPhone
+      ? `Teléfono de canal conocido: ${knownPhone}. Puedes reutilizarlo como customer_phone; no lo vuelvas a pedir salvo que el cliente quiera usar otro.`
+      : null,
+    knownName
+      ? `Nombre de perfil de WhatsApp disponible como sugerencia: ${knownName}. Si el cliente no ha dado otro nombre, puedes usarlo como contexto o confirmarlo brevemente.`
+      : null,
+    'Responde pensando en un chat móvil: mensajes breves, claros y sin tablas.',
+  ]
+    .filter(
+      Boolean,
+    )
+    .join(
+      '\n',
+    );
+}
+
 function buildReturnedFromHumanContext(
   lifecycleState: ConversationLifecycleState,
 ): string | null {
@@ -6779,19 +7214,121 @@ async function updateDraft(conversationId: string, args: any) {
       deliveryValidation.deliveryFee,
     );
 
+  const [
+    {
+      data:
+        conversationCustomer,
+      error:
+        conversationCustomerError,
+    },
+    {
+      data:
+        existingDraft,
+      error:
+        existingDraftError,
+    },
+  ] =
+    await Promise.all([
+      admin
+        .from(
+          'ai_order_conversations',
+        )
+        .select(
+          'customer_name,customer_phone',
+        )
+        .eq(
+          'id',
+          conversationId,
+        )
+        .maybeSingle(),
+      admin
+        .from(
+          'ai_order_drafts',
+        )
+        .select(
+          'customer_name,customer_phone',
+        )
+        .eq(
+          'conversation_id',
+          conversationId,
+        )
+        .maybeSingle(),
+    ]);
+
+  if (
+    conversationCustomerError
+  ) {
+    throw conversationCustomerError;
+  }
+
+  if (
+    existingDraftError
+  ) {
+    throw existingDraftError;
+  }
+
+  const requestedCustomerName =
+    typeof args.customer_name ===
+        'string'
+      ? args.customer_name
+          .trim()
+          .slice(
+            0,
+            120,
+          )
+      : '';
+
+  const requestedCustomerPhone =
+    typeof args.customer_phone ===
+        'string'
+      ? normalizePhone(
+          args.customer_phone,
+        )
+          .slice(
+            0,
+            15,
+          )
+      : '';
+
+  const resolvedCustomerName =
+    requestedCustomerName ||
+    String(
+      existingDraft
+        ?.customer_name ??
+      conversationCustomer
+        ?.customer_name ??
+      '',
+    )
+      .trim()
+      .slice(
+        0,
+        120,
+      ) ||
+    null;
+
+  const resolvedCustomerPhone =
+    requestedCustomerPhone ||
+    normalizePhone(
+      existingDraft
+        ?.customer_phone ??
+      conversationCustomer
+        ?.customer_phone,
+    )
+      .slice(
+        0,
+        15,
+      ) ||
+    null;
+
   const payload = {
     conversation_id:
       conversationId,
     status:
       'building',
     customer_name:
-      typeof args.customer_name === 'string'
-        ? args.customer_name.trim().slice(0, 120)
-        : null,
+      resolvedCustomerName,
     customer_phone:
-      typeof args.customer_phone === 'string'
-        ? args.customer_phone.replace(/\D/g, '').slice(0, 15)
-        : null,
+      resolvedCustomerPhone,
     fulfillment_type:
       fulfillmentType,
     delivery:
@@ -6816,18 +7353,30 @@ async function updateDraft(conversationId: string, args: any) {
 
   if (error) throw error;
 
-  await admin
-    .from('ai_order_conversations')
-    .update({
-      customer_name:
-        payload.customer_name,
-      customer_phone:
-        payload.customer_phone,
-    })
-    .eq(
-      'id',
-      conversationId,
-    );
+  const {
+    error:
+      conversationUpdateError,
+  } =
+    await admin
+      .from(
+        'ai_order_conversations',
+      )
+      .update({
+        customer_name:
+          payload.customer_name,
+        customer_phone:
+          payload.customer_phone,
+      })
+      .eq(
+        'id',
+        conversationId,
+      );
+
+  if (
+    conversationUpdateError
+  ) {
+    throw conversationUpdateError;
+  }
 
   const readiness =
     await evaluateDraftReadiness(
@@ -7204,6 +7753,115 @@ function normalizePhone(
   ).replace(
     /\D/g,
     '',
+  );
+}
+
+async function getLastAssistantMessage(
+  conversationId: string,
+): Promise<string> {
+  const {
+    data,
+    error,
+  } =
+    await admin
+      .from(
+        'ai_order_messages',
+      )
+      .select(
+        'content,created_at',
+      )
+      .eq(
+        'conversation_id',
+        conversationId,
+      )
+      .eq(
+        'role',
+        'assistant',
+      )
+      .order(
+        'created_at',
+        {
+          ascending:
+            false,
+        },
+      )
+      .limit(
+        1,
+      )
+      .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return String(
+    data?.content ??
+    '',
+  ).trim();
+}
+
+function isFinalOrderConfirmationPrompt(
+  message: string,
+): boolean {
+  const normalized =
+    normalizeText(
+      message,
+    )
+      .replace(
+        /[.!¡,;:]+/g,
+        ' ',
+      )
+      .replace(
+        /\s+/g,
+        ' ',
+      )
+      .trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  const asksForConfirmation =
+    /\bconfirmas?\b/.test(
+      normalized,
+    ) ||
+    /\besta bien asi\b/.test(
+      normalized,
+    ) ||
+    /\blo dejamos asi\b/.test(
+      normalized,
+    ) ||
+    /\basi queda\b/.test(
+      normalized,
+    ) ||
+    /\bte parece bien\b/.test(
+      normalized,
+    );
+
+  if (!asksForConfirmation) {
+    return false;
+  }
+
+  /*
+   * Exigimos señales de que se trata del cierre del pedido y no
+   * de una confirmación incidental de otro dato.
+   */
+  return (
+    normalized.includes(
+      'total',
+    ) ||
+    normalized.includes(
+      'pedido',
+    ) ||
+    normalized.includes(
+      'domicilio',
+    ) ||
+    normalized.includes(
+      'recoger',
+    ) ||
+    message.includes(
+      '$',
+    )
   );
 }
 
@@ -8700,10 +9358,14 @@ REGLAS OBLIGATORIAS:
 - Si solo una modalidad está disponible y fulfillment_type falta, utiliza esa modalidad disponible sin hacer una pregunta innecesaria, salvo que falte información propia de esa modalidad como la dirección.
 - Si blockingReasons indica que la modalidad elegida dejó de estar disponible, informa el motivo y ofrece únicamente otra modalidad que fulfillmentAvailability marque disponible. Si ninguna está disponible, no continúes el pedido.
 - CONFIRMACIÓN ÚNICA: para cada versión final del pedido existe exactamente un solo punto de confirmación.
-- Cuando ya estén completos productos, nombre, teléfono, modalidad y domicilio/cotización si aplica, muestra UNA sola vez un resumen breve con el total y pregunta algo natural como "¿Está bien así?" o "¿Lo dejamos así?".
+- ANTI-DOBLE-CONFIRMACIÓN: cualquier pregunta tuya equivalente a "¿Está bien así?", "¿Lo dejamos así?", "¿Confirmas?", "¿Así queda?" o similar, hecha después de resumir el pedido, CUENTA como la confirmación final. Si el cliente responde afirmativamente, está PROHIBIDO pedir otra confirmación.
+- Si por error mostraste un resumen y pediste confirmación antes de ejecutar get_order_summary, y el cliente responde afirmativamente, NO vuelvas a preguntarle. En ese mismo turno llama get_order_summary de forma silenciosa; si readiness.readyToConfirm=true llama inmediatamente a confirm_order. Si readiness.readyToConfirm=false, solicita únicamente el dato realmente faltante.
+- Cuando ya estén completos productos, nombre, teléfono, modalidad y domicilio/cotización si aplica, llama get_order_summary y, solo si readiness.readyToConfirm=true, muestra UNA sola vez el resumen final y una sola pregunta de confirmación.
+- RESUMEN FINAL CON DESGLOSE: no muestres únicamente el total. Usa exclusivamente los datos devueltos por get_order_summary. Muestra cada item en su propio renglón con cantidad, nombre y precio de esa línea usando draft.items[].lineTotal. Debajo puedes mencionar brevemente modificadores/notas relevantes sin inventar precios. Si pricing.totalDiscount > 0, muestra una línea separada de descuento con ese importe. Si pricing.deliveryFee > 0, muestra una línea separada de envío. Termina con pricing.estimatedTotal como TOTAL. No recalcules precios mentalmente.
+- Formato recomendado del resumen final: "1× Producto — $XX", luego detalles relevantes; después "Descuento — -$XX" si aplica; "Envío — $XX" si aplica; y "Total — $XX". Mantén el resumen compacto y fácil de leer.
 - Considera válidas respuestas afirmativas naturales como "sí", "claro", "va", "dale", "está bien", "así está bien", "perfecto", "ok", "de acuerdo", "sí porfa" y equivalentes.
-- Si el cliente responde afirmativamente a ese resumen y NO pide ningún cambio en el mismo mensaje, llama INMEDIATAMENTE a confirm_order. No vuelvas a resumir, no vuelvas a preguntar, no llames update_draft y no llames get_order_summary antes de confirm_order.
-- Nunca pidas una segunda confirmación solo para pasar de "revisión" a "crear pedido". La confirmación natural del resumen final es suficiente para crear.
+- Si el cliente responde afirmativamente a ese resumen y NO pide ningún cambio en el mismo mensaje, llama INMEDIATAMENTE a confirm_order. No vuelvas a resumir, no vuelvas a preguntar y no llames update_draft. Si ya verificaste readiness para ese resumen, tampoco vuelvas a llamar get_order_summary.
+- Nunca pidas una segunda confirmación solo para pasar de "revisión" a "crear pedido". La primera respuesta afirmativa a tu pregunta de confirmación es suficiente para crear el pedido.
 - Si el cliente modifica, corrige, agrega o quita algo después del resumen final, actualiza el borrador y entonces pide UNA nueva confirmación para esa nueva versión. Esa nueva confirmación sustituye a la anterior.
 - Un cambio de nombre, teléfono, dirección, modalidad, producto, cantidad, modificador o nota invalida la confirmación anterior y permite pedir una nueva; si no hubo cambios, repetir la confirmación está prohibido.
 - Si el cliente ya proporcionó nombre, teléfono, dirección o modalidad en mensajes anteriores o en el mismo mensaje inicial, reutiliza esos datos y no vuelvas a pedirlos.
@@ -8724,9 +9386,18 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   try {
-    await requireAdmin(request);
-    const body = await request.json() as RequestBody;
-    const message = body.message?.trim() ?? '';
+    const body =
+      await request.json() as
+        RequestBody;
+
+    await authorizeRequest(
+      request,
+      body,
+    );
+
+    const message =
+      body.message?.trim() ??
+      '';
     if (!message || message.length > 3000) return json({ error: 'Mensaje requerido (máximo 3000 caracteres).' }, 400);
 
     const settings = await getSettings();
@@ -8737,6 +9408,17 @@ Deno.serve(async (request) => {
     let conversationId =
       await ensureConversation(
         body.conversationId,
+        {
+          channel:
+            body.channel ??
+            'internal',
+          externalConversationId:
+            body.externalConversationId,
+          customerName:
+            body.customerName,
+          customerPhone:
+            body.customerPhone,
+        },
       );
 
     /*
@@ -8967,10 +9649,187 @@ Deno.serve(async (request) => {
       }
     }
 
+    /*
+     * ========================================================
+     * CONFIRMACIÓN FINAL DETERMINÍSTICA
+     * ========================================================
+     *
+     * Si el turno anterior ya terminó con un resumen del pedido
+     * y una pregunta de confirmación, una respuesta afirmativa
+     * del cliente crea el pedido directamente en backend.
+     *
+     * No dejamos esta decisión a criterio del modelo: evita
+     * dobles confirmaciones y handoffs humanos accidentales.
+     */
+    const previousAssistantMessage =
+      await getLastAssistantMessage(
+        conversationId,
+      );
+
+    if (
+      settings
+        .order_creation_enabled &&
+      isExplicitOrderConfirmation(
+        message,
+      ) &&
+      isFinalOrderConfirmationPrompt(
+        previousAssistantMessage,
+      )
+    ) {
+      await saveMessage(
+        conversationId,
+        'user',
+        message,
+        {
+          metadata: {
+            channel:
+              body.channel ??
+              'internal',
+            channelMessageId:
+              body.channelMessageId ??
+              null,
+            deterministicConfirmation:
+              true,
+          },
+        },
+      );
+
+      const confirmationResult =
+        await confirmOrder(
+          conversationId,
+          settings,
+        );
+
+      if (
+        confirmationResult &&
+        typeof confirmationResult ===
+          'object' &&
+        (
+          confirmationResult as
+            Record<string, unknown>
+        ).created ===
+          true
+      ) {
+        const created =
+          confirmationResult as
+            Record<string, unknown>;
+
+        const trackingCode =
+          String(
+            created.trackingCode ??
+            '',
+          ).trim();
+
+        const total =
+          Number(
+            created.total ??
+            0,
+          );
+
+        const assistantText =
+          `¡Pedido confirmado! Total: $${total.toFixed(2)}. Número de seguimiento: #${trackingCode}.`;
+
+        await saveMessage(
+          conversationId,
+          'assistant',
+          assistantText,
+          {
+            metadata: {
+              deterministicConfirmation:
+                true,
+              created:
+                true,
+            },
+          },
+        );
+
+        const draft =
+          await getDraft(
+            conversationId,
+          );
+
+        return json({
+          conversationId,
+          message:
+            assistantText,
+          draft:
+            draft.draft,
+          pricing:
+            draft.pricing,
+          orderCreated:
+            true,
+          trackingCode:
+            trackingCode ||
+            null,
+        });
+      }
+
+      /*
+       * Si por algún motivo el resumen previo no estaba realmente
+       * listo, devolvemos el motivo exacto. No mandamos al cliente
+       * a soporte humano por una inconsistencia recuperable.
+       */
+      const blockedReason =
+        confirmationResult &&
+        typeof confirmationResult ===
+          'object'
+          ? String(
+              (
+                confirmationResult as
+                  Record<string, unknown>
+              ).reason ??
+              'El pedido todavía no está listo para confirmarse.',
+            )
+          : 'El pedido todavía no está listo para confirmarse.';
+
+      await saveMessage(
+        conversationId,
+        'assistant',
+        blockedReason,
+        {
+          metadata: {
+            deterministicConfirmation:
+              true,
+            created:
+              false,
+          },
+        },
+      );
+
+      const draft =
+        await getDraft(
+          conversationId,
+        );
+
+      return json({
+        conversationId,
+        message:
+          blockedReason,
+        draft:
+          draft.draft,
+        pricing:
+          draft.pricing,
+        orderCreated:
+          false,
+        confirmationBlocked:
+          true,
+      });
+    }
+
     await saveMessage(
       conversationId,
       'user',
       message,
+      {
+        metadata: {
+          channel:
+            body.channel ??
+            'internal',
+          channelMessageId:
+            body.channelMessageId ??
+            null,
+        },
+      },
     );
 
     const history =
@@ -9020,6 +9879,25 @@ Deno.serve(async (request) => {
             'system',
           content:
             buildPostOrderContext(),
+        },
+        ...input,
+      ];
+    }
+
+    const channelContext =
+      buildChannelContext(
+        lifecycleState,
+      );
+
+    if (
+      channelContext
+    ) {
+      input = [
+        {
+          role:
+            'system',
+          content:
+            channelContext,
         },
         ...input,
       ];
@@ -9311,7 +10189,60 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message === 'UNAUTHORIZED') return json({ error: 'No autorizado.' }, 401);
+    if (
+      message ===
+        'UNAUTHORIZED' ||
+      message ===
+        'UNAUTHORIZED_CHANNEL'
+    ) {
+      return json(
+        {
+          error:
+            'No autorizado.',
+        },
+        401,
+      );
+    }
+
+    if (
+      message ===
+      'CHANNEL_AUTH_NOT_CONFIGURED'
+    ) {
+      return json(
+        {
+          error:
+            'DORIAN_CHANNEL_SECRET no está configurado.',
+        },
+        503,
+      );
+    }
+
+    if (
+      message ===
+      'EXTERNAL_CONVERSATION_ID_REQUIRED'
+    ) {
+      return json(
+        {
+          error:
+            'externalConversationId es obligatorio para canales externos.',
+        },
+        400,
+      );
+    }
+
+    if (
+      message ===
+      'UNSUPPORTED_CHANNEL'
+    ) {
+      return json(
+        {
+          error:
+            'Canal no soportado.',
+        },
+        400,
+      );
+    }
+
     if (message === 'FORBIDDEN') return json({ error: 'Solo administradores pueden usar el simulador interno.' }, 403);
     console.error('ai-order-agent:', error);
     return json({ error: message || 'Error interno.' }, 500);

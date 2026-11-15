@@ -18,7 +18,11 @@ const json = (body: unknown, status = 200) =>
 
 function preferenceKeyFor(
   notificationType: string,
-): 'clock_reminders' | 'request_updates' | 'payroll_updates' | 'shift_updates' | null {
+): 'clock_reminders' | 'shift_start_reminders' | 'request_updates' | 'payroll_updates' | 'shift_updates' | null {
+  if (notificationType === 'shift_start_soon') {
+    return 'shift_start_reminders';
+  }
+
   if (
     notificationType === 'clock_in_pending' ||
     notificationType === 'clock_out_pending'
@@ -256,7 +260,7 @@ serve(async request => {
         const { data: preferences } =
           await admin
             .from('attendance_notification_preferences')
-            .select('clock_reminders,request_updates,payroll_updates,shift_updates')
+            .select('clock_reminders,shift_start_reminders,request_updates,payroll_updates,shift_updates')
             .eq('user_id', n.recipient_user_id)
             .maybeSingle();
 

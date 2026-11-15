@@ -24,6 +24,7 @@ export interface AdminAttendanceRecord extends AttendanceRecord {
 
 export interface AttendanceSettings {
   remindersEnabled: boolean;
+  shiftStartReminderMinutes: number;
   earlyClockInMinutes: number;
   reminderIntervalMinutes: number;
   afterCloseGraceMinutes: number;
@@ -133,6 +134,7 @@ interface AttendanceStatusRpc {
   needs_clock_in_reminder?: boolean;
   needs_clock_out_reminder?: boolean;
   reminders_enabled?: boolean;
+  shift_start_reminder_minutes?: number;
   early_clock_in_minutes?: number;
   reminder_interval_minutes?: number;
   after_close_grace_minutes?: number;
@@ -143,6 +145,7 @@ interface AttendanceStatusRpc {
 
 const DEFAULT_SETTINGS: AttendanceSettings = {
   remindersEnabled: true,
+  shiftStartReminderMinutes: 10,
   earlyClockInMinutes: 60,
   reminderIntervalMinutes: 15,
   afterCloseGraceMinutes: 60,
@@ -153,6 +156,7 @@ const DEFAULT_SETTINGS: AttendanceSettings = {
 
 function normalizeSettings(row: {
   reminders_enabled?: boolean;
+  shift_start_reminder_minutes?: number;
   early_clock_in_minutes?: number;
   reminder_interval_minutes?: number;
   after_close_grace_minutes?: number;
@@ -162,6 +166,7 @@ function normalizeSettings(row: {
 } | null): AttendanceSettings {
   return {
     remindersEnabled: row?.reminders_enabled ?? DEFAULT_SETTINGS.remindersEnabled,
+    shiftStartReminderMinutes: row?.shift_start_reminder_minutes ?? DEFAULT_SETTINGS.shiftStartReminderMinutes,
     earlyClockInMinutes: row?.early_clock_in_minutes ?? DEFAULT_SETTINGS.earlyClockInMinutes,
     reminderIntervalMinutes: row?.reminder_interval_minutes ?? DEFAULT_SETTINGS.reminderIntervalMinutes,
     afterCloseGraceMinutes: row?.after_close_grace_minutes ?? DEFAULT_SETTINGS.afterCloseGraceMinutes,
@@ -273,6 +278,7 @@ export async function getAttendanceSettings(): Promise<AttendanceSettings> {
 export async function saveAttendanceSettings(settings: AttendanceSettings): Promise<AttendanceSettings> {
   const { data, error } = await supabase.rpc('attendance_admin_save_settings', {
     p_reminders_enabled: settings.remindersEnabled,
+    p_shift_start_reminder_minutes: settings.shiftStartReminderMinutes,
     p_early_clock_in_minutes: settings.earlyClockInMinutes,
     p_reminder_interval_minutes: settings.reminderIntervalMinutes,
     p_after_close_grace_minutes: settings.afterCloseGraceMinutes,
@@ -1257,6 +1263,7 @@ export interface AttendanceNotificationItem {
   message: string;
   severity: AttendanceNotificationSeverity;
   relatedUserId: string | null;
+  relatedUserName: string | null;
   requestId: string | null;
   payrollItemId: string | null;
   attendanceRecordId: string | null;
@@ -1274,6 +1281,7 @@ function mapAttendanceNotification(row: any): AttendanceNotificationItem {
     message: row.message,
     severity: (row.severity ?? 'info') as AttendanceNotificationSeverity,
     relatedUserId: row.related_user_id ?? null,
+    relatedUserName: row.related_user_name ?? null,
     requestId: row.request_id ?? null,
     payrollItemId: row.payroll_item_id ?? null,
     attendanceRecordId: row.attendance_record_id ?? null,
@@ -1332,6 +1340,7 @@ export async function markAllAttendanceNotificationsRead(): Promise<void> {
  * ============================================================ */
 export interface AttendanceNotificationPreferences {
   clockReminders: boolean;
+  shiftStartReminders: boolean;
   requestUpdates: boolean;
   payrollUpdates: boolean;
   shiftUpdates: boolean;
@@ -1356,6 +1365,8 @@ export async function getAttendanceNotificationPreferences():
   return {
     clockReminders:
       row?.clock_reminders !== false,
+    shiftStartReminders:
+      row?.shift_start_reminders !== false,
     requestUpdates:
       row?.request_updates !== false,
     payrollUpdates:
@@ -1375,6 +1386,8 @@ export async function saveAttendanceNotificationPreferences(
       {
         p_clock_reminders:
           preferences.clockReminders,
+        p_shift_start_reminders:
+          preferences.shiftStartReminders,
         p_request_updates:
           preferences.requestUpdates,
         p_payroll_updates:

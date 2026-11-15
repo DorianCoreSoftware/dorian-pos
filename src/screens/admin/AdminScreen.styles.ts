@@ -149,6 +149,7 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 14,
+      paddingVertical: 12,
       backgroundColor:
         'rgba(0, 0, 0, 0.72)',
     },
@@ -160,7 +161,6 @@ export const styles =
     mobileMenuCard: {
       width: '100%',
       maxWidth: 520,
-      maxHeight: '82%',
       alignSelf: 'center',
       borderRadius: 22,
       borderWidth: 1,
@@ -206,13 +206,12 @@ export const styles =
     },
 
     mobileMenuList: {
-      flexGrow: 0,
-      flexShrink: 1,
+      flex: 1,
+      minHeight: 0,
     },
 
     mobileMenuListContent: {
       padding: 12,
-      paddingBottom: 42,
     },
 
     mobileMenuOption: {

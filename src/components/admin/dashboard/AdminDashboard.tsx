@@ -27,6 +27,11 @@ import {
   styles,
 } from './AdminDashboard.styles';
 
+import {
+  getWebVisitStats,
+  WebVisitStats,
+} from '../../../services/webAnalyticsService';
+
 const PERIODS:
 Array<{
   key: DashboardPeriod;
@@ -259,6 +264,14 @@ export function AdminDashboard() {
       null,
     );
 
+  const [
+    webVisits,
+    setWebVisits,
+  ] =
+    useState<WebVisitStats | null>(
+      null,
+    );
+
   const load =
     useCallback(
       async () => {
@@ -271,13 +284,33 @@ export function AdminDashboard() {
             null,
           );
 
-          const data =
-            await getDashboardSnapshot(
-              period,
-            );
+          const [
+            data,
+            visits,
+          ] =
+            await Promise.all([
+              getDashboardSnapshot(
+                period,
+              ),
+              getWebVisitStats()
+                .catch(
+                  visitError => {
+                    console.warn(
+                      'No se pudieron cargar las visitas web:',
+                      visitError,
+                    );
+
+                    return null;
+                  },
+                ),
+            ]);
 
           setSnapshot(
             data,
+          );
+
+          setWebVisits(
+            visits,
           );
         } catch (loadError) {
           console.error(
@@ -1113,6 +1146,98 @@ export function AdminDashboard() {
               />
             </View>
           </View>
+
+          {webVisits ? (
+            <View
+              style={
+                styles.section
+              }
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color:
+                      theme.text,
+                  },
+                ]}
+              >
+                Sitio web
+              </Text>
+
+              <Text
+                style={[
+                  styles.helper,
+                  {
+                    marginBottom:
+                      10,
+                    color:
+                      theme.textMuted,
+                  },
+                ]}
+              >
+                Visitas registradas en la web pública. Una recarga de la misma sesión no genera otra visita.
+              </Text>
+
+              <View
+                style={
+                  styles.grid
+                }
+              >
+                <KpiCard
+                  label="Visitas hoy"
+                  value={
+                    String(
+                      webVisits.today,
+                    )
+                  }
+                  helper={`${webVisits.uniqueToday} visitantes únicos`}
+                  theme={
+                    theme
+                  }
+                />
+
+                <KpiCard
+                  label="Últimos 7 días"
+                  value={
+                    String(
+                      webVisits.last7Days,
+                    )
+                  }
+                  helper={`${webVisits.unique7Days} visitantes únicos`}
+                  theme={
+                    theme
+                  }
+                />
+
+                <KpiCard
+                  label="Últimos 30 días"
+                  value={
+                    String(
+                      webVisits.last30Days,
+                    )
+                  }
+                  helper={`${webVisits.unique30Days} visitantes únicos`}
+                  theme={
+                    theme
+                  }
+                />
+
+                <KpiCard
+                  label="Visitas totales"
+                  value={
+                    String(
+                      webVisits.total,
+                    )
+                  }
+                  helper={`${webVisits.uniqueTotal} visitantes únicos`}
+                  theme={
+                    theme
+                  }
+                />
+              </View>
+            </View>
+          ) : null}
 
           <View
             style={

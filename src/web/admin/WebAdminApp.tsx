@@ -296,6 +296,7 @@ export default function WebAdminApp() {
           onProductsChanged={noopRefresh}
           onCategoriesChanged={noopRefresh}
           onModifiersChanged={noopRefresh}
+          forceSectionSelector
         />
       </View>
     </View>

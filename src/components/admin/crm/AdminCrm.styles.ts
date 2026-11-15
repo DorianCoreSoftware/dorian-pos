@@ -59,6 +59,76 @@ export const styles =
       marginBottom: 10,
     },
 
+    directoryPanel: {
+      borderWidth: 1,
+      borderRadius: 14,
+      overflow: 'hidden',
+      marginBottom: 18,
+    },
+
+    directoryHeader: {
+      minHeight: 72,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+
+    directoryHeaderText: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    directoryTitle: {
+      fontSize: 15,
+      fontWeight: '900',
+    },
+
+    directorySubtitle: {
+      marginTop: 4,
+      fontSize: 10,
+      lineHeight: 15,
+    },
+
+    directoryCount: {
+      minWidth: 38,
+      height: 38,
+      borderWidth: 1,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+    },
+
+    directoryCountText: {
+      fontSize: 12,
+      fontWeight: '900',
+    },
+
+    directoryChevron: {
+      width: 22,
+      textAlign: 'center',
+      fontSize: 12,
+      fontWeight: '900',
+    },
+
+    cardDesktop: {
+      width: '48.8%',
+      flexGrow: 0,
+      flexShrink: 0,
+    },
+
+    loadMoreButton: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 14,
+      marginTop: 2,
+    },
+
     toolbarActionPhone: {
       minHeight: 36,
       flexGrow: 1,
@@ -129,13 +199,16 @@ export const styles =
       fontWeight: '900',
     },
     list: {
-      gap: 14,
-      paddingBottom: 32,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      paddingBottom: 20,
     },
     card: {
+      width: '100%',
       borderWidth: 1,
       borderRadius: 12,
-      padding: 16,
+      padding: 13,
     },
     cardHeader: {
       flexDirection: 'row',
@@ -175,7 +248,7 @@ export const styles =
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-      marginTop: 14,
+      marginTop: 10,
       marginBottom: 2,
     },
 
@@ -203,6 +276,7 @@ export const styles =
       fontWeight: '900',
     },
     empty: {
+      width: '100%',
       alignItems: 'center',
       paddingVertical: 44,
     },

@@ -31,6 +31,12 @@ const EVENT_REQUESTS_CHANNEL_ID =
 const EVENT_REMINDERS_CHANNEL_ID =
   'event-reminders';
 
+const ATTENDANCE_CHANNEL_ID =
+  'attendance';
+
+const ADMIN_ACTIONS_CHANNEL_ID =
+  'admin-actions';
+
 type PushDeviceType =
   | 'pos'
   | 'driver';
@@ -278,6 +284,63 @@ async function configureAndroidNotificationChannels():
             .PUBLIC,
       },
     );
+
+
+  /*
+   * Asistencia y recordatorios de turno.
+   */
+  await Notifications
+    .setNotificationChannelAsync(
+      ATTENDANCE_CHANNEL_ID,
+      {
+        name:
+          'Asistencia',
+
+        description:
+          'Recordatorios de entrada, salida y avisos de turnos laborales.',
+
+        importance:
+          Notifications
+            .AndroidImportance
+            .MAX,
+
+        sound:
+          'default',
+
+        vibrationPattern: [
+          0,
+          300,
+          180,
+          300,
+        ],
+
+        enableVibrate:
+          true,
+
+        enableLights:
+          true,
+
+        lockscreenVisibility:
+          Notifications
+            .AndroidNotificationVisibility
+            .PUBLIC,
+      },
+    );
+
+  await Notifications.setNotificationChannelAsync(
+    ADMIN_ACTIONS_CHANNEL_ID,
+    {
+      name: 'Solicitudes administrativas',
+      description: 'Inbox IA, sugerencias y solicitudes que requieren atención.',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'default',
+      vibrationPattern: [0, 300, 180, 300],
+      enableVibrate: true,
+      enableLights: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    },
+  );
+
 }
 
 
@@ -672,6 +735,20 @@ export function isEventRequestNotification(
   );
 }
 
+export interface AdminActionNotificationData {
+  type: 'ai_handoff_pending' | 'customer_feedback_new';
+  conversationId?: string;
+  feedbackId?: string;
+}
+
+export function isAdminActionNotification(
+  data: unknown,
+): data is AdminActionNotificationData {
+  if (!data || typeof data !== 'object') return false;
+  const value = data as { type?: unknown };
+  return value.type === 'ai_handoff_pending' || value.type === 'customer_feedback_new';
+}
+
 /*
  * ============================================================
  * LISTENER POS
@@ -683,6 +760,9 @@ export function listenToPushNotificationResponses(
   ) => void,
   onEventRequestPressed?: (
     data: EventRequestNotificationData,
+  ) => void,
+  onAdminActionPressed?: (
+    data: AdminActionNotificationData,
   ) => void,
 ): Notifications.EventSubscription {
   return Notifications.addNotificationResponseReceivedListener(
@@ -699,6 +779,11 @@ export function listenToPushNotificationResponses(
         isEventRequestNotification(data)
       ) {
         onEventRequestPressed(data);
+        return;
+      }
+
+      if (onAdminActionPressed && isAdminActionNotification(data)) {
+        onAdminActionPressed(data);
       }
     },
   );
@@ -708,12 +793,19 @@ export function listenToPushNotificationsReceived(
   onEventRequestReceived: (
     data: EventRequestNotificationData,
   ) => void,
+  onAdminActionReceived?: (
+    data: AdminActionNotificationData,
+  ) => void,
 ): Notifications.EventSubscription {
   return Notifications.addNotificationReceivedListener(
     notification => {
       const data = notification.request.content.data;
       if (isEventRequestNotification(data)) {
         onEventRequestReceived(data);
+        return;
+      }
+      if (onAdminActionReceived && isAdminActionNotification(data)) {
+        onAdminActionReceived(data);
       }
     },
   );

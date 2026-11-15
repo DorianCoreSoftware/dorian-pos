@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 
 import {
-  SafeAreaProvider,
   SafeAreaView,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 import {
@@ -170,16 +170,23 @@ interface AdminScreenProps {
   () => Promise<void>;
   onModifiersChanged:
   () => Promise<void>;
+  forceSectionSelector?: boolean;
 }
 
 export function AdminScreen({
   onProductsChanged,
   onCategoriesChanged,
   onModifiersChanged,
+  forceSectionSelector = false,
 }: AdminScreenProps) {
   const {
     width,
+    height:
+      windowHeight,
   } = useWindowDimensions();
+
+  const insets =
+    useSafeAreaInsets();
 
   const {
     business,
@@ -192,6 +199,10 @@ export function AdminScreen({
 
   const isPhone =
     width < 700;
+
+  const useSectionSelector =
+    isPhone ||
+    forceSectionSelector;
 
   const [
     activeSection,
@@ -409,16 +420,6 @@ export function AdminScreen({
             },
             {
               key:
-                'ai-inbox',
-              label:
-                'INBOX IA',
-              icon:
-                '💬',
-              badge:
-                aiHandoffPendingCount,
-            },
-            {
-              key:
                 'reports',
               label:
                 'REPORTES',
@@ -535,14 +536,6 @@ export function AdminScreen({
             '🖼️',
         });
 
-        sections.push({
-          key:
-            'feedback',
-          label:
-            'BUZÓN',
-          icon:
-            '💬',
-        });
         if (
           user?.role === 'accountant'
         ) {
@@ -552,7 +545,14 @@ export function AdminScreen({
           );
         }
 
-        return sections;
+        return sections.sort(
+          (left, right) =>
+            left.label.localeCompare(
+              right.label,
+              'es',
+              { sensitivity: 'base' },
+            ),
+        );
       },
       [
         user?.role,
@@ -1073,7 +1073,7 @@ export function AdminScreen({
         </Text>
       </View>
 
-      {isPhone ? (
+      {useSectionSelector ? (
         <TouchableOpacity
           style={[
             styles.mobileSectionSelector,
@@ -1194,8 +1194,7 @@ export function AdminScreen({
         }
       >
 
-        <SafeAreaProvider>
-          <SafeAreaView
+        <SafeAreaView
             edges={[
               'top',
               'bottom',
@@ -1224,8 +1223,24 @@ export function AdminScreen({
                     '100%',
                   maxWidth:
                     520,
-                  maxHeight:
-                    '82%',
+                  height:
+                    Math.max(
+                      320,
+                      Math.min(
+                        windowHeight -
+                          Math.max(
+                            16,
+                            insets.top,
+                          ) -
+                          Math.max(
+                            28,
+                            insets.bottom + 20,
+                          ) -
+                          24,
+                        windowHeight *
+                          0.88,
+                      ),
+                    ),
                   alignSelf:
                     'center',
                   borderRadius:
@@ -1310,11 +1325,20 @@ export function AdminScreen({
                 style={
                   styles.mobileMenuList
                 }
-                contentContainerStyle={
-                  styles.mobileMenuListContent
-                }
+                contentContainerStyle={[
+                  styles.mobileMenuListContent,
+                  {
+                    paddingBottom:
+                      Math.max(
+                        56,
+                        insets.bottom + 44,
+                      ),
+                  },
+                ]}
                 showsVerticalScrollIndicator
                 persistentScrollbar
+                nestedScrollEnabled
+                bounces={false}
               >
                 {availableSections.map(
                   option => {
@@ -1422,8 +1446,7 @@ export function AdminScreen({
                 )}
               </ScrollView>
             </View>
-          </SafeAreaView>
-        </SafeAreaProvider>
+        </SafeAreaView>
       </Modal>
     </View>
   );

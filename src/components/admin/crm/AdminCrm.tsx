@@ -73,6 +73,11 @@ export function AdminCrm() {
     windowWidth <
     700;
 
+  const customerPageSize =
+    isPhone
+      ? 5
+      : 10;
+
   const [
     customers,
     setCustomers,
@@ -168,6 +173,20 @@ export function AdminCrm() {
     useState<
       CrmSegmentCode | 'all'
     >('all');
+
+  const [
+    directoryExpanded,
+    setDirectoryExpanded,
+  ] =
+    useState(true);
+
+  const [
+    visibleCustomerCount,
+    setVisibleCustomerCount,
+  ] =
+    useState(
+      customerPageSize,
+    );
 
   const [
     segmentSummary,
@@ -424,6 +443,33 @@ export function AdminCrm() {
       [
         customers,
         segmentFilter,
+      ],
+    );
+
+  useEffect(
+    () => {
+      setVisibleCustomerCount(
+        customerPageSize,
+      );
+    },
+    [
+      search,
+      activeOnly,
+      segmentFilter,
+      customerPageSize,
+    ],
+  );
+
+  const visibleCustomers =
+    useMemo(
+      () =>
+        filteredCustomers.slice(
+          0,
+          visibleCustomerCount,
+        ),
+      [
+        filteredCustomers,
+        visibleCustomerCount,
       ],
     );
 
@@ -1180,6 +1226,101 @@ export function AdminCrm() {
 
       <View
         style={[
+          styles.directoryPanel,
+          {
+            borderColor:
+              theme.border,
+            backgroundColor:
+              theme.surface,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={
+            () =>
+              setDirectoryExpanded(
+                value =>
+                  !value,
+              )
+          }
+          activeOpacity={0.85}
+          style={
+            styles.directoryHeader
+          }
+        >
+          <View
+            style={
+              styles.directoryHeaderText
+            }
+          >
+            <Text
+              style={[
+                styles.directoryTitle,
+                {
+                  color:
+                    theme.text,
+                },
+              ]}
+            >
+              Directorio de clientes
+            </Text>
+
+            <Text
+              style={[
+                styles.directorySubtitle,
+                {
+                  color:
+                    theme.textMuted,
+                },
+              ]}
+            >
+              {filteredCustomers.length} cliente{filteredCustomers.length === 1 ? '' : 's'} · filtros y búsqueda
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.directoryCount,
+              {
+                borderColor:
+                  theme.border,
+                backgroundColor:
+                  theme.surfaceAlt,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.directoryCountText,
+                {
+                  color:
+                    theme.primary,
+                },
+              ]}
+            >
+              {filteredCustomers.length}
+            </Text>
+          </View>
+
+          <Text
+            style={[
+              styles.directoryChevron,
+              {
+                color:
+                  theme.primary,
+              },
+            ]}
+          >
+            {directoryExpanded
+              ? '▲'
+              : '▼'}
+          </Text>
+        </TouchableOpacity>
+
+        {directoryExpanded ? (
+          <>
+      <View
+        style={[
           styles.toolbar,
           isPhone
             ? styles.toolbarPhone
@@ -1479,7 +1620,7 @@ export function AdminCrm() {
             styles.list
           }
         >
-          {filteredCustomers.map(
+          {visibleCustomers.map(
             customer => (
               <TouchableOpacity
                 key={
@@ -1494,6 +1635,9 @@ export function AdminCrm() {
                 }
                 style={[
                   styles.card,
+                  !isPhone
+                    ? styles.cardDesktop
+                    : null,
                   !customer.isActive
                     ? styles.inactive
                     : null,
@@ -1688,6 +1832,41 @@ export function AdminCrm() {
             ),
           )}
 
+          {filteredCustomers.length >
+          visibleCustomerCount ? (
+            <TouchableOpacity
+              onPress={
+                () =>
+                  setVisibleCustomerCount(
+                    current =>
+                      current +
+                      customerPageSize,
+                  )
+              }
+              style={[
+                styles.loadMoreButton,
+                {
+                  borderColor:
+                    theme.border,
+                  backgroundColor:
+                    theme.surfaceAlt,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.buttonText,
+                  {
+                    color:
+                      theme.primary,
+                  },
+                ]}
+              >
+                MOSTRAR {customerPageSize} MÁS · {filteredCustomers.length - visibleCustomerCount} RESTANTES
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
           {!filteredCustomers.length ? (
             <View
               style={
@@ -1721,6 +1900,10 @@ export function AdminCrm() {
           ) : null}
         </View>
       )}
+
+          </>
+        ) : null}
+      </View>
       </ScrollView>
 
       <Modal
