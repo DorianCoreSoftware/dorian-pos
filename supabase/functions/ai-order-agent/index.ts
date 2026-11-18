@@ -1746,7 +1746,7 @@ async function getBusinessStatus() {
         'business_settings',
       )
       .select(
-        'business_name,short_name,currency_code,web_orders_enabled,delivery_enabled',
+        'business_name,short_name,currency_code,web_orders_enabled,delivery_enabled,timezone',
       )
       .eq(
         'id',
@@ -1779,8 +1779,284 @@ async function getBusinessStatus() {
       : fulfillment ??
         null;
 
+  const [
+    {
+      data:
+        fulfillmentSchedules,
+      error:
+        fulfillmentSchedulesError,
+    },
+    {
+      data:
+        businessHours,
+      error:
+        businessHoursError,
+    },
+    {
+      data:
+        deliverySettings,
+      error:
+        deliverySettingsError,
+    },
+  ] =
+    await Promise.all([
+      admin
+        .from(
+          'fulfillment_schedule_windows',
+        )
+        .select(
+          'fulfillment_type,day_of_week,start_time,end_time,is_active',
+        )
+        .eq(
+          'is_active',
+          true,
+        )
+        .order(
+          'day_of_week',
+          {
+            ascending:
+              true,
+          },
+        )
+        .order(
+          'start_time',
+          {
+            ascending:
+              true,
+          },
+        ),
+      admin
+        .from(
+          'business_hours',
+        )
+        .select(
+          'day_of_week,is_open,open_time,close_time',
+        )
+        .order(
+          'day_of_week',
+          {
+            ascending:
+              true,
+          },
+        ),
+      admin
+        .from(
+          'delivery_settings',
+        )
+        .select(
+          'pickup_enabled,is_enabled,pickup_schedule_enabled,delivery_schedule_enabled',
+        )
+        .eq(
+          'id',
+          true,
+        )
+        .maybeSingle(),
+    ]);
+
+  if (fulfillmentSchedulesError) {
+    throw fulfillmentSchedulesError;
+  }
+
+  if (businessHoursError) {
+    throw businessHoursError;
+  }
+
+  if (deliverySettingsError) {
+    throw deliverySettingsError;
+  }
+
+  const dayNames = [
+    'Domingo',
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+  ];
+
+  const normalizeTimeValue = (
+    value:
+      unknown,
+  ): string | null => {
+    if (
+      typeof value !==
+        'string' ||
+      !value
+    ) {
+      return null;
+    }
+
+    return value.slice(
+      0,
+      5,
+    );
+  };
+
+  const normalizedFulfillmentSchedules =
+    (
+      fulfillmentSchedules ??
+      []
+    ).map(
+      (
+        row:
+          any,
+      ) => ({
+        fulfillmentType:
+          row.fulfillment_type,
+        dayOfWeek:
+          Number(
+            row.day_of_week,
+          ),
+        dayName:
+          dayNames[
+            Number(
+              row.day_of_week,
+            )
+          ] ??
+          String(
+            row.day_of_week,
+          ),
+        startTime:
+          normalizeTimeValue(
+            row.start_time,
+          ),
+        endTime:
+          normalizeTimeValue(
+            row.end_time,
+          ),
+      }),
+    );
+
+  const normalizedBusinessHours =
+    (
+      businessHours ??
+      []
+    ).map(
+      (
+        row:
+          any,
+      ) => ({
+        dayOfWeek:
+          Number(
+            row.day_of_week,
+          ),
+        dayName:
+          dayNames[
+            Number(
+              row.day_of_week,
+            )
+          ] ??
+          String(
+            row.day_of_week,
+          ),
+        isOpen:
+          Boolean(
+            row.is_open,
+          ),
+        openTime:
+          normalizeTimeValue(
+            row.open_time,
+          ),
+        closeTime:
+          normalizeTimeValue(
+            row.close_time,
+          ),
+      }),
+    );
+
+  const timezone =
+    String(
+      settings
+        ?.timezone ??
+      'America/Mexico_City',
+    );
+
+  const localWeekday =
+    new Intl.DateTimeFormat(
+      'en-US',
+      {
+        timeZone:
+          timezone,
+        weekday:
+          'short',
+      },
+    ).format(
+      new Date(),
+    );
+
+  const dayIndexByShortName:
+    Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+
+  const localDayOfWeek =
+    dayIndexByShortName[
+      localWeekday
+    ] ??
+    0;
+
   return {
     settings,
+    localContext: {
+      timezone,
+      dayOfWeek:
+        localDayOfWeek,
+      dayName:
+        dayNames[
+          localDayOfWeek
+        ],
+      localTime:
+        new Intl.DateTimeFormat(
+          'es-MX',
+          {
+            timeZone:
+              timezone,
+            hour:
+              '2-digit',
+            minute:
+              '2-digit',
+            hour12:
+              false,
+          },
+        ).format(
+          new Date(),
+        ),
+    },
+    businessHours:
+      normalizedBusinessHours,
+    fulfillmentSchedules: {
+      pickupScheduleEnabled:
+        Boolean(
+          deliverySettings
+            ?.pickup_schedule_enabled,
+        ),
+      deliveryScheduleEnabled:
+        Boolean(
+          deliverySettings
+            ?.delivery_schedule_enabled,
+        ),
+      pickup:
+        normalizedFulfillmentSchedules
+          .filter(
+            row =>
+              row.fulfillmentType ===
+                'pickup',
+          ),
+      delivery:
+        normalizedFulfillmentSchedules
+          .filter(
+            row =>
+              row.fulfillmentType ===
+                'delivery',
+          ),
+    },
     fulfillment:
       rawFulfillment
         ? {
@@ -8858,7 +9134,7 @@ const tools = [
   },
   {
     type: 'function', name: 'get_business_status',
-    description: 'Consulta configuración general de pedidos, recoger y domicilio.',
+    description: 'Consulta disponibilidad actual, próxima ventana, horario general y horarios semanales reales de recoger y domicilio. Úsala también para responder preguntas sobre apertura, cierre, a qué hora pueden pasar por un pedido o cuándo inicia cada modalidad.',
     parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     strict: true,
   },
@@ -9369,6 +9645,7 @@ REGLAS OBLIGATORIAS:
 - Si el cliente modifica, corrige, agrega o quita algo después del resumen final, actualiza el borrador y entonces pide UNA nueva confirmación para esa nueva versión. Esa nueva confirmación sustituye a la anterior.
 - Un cambio de nombre, teléfono, dirección, modalidad, producto, cantidad, modificador o nota invalida la confirmación anterior y permite pedir una nueva; si no hubo cambios, repetir la confirmación está prohibido.
 - Si el cliente ya proporcionó nombre, teléfono, dirección o modalidad en mensajes anteriores o en el mismo mensaje inicial, reutiliza esos datos y no vuelvas a pedirlos.
+- HORARIOS: si el cliente pregunta horarios, a qué hora abre/cierra, a qué hora puede pasar a recoger, cuándo hay domicilio o cuándo vuelve una modalidad, llama get_business_status. Responde usando localContext, businessHours, fulfillmentSchedules y fulfillment. Distingue siempre el horario general del negocio del horario específico de Recoger y Domicilio. Si una modalidad tiene horario propio, ese horario tiene prioridad al responder sobre esa modalidad. No inventes horarios.
 - Si el cliente elige recoger, usa get_business_status para consultar pickupAvailable y pickupReason. No confundas pickup con delivery y no inventes que recoger está desactivado: usa exactamente pickupAvailable/pickupReason.
 - Cuando order_creation_enabled sea false, habla de "borrador" o "listo para revisión" y nunca afirmes que crearás la orden.
 - Cuando order_creation_enabled sea true, NO uses frases como "dejarlo listo para revisión". Tras la única confirmación afirmativa llama confirm_order y crea el pedido.
@@ -9761,6 +10038,8 @@ Deno.serve(async (request) => {
           trackingCode:
             trackingCode ||
             null,
+          conversationStatus:
+            'completed',
         });
       }
 
@@ -10177,6 +10456,10 @@ Deno.serve(async (request) => {
       );
     await saveMessage(conversationId, 'assistant', assistantText);
     const draft = await getDraft(conversationId);
+    const finalLifecycleState =
+      await getConversationLifecycleState(
+        conversationId,
+      );
 
     return json({
       conversationId,
@@ -10186,6 +10469,8 @@ Deno.serve(async (request) => {
         draft.draft,
       pricing:
         draft.pricing,
+      conversationStatus:
+        finalLifecycleState.status,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

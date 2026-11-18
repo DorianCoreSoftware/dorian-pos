@@ -188,6 +188,108 @@ function getCustomerAvatarUrl(
 const CHAT_MESSAGES_KEY =
   'dorian_web_chat_messages_v1';
 
+const CHAT_VISITOR_KEY =
+  'dorian_web_visitor_id_v1';
+
+const CHAT_TERMINAL_KEY =
+  'dorian_web_chat_terminal_v1';
+
+const TERMINAL_CHAT_RESET_MS =
+  5 * 60 * 1000;
+
+const TERMINAL_STATUSES =
+  new Set([
+    'completed',
+    'cancelled',
+    'abandoned',
+  ]);
+
+function clearPersistedChat(): void {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(
+      CHAT_MESSAGES_KEY,
+    );
+    window.localStorage.removeItem(
+      CHAT_VISITOR_KEY,
+    );
+    window.localStorage.removeItem(
+      CHAT_TERMINAL_KEY,
+    );
+  } catch {
+    // No-op.
+  }
+}
+
+function getTerminalCleanupAt(): number | null {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return null;
+  }
+
+  try {
+    const raw =
+      window.localStorage.getItem(
+        CHAT_TERMINAL_KEY,
+      );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed =
+      JSON.parse(raw) as {
+        cleanupAt?: unknown;
+      };
+
+    const cleanupAt =
+      Number(parsed.cleanupAt);
+
+    return Number.isFinite(
+      cleanupAt,
+    )
+      ? cleanupAt
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveTerminalCleanup(
+  status: string,
+): number {
+  const cleanupAt =
+    Date.now() +
+    TERMINAL_CHAT_RESET_MS;
+
+  if (
+    typeof window !==
+    'undefined'
+  ) {
+    try {
+      window.localStorage.setItem(
+        CHAT_TERMINAL_KEY,
+        JSON.stringify({
+          status,
+          cleanupAt,
+        }),
+      );
+    } catch {
+      // No-op.
+    }
+  }
+
+  return cleanupAt;
+}
+
 function createMessageId(): string {
   return `${Date.now()}-${Math.random()
     .toString(36)
@@ -204,6 +306,17 @@ ChatMessage[] {
   }
 
   try {
+    const cleanupAt =
+      getTerminalCleanupAt();
+
+    if (
+      cleanupAt !== null &&
+      cleanupAt <= Date.now()
+    ) {
+      clearPersistedChat();
+      return [];
+    }
+
     const raw =
       window.localStorage.getItem(
         CHAT_MESSAGES_KEY,
@@ -327,6 +440,14 @@ export default function DorianWebChat() {
   ] =
     useState<ChatMessage[]>(
       getInitialMessages,
+    );
+
+  const [
+    terminalCleanupAt,
+    setTerminalCleanupAt,
+  ] =
+    useState<number | null>(
+      getTerminalCleanupAt,
     );
 
   const scrollRef =
@@ -468,12 +589,125 @@ export default function DorianWebChat() {
       ],
     );
 
+  const resetConversation =
+    (
+      options?: {
+        reloadIdentity?: boolean;
+      },
+    ): void => {
+      clearPersistedChat();
+      setTerminalCleanupAt(
+        null,
+      );
+      setMessages([
+        {
+          id:
+            createMessageId(),
+          role:
+            'assistant',
+          content:
+            greeting,
+          createdAt:
+            new Date()
+              .toISOString(),
+        },
+      ]);
+      setInput('');
+
+      if (
+        options
+          ?.reloadIdentity !==
+        false
+      ) {
+        void loadVisualIdentity();
+      } else {
+        setWebCustomerProfile(
+          null,
+        );
+        setBackendCustomer(
+          null,
+        );
+      }
+    };
+
   useEffect(
     () => {
       void loadVisualIdentity();
     },
     [
       isOpen,
+    ],
+  );
+
+
+  useEffect(
+    () => {
+      if (
+        terminalCleanupAt ===
+        null
+      ) {
+        return;
+      }
+
+      const delay =
+        terminalCleanupAt -
+        Date.now();
+
+      if (delay <= 0) {
+        resetConversation();
+        return;
+      }
+
+      const timeout =
+        window.setTimeout(
+          () => {
+            resetConversation();
+          },
+          delay,
+        );
+
+      return () =>
+        window.clearTimeout(
+          timeout,
+        );
+    },
+    [
+      terminalCleanupAt,
+      greeting,
+    ],
+  );
+
+  useEffect(
+    () => {
+      if (
+        typeof window ===
+        'undefined'
+      ) {
+        return;
+      }
+
+      const handleSessionCleared =
+        (): void => {
+          resetConversation({
+            reloadIdentity:
+              false,
+          });
+        };
+
+      window.addEventListener(
+        'dorian:web-customer-session-cleared',
+        handleSessionCleared,
+      );
+
+      return () => {
+        window.removeEventListener(
+          'dorian:web-customer-session-cleared',
+          handleSessionCleared,
+        );
+      };
+    },
+    [
+      greeting,
     ],
   );
 
@@ -717,6 +951,23 @@ export default function DorianWebChat() {
           );
         }
 
+        if (
+          response
+            .conversationStatus &&
+          TERMINAL_STATUSES
+            .has(
+              response
+                .conversationStatus,
+            )
+        ) {
+          setTerminalCleanupAt(
+            saveTerminalCleanup(
+              response
+                .conversationStatus,
+            ),
+          );
+        }
+
         const assistantMessage =
           response.message
             ?.trim() ||
@@ -769,42 +1020,7 @@ export default function DorianWebChat() {
 
   const handleNewConversation =
     (): void => {
-      if (
-        typeof window !==
-        'undefined'
-      ) {
-        try {
-          window.localStorage
-            .removeItem(
-              CHAT_MESSAGES_KEY,
-            );
-
-          window.localStorage
-            .removeItem(
-              'dorian_web_visitor_id_v1',
-            );
-        } catch {
-          // No-op.
-        }
-      }
-
-      setMessages([
-        {
-          id:
-            createMessageId(),
-          role:
-            'assistant',
-          content:
-            greeting,
-          createdAt:
-            new Date()
-              .toISOString(),
-        },
-      ]);
-
-      setInput('');
-
-      void loadVisualIdentity();
+      resetConversation();
     };
 
   return (

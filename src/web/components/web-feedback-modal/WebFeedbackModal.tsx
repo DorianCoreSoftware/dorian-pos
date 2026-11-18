@@ -142,6 +142,38 @@ export function WebFeedbackModal({
     const normalizedMessage =
       message.trim();
 
+    const normalizedName =
+      name.trim();
+
+    const normalizedPhone =
+      phone.replace(
+        /\D/g,
+        '',
+      );
+
+    if (
+      normalizedName.length >
+      80
+    ) {
+      setError(
+        'El nombre no puede superar 80 caracteres.',
+      );
+
+      return;
+    }
+
+    if (
+      normalizedPhone &&
+      normalizedPhone.length !==
+        10
+    ) {
+      setError(
+        'Si agregas un teléfono, debe tener exactamente 10 dígitos.',
+      );
+
+      return;
+    }
+
     if (
       normalizedMessage.length <
       5
@@ -169,10 +201,10 @@ export function WebFeedbackModal({
           normalizedMessage,
 
         customerName:
-          name,
+          normalizedName,
 
         customerPhone:
-          phone,
+          normalizedPhone,
       });
 
       setSuccess(
@@ -405,6 +437,14 @@ export function WebFeedbackModal({
 
                 <Text
                   style={
+                    styles.counter
+                  }
+                >
+                  {name.length}/80
+                </Text>
+
+                <Text
+                  style={
                     styles.label
                   }
                 >
@@ -415,22 +455,42 @@ export function WebFeedbackModal({
                   value={
                     phone
                   }
-                  onChangeText={
-                    setPhone
+                  onChangeText={(
+                    value,
+                  ) =>
+                    setPhone(
+                      value
+                        .replace(
+                          /\D/g,
+                          '',
+                        )
+                        .slice(
+                          0,
+                          10,
+                        ),
+                    )
                   }
                   editable={
                     !isSubmitting
                   }
                   keyboardType="phone-pad"
                   maxLength={
-                    25
+                    10
                   }
-                  placeholder="Tu teléfono"
+                  placeholder="Ej. 4171234567"
                   placeholderTextColor="#666666"
                   style={
                     styles.input
                   }
                 />
+
+                <Text
+                  style={
+                    styles.counter
+                  }
+                >
+                  {phone.length}/10 dígitos
+                </Text>
 
                 <Text
                   style={

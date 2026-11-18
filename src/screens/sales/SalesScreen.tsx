@@ -448,23 +448,25 @@ export function SalesScreen() {
           accumulator.total +=
             sale.totalAmount;
 
-          if (
-            sale.payment
-              .paymentMethod ===
-            'cash'
-          ) {
-            accumulator.cash +=
-              sale.totalAmount;
-          }
+          sale.payments.forEach(
+            movement => {
+              if (
+                movement.paymentMethod ===
+                'cash'
+              ) {
+                accumulator.cash +=
+                  movement.amount;
+              }
 
-          if (
-            sale.payment
-              .paymentMethod ===
-            'card'
-          ) {
-            accumulator.card +=
-              sale.totalAmount;
-          }
+              if (
+                movement.paymentMethod ===
+                'card'
+              ) {
+                accumulator.card +=
+                  movement.amount;
+              }
+            },
+          );
 
           const refundStatus =
             refundStatusByOrder[

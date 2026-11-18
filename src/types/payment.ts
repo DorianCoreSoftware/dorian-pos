@@ -5,7 +5,37 @@ export type PaymentMethod =
 
 export type PaymentTiming =
   | 'final'
-  | 'advance';
+  | 'advance'
+  | 'adjustment';
+
+
+export type OrderPaymentStatus =
+  | 'unpaid'
+  | 'partial'
+  | 'paid'
+  | 'credit';
+
+export interface OrderPaymentMovement {
+  id: string;
+  orderId: string;
+  paymentMethod: PaymentMethod;
+  amount: number;
+  amountReceived: number | null;
+  changeAmount: number | null;
+  paymentReference: string | null;
+  paymentTiming: PaymentTiming;
+  createdAt: string;
+}
+
+export interface OrderPaymentState {
+  orderId: string;
+  orderTotal: number;
+  paidTotal: number;
+  balanceDue: number;
+  creditDue: number;
+  status: OrderPaymentStatus;
+  movements: OrderPaymentMovement[];
+}
 
 export interface OrderPayment {
   id: string;
@@ -39,4 +69,5 @@ export interface CompletedSale {
   orderCreatedAt: string;
 
   payment: OrderPayment;
+  payments: OrderPaymentMovement[];
 }

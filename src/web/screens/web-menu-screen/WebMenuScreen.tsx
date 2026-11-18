@@ -60,6 +60,10 @@ import {
   PublicBusinessStatus,
 } from '../../services/web-business-hours/webBusinessHoursService';
 import {
+  FulfillmentAvailability,
+  getFulfillmentAvailability,
+} from '../../../services/deliveryService';
+import {
   getPublicWebBanners,
   WebBanner,
 } from '../../../services/webBannerService';
@@ -336,6 +340,59 @@ function getBusinessAvailabilityText(
     return `${status.exceptionReason.trim()} · ${schedule}`;
   }
   return schedule;
+}
+
+function getFulfillmentAvailabilityText(
+  availability:
+    | FulfillmentAvailability
+    | null,
+): string {
+  if (!availability) {
+    return 'No pudimos confirmar las modalidades disponibles.';
+  }
+
+  const available: string[] = [];
+
+  if (availability.deliveryAvailable) {
+    available.push('domicilio');
+  }
+
+  if (availability.pickupAvailable) {
+    available.push('recoger');
+  }
+
+  if (available.length > 0) {
+    return `Disponible ahora: ${available.join(' y ')}.`;
+  }
+
+  const next: string[] = [];
+
+  if (availability.pickupNextWindow) {
+    next.push(
+      `Recoger: ${availability.pickupNextWindow}`,
+    );
+  }
+
+  if (availability.deliveryNextWindow) {
+    next.push(
+      `Domicilio: ${availability.deliveryNextWindow}`,
+    );
+  }
+
+  if (next.length > 0) {
+    return `Ahora no hay modalidad disponible. ${next.join(' · ')}`;
+  }
+
+  const reasons = [
+    availability.pickupReason,
+    availability.deliveryReason,
+  ]
+    .map(value => value.trim())
+    .filter(Boolean);
+
+  return reasons.length > 0
+    ? `Ahora no hay modalidad disponible. ${Array.from(new Set(reasons)).join(' ')}`
+    : 'Ahora no hay modalidad disponible.';
 }
 
 interface SocialLinkItem {
@@ -625,6 +682,18 @@ export default function WebMenuScreen({
   ] = useState<
     string | null
   >(null);
+  const [
+    fulfillmentAvailability,
+    setFulfillmentAvailability,
+  ] = useState<FulfillmentAvailability | null>(
+    null,
+  );
+  const [
+    fulfillmentAvailabilityError,
+    setFulfillmentAvailabilityError,
+  ] = useState<string | null>(
+    null,
+  );
   const menuScrollRef =
     useRef<ScrollView | null>(
       null,
@@ -768,6 +837,38 @@ export default function WebMenuScreen({
       );
     }
   }
+  async function loadFulfillmentAvailability():
+    Promise<FulfillmentAvailability | null> {
+    try {
+      setFulfillmentAvailabilityError(
+        null,
+      );
+
+      const availability =
+        await getFulfillmentAvailability();
+
+      setFulfillmentAvailability(
+        availability,
+      );
+
+      return availability;
+    } catch (availabilityError) {
+      console.error(
+        'Error cargando modalidades disponibles:',
+        availabilityError,
+      );
+
+      setFulfillmentAvailabilityError(
+        'No pudimos confirmar qué modalidades están disponibles.',
+      );
+
+      setFulfillmentAvailability(
+        null,
+      );
+
+      return null;
+    }
+  }
   async function loadMenu(
     isRefresh = false,
   ) {
@@ -785,6 +886,7 @@ export default function WebMenuScreen({
         loadedQuantityPromotions,
         loadedPricingPromotions,
         loadedBusinessStatus,
+        loadedFulfillmentAvailability,
         loadedWebBanners,
       ] =
         await Promise.all([
@@ -803,6 +905,10 @@ export default function WebMenuScreen({
               () => [],
             ),
           getPublicBusinessStatus()
+            .catch(
+              () => null,
+            ),
+          getFulfillmentAvailability()
             .catch(
               () => null,
             ),
@@ -828,6 +934,14 @@ export default function WebMenuScreen({
       );
       setBusinessStatus(
         loadedBusinessStatus,
+      );
+      setFulfillmentAvailability(
+        loadedFulfillmentAvailability,
+      );
+      setFulfillmentAvailabilityError(
+        loadedFulfillmentAvailability
+          ? null
+          : 'No pudimos confirmar qué modalidades están disponibles.',
       );
       setWebBanners(
         loadedWebBanners,
@@ -916,6 +1030,7 @@ export default function WebMenuScreen({
       setInterval(
         () => {
           void loadBusinessStatus();
+          void loadFulfillmentAvailability();
         },
         60_000,
       );
@@ -1052,13 +1167,31 @@ export default function WebMenuScreen({
       ) /
       columns,
     );
+  const hasFulfillmentAvailable =
+    fulfillmentAvailability?.pickupAvailable ===
+      true ||
+    fulfillmentAvailability?.deliveryAvailable ===
+      true;
+
   const canCheckout =
     businessStatus?.isOpen ===
-    true;
+      true &&
+    hasFulfillmentAvailable;
+
   const businessScheduleText =
     getBusinessAvailabilityText(
       businessStatus,
     );
+
+  const fulfillmentAvailabilityText =
+    getFulfillmentAvailabilityText(
+      fulfillmentAvailability,
+    );
+
+  const publicAvailabilityText =
+    businessStatus?.isOpen === true
+      ? `${businessScheduleText} · ${fulfillmentAvailabilityText}`
+      : businessScheduleText;
   function handleCategorySelect(
     categoryId: string,
   ): void {
@@ -1219,6 +1352,56 @@ export default function WebMenuScreen({
       );
       return;
     }
+
+    const latestFulfillmentAvailability =
+      await loadFulfillmentAvailability();
+
+    if (
+      !latestFulfillmentAvailability
+    ) {
+      setSubmitError(
+        'No pudimos confirmar la modalidad elegida. Intenta nuevamente.',
+      );
+      return;
+    }
+
+    const selectedFulfillmentAvailable =
+      data.fulfillmentType ===
+        'pickup'
+        ? latestFulfillmentAvailability
+            .pickupAvailable
+        : latestFulfillmentAvailability
+            .deliveryAvailable;
+
+    if (
+      !selectedFulfillmentAvailable
+    ) {
+      const reason =
+        data.fulfillmentType ===
+          'pickup'
+          ? latestFulfillmentAvailability
+              .pickupReason
+          : latestFulfillmentAvailability
+              .deliveryReason;
+
+      const nextWindow =
+        data.fulfillmentType ===
+          'pickup'
+          ? latestFulfillmentAvailability
+              .pickupNextWindow
+          : latestFulfillmentAvailability
+              .deliveryNextWindow;
+
+      setSubmitError(
+        `${reason || 'La modalidad seleccionada no está disponible en este momento.'}${
+          nextWindow
+            ? ` Próximo horario: ${nextWindow}.`
+            : ''
+        }`,
+      );
+      return;
+    }
+
     setSubmitError(null);
     const fingerprint =
       createWebOrderFingerprint(
@@ -1622,7 +1805,10 @@ export default function WebMenuScreen({
                       ? 'Abierto · Estamos recibiendo pedidos'
                       : businessStatus?.webOrdersEnabled === false
                         ? 'Pedidos web pausados'
-                        : 'Cerrado · Pedidos no disponibles'}
+                        : businessStatus?.isOpen === true &&
+                            !hasFulfillmentAvailable
+                          ? 'Pausa de servicio · Pedidos no disponibles'
+                          : 'Cerrado · Pedidos no disponibles'}
                 </Text>
                 <Text
                   style={
@@ -1632,7 +1818,8 @@ export default function WebMenuScreen({
                   {isBusinessStatusLoading
                     ? 'Consultando el horario de atención...'
                     : businessStatusError ??
-                    businessScheduleText}
+                      fulfillmentAvailabilityError ??
+                      publicAvailabilityText}
                 </Text>
               </View>
             </View>
@@ -1643,8 +1830,8 @@ export default function WebMenuScreen({
                     styles.businessStatusNotice
                   }
                 >
-                  Puedes consultar el menú y preparar tu carrito, pero el checkout
-                  estará disponible cuando el negocio esté abierto.
+                  Puedes consultar el menú y preparar tu carrito. El checkout se
+                  habilitará cuando exista al menos una modalidad disponible.
                 </Text>
               )}
           </View>
@@ -1935,9 +2122,10 @@ export default function WebMenuScreen({
           isBusinessStatusLoading
             ? 'Estamos verificando el horario de atención.'
             : businessStatusError ??
+              fulfillmentAvailabilityError ??
             (
               businessStatus
-                ? businessScheduleText
+                ? publicAvailabilityText
                 : 'No pudimos confirmar el horario de atención. Intenta nuevamente en un momento.'
             )
         }
