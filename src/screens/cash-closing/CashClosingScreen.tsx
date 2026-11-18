@@ -34,8 +34,13 @@ import {
 } from '../../services/salesService';
 
 import {
+  getOrderPaymentMovementsSince,
+} from '../../services/paymentService';
+
+import {
   CashSession,
   CompletedSale,
+  OrderPaymentMovement,
 } from '../../types';
 
 import {
@@ -155,6 +160,13 @@ export function CashClosingScreen({
     sales,
     setSales,
   ] = useState<CompletedSale[]>(
+    [],
+  );
+
+  const [
+    cashMovements,
+    setCashMovements,
+  ] = useState<OrderPaymentMovement[]>(
     [],
   );
 
@@ -313,11 +325,23 @@ export function CashClosingScreen({
           setIsLoading(true);
           setErrorMessage(null);
 
-          const completedSales =
-            await getCompletedSales();
+          const [
+            completedSales,
+            movements,
+          ] = await Promise.all([
+            getCompletedSales(),
+            cashSession
+              ? getOrderPaymentMovementsSince(
+                  cashSession.openedAt,
+                )
+              : Promise.resolve([]),
+          ]);
 
           setSales(
             completedSales,
+          );
+          setCashMovements(
+            movements,
           );
         } catch (error) {
           console.error(
@@ -334,7 +358,7 @@ export function CashClosingScreen({
           setIsLoading(false);
         }
       },
-      [],
+      [cashSession],
     );
 
   const loadRefunds =
@@ -485,67 +509,71 @@ export function CashClosingScreen({
 
   const sessionSales =
     useMemo(() => {
-      if (!cashSession) {
-        return [];
-      }
-
-      const openedAt =
-        parseSupabaseDate(
-          cashSession.openedAt,
+      const orderIds =
+        new Set(
+          cashMovements
+            .filter(
+              movement =>
+                movement.amount > 0,
+            )
+            .map(
+              movement =>
+                movement.orderId,
+            ),
         );
 
-      if (!openedAt) {
-        return [];
-      }
-
       return sales.filter(
-        (sale) => {
-          const paymentDate =
-            parseSupabaseDate(
-              sale.payment.createdAt,
-            );
-
-          if (!paymentDate) {
-            return false;
-          }
-
-          return (
-            paymentDate >=
-            openedAt
-          );
-        },
+        sale =>
+          orderIds.has(
+            sale.orderId,
+          ),
       );
     }, [
-      cashSession,
+      cashMovements,
       sales,
     ]);
 
+  const sessionSalesCount =
+    useMemo(
+      () =>
+        new Set(
+          cashMovements
+            .filter(
+              movement =>
+                movement.amount > 0,
+            )
+            .map(
+              movement =>
+                movement.orderId,
+            ),
+        ).size,
+      [cashMovements],
+    );
+
   const summary =
     useMemo(() => {
-      return sessionSales.reduce(
+      return cashMovements.reduce(
         (
           accumulator,
-          sale,
+          movement,
         ) => {
           accumulator.total +=
-            sale.totalAmount;
+            movement.amount;
 
           if (
-            sale.payment
-              .paymentMethod ===
+            movement.paymentMethod ===
             'cash'
           ) {
             accumulator.cash +=
-              sale.totalAmount;
+              movement.amount;
           }
 
           if (
-            sale.payment
-              .paymentMethod ===
+            movement.paymentMethod ===
             'card'
           ) {
             accumulator.card +=
-              sale.totalAmount;
+              movement.amount;
           }
 
           return accumulator;
@@ -556,7 +584,7 @@ export function CashClosingScreen({
           card: 0,
         },
       );
-    }, [sessionSales]);
+    }, [cashMovements]);
 
   const countedCash =
     useMemo(() => {
@@ -804,6 +832,7 @@ export function CashClosingScreen({
         setSales(
           completedSales,
         );
+        setCashMovements([]);
 
         Alert.alert(
           'Caja abierta',
@@ -954,7 +983,7 @@ export function CashClosingScreen({
               refundSummary.card,
 
             salesCount:
-              sessionSales.length,
+              sessionSalesCount,
 
             closedBy:
               user?.id ??
@@ -2465,7 +2494,7 @@ export function CashClosingScreen({
               }
             >
               {
-                sessionSales.length
+                sessionSalesCount
               }
             </Text>
           </View>

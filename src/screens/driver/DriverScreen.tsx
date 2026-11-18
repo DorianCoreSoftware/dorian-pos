@@ -44,6 +44,10 @@ import {
 } from '../../types';
 
 import {
+  getOrderPaymentState,
+} from '../../services/paymentService';
+
+import {
   getOrderTrackingCode,
 } from '../../Utils/orderTracking';
 
@@ -111,6 +115,11 @@ export function DriverScreen() {
     isProcessingPayment,
     setIsProcessingPayment,
   ] = useState(false);
+
+  const [
+    paymentAmountDue,
+    setPaymentAmountDue,
+  ] = useState(0);
 
   /*
    * ==========================================================
@@ -385,10 +394,10 @@ export function DriverScreen() {
    * ==========================================================
    */
   const handleOpenPayment =
-    (
+    async (
       order:
         DriverOrder,
-    ): void => {
+    ): Promise<void> => {
       if (
         processingOrderId ||
         isProcessingPayment
@@ -396,9 +405,46 @@ export function DriverScreen() {
         return;
       }
 
-      setPaymentOrder(
-        order,
-      );
+      try {
+        const state =
+          await getOrderPaymentState(
+            order.id,
+          );
+
+        if (state.creditDue > 0) {
+          Alert.alert(
+            'Saldo a favor pendiente',
+            `Este pedido tiene ${formatCurrency(
+              state.creditDue,
+            )} a favor del cliente. Debe resolverse en el POS antes de entregar.`,
+          );
+          return;
+        }
+
+        if (state.balanceDue <= 0) {
+          await completeDriverDelivery(
+            order.id,
+          );
+          await loadOrders();
+          Alert.alert(
+            'Pedido entregado',
+            'El pedido ya estaba pagado y se marcó como entregado.',
+          );
+          return;
+        }
+
+        setPaymentAmountDue(
+          state.balanceDue,
+        );
+        setPaymentOrder(order);
+      } catch (error) {
+        Alert.alert(
+          'No se pudo consultar el saldo',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo consultar el saldo del pedido.',
+        );
+      }
     };
 
   /*
@@ -417,6 +463,7 @@ export function DriverScreen() {
       setPaymentOrder(
         null,
       );
+      setPaymentAmountDue(0);
     };
 
   /*
@@ -1029,7 +1076,7 @@ export function DriverScreen() {
                       )
                     }
                     onAction={() =>
-                      handleOpenPayment(
+                      void handleOpenPayment(
                         order,
                       )
                     }
@@ -1214,7 +1261,7 @@ export function DriverScreen() {
           }
           totalAmount={
             paymentOrder
-              ? paymentOrder.total
+              ? paymentAmountDue
               : 0
           }
           isProcessing={

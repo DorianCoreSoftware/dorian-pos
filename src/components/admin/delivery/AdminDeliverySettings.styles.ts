@@ -950,6 +950,548 @@ const createStyles = (
         5,
     },
 
+    heroCard: {
+      padding: 20,
+      marginBottom: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#3A3A3A',
+      backgroundColor: '#191919',
+    },
+
+    heroHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 16,
+      flexWrap: 'wrap',
+    },
+
+    heroTitleWrap: {
+      flex: 1,
+      minWidth: 220,
+    },
+
+    heroEyebrow: {
+      color: primaryColor,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 1.2,
+      marginBottom: 6,
+    },
+
+    heroTitle: {
+      color: '#FFFFFF',
+      fontSize: 23,
+      fontWeight: '900',
+    },
+
+    heroSubtitle: {
+      color: '#929292',
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 6,
+      maxWidth: 620,
+    },
+
+    overallStatusBadge: {
+      paddingHorizontal: 11,
+      paddingVertical: 7,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+
+    overallStatusBadgeOn: {
+      backgroundColor: '#17331A',
+      borderColor: '#315F35',
+    },
+
+    overallStatusBadgeOff: {
+      backgroundColor: '#351B1B',
+      borderColor: '#793838',
+    },
+
+    overallStatusText: {
+      fontSize: 9,
+      fontWeight: '900',
+    },
+
+    overallStatusTextOn: {
+      color: '#63D16D',
+    },
+
+    overallStatusTextOff: {
+      color: '#FF8A80',
+    },
+
+    summaryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 18,
+    },
+
+    summaryCard: {
+      flexGrow: 1,
+      flexBasis: 150,
+      minWidth: 140,
+      padding: 13,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: '#303030',
+      backgroundColor: '#202020',
+    },
+
+    summaryIcon: {
+      fontSize: 18,
+      marginBottom: 7,
+    },
+
+    summaryLabel: {
+      color: '#888888',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+
+    summaryValue: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+      marginTop: 3,
+    },
+
+    summaryValueOn: {
+      color: '#63D16D',
+    },
+
+    summaryValueOff: {
+      color: '#FF8A80',
+    },
+
+    accordionCard: {
+      marginBottom: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: '#343434',
+      backgroundColor: '#1C1C1C',
+      overflow: 'hidden',
+    },
+
+    accordionHeader: {
+      minHeight: 76,
+      paddingHorizontal: 16,
+      paddingVertical: 13,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+
+    accordionHeaderLeft: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+
+    accordionIconBox: {
+      width: 42,
+      height: 42,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: withAlpha(primaryColor, 0.11),
+      borderWidth: 1,
+      borderColor: withAlpha(primaryColor, 0.35),
+    },
+
+    accordionIcon: {
+      fontSize: 19,
+    },
+
+    accordionHeaderText: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    accordionTitle: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '900',
+    },
+
+    accordionSubtitle: {
+      color: '#8C8C8C',
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 3,
+    },
+
+    accordionChevron: {
+      color: primaryColor,
+      fontSize: 22,
+      fontWeight: '700',
+      width: 28,
+      textAlign: 'center',
+    },
+
+    accordionBody: {
+      padding: 16,
+      paddingTop: 4,
+      borderTopWidth: 1,
+      borderTopColor: '#2D2D2D',
+    },
+
+    modeGrid: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+
+    modeGridPhone: {
+      flexDirection: 'column',
+    },
+
+    modeCard: {
+      flex: 1,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#353535',
+      backgroundColor: '#202020',
+    },
+
+    modeCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+
+    modeTitle: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+    },
+
+    modeDescription: {
+      color: '#888888',
+      fontSize: 10,
+      marginTop: 3,
+    },
+
+    modeScheduleRow: {
+      marginTop: 13,
+      paddingTop: 11,
+      borderTopWidth: 1,
+      borderTopColor: '#333333',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+
+    modeScheduleTextWrap: {
+      flex: 1,
+    },
+
+    modeScheduleLabel: {
+      color: '#CCCCCC',
+      fontSize: 10,
+      fontWeight: '800',
+    },
+
+    modeScheduleHint: {
+      color: '#777777',
+      fontSize: 9,
+      marginTop: 2,
+    },
+
+    subsectionBox: {
+      marginTop: 14,
+      padding: 14,
+      borderRadius: 11,
+      backgroundColor: '#181818',
+      borderWidth: 1,
+      borderColor: '#303030',
+    },
+
+    subsectionTitle: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '900',
+    },
+
+    subsectionSubtitle: {
+      color: '#858585',
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 3,
+    },
+
+    secondaryPrimaryButton: {
+      marginTop: 14,
+      minHeight: 40,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: primaryColor,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: withAlpha(primaryColor, 0.10),
+    },
+
+    secondaryPrimaryButtonText: {
+      color: primaryColor,
+      fontSize: 11,
+      fontWeight: '900',
+    },
+
+    inlineEmptyState: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 13,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#303030',
+      backgroundColor: '#181818',
+    },
+
+    inlineEmptyIcon: {
+      fontSize: 22,
+    },
+
+    inlineEmptyTextWrap: {
+      flex: 1,
+    },
+
+    inlineEmptyTitle: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    inlineEmptyText: {
+      color: '#858585',
+      fontSize: 9,
+      marginTop: 2,
+      lineHeight: 14,
+    },
+
+    primaryButtonFull: {
+      minHeight: 44,
+      marginTop: 16,
+      width: '100%',
+      paddingHorizontal: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: primaryColor,
+    },
+
+    infoCallout: {
+      marginBottom: 14,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: withAlpha(primaryColor, 0.30),
+      backgroundColor: withAlpha(primaryColor, 0.07),
+    },
+
+    infoCalloutTitle: {
+      color: primaryColor,
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
+    infoCalloutText: {
+      color: '#A7A7A7',
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 3,
+    },
+
+    locationSelectedCard: {
+      marginTop: 12,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#315F35',
+      backgroundColor: '#17331A',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+
+    locationSelectedCheck: {
+      color: '#63D16D',
+      fontSize: 16,
+      fontWeight: '900',
+    },
+
+    locationSelectedTextWrap: {
+      flex: 1,
+    },
+
+    locationSelectedTitle: {
+      color: '#63D16D',
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
+    locationSelectedText: {
+      color: '#D5D5D5',
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 3,
+    },
+
+    zonesToolbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 14,
+      marginBottom: 12,
+    },
+
+    zonesToolbarPhone: {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+
+    zonesToolbarText: {
+      flex: 1,
+    },
+
+    zoneList: {
+      gap: 9,
+    },
+
+    zoneCardModern: {
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#353535',
+      backgroundColor: '#202020',
+    },
+
+    zoneCardTopRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+
+    zoneRangeLarge: {
+      color: primaryColor,
+      fontSize: 13,
+      fontWeight: '900',
+      marginTop: 7,
+    },
+
+    zonePricePill: {
+      minWidth: 82,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: '#181818',
+      borderWidth: 1,
+      borderColor: '#333333',
+      alignItems: 'flex-end',
+    },
+
+    zonePriceLabel: {
+      color: '#777777',
+      fontSize: 8,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+
+    zonePriceValue: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '900',
+      marginTop: 2,
+    },
+
+    zoneDivider: {
+      height: 1,
+      backgroundColor: '#303030',
+      marginVertical: 12,
+    },
+
+    zoneActionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+
+    zoneActionRowPhone: {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+
+    zoneOrderCompact: {
+      color: '#777777',
+      fontSize: 9,
+      fontWeight: '700',
+    },
+
+    zoneActionButtons: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+
+    editButtonCompact: {
+      minHeight: 32,
+      paddingHorizontal: 10,
+      borderRadius: 7,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: primaryColor,
+      backgroundColor: withAlpha(primaryColor, 0.10),
+    },
+
+    stateButtonCompact: {
+      minHeight: 32,
+      paddingHorizontal: 10,
+      borderRadius: 7,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+    },
+
+    deleteButtonCompact: {
+      minHeight: 32,
+      paddingHorizontal: 10,
+      borderRadius: 7,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#793838',
+      backgroundColor: '#351B1B',
+    },
+
+    emptyActionButton: {
+      marginTop: 14,
+      minHeight: 38,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      backgroundColor: primaryColor,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    emptyActionButtonText: {
+      color: '#171717',
+      fontSize: 10,
+      fontWeight: '900',
+    },
+
     modalOverlay: {
       flex:
         1,

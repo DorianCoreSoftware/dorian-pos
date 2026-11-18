@@ -65,6 +65,30 @@ export const styles =
       fontWeight: '800',
     },
 
+
+    sectionTabContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+
+    sectionBadge: {
+      minWidth: 20,
+      height: 20,
+      paddingHorizontal: 5,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    sectionBadgeText: {
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: '900',
+      textAlign: 'center',
+    },
+
     mobileSectionSelector: {
       minHeight: 58,
       flexDirection: 'row',
@@ -114,7 +138,10 @@ export const styles =
 
     content: {
       flex: 1,
+      width: '100%',
+      minWidth: 0,
       minHeight: 0,
+      overflow: 'hidden',
     },
 
     modalBackdrop: {
@@ -122,6 +149,7 @@ export const styles =
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 14,
+      paddingVertical: 12,
       backgroundColor:
         'rgba(0, 0, 0, 0.72)',
     },
@@ -133,7 +161,6 @@ export const styles =
     mobileMenuCard: {
       width: '100%',
       maxWidth: 520,
-      maxHeight: '82%',
       alignSelf: 'center',
       borderRadius: 22,
       borderWidth: 1,
@@ -179,13 +206,12 @@ export const styles =
     },
 
     mobileMenuList: {
-      flexGrow: 0,
-      flexShrink: 1,
+      flex: 1,
+      minHeight: 0,
     },
 
     mobileMenuListContent: {
       padding: 12,
-      paddingBottom: 42,
     },
 
     mobileMenuOption: {

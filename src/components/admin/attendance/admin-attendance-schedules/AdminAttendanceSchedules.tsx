@@ -59,6 +59,8 @@ function incidentLabel(item: AttendanceDailySummaryItem): string {
 }
 
 export function AdminAttendanceSchedules() {
+  const { width } = useWindowDimensions();
+  const compactIncidents = width < 760;
   const { theme } = useBusiness();
 
   const {
@@ -549,21 +551,32 @@ export function AdminAttendanceSchedules() {
           <Text style={{ color: theme.textMuted }}>No hay incidencias en el periodo.</Text>
         ) : (
           incidents.slice(0, 80).map((item, index) => (
-            <View key={`${item.workDate}-${item.userId}-${index}`} style={[styles.incidentRow, { borderColor: theme.border }]}> 
-              <View style={{ flex: 1, minWidth: 180 }}>
-                <Text style={{ color: theme.text, fontWeight: '900' }}>{item.employeeName}</Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12 }}>{item.workDate} · {item.employeeRole}</Text>
+            <View
+              key={`${item.workDate}-${item.userId}-${index}`}
+              style={[
+                styles.incidentRow,
+                compactIncidents && styles.incidentRowCompact,
+                { borderColor: theme.border },
+              ]}
+            >
+              <View style={compactIncidents ? styles.incidentEmployeeCompact : styles.incidentEmployee}>
+                <Text numberOfLines={1} style={{ color: theme.text, fontWeight: '900' }}>{item.employeeName}</Text>
+                <Text numberOfLines={1} style={{ color: theme.textMuted, fontSize: 12 }}>{item.workDate} · {item.employeeRole}</Text>
               </View>
-              <View style={{ width: 190 }}>
+              <View style={compactIncidents ? styles.incidentTimeCompact : styles.incidentTime}>
                 <Text style={{ color: theme.textMuted, fontSize: 11 }}>ESPERADO</Text>
-                <Text style={{ color: theme.text }}>{formatTime(item.expectedStart)} – {formatTime(item.expectedEnd)}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} style={{ color: theme.text }}>
+                  {formatTime(item.expectedStart)} – {formatTime(item.expectedEnd)}
+                </Text>
               </View>
-              <View style={{ width: 190 }}>
+              <View style={compactIncidents ? styles.incidentTimeCompact : styles.incidentTime}>
                 <Text style={{ color: theme.textMuted, fontSize: 11 }}>REGISTRADO</Text>
-                <Text style={{ color: theme.text }}>{formatTime(item.clockIn)} – {formatTime(item.clockOut)}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} style={{ color: theme.text }}>
+                  {formatTime(item.clockIn)} – {formatTime(item.clockOut)}
+                </Text>
               </View>
-              <View style={{ width: 240 }}>
-                <Text style={{ color: item.dayStatus === 'absent' ? theme.danger : theme.primary, fontWeight: '900' }}>{incidentLabel(item)}</Text>
+              <View style={compactIncidents ? styles.incidentStatusCompact : styles.incidentStatus}>
+                <Text numberOfLines={2} style={{ color: item.dayStatus === 'absent' ? theme.danger : theme.primary, fontWeight: '900' }}>{incidentLabel(item)}</Text>
               </View>
             </View>
           ))

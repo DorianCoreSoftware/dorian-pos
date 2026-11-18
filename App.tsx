@@ -13,6 +13,10 @@ import {
 } from 'react-native';
 
 import {
+  SafeAreaProvider,
+} from 'react-native-safe-area-context';
+
+import {
   AuthProvider,
   useAuth,
 } from './src/context/AuthContext';
@@ -53,6 +57,14 @@ import {
 import {
   AdminScreen,
 } from './src/screens/admin/AdminScreen';
+
+import {
+  AdminAiHandoffInbox,
+} from './src/components/admin/ai-handoff/AdminAiHandoffInbox';
+
+import {
+  AdminFeedback,
+} from './src/components/admin/feedback/AdminFeedback';
 
 import {
   EventsScreen,
@@ -97,6 +109,7 @@ import {
 
 import {
   getLastPushNotificationResponse,
+  isAdminActionNotification,
   isEventRequestNotification,
   isWebOrderNotification,
   listenToPushNotificationResponses,
@@ -125,6 +138,16 @@ import {
   getDriverOrders,
   listenToDriverOrderChanges,
 } from './src/services/driverService';
+
+import {
+  getAiHandoffPendingCount,
+  subscribeAiHandoffRealtime,
+} from './src/services/aiHandoffService';
+
+import {
+  getCustomerFeedbackPendingCount,
+  subscribeCustomerFeedbackRealtime,
+} from './src/services/customerFeedbackService';
 
 function MainApp() {
   const {
@@ -192,6 +215,40 @@ function MainApp() {
     driverOrdersCount,
     setDriverOrdersCount,
   ] = useState(0);
+
+  const [
+    aiHandoffPendingCount,
+    setAiHandoffPendingCount,
+  ] = useState(0);
+
+  const [
+    feedbackPendingCount,
+    setFeedbackPendingCount,
+  ] = useState(0);
+
+  const refreshAiHandoffPendingCount = async (): Promise<void> => {
+    if (user?.role !== 'admin') {
+      setAiHandoffPendingCount(0);
+      return;
+    }
+    try {
+      setAiHandoffPendingCount(await getAiHandoffPendingCount());
+    } catch (error) {
+      console.warn('No se pudo actualizar Inbox IA:', error);
+    }
+  };
+
+  const refreshFeedbackPendingCount = async (): Promise<void> => {
+    if (user?.role !== 'admin') {
+      setFeedbackPendingCount(0);
+      return;
+    }
+    try {
+      setFeedbackPendingCount(await getCustomerFeedbackPendingCount());
+    } catch (error) {
+      console.warn('No se pudo actualizar Sugerencias:', error);
+    }
+  };
 
   const refreshDriverOrdersCount =
     async (): Promise<void> => {
@@ -365,6 +422,27 @@ function MainApp() {
   ]);
 
   useEffect(() => {
+    void refreshAiHandoffPendingCount();
+    void refreshFeedbackPendingCount();
+
+    if (user?.role !== 'admin') {
+      return;
+    }
+
+    const unsubscribeAi = subscribeAiHandoffRealtime(() => {
+      void refreshAiHandoffPendingCount();
+    });
+    const unsubscribeFeedback = subscribeCustomerFeedbackRealtime(() => {
+      void refreshFeedbackPendingCount();
+    });
+
+    return () => {
+      unsubscribeAi();
+      unsubscribeFeedback();
+    };
+  }, [user?.id, user?.role]);
+
+  useEffect(() => {
     void refreshAttendanceStatus();
 
     if (!user?.id) {
@@ -383,6 +461,8 @@ function MainApp() {
   useEffect(() => {
     void refreshAttendanceStatus();
     void refreshDriverOrdersCount();
+    void refreshAiHandoffPendingCount();
+    void refreshFeedbackPendingCount();
   }, [activeTab]);
 
   useEffect(() => {
@@ -569,6 +649,16 @@ function MainApp() {
             void refreshNewEventRequestsCount();
           }
         },
+        data => {
+          if (user?.role !== 'admin') return;
+          if (data.type === 'ai_handoff_pending') {
+            setActiveTab('ai-inbox');
+            void refreshAiHandoffPendingCount();
+          } else if (data.type === 'customer_feedback_new') {
+            setActiveTab('feedback');
+            void refreshFeedbackPendingCount();
+          }
+        },
       );
 
     const attendanceSubscription =
@@ -586,6 +676,13 @@ function MainApp() {
       listenToPushNotificationsReceived(
         () => {
           void refreshNewEventRequestsCount();
+        },
+        data => {
+          if (data.type === 'ai_handoff_pending') {
+            void refreshAiHandoffPendingCount();
+          } else if (data.type === 'customer_feedback_new') {
+            void refreshFeedbackPendingCount();
+          }
         },
       );
 
@@ -637,6 +734,19 @@ function MainApp() {
               );
               setActiveTab('events');
               await refreshNewEventRequestsCount();
+            }
+            return;
+          }
+
+          if (isAdminActionNotification(data)) {
+            if (user?.role === 'admin') {
+              if (data.type === 'ai_handoff_pending') {
+                setActiveTab('ai-inbox');
+                await refreshAiHandoffPendingCount();
+              } else {
+                setActiveTab('feedback');
+                await refreshFeedbackPendingCount();
+              }
             }
             return;
           }
@@ -1231,6 +1341,20 @@ function MainApp() {
         );
       }
 
+      if (activeTab === 'ai-inbox') {
+        if (user?.role !== 'admin') {
+          return renderRestricted('Solo un administrador puede atender Inbox IA.');
+        }
+        return <AdminAiHandoffInbox />;
+      }
+
+      if (activeTab === 'feedback') {
+        if (user?.role !== 'admin') {
+          return renderRestricted('Solo un administrador puede revisar sugerencias.');
+        }
+        return <AdminFeedback />;
+      }
+
       if (
         activeTab ===
         'admin'
@@ -1289,6 +1413,12 @@ function MainApp() {
         }
         driverOrdersCount={
           driverOrdersCount
+        }
+        aiHandoffPendingCount={
+          aiHandoffPendingCount
+        }
+        feedbackPendingCount={
+          feedbackPendingCount
         }
         user={
           user
@@ -1542,10 +1672,12 @@ function NavigationGateway() {
 
 export default function App() {
   return (
-    <BusinessProvider>
-      <AuthProvider>
-        <NavigationGateway />
-      </AuthProvider>
-    </BusinessProvider>
+    <SafeAreaProvider>
+      <BusinessProvider>
+        <AuthProvider>
+          <NavigationGateway />
+        </AuthProvider>
+      </BusinessProvider>
+    </SafeAreaProvider>
   );
 }

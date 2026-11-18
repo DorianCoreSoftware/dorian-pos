@@ -1,16 +1,18 @@
-import React from 'react';
+import React, {
+  useMemo,
+  useState,
+} from 'react';
 
 import {
-  Alert,
   Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-
-import {
-  styles,
-} from '../../../App.styles';
 
 import {
   canAccessAdminPanel,
@@ -20,20 +22,16 @@ import {
 } from '../../Utils/permissions';
 
 import {
-  printTestTicket,
-} from '../../services/printerService';
-
-import {
-  useResponsiveLayout,
-} from '../../hooks/useResponsiveLayout';
-
-import {
   useBusiness,
 } from '../../context/BusinessContext';
 
 import {
   runtimeBranding,
 } from '../../generated/runtimeClientBranding';
+
+import {
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 export type MainTab =
   | 'pos'
@@ -44,78 +42,65 @@ export type MainTab =
   | 'loyalty'
   | 'cash'
   | 'events'
+  | 'ai-inbox'
+  | 'feedback'
   | 'admin';
 
 interface HeaderProps {
   activeTab: MainTab;
-
-  setActiveTab: (
-    tab: MainTab,
-  ) => void;
-
+  setActiveTab: (tab: MainTab) => void;
   editingOrderId: string | null;
-
   pendingOrdersCount: number;
-
   newEventRequestsCount: number;
-
   driverOrdersCount: number;
-
+  aiHandoffPendingCount: number;
+  feedbackPendingCount: number;
   user: any;
-
   logout: () => void;
+}
+
+interface NavigationItem {
+  tab: MainTab;
+  label: string;
+  icon: string;
+  badge?: number;
+}
+
+function roleLabel(role: string | null | undefined): string {
+  if (role === 'admin') return 'Administrador';
+  if (role === 'accountant') return 'Contador';
+  if (role === 'operator') return 'Operador';
+  if (role === 'driver') return 'Repartidor';
+  if (role === 'seller') return 'Vendedor';
+  return role || 'Usuario';
 }
 
 export function GlobalHeader({
   activeTab,
   setActiveTab,
-  editingOrderId,
   pendingOrdersCount,
   newEventRequestsCount,
   driverOrdersCount,
+  aiHandoffPendingCount,
+  feedbackPendingCount,
   user,
   logout,
 }: HeaderProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const insets =
+    useSafeAreaInsets();
+
   const {
-    isPhone,
-  } = useResponsiveLayout();
+    height:
+      windowHeight,
+  } =
+    useWindowDimensions();
 
   const {
     business,
     theme,
-    isLoading,
-    error,
   } = useBusiness();
-
-  console.log(
-    'GLOBAL HEADER BUSINESS:',
-    business,
-  );
-
-  console.log(
-    'GLOBAL HEADER LOGO:',
-    business?.identity.logoUrl,
-  );
-
-  console.log(
-    'GLOBAL HEADER NAME:',
-    business?.identity.businessName,
-  );
-
-  console.log(
-    'GLOBAL HEADER BUSINESS:',
-    business,
-  );
-
-  console.log(
-    'GLOBAL HEADER LOADING:',
-    isLoading,
-  );
-
-  console.log(
-    'GLOBAL HEADER ERROR:',
-    error,
-  );
 
   const logoUrl =
     business?.identity.logoUrl?.trim() ||
@@ -131,481 +116,355 @@ export function GlobalHeader({
     business?.identity.businessName ??
     'Dorian POS';
 
-  const handlePrinterTest =
-    async (): Promise<void> => {
-      try {
-        await printTestTicket();
+  const items = useMemo<NavigationItem[]>(() => {
+    if (user?.role === 'accountant') {
+      return [
+        { tab: 'attendance', label: 'Asistencia', icon: '🕐' },
+        { tab: 'admin', label: 'Nómina', icon: '💵' },
+      ];
+    }
 
-        Alert.alert(
-          'Impresión enviada',
-          'La prueba se imprimió correctamente.',
-        );
-      } catch (error) {
-        console.error(
-          'Error de impresora:',
-          error,
-        );
+    if (user?.role === 'driver') {
+      return [
+        {
+          tab: 'driver',
+          label: 'Reparto',
+          icon: '🛵',
+          badge: driverOrdersCount,
+        },
+        { tab: 'attendance', label: 'Asistencia', icon: '🕐' },
+      ];
+    }
 
-        Alert.alert(
-          'Error de impresora',
-          error instanceof Error
-            ? error.message
-            : 'No se pudo imprimir.',
-        );
-      }
-    };
-
-  const getTabButtonStyle = (
-    tab: MainTab,
-  ) => [
-      styles.tabButton,
-
-      isPhone &&
-      styles.tabButtonPhone,
-
-      activeTab === tab &&
-      styles.tabActiveButton,
-
-      activeTab === tab && {
-        backgroundColor:
-          theme.primary,
-      },
+    const next: NavigationItem[] = [
+      { tab: 'pos', label: 'Menú', icon: '🍔' },
     ];
 
-  const getTabTextStyle = (
-    tab: MainTab,
-  ) => [
-      styles.tabText,
+    if (business?.features.kitchenEnabled) {
+      next.push({
+        tab: 'kitchen',
+        label: 'Pedidos',
+        icon: '🧾',
+        badge: pendingOrdersCount,
+      });
+    }
 
-      isPhone &&
-      styles.tabTextPhone,
+    next.push({ tab: 'sales', label: 'Ventas', icon: '📊' });
 
-      activeTab === tab &&
-      styles.tabActiveText,
+    if (business?.features.loyaltyEnabled) {
+      next.push({ tab: 'loyalty', label: 'Recompensas', icon: '🎁' });
+    }
 
-      activeTab === tab && {
-        color:
-          theme.onPrimary,
-      },
-    ];
+    if (canManageCash(user)) {
+      next.push({ tab: 'cash', label: 'Caja', icon: '💵' });
+    }
+
+    if (
+      business?.features.eventsEnabled &&
+      canManageCatalog(user)
+    ) {
+      next.push({
+        tab: 'events',
+        label: 'Eventos',
+        icon: '🎉',
+        badge: newEventRequestsCount,
+      });
+    }
+
+    if (
+      business?.features.deliveryEnabled &&
+      canAccessDriverOrders(user)
+    ) {
+      next.push({
+        tab: 'driver',
+        label: 'Reparto',
+        icon: '🛵',
+        badge: driverOrdersCount,
+      });
+    }
+
+    next.push({ tab: 'attendance', label: 'Asistencia', icon: '🕐' });
+
+    if (user?.role === 'admin') {
+      next.push({
+        tab: 'ai-inbox',
+        label: 'Inbox IA',
+        icon: '🤖',
+        badge: aiHandoffPendingCount,
+      });
+      next.push({
+        tab: 'feedback',
+        label: 'Sugerencias',
+        icon: '💬',
+        badge: feedbackPendingCount,
+      });
+    }
+
+    if (canAccessAdminPanel(user)) {
+      next.push({ tab: 'admin', label: 'Admin', icon: '⚙️' });
+    }
+
+    return next;
+  }, [
+    user,
+    business?.features.kitchenEnabled,
+    business?.features.loyaltyEnabled,
+    business?.features.eventsEnabled,
+    business?.features.deliveryEnabled,
+    pendingOrdersCount,
+    newEventRequestsCount,
+    driverOrdersCount,
+    aiHandoffPendingCount,
+    feedbackPendingCount,
+  ]);
+
+  const activeItem =
+    items.find(item => item.tab === activeTab) ??
+    items[0];
+
+  const goTo = (tab: MainTab): void => {
+    setActiveTab(tab);
+    setDrawerOpen(false);
+  };
 
   return (
-    <View
-      style={[
-        styles.header,
-
-        {
-          backgroundColor:
-            theme.surface,
-        },
-
-        isPhone &&
-        styles.headerPhone,
-      ]}
-    >
+    <>
       <View
         style={[
-          styles.headerTopRow,
-
-          isPhone &&
-          styles.headerTopRowPhone,
+          localStyles.header,
+          {
+            backgroundColor: theme.surface,
+            borderBottomColor: theme.border,
+          },
         ]}
       >
-        <View
-          style={
-            styles.headerBrandContainer
-          }
+        <TouchableOpacity
+          onPress={() => setDrawerOpen(true)}
+          style={[
+            localStyles.menuButton,
+            {
+              borderColor: theme.border,
+              backgroundColor: theme.surfaceAlt,
+            },
+          ]}
         >
-          {logoSource ? (
-            <Image
-              source={logoSource}
-              style={[
-                styles.headerLogoLetters,
-                isPhone &&
-                styles.headerLogoLettersPhone,
-              ]}
-              resizeMode="contain"
-            />
-          ) : (
-            <Text
-              style={{
-                color:
-                  theme.primary,
-                fontSize:
-                  22,
-                fontWeight:
-                  '900',
-              }}
-            >
-              {businessName}
-            </Text>
-          )}
+          <Text style={[localStyles.menuIcon, { color: theme.text }]}>☰</Text>
+        </TouchableOpacity>
 
-          {!logoSource && !businessName ? (
-            <Text
-              style={{
-                color:
-                  theme.primary,
-
-                fontSize:
-                  22,
-
-                fontWeight:
-                  '900',
-              }}
-            >
-              Dorian POS
-            </Text>
+        <View style={localStyles.activeModule}>
+          <Text style={[localStyles.activeModuleText, { color: theme.text }]} numberOfLines={1}>
+            {activeItem?.label ?? ''}
+          </Text>
+          {activeItem?.badge && activeItem.badge > 0 ? (
+            <View style={[localStyles.headerBadge, { backgroundColor: theme.primary }]}>
+              <Text style={[localStyles.headerBadgeText, { color: theme.onPrimary }]}>
+                {activeItem.badge > 99 ? '99+' : activeItem.badge}
+              </Text>
+            </View>
           ) : null}
         </View>
 
-        <View
-          style={[
-            styles.userContainer,
+        <View style={localStyles.headerSpacer} />
 
-            isPhone &&
-            styles.userContainerPhone,
-          ]}
-        >
-          {!isPhone ? (
-            <Text
-              style={[
-                styles.userName,
-
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              {user?.fullName}{' '}
-              (
-              {user?.role === 'admin'
-                ? 'Admin'
-                : user?.role === 'accountant'
-                  ? 'Contador'
-                  : user?.role === 'operator'
-                    ? 'Operador'
-                    : user?.role === 'driver'
-                      ? 'Reparto'
-                      : 'Caja'}
-              )
-            </Text>
+        <View style={localStyles.brandBlock}>
+          {logoSource ? (
+            <Image
+              source={logoSource}
+              style={localStyles.logo}
+              resizeMode="contain"
+            />
           ) : (
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.userNamePhone,
-
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              {user?.fullName}
+            <Text style={[localStyles.businessName, { color: theme.text }]} numberOfLines={1}>
+              {businessName}
             </Text>
           )}
+        </View>
+      </View>
 
+      <Modal
+        visible={drawerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDrawerOpen(false)}
+      >
+        <View style={localStyles.modalRoot}>
           <TouchableOpacity
-            onPress={
-              logout
-            }
-            style={[
-              styles.logoutButton,
+            activeOpacity={1}
+            style={localStyles.backdrop}
+            onPress={() => setDrawerOpen(false)}
+          />
 
+          <View
+            style={[
+              localStyles.drawer,
               {
-                borderColor:
-                  theme.primary,
+                backgroundColor: theme.surface,
+                borderRightColor: theme.border,
+                marginTop:
+                  Math.max(
+                    4,
+                    insets.top,
+                  ),
+                marginBottom:
+                  Math.max(
+                    24,
+                    insets.bottom + 24,
+                  ),
+                height:
+                  Math.max(
+                    320,
+                    windowHeight -
+                      Math.max(
+                        4,
+                        insets.top,
+                      ) -
+                      Math.max(
+                        24,
+                        insets.bottom + 24,
+                      ),
+                  ),
               },
             ]}
           >
-            <Text
-              style={[
-                styles.logoutText,
+            <View style={[localStyles.drawerHeader, { borderBottomColor: theme.border }]}>
+              <View style={localStyles.drawerIdentity}>
+                {logoSource ? (
+                  <Image source={logoSource} style={localStyles.drawerLogo} resizeMode="contain" />
+                ) : null}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[localStyles.drawerBusiness, { color: theme.text }]} numberOfLines={1}>
+                    {businessName}
+                  </Text>
+                  <Text style={[localStyles.drawerSubtitle, { color: theme.textMuted }]}>Navegación</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setDrawerOpen(false)} style={localStyles.closeButton}>
+                <Text style={[localStyles.closeText, { color: theme.text }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
+            <ScrollView
+              style={localStyles.navScroll}
+              contentContainerStyle={[
+                localStyles.navContent,
                 {
-                  color:
-                    theme.primary,
+                  paddingBottom:
+                    Math.max(
+                      72,
+                      insets.bottom + 64,
+                    ),
                 },
               ]}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+              bounces={false}
             >
-              Salir
-            </Text>
-          </TouchableOpacity>
+              {items.map(item => {
+                const active = item.tab === activeTab;
+                return (
+                  <TouchableOpacity
+                    key={item.tab}
+                    onPress={() => goTo(item.tab)}
+                    style={[
+                      localStyles.navItem,
+                      {
+                        backgroundColor: active ? theme.surfaceAlt : 'transparent',
+                        borderColor: active ? theme.primary : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Text style={localStyles.navIcon}>{item.icon}</Text>
+                    <Text
+                      style={[
+                        localStyles.navLabel,
+                        { color: active ? theme.primary : theme.text },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {item.badge && item.badge > 0 ? (
+                      <View style={[localStyles.badge, { backgroundColor: theme.primary }]}>
+                        <Text style={[localStyles.badgeText, { color: theme.onPrimary }]}>
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+
+              <View style={[localStyles.userCard, { borderTopColor: theme.border }]}>
+                <Text style={[localStyles.userName, { color: theme.text }]} numberOfLines={1}>
+                  {user?.fullName || user?.email || 'Usuario'}
+                </Text>
+                <Text style={[localStyles.userRole, { color: theme.textMuted }]}>
+                  {roleLabel(user?.role)}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setDrawerOpen(false);
+                    logout();
+                  }}
+                  style={[localStyles.logoutButton, { borderColor: theme.primary }]}
+                >
+                  <Text style={[localStyles.logoutText, { color: theme.primary }]}>Cerrar sesión</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
         </View>
-      </View>
-
-      <View
-        style={[
-          styles.tabContainer,
-
-          isPhone &&
-          styles.tabContainerPhone,
-        ]}
-      >
-        {user?.role === 'accountant' ? (
-          <>
-            <TouchableOpacity
-              style={getTabButtonStyle('admin')}
-              onPress={() => setActiveTab('admin')}
-            >
-              <Text style={getTabTextStyle('admin')}>
-                NÓMINA
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={getTabButtonStyle('attendance')}
-              onPress={() => setActiveTab('attendance')}
-            >
-              <Text style={getTabTextStyle('attendance')}>
-                ASISTENCIA
-              </Text>
-            </TouchableOpacity>
-          </>
-        ) : user?.role === 'driver' ? (
-          <>
-            <TouchableOpacity
-              style={getTabButtonStyle('driver')}
-              onPress={() => setActiveTab('driver')}
-            >
-              <Text style={getTabTextStyle('driver')}>
-                REPARTO{driverOrdersCount > 0 ? ` (${driverOrdersCount})` : ''}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={getTabButtonStyle('attendance')}
-              onPress={() => setActiveTab('attendance')}
-            >
-              <Text style={getTabTextStyle('attendance')}>
-                ASISTENCIA
-              </Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-        <TouchableOpacity
-          style={
-            getTabButtonStyle(
-              'pos',
-            )
-          }
-          onPress={() =>
-            setActiveTab(
-              'pos',
-            )
-          }
-        >
-          <Text
-            style={
-              getTabTextStyle(
-                'pos',
-              )
-            }
-          >
-            MENÚ
-          </Text>
-        </TouchableOpacity>
-
-        {business?.features.kitchenEnabled ? (
-          <TouchableOpacity
-            style={
-              getTabButtonStyle(
-                'kitchen',
-              )
-            }
-            onPress={() =>
-              setActiveTab(
-                'kitchen',
-              )
-            }
-          >
-            <Text
-              style={
-                getTabTextStyle(
-                  'kitchen',
-                )
-              }
-            >
-              PEDIDOS (
-              {pendingOrdersCount})
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        <TouchableOpacity
-          style={
-            getTabButtonStyle(
-              'sales',
-            )
-          }
-          onPress={() =>
-            setActiveTab(
-              'sales',
-            )
-          }
-        >
-          <Text
-            style={
-              getTabTextStyle(
-                'sales',
-              )
-            }
-          >
-            VENTAS
-          </Text>
-        </TouchableOpacity>
-
-        {business?.features.loyaltyEnabled ? (
-          <TouchableOpacity
-            style={
-              getTabButtonStyle(
-                'loyalty',
-              )
-            }
-            onPress={() =>
-              setActiveTab(
-                'loyalty',
-              )
-            }
-          >
-            <Text
-              style={
-                getTabTextStyle(
-                  'loyalty',
-                )
-              }
-            >
-              RECOMPENSAS
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {canManageCash(
-          user,
-        ) ? (
-          <TouchableOpacity
-            style={
-              getTabButtonStyle(
-                'cash',
-              )
-            }
-            onPress={() =>
-              setActiveTab(
-                'cash',
-              )
-            }
-          >
-            <Text
-              style={
-                getTabTextStyle(
-                  'cash',
-                )
-              }
-            >
-              CAJA
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-
-
-        {business?.features.eventsEnabled && canManageCatalog(user) ? (
-          <TouchableOpacity
-            style={getTabButtonStyle('events')}
-            onPress={() => setActiveTab('events')}
-          >
-            <Text style={getTabTextStyle('events')}>
-              EVENTOS{newEventRequestsCount > 0 ? ` (${newEventRequestsCount})` : ''}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {business?.features.deliveryEnabled &&
-        canAccessDriverOrders(user) ? (
-          <TouchableOpacity
-            style={
-              getTabButtonStyle(
-                'driver',
-              )
-            }
-            onPress={() =>
-              setActiveTab(
-                'driver',
-              )
-            }
-          >
-            <Text
-              style={
-                getTabTextStyle(
-                  'driver',
-                )
-              }
-            >
-              REPARTO{driverOrdersCount > 0 ? ` (${driverOrdersCount})` : ''}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {canAccessAdminPanel(
-          user,
-        ) ? (
-          <TouchableOpacity
-            style={
-              getTabButtonStyle(
-                'admin',
-              )
-            }
-            onPress={() =>
-              setActiveTab(
-                'admin',
-              )
-            }
-          >
-            <Text
-              style={
-                getTabTextStyle(
-                  'admin',
-                )
-              }
-            >
-              ADMIN
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-            <TouchableOpacity
-              style={getTabButtonStyle('attendance')}
-              onPress={() => setActiveTab('attendance')}
-            >
-              <Text style={getTabTextStyle('attendance')}>
-                ASISTENCIA
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-
-      {editingOrderId ? (
-        <View
-          style={
-            styles.editingOrderBadge
-          }
-        >
-          <Text
-            style={
-              styles.editingOrderBadgeText
-            }
-            numberOfLines={
-              1
-            }
-          >
-            ⚠️ Editando pedido
-          </Text>
-        </View>
-      ) : null}
-    </View>
+      </Modal>
+    </>
   );
 }
+
+const localStyles = StyleSheet.create({
+  header: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+    borderBottomWidth: 1,
+  },
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuIcon: { fontSize: 23, fontWeight: '900' },
+  brandBlock: { minWidth: 76, alignItems: 'flex-end', justifyContent: 'center' },
+  logo: { width: 76, height: 44 },
+  businessName: { fontSize: 18, fontWeight: '900' },
+  activeModule: { minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 8, maxWidth: '42%' },
+  activeModuleText: { fontSize: 14, fontWeight: '900' },
+  headerSpacer: { flex: 1 },
+  headerBadge: { minWidth: 24, height: 24, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  headerBadgeText: { fontSize: 11, fontWeight: '900' },
+  modalRoot: { flex: 1, flexDirection: 'row' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.62)' },
+  drawer: { width: '82%', maxWidth: 360, alignSelf: 'flex-start', borderRightWidth: 1, overflow: 'hidden' },
+  drawerHeader: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, borderBottomWidth: 1 },
+  drawerIdentity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  drawerLogo: { width: 58, height: 38 },
+  drawerBusiness: { fontSize: 16, fontWeight: '900' },
+  drawerSubtitle: { marginTop: 2, fontSize: 11, fontWeight: '700' },
+  closeButton: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  closeText: { fontSize: 18, fontWeight: '900' },
+  navScroll: { flex: 1, minHeight: 0 },
+  navContent: { paddingHorizontal: 12, paddingTop: 12, gap: 6 },
+  navItem: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, borderWidth: 1, borderRadius: 11 },
+  navIcon: { width: 27, textAlign: 'center', fontSize: 18 },
+  navLabel: { flex: 1, fontSize: 14, fontWeight: '900' },
+  badge: { minWidth: 24, height: 24, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11, fontWeight: '900' },
+  userCard: { borderTopWidth: 1, marginTop: 10, paddingHorizontal: 4, paddingTop: 16, paddingBottom: 24 },
+  userName: { fontSize: 14, fontWeight: '900' },
+  userRole: { marginTop: 3, fontSize: 12, fontWeight: '700' },
+  logoutButton: { minHeight: 42, marginTop: 12, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  logoutText: { fontSize: 13, fontWeight: '900' },
+});

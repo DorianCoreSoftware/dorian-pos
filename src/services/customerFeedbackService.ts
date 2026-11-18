@@ -132,3 +132,33 @@ export async function updateCustomerFeedbackStatus(
         );
     }
 }
+
+export async function getCustomerFeedbackPendingCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('customer_feedback')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'new');
+
+  if (error) {
+    throw new Error(`No se pudo consultar el contador de sugerencias: ${error.message}`);
+  }
+
+  return Number(count ?? 0);
+}
+
+export function subscribeCustomerFeedbackRealtime(
+  onChange: () => void,
+): () => void {
+  const channel = supabase
+    .channel(`customer-feedback-${Date.now()}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'customer_feedback' },
+      () => onChange(),
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}

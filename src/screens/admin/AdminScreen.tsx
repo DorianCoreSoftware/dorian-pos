@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 
 import {
-  SafeAreaProvider,
   SafeAreaView,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 import {
@@ -96,6 +96,12 @@ import { appVersionLabel } from '../../Utils/appVersion';
 import { AdminAttendance } from '../../components/admin/attendance/admin-attendance/AdminAttendance';
 import { AdminPayroll } from '../../components/admin/payroll/AdminPayroll';
 import { AdminPaymentSettings } from '../../components/admin/payment-settings/AdminPaymentSettings';
+import { AdminAiOrders } from '../../components/admin/ai-orders/AdminAiOrders';
+import { AdminAiHandoffInbox } from '../../components/admin/ai-handoff/AdminAiHandoffInbox';
+import {
+  getAiHandoffPendingCount,
+  subscribeAiHandoffRealtime,
+} from '../../services/aiHandoffService';
 
 type AdminSection =
   | 'dashboard'
@@ -112,6 +118,8 @@ type AdminSection =
   | 'attendance'
   | 'payroll'
   | 'payments'
+  | 'ai-orders'
+  | 'ai-inbox'
   | 'reports'
   | 'expenses'
   | 'printer'
@@ -125,10 +133,34 @@ type AdminSection =
   | 'invoicing'
   | 'refunds';
 
+const lastAdminSectionByRole:
+  Record<string, AdminSection | undefined> =
+  {};
+
+function getInitialAdminSection(
+  role:
+    string | null | undefined,
+): AdminSection {
+  const roleKey =
+    role ?? 'unknown';
+
+  return (
+    lastAdminSectionByRole[
+      roleKey
+    ] ??
+    (
+      role === 'accountant'
+        ? 'payroll'
+        : 'dashboard'
+    )
+  );
+}
+
 interface AdminSectionOption {
   key: AdminSection;
   label: string;
   icon: string;
+  badge?: number;
 }
 
 interface AdminScreenProps {
@@ -138,16 +170,23 @@ interface AdminScreenProps {
   () => Promise<void>;
   onModifiersChanged:
   () => Promise<void>;
+  forceSectionSelector?: boolean;
 }
 
 export function AdminScreen({
   onProductsChanged,
   onCategoriesChanged,
   onModifiersChanged,
+  forceSectionSelector = false,
 }: AdminScreenProps) {
   const {
     width,
+    height:
+      windowHeight,
   } = useWindowDimensions();
+
+  const insets =
+    useSafeAreaInsets();
 
   const {
     business,
@@ -161,14 +200,19 @@ export function AdminScreen({
   const isPhone =
     width < 700;
 
+  const useSectionSelector =
+    isPhone ||
+    forceSectionSelector;
+
   const [
     activeSection,
     setActiveSection,
   ] =
     useState<AdminSection>(
-      user?.role === 'accountant'
-        ? 'payroll'
-        : 'dashboard',
+      () =>
+        getInitialAdminSection(
+          user?.role,
+        ),
     );
 
   const [
@@ -177,10 +221,75 @@ export function AdminScreen({
   ] =
     useState(false);
 
+
+  const [
+    aiHandoffPendingCount,
+    setAiHandoffPendingCount,
+  ] =
+    useState(0);
+
   const businessName =
     business?.identity
       .businessName ??
     'Dorian POS';
+
+  useEffect(
+    () => {
+      if (
+        user?.role !==
+        'admin'
+      ) {
+        setAiHandoffPendingCount(
+          0,
+        );
+
+        return;
+      }
+
+      let active =
+        true;
+
+      const refreshCount =
+        async (): Promise<void> => {
+          try {
+            const count =
+              await getAiHandoffPendingCount();
+
+            if (active) {
+              setAiHandoffPendingCount(
+                count,
+              );
+            }
+          } catch (
+            error
+          ) {
+            console.warn(
+              'No se pudo actualizar el contador de Inbox IA:',
+              error,
+            );
+          }
+        };
+
+      void refreshCount();
+
+      const unsubscribe =
+        subscribeAiHandoffRealtime(
+          () => {
+            void refreshCount();
+          },
+        );
+
+      return () => {
+        active =
+          false;
+
+        unsubscribe();
+      };
+    },
+    [
+      user?.role,
+    ],
+  );
 
   const availableSections =
     useMemo<
@@ -303,6 +412,14 @@ export function AdminScreen({
             },
             {
               key:
+                'ai-orders',
+              label:
+                'IA ORDERS',
+              icon:
+                '🤖',
+            },
+            {
+              key:
                 'reports',
               label:
                 'REPORTES',
@@ -419,14 +536,6 @@ export function AdminScreen({
             '🖼️',
         });
 
-        sections.push({
-          key:
-            'feedback',
-          label:
-            'BUZÓN',
-          icon:
-            '💬',
-        });
         if (
           user?.role === 'accountant'
         ) {
@@ -436,10 +545,18 @@ export function AdminScreen({
           );
         }
 
-        return sections;
+        return sections.sort(
+          (left, right) =>
+            left.label.localeCompare(
+              right.label,
+              'es',
+              { sensitivity: 'base' },
+            ),
+        );
       },
       [
         user?.role,
+        aiHandoffPendingCount,
         business?.features
           .deliveryEnabled,
         business?.features
@@ -467,6 +584,20 @@ export function AdminScreen({
         availableSections,
       ],
     );
+
+  useEffect(
+    () => {
+      lastAdminSectionByRole[
+        user?.role ??
+        'unknown'
+      ] =
+        activeSection;
+    },
+    [
+      activeSection,
+      user?.role,
+    ],
+  );
 
   useEffect(() => {
     const activeSectionExists =
@@ -639,6 +770,22 @@ export function AdminScreen({
       }
       if (
         activeSection ===
+        'ai-orders'
+      ) {
+        return (
+          <AdminAiOrders />
+        );
+      }
+      if (
+        activeSection ===
+        'ai-inbox'
+      ) {
+        return (
+          <AdminAiHandoffInbox />
+        );
+      }
+      if (
+        activeSection ===
         'reports'
       ) {
         return (
@@ -806,19 +953,60 @@ export function AdminScreen({
             )
           }
         >
-          <Text
-            style={[
-              styles.sectionTabText,
-              {
-                color:
-                  isActive
-                    ? theme.primary
-                    : theme.textMuted,
-              },
-            ]}
+          <View
+            style={
+              styles.sectionTabContent
+            }
           >
-            {option.label}
-          </Text>
+            <Text
+              style={[
+                styles.sectionTabText,
+                {
+                  color:
+                    isActive
+                      ? theme.primary
+                      : theme.textMuted,
+                },
+              ]}
+            >
+              {option.label}
+            </Text>
+
+            {
+              option.badge &&
+              option.badge >
+                0
+                ? (
+                  <View
+                    style={[
+                      styles.sectionBadge,
+                      {
+                        backgroundColor:
+                          theme.primary,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.sectionBadgeText,
+                        {
+                          color:
+                            theme.background,
+                        },
+                      ]}
+                    >
+                      {
+                        option.badge >
+                        99
+                          ? '99+'
+                          : option.badge
+                      }
+                    </Text>
+                  </View>
+                )
+                : null
+            }
+          </View>
         </TouchableOpacity>
       );
     };
@@ -885,7 +1073,7 @@ export function AdminScreen({
         </Text>
       </View>
 
-      {isPhone ? (
+      {useSectionSelector ? (
         <TouchableOpacity
           style={[
             styles.mobileSectionSelector,
@@ -943,9 +1131,20 @@ export function AdminScreen({
                   },
                 ]}
               >
-                {activeSectionOption
-                  ?.label ??
-                  'DASHBOARD'}
+                {
+                  activeSectionOption
+                    ?.label ??
+                  'DASHBOARD'
+                }
+                {
+                  activeSectionOption
+                    ?.badge &&
+                  activeSectionOption
+                    .badge >
+                    0
+                    ? ` (${activeSectionOption.badge})`
+                    : ''
+                }
               </Text>
             </View>
           </View>
@@ -995,8 +1194,7 @@ export function AdminScreen({
         }
       >
 
-        <SafeAreaProvider>
-          <SafeAreaView
+        <SafeAreaView
             edges={[
               'top',
               'bottom',
@@ -1025,8 +1223,24 @@ export function AdminScreen({
                     '100%',
                   maxWidth:
                     520,
-                  maxHeight:
-                    '82%',
+                  height:
+                    Math.max(
+                      320,
+                      Math.min(
+                        windowHeight -
+                          Math.max(
+                            16,
+                            insets.top,
+                          ) -
+                          Math.max(
+                            28,
+                            insets.bottom + 20,
+                          ) -
+                          24,
+                        windowHeight *
+                          0.88,
+                      ),
+                    ),
                   alignSelf:
                     'center',
                   borderRadius:
@@ -1111,11 +1325,20 @@ export function AdminScreen({
                 style={
                   styles.mobileMenuList
                 }
-                contentContainerStyle={
-                  styles.mobileMenuListContent
-                }
+                contentContainerStyle={[
+                  styles.mobileMenuListContent,
+                  {
+                    paddingBottom:
+                      Math.max(
+                        56,
+                        insets.bottom + 44,
+                      ),
+                  },
+                ]}
                 showsVerticalScrollIndicator
                 persistentScrollbar
+                nestedScrollEnabled
+                bounces={false}
               >
                 {availableSections.map(
                   option => {
@@ -1169,6 +1392,41 @@ export function AdminScreen({
                           {option.label}
                         </Text>
 
+                        {
+                          option.badge &&
+                          option.badge >
+                            0
+                            ? (
+                              <View
+                                style={[
+                                  styles.sectionBadge,
+                                  {
+                                    backgroundColor:
+                                      theme.primary,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.sectionBadgeText,
+                                    {
+                                      color:
+                                        theme.background,
+                                    },
+                                  ]}
+                                >
+                                  {
+                                    option.badge >
+                                    99
+                                      ? '99+'
+                                      : option.badge
+                                  }
+                                </Text>
+                              </View>
+                            )
+                            : null
+                        }
+
                         {isActive ? (
                           <Text
                             style={[
@@ -1188,8 +1446,7 @@ export function AdminScreen({
                 )}
               </ScrollView>
             </View>
-          </SafeAreaView>
-        </SafeAreaProvider>
+        </SafeAreaView>
       </Modal>
     </View>
   );

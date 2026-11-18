@@ -294,6 +294,7 @@ export async function printOrderTicket({
   order,
   paymentMethod,
   amountReceived,
+  paymentAmount,
   promoCoupon,
   ticketDate,
   isReprint = false,
@@ -342,17 +343,22 @@ export async function printOrderTicket({
       modifierPromotionDiscountTotal,
     );
 
+  const resolvedPaymentAmount =
+    Number(
+      paymentAmount ?? total,
+    );
+
   const received =
     paymentMethod === 'cash'
       ? Number(
-        amountReceived ?? total,
+        amountReceived ?? resolvedPaymentAmount,
       )
       : null;
 
   const change =
     received !== null
       ? roundCurrency(
-        received - total,
+        received - resolvedPaymentAmount,
       )
       : null;
 
@@ -820,13 +826,30 @@ export async function printOrderTicket({
     false,
   );
 
+  if (
+    Math.abs(
+      resolvedPaymentAmount -
+      total,
+    ) > 0.009
+  ) {
+    await printer.write(
+      createAmountRow(
+        'ABONO / AJUSTE',
+        resolvedPaymentAmount,
+        resolvedCurrencyCode,
+      ),
+    );
+  }
+
   await printer.write(
     createTextRow(
       'PAGO',
       paymentMethod ===
         'cash'
         ? 'EFECTIVO'
-        : 'TARJETA',
+        : paymentMethod === 'transfer'
+          ? 'TRANSFERENCIA'
+          : 'TARJETA',
     ),
   );
 
@@ -1479,6 +1502,9 @@ interface PrintOrderTicketParams {
 
   amountReceived:
   number | null;
+
+  paymentAmount?:
+  number;
 
   promoCoupon:
   PromoCoupon | null;

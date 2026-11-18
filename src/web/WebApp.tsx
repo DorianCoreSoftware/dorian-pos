@@ -16,6 +16,8 @@ import WebLoyaltyScreen from './screens/web-loyalty-screen/WebLoyaltyScreen';
 import WebEventsScreen from './screens/web-events-screen/WebEventsScreen';
 import WebEventQuoteScreen from './screens/web-event-quote-screen/WebEventQuoteScreen';
 import WebCookieNotice from './components/web-cookie-notice/WebCookieNotice';
+import DorianWebChat from './components/dorian-web-chat/DorianWebChat';
+import { trackWebVisit } from '../services/webAnalyticsService';
 
 type WebRoute =
   | 'menu'
@@ -97,6 +99,13 @@ export default function WebApp() {
     useState<WebRoute>(
       getCurrentRoute(),
     );
+
+  useEffect(
+    () => {
+      void trackWebVisit();
+    },
+    [],
+  );
 
   useEffect(
     () => {
@@ -286,7 +295,10 @@ export default function WebApp() {
               )
         }
       </View>
-       <WebCookieNotice />
+
+      <DorianWebChat />
+
+      <WebCookieNotice />
     </View>
   );
 }

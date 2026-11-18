@@ -230,6 +230,24 @@ export function AdminDeliverySettings() {
       false,
     );
 
+  const [
+    serviceSectionOpen,
+    setServiceSectionOpen,
+  ] =
+    useState(true);
+
+  const [
+    locationSectionOpen,
+    setLocationSectionOpen,
+  ] =
+    useState(false);
+
+  const [
+    zonesSectionOpen,
+    setZonesSectionOpen,
+  ] =
+    useState(true);
+
   const loadData =
     useCallback(
       async (): Promise<void> => {
@@ -355,6 +373,30 @@ export function AdminDeliverySettings() {
         zones,
       ],
     );
+
+
+  const activeZones =
+    useMemo(
+      () =>
+        sortedZones.filter(
+          zone =>
+            zone.isActive,
+        ),
+      [sortedZones],
+    );
+
+  const maxCoverageKm =
+    activeZones.length > 0
+      ? Math.max(
+          ...activeZones.map(
+            zone =>
+              zone.maxDistanceKm,
+          ),
+        )
+      : 0;
+
+  const activeScheduleWindows =
+    scheduleWindows.length;
 
   async function handleSaveSettings():
     Promise<void> {
@@ -1036,608 +1078,442 @@ export function AdminDeliverySettings() {
 
   return (
     <ScrollView
-      style={
-        styles.container
-      }
-      contentContainerStyle={
-        styles.content
-      }
-      showsVerticalScrollIndicator={
-        false
-      }
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <View
-        style={
-          styles.sectionHeader
-        }
-      >
-        <View
-          style={
-            styles.sectionHeaderText
-          }
-        >
-          <Text
-            style={
-              styles.title
-            }
-          >
-            Configuración de entregas
-          </Text>
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View style={styles.heroTitleWrap}>
+            <Text style={styles.heroEyebrow}>ENTREGAS</Text>
+            <Text style={styles.heroTitle}>Control de servicio</Text>
+            <Text style={styles.heroSubtitle}>
+              Revisa de un vistazo qué modalidades están disponibles y ajusta sólo lo que necesites.
+            </Text>
+          </View>
+          <View style={[
+            styles.overallStatusBadge,
+            (deliveryEnabled || pickupEnabled)
+              ? styles.overallStatusBadgeOn
+              : styles.overallStatusBadgeOff,
+          ]}>
+            <Text style={[
+              styles.overallStatusText,
+              (deliveryEnabled || pickupEnabled)
+                ? styles.overallStatusTextOn
+                : styles.overallStatusTextOff,
+            ]}>
+              {(deliveryEnabled || pickupEnabled) ? 'SERVICIO ACTIVO' : 'SERVICIO PAUSADO'}
+            </Text>
+          </View>
+        </View>
 
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            Controla recoger, domicilio, horarios automáticos y zonas de reparto.
-          </Text>
+        <View style={styles.summaryGrid}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryIcon}>🛵</Text>
+            <Text style={styles.summaryLabel}>Domicilio</Text>
+            <Text style={[
+              styles.summaryValue,
+              deliveryEnabled ? styles.summaryValueOn : styles.summaryValueOff,
+            ]}>
+              {deliveryEnabled ? 'Disponible' : 'Pausado'}
+            </Text>
+          </View>
+
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryIcon}>🏪</Text>
+            <Text style={styles.summaryLabel}>Recoger</Text>
+            <Text style={[
+              styles.summaryValue,
+              pickupEnabled ? styles.summaryValueOn : styles.summaryValueOff,
+            ]}>
+              {pickupEnabled ? 'Disponible' : 'Pausado'}
+            </Text>
+          </View>
+
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryIcon}>📍</Text>
+            <Text style={styles.summaryLabel}>Zonas activas</Text>
+            <Text style={styles.summaryValue}>{activeZones.length}</Text>
+          </View>
+
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryIcon}>🧭</Text>
+            <Text style={styles.summaryLabel}>Cobertura máxima</Text>
+            <Text style={styles.summaryValue}>
+              {maxCoverageKm > 0 ? `${maxCoverageKm.toFixed(1)} km` : 'Sin definir'}
+            </Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          Modalidades y horarios automáticos
-        </Text>
-        <Text style={styles.cardSubtitle}>
-          El apagado manual siempre tiene prioridad. Si activas el horario automático, la modalidad solo estará disponible dentro de sus ventanas configuradas.
-        </Text>
-
-        <View style={styles.fulfillmentModeCard}>
-          <View style={styles.fulfillmentModeInfo}>
-            <Text style={styles.fulfillmentModeTitle}>🏪 Recoger</Text>
-            <Text style={styles.fulfillmentModeSubtitle}>
-              Permite que el cliente pase por su pedido.
-            </Text>
-          </View>
-          <View style={styles.fulfillmentSwitches}>
-            <View style={styles.compactSwitchRow}>
-              <Text style={styles.compactSwitchLabel}>Manual</Text>
-              <Switch
-                value={pickupEnabled}
-                disabled={isProcessing}
-                onValueChange={setPickupEnabled}
-              />
+      <View style={styles.accordionCard}>
+        <TouchableOpacity
+          style={styles.accordionHeader}
+          onPress={() => setServiceSectionOpen(current => !current)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.accordionHeaderLeft}>
+            <View style={styles.accordionIconBox}>
+              <Text style={styles.accordionIcon}>⏱️</Text>
             </View>
-            <View style={styles.compactSwitchRow}>
-              <Text style={styles.compactSwitchLabel}>Horario</Text>
-              <Switch
-                value={pickupScheduleEnabled}
-                disabled={isProcessing || !pickupEnabled}
-                onValueChange={setPickupScheduleEnabled}
-              />
+            <View style={styles.accordionHeaderText}>
+              <Text style={styles.accordionTitle}>Disponibilidad y horarios</Text>
+              <Text style={styles.accordionSubtitle}>
+                {activeScheduleWindows > 0
+                  ? `${activeScheduleWindows} ventana${activeScheduleWindows === 1 ? '' : 's'} configurada${activeScheduleWindows === 1 ? '' : 's'}`
+                  : 'Control manual, sin horarios automáticos'}
+              </Text>
             </View>
           </View>
-        </View>
+          <Text style={styles.accordionChevron}>{serviceSectionOpen ? '−' : '+'}</Text>
+        </TouchableOpacity>
 
-        <View style={styles.fulfillmentModeCard}>
-          <View style={styles.fulfillmentModeInfo}>
-            <Text style={styles.fulfillmentModeTitle}>🛵 Domicilio</Text>
-            <Text style={styles.fulfillmentModeSubtitle}>
-              Usa la ubicación y las zonas de reparto configuradas abajo.
-            </Text>
-          </View>
-          <View style={styles.fulfillmentSwitches}>
-            <View style={styles.compactSwitchRow}>
-              <Text style={styles.compactSwitchLabel}>Manual</Text>
-              <Switch
-                value={deliveryEnabled}
-                disabled={isProcessing}
-                onValueChange={setDeliveryEnabled}
-              />
-            </View>
-            <View style={styles.compactSwitchRow}>
-              <Text style={styles.compactSwitchLabel}>Horario</Text>
-              <Switch
-                value={deliveryScheduleEnabled}
-                disabled={isProcessing || !deliveryEnabled}
-                onValueChange={setDeliveryScheduleEnabled}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.scheduleBuilder}>
-          <Text style={styles.inputLabel}>Agregar ventana</Text>
-
-          <View style={styles.scheduleTypeRow}>
-            {(['delivery', 'pickup'] as FulfillmentType[]).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.scheduleTypeButton,
-                  scheduleType === type && styles.scheduleTypeButtonActive,
-                ]}
-                disabled={isProcessing}
-                onPress={() => setScheduleType(type)}
-              >
-                <Text style={styles.scheduleTypeButtonText}>
-                  {type === 'delivery' ? 'Domicilio' : 'Recoger'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.dayButtons}>
-            {DAY_NAMES.map((day, index) => (
-              <TouchableOpacity
-                key={day}
-                style={[
-                  styles.dayButton,
-                  scheduleDayOfWeek === index && styles.dayButtonActive,
-                ]}
-                disabled={isProcessing}
-                onPress={() => setScheduleDayOfWeek(index)}
-              >
-                <Text style={styles.dayButtonText}>{day.slice(0, 3)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={[styles.coordinatesRow, isPhone && styles.coordinatesRowPhone]}>
-            <View style={styles.coordinateField}>
-              <Text style={styles.inputLabel}>Desde</Text>
-              <TimeSelect
-                value={scheduleStartTime}
-                onChange={setScheduleStartTime}
-              />
-            </View>
-            <View style={styles.coordinateField}>
-              <Text style={styles.inputLabel}>Hasta</Text>
-              <TimeSelect
-                value={scheduleEndTime}
-                onChange={setScheduleEndTime}
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryButton, isProcessing && styles.buttonDisabled]}
-            disabled={isProcessing}
-            onPress={() => { void handleAddScheduleWindow(); }}
-          >
-            <Text style={styles.primaryButtonText}>+ Agregar horario</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.scheduleList}>
-          {scheduleWindows.length === 0 ? (
-            <Text style={styles.scheduleEmpty}>
-              No hay ventanas configuradas. Si el horario automático está apagado, la modalidad depende únicamente del interruptor manual.
-            </Text>
-          ) : (
-            scheduleWindows.map((window) => (
-              <View key={window.id} style={styles.scheduleWindowRow}>
-                <View style={styles.scheduleWindowInfo}>
-                  <Text style={styles.scheduleWindowTitle}>
-                    {window.fulfillmentType === 'delivery' ? '🛵 Domicilio' : '🏪 Recoger'} · {DAY_NAMES[window.dayOfWeek]}
-                  </Text>
-                  <Text style={styles.scheduleWindowTime}>
-                    {window.startTime}–{window.endTime}
-                  </Text>
+        {serviceSectionOpen ? (
+          <View style={styles.accordionBody}>
+            <View style={[styles.modeGrid, isPhone && styles.modeGridPhone]}>
+              <View style={styles.modeCard}>
+                <View style={styles.modeCardHeader}>
+                  <View>
+                    <Text style={styles.modeTitle}>🏪 Recoger</Text>
+                    <Text style={styles.modeDescription}>El cliente pasa por su pedido.</Text>
+                  </View>
+                  <Switch
+                    value={pickupEnabled}
+                    disabled={isProcessing}
+                    onValueChange={setPickupEnabled}
+                  />
                 </View>
-                <TouchableOpacity
-                  style={styles.scheduleDeleteButton}
-                  disabled={isProcessing}
-                  onPress={() => confirmDeleteScheduleWindow(window)}
-                >
-                  <Text style={styles.scheduleDeleteButtonText}>Eliminar</Text>
-                </TouchableOpacity>
+                <View style={styles.modeScheduleRow}>
+                  <View style={styles.modeScheduleTextWrap}>
+                    <Text style={styles.modeScheduleLabel}>Horario automático</Text>
+                    <Text style={styles.modeScheduleHint}>Limita recoger a las ventanas configuradas.</Text>
+                  </View>
+                  <Switch
+                    value={pickupScheduleEnabled}
+                    disabled={isProcessing || !pickupEnabled}
+                    onValueChange={setPickupScheduleEnabled}
+                  />
+                </View>
               </View>
-            ))
-          )}
-        </View>
 
-        <TouchableOpacity
-          style={[styles.primaryButton, isProcessing && styles.buttonDisabled]}
-          disabled={isProcessing}
-          onPress={() => { void handleSaveSettings(); }}
-        >
-          <Text style={styles.primaryButtonText}>
-            Guardar disponibilidad
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View
-        style={
-          styles.card
-        }
-      >
-        <View
-          style={
-            styles.cardHeader
-          }
-        >
-          <View
-            style={
-              styles.cardHeaderText
-            }
-          >
-            <Text
-              style={
-                styles.cardTitle
-              }
-            >
-              Ubicación del negocio
-            </Text>
-
-            <Text
-              style={
-                styles.cardSubtitle
-              }
-            >
-              Busca el negocio o su dirección. Esta ubicación se utiliza como origen para calcular la distancia de entrega.
-            </Text>
-          </View>
-
-        </View>
-
-        <GooglePlaceSearch
-          initialValue=""
-          disabled={
-            isProcessing
-          }
-          placeholder={
-            businessAddress
-              ? 'Buscar otra ubicación...'
-              : 'Buscar negocio o dirección...'
-          }
-          onPlaceSelected={(
-            place,
-          ) => {
-            setBusinessLatitude(
-              place.latitude,
-            );
-
-            setBusinessLongitude(
-              place.longitude,
-            );
-
-            setBusinessAddress(
-              place.formattedAddress ||
-              place.displayName,
-            );
-
-            setBusinessPlaceId(
-              place.placeId,
-            );
-          }}
-        />
-
-        {!!businessAddress &&
-          businessLatitude !==
-          null &&
-          businessLongitude !==
-          null && (
-            <View
-              style={
-                styles.locationHint
-              }
-            >
-              <Text
-                style={
-                  styles.locationHintTitle
-                }
-              >
-                ✓ Ubicación seleccionada
-              </Text>
-
-              <Text
-                style={
-                  styles.locationHintText
-                }
-              >
-                {
-                  businessAddress
-                }
-              </Text>
+              <View style={styles.modeCard}>
+                <View style={styles.modeCardHeader}>
+                  <View>
+                    <Text style={styles.modeTitle}>🛵 Domicilio</Text>
+                    <Text style={styles.modeDescription}>Usa ubicación y zonas de reparto.</Text>
+                  </View>
+                  <Switch
+                    value={deliveryEnabled}
+                    disabled={isProcessing}
+                    onValueChange={setDeliveryEnabled}
+                  />
+                </View>
+                <View style={styles.modeScheduleRow}>
+                  <View style={styles.modeScheduleTextWrap}>
+                    <Text style={styles.modeScheduleLabel}>Horario automático</Text>
+                    <Text style={styles.modeScheduleHint}>Limita domicilio a las ventanas configuradas.</Text>
+                  </View>
+                  <Switch
+                    value={deliveryScheduleEnabled}
+                    disabled={isProcessing || !deliveryEnabled}
+                    onValueChange={setDeliveryScheduleEnabled}
+                  />
+                </View>
+              </View>
             </View>
-          )}
 
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
+            <View style={styles.subsectionBox}>
+              <Text style={styles.subsectionTitle}>Agregar horario</Text>
+              <Text style={styles.subsectionSubtitle}>
+                Define cuándo se activa automáticamente cada modalidad.
+              </Text>
 
-            isProcessing &&
-            styles.buttonDisabled,
-          ]}
-          disabled={
-            isProcessing
-          }
-          onPress={
-            () => {
-              void handleSaveSettings();
-            }
-          }
-        >
-          {isProcessing ? (
-            <ActivityIndicator
-              size="small"
-              color="#171717"
-            />
-          ) : (
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
-              Guardar ubicación y configuración
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View
-        style={
-          styles.zonesHeader
-        }
-      >
-        <View>
-          <Text
-            style={
-              styles.cardTitle
-            }
-          >
-            Zonas de entrega
-          </Text>
-
-          <Text
-            style={
-              styles.cardSubtitle
-            }
-          >
-            Configura los rangos de distancia y el cargo adicional.
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={
-            styles.createButton
-          }
-          disabled={
-            isProcessing
-          }
-          onPress={
-            openCreateZone
-          }
-        >
-          <Text
-            style={
-              styles.createButtonText
-            }
-          >
-            + Nueva zona
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {sortedZones.length ===
-        0 ? (
-        <View
-          style={
-            styles.emptyContainer
-          }
-        >
-          <Text
-            style={
-              styles.emptyIcon
-            }
-          >
-            🛵
-          </Text>
-
-          <Text
-            style={
-              styles.emptyTitle
-            }
-          >
-            No hay zonas configuradas
-          </Text>
-
-          <Text
-            style={
-              styles.emptyText
-            }
-          >
-            Agrega la primera zona de reparto.
-          </Text>
-        </View>
-      ) : (
-        sortedZones.map(
-          (
-            zone,
-          ) => (
-            <View
-              key={
-                zone.id
-              }
-              style={[
-                styles.zoneCard,
-
-                !zone.isActive &&
-                styles.zoneCardInactive,
-              ]}
-            >
-              <View
-                style={
-                  styles.zoneInfo
-                }
-              >
-                <View
-                  style={
-                    styles.zoneTitleRow
-                  }
-                >
-                  <Text
-                    style={
-                      styles.zoneName
-                    }
-                  >
-                    {
-                      zone.name
-                    }
-                  </Text>
-
-                  <View
+              <View style={styles.scheduleTypeRow}>
+                {(['delivery', 'pickup'] as FulfillmentType[]).map((type) => (
+                  <TouchableOpacity
+                    key={type}
                     style={[
-                      styles.statusBadge,
-
-                      zone.isActive
-                        ? styles.statusBadgeActive
-                        : styles.statusBadgeInactive,
+                      styles.scheduleTypeButton,
+                      scheduleType === type && styles.scheduleTypeButtonActive,
                     ]}
+                    disabled={isProcessing}
+                    onPress={() => setScheduleType(type)}
                   >
-                    <Text
-                      style={[
-                        styles.statusText,
-
-                        zone.isActive
-                          ? styles.statusTextActive
-                          : styles.statusTextInactive,
-                      ]}
-                    >
-                      {zone.isActive
-                        ? 'ACTIVA'
-                        : 'INACTIVA'}
+                    <Text style={styles.scheduleTypeButtonText}>
+                      {type === 'delivery' ? '🛵 Domicilio' : '🏪 Recoger'}
                     </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.dayButtons}>
+                {DAY_NAMES.map((day, index) => (
+                  <TouchableOpacity
+                    key={day}
+                    style={[
+                      styles.dayButton,
+                      scheduleDayOfWeek === index && styles.dayButtonActive,
+                    ]}
+                    disabled={isProcessing}
+                    onPress={() => setScheduleDayOfWeek(index)}
+                  >
+                    <Text style={styles.dayButtonText}>{day.slice(0, 3)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={[styles.coordinatesRow, isPhone && styles.coordinatesRowPhone]}>
+                <View style={styles.coordinateField}>
+                  <Text style={styles.inputLabel}>Desde</Text>
+                  <TimeSelect value={scheduleStartTime} onChange={setScheduleStartTime} />
+                </View>
+                <View style={styles.coordinateField}>
+                  <Text style={styles.inputLabel}>Hasta</Text>
+                  <TimeSelect value={scheduleEndTime} onChange={setScheduleEndTime} />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.secondaryPrimaryButton, isProcessing && styles.buttonDisabled]}
+                disabled={isProcessing}
+                onPress={() => { void handleAddScheduleWindow(); }}
+              >
+                <Text style={styles.secondaryPrimaryButtonText}>+ Agregar horario</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.scheduleList}>
+              {scheduleWindows.length === 0 ? (
+                <View style={styles.inlineEmptyState}>
+                  <Text style={styles.inlineEmptyIcon}>🗓️</Text>
+                  <View style={styles.inlineEmptyTextWrap}>
+                    <Text style={styles.inlineEmptyTitle}>Sin horarios automáticos</Text>
+                    <Text style={styles.inlineEmptyText}>Las modalidades dependen únicamente de sus interruptores.</Text>
                   </View>
                 </View>
+              ) : (
+                scheduleWindows.map((window) => (
+                  <View key={window.id} style={styles.scheduleWindowRow}>
+                    <View style={styles.scheduleWindowInfo}>
+                      <Text style={styles.scheduleWindowTitle}>
+                        {window.fulfillmentType === 'delivery' ? '🛵 Domicilio' : '🏪 Recoger'} · {DAY_NAMES[window.dayOfWeek]}
+                      </Text>
+                      <Text style={styles.scheduleWindowTime}>{window.startTime} – {window.endTime}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.scheduleDeleteButton}
+                      disabled={isProcessing}
+                      onPress={() => confirmDeleteScheduleWindow(window)}
+                    >
+                      <Text style={styles.scheduleDeleteButtonText}>Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
 
-                <Text
-                  style={
-                    styles.zoneRange
-                  }
-                >
-                  {zone.minDistanceKm.toFixed(
-                    2,
-                  )}{' '}
-                  km –{' '}
-                  {zone.maxDistanceKm.toFixed(
-                    2,
-                  )}{' '}
-                  km
-                </Text>
+            <TouchableOpacity
+              style={[styles.primaryButtonFull, isProcessing && styles.buttonDisabled]}
+              disabled={isProcessing}
+              onPress={() => { void handleSaveSettings(); }}
+            >
+              <Text style={styles.primaryButtonText}>Guardar disponibilidad</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
 
-                <View
-                  style={
-                    styles.zoneMetaRow
-                  }
-                >
-                  <Text
-                    style={
-                      styles.zoneFee
-                    }
-                  >
-                    {zone.extraFee >
-                      0
-                      ? `+${formatCurrency(
-                        zone.extraFee,
-                      )}`
-                      : 'Sin cargo extra'}
-                  </Text>
+      <View style={styles.accordionCard}>
+        <TouchableOpacity
+          style={styles.accordionHeader}
+          onPress={() => setLocationSectionOpen(current => !current)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.accordionHeaderLeft}>
+            <View style={styles.accordionIconBox}>
+              <Text style={styles.accordionIcon}>📍</Text>
+            </View>
+            <View style={styles.accordionHeaderText}>
+              <Text style={styles.accordionTitle}>Ubicación del negocio</Text>
+              <Text style={styles.accordionSubtitle} numberOfLines={1}>
+                {businessAddress || 'Aún no se ha definido una ubicación'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.accordionChevron}>{locationSectionOpen ? '−' : '+'}</Text>
+        </TouchableOpacity>
 
-                  <Text
-                    style={
-                      styles.zoneOrder
-                    }
-                  >
-                    Orden:{' '}
-                    {
-                      zone.sortOrder
-                    }
-                  </Text>
+        {locationSectionOpen ? (
+          <View style={styles.accordionBody}>
+            <View style={styles.infoCallout}>
+              <Text style={styles.infoCalloutTitle}>¿Para qué se usa?</Text>
+              <Text style={styles.infoCalloutText}>
+                Esta ubicación es el punto de origen para calcular la distancia y saber qué tarifa de reparto corresponde.
+              </Text>
+            </View>
+
+            <GooglePlaceSearch
+              initialValue=""
+              disabled={isProcessing}
+              placeholder={businessAddress ? 'Buscar otra ubicación...' : 'Buscar negocio o dirección...'}
+              onPlaceSelected={(place) => {
+                setBusinessLatitude(place.latitude);
+                setBusinessLongitude(place.longitude);
+                setBusinessAddress(place.formattedAddress || place.displayName);
+                setBusinessPlaceId(place.placeId);
+              }}
+            />
+
+            {!!businessAddress && businessLatitude !== null && businessLongitude !== null ? (
+              <View style={styles.locationSelectedCard}>
+                <Text style={styles.locationSelectedCheck}>✓</Text>
+                <View style={styles.locationSelectedTextWrap}>
+                  <Text style={styles.locationSelectedTitle}>Ubicación lista</Text>
+                  <Text style={styles.locationSelectedText}>{businessAddress}</Text>
                 </View>
               </View>
+            ) : null}
 
-              <View
-                style={[
-                  styles.zoneActions,
+            <TouchableOpacity
+              style={[styles.primaryButtonFull, isProcessing && styles.buttonDisabled]}
+              disabled={isProcessing}
+              onPress={() => { void handleSaveSettings(); }}
+            >
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#171717" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Guardar ubicación</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
 
-                  isPhone &&
-                  styles.zoneActionsPhone,
-                ]}
+      <View style={styles.accordionCard}>
+        <TouchableOpacity
+          style={styles.accordionHeader}
+          onPress={() => setZonesSectionOpen(current => !current)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.accordionHeaderLeft}>
+            <View style={styles.accordionIconBox}>
+              <Text style={styles.accordionIcon}>🗺️</Text>
+            </View>
+            <View style={styles.accordionHeaderText}>
+              <Text style={styles.accordionTitle}>Zonas de entrega</Text>
+              <Text style={styles.accordionSubtitle}>
+                {activeZones.length} activa{activeZones.length === 1 ? '' : 's'} de {sortedZones.length} · {maxCoverageKm > 0 ? `hasta ${maxCoverageKm.toFixed(1)} km` : 'sin cobertura definida'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.accordionChevron}>{zonesSectionOpen ? '−' : '+'}</Text>
+        </TouchableOpacity>
+
+        {zonesSectionOpen ? (
+          <View style={styles.accordionBody}>
+            <View style={[styles.zonesToolbar, isPhone && styles.zonesToolbarPhone]}>
+              <View style={styles.zonesToolbarText}>
+                <Text style={styles.subsectionTitle}>Tarifas por distancia</Text>
+                <Text style={styles.subsectionSubtitle}>
+                  Cada zona define el cargo adicional según la distancia desde el negocio.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.createButton}
+                disabled={isProcessing}
+                onPress={openCreateZone}
               >
-                <TouchableOpacity
-                  style={
-                    styles.editButton
-                  }
-                  disabled={
-                    isProcessing
-                  }
-                  onPress={
-                    () =>
-                      openEditZone(
-                        zone,
-                      )
-                  }
-                >
-                  <Text
-                    style={
-                      styles.editButtonText
-                    }
-                  >
-                    Editar
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.createButtonText}>+ Nueva zona</Text>
+              </TouchableOpacity>
+            </View>
 
-                <TouchableOpacity
-                  style={[
-                    styles.stateButton,
-
-                    zone.isActive
-                      ? styles.deactivateButton
-                      : styles.activateButton,
-                  ]}
-                  disabled={
-                    isProcessing
-                  }
-                  onPress={
-                    () =>
-                      confirmToggleZone(
-                        zone,
-                      )
-                  }
-                >
-                  <Text
-                    style={
-                      styles.stateButtonText
-                    }
-                  >
-                    {zone.isActive
-                      ? 'Desactivar'
-                      : 'Activar'}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={
-                    styles.deleteButton
-                  }
-                  disabled={
-                    isProcessing
-                  }
-                  onPress={
-                    () =>
-                      confirmDeleteZone(
-                        zone,
-                      )
-                  }
-                >
-                  <Text
-                    style={
-                      styles.deleteButtonText
-                    }
-                  >
-                    Eliminar
-                  </Text>
+            {sortedZones.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>🛵</Text>
+                <Text style={styles.emptyTitle}>Aún no hay zonas de reparto</Text>
+                <Text style={styles.emptyText}>Crea la primera para comenzar a cotizar entregas por distancia.</Text>
+                <TouchableOpacity style={styles.emptyActionButton} onPress={openCreateZone}>
+                  <Text style={styles.emptyActionButtonText}>Crear primera zona</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ),
-        )
-      )}
+            ) : (
+              <View style={styles.zoneList}>
+                {sortedZones.map((zone) => (
+                  <View
+                    key={zone.id}
+                    style={[
+                      styles.zoneCardModern,
+                      !zone.isActive && styles.zoneCardInactive,
+                    ]}
+                  >
+                    <View style={styles.zoneCardTopRow}>
+                      <View style={styles.zoneInfo}>
+                        <View style={styles.zoneTitleRow}>
+                          <Text style={styles.zoneName}>{zone.name}</Text>
+                          <View style={[
+                            styles.statusBadge,
+                            zone.isActive ? styles.statusBadgeActive : styles.statusBadgeInactive,
+                          ]}>
+                            <Text style={[
+                              styles.statusText,
+                              zone.isActive ? styles.statusTextActive : styles.statusTextInactive,
+                            ]}>
+                              {zone.isActive ? 'ACTIVA' : 'INACTIVA'}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.zoneRangeLarge}>
+                          {zone.minDistanceKm.toFixed(1)} – {zone.maxDistanceKm.toFixed(1)} km
+                        </Text>
+                      </View>
+                      <View style={styles.zonePricePill}>
+                        <Text style={styles.zonePriceLabel}>Cargo</Text>
+                        <Text style={styles.zonePriceValue}>
+                          {zone.extraFee > 0 ? `+${formatCurrency(zone.extraFee)}` : 'Gratis'}
+                        </Text>
+                      </View>
+                    </View>
 
+                    <View style={styles.zoneDivider} />
+
+                    <View style={[styles.zoneActionRow, isPhone && styles.zoneActionRowPhone]}>
+                      <Text style={styles.zoneOrderCompact}>Prioridad {zone.sortOrder}</Text>
+                      <View style={styles.zoneActionButtons}>
+                        <TouchableOpacity
+                          style={styles.editButtonCompact}
+                          disabled={isProcessing}
+                          onPress={() => openEditZone(zone)}
+                        >
+                          <Text style={styles.editButtonText}>Editar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.stateButtonCompact,
+                            zone.isActive ? styles.deactivateButton : styles.activateButton,
+                          ]}
+                          disabled={isProcessing}
+                          onPress={() => confirmToggleZone(zone)}
+                        >
+                          <Text style={styles.stateButtonText}>{zone.isActive ? 'Pausar' : 'Activar'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.deleteButtonCompact}
+                          disabled={isProcessing}
+                          onPress={() => confirmDeleteZone(zone)}
+                        >
+                          <Text style={styles.deleteButtonText}>Eliminar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : null}
+      </View>
       <Modal
         visible={
           isZoneModalVisible

@@ -1,11 +1,13 @@
 import {
-  fetchOrderPaymentByOrderId,
-  insertOrderPayment,
-  PaymentRepositoryError,
+  fetchOrderPaymentMovementsSince,
+  fetchOrderPaymentState,
+  registerOrderOverpaymentRefund,
+  registerOrderPaymentMovement,
 } from '../repositories/PaymentRepository';
 
 import {
-  OrderPayment,
+  OrderPaymentMovement,
+  OrderPaymentState,
   PaymentMethod,
   PaymentTiming,
 } from '../types';
@@ -17,21 +19,35 @@ import {
 
 interface RegisterPaymentParams {
   orderId: string;
-  paymentMethod:
-    PaymentMethod;
+  paymentMethod: PaymentMethod;
+
+  /**
+   * Amount applied to the outstanding balance in this movement.
+   * For the first payment this may equal the order total; after edits it is
+   * normally only the remaining balance.
+   */
   totalAmount: number;
 
-  amountReceived?:
-    number | null;
+  amountReceived?: number | null;
+  paymentReference?: string | null;
+  paymentTiming?: Exclude<PaymentTiming, 'adjustment'>;
+  currencyCode?: string;
+}
 
-  paymentReference?:
-    string | null;
 
-  paymentTiming?:
-    PaymentTiming;
+export async function getOrderPaymentMovementsSince(
+  since: string,
+): Promise<OrderPaymentMovement[]> {
+  return fetchOrderPaymentMovementsSince(
+    since,
+  );
+}
 
-  currencyCode?:
-    string;
+export async function getOrderPaymentState(
+  orderId: string,
+): Promise<OrderPaymentState> {
+  validateOrderId(orderId);
+  return fetchOrderPaymentState(orderId);
 }
 
 export async function registerOrderPayment({
@@ -41,159 +57,77 @@ export async function registerOrderPayment({
   amountReceived = null,
   paymentReference = null,
   paymentTiming = 'final',
-  currencyCode =
-    DEFAULT_CURRENCY_CODE,
-}: RegisterPaymentParams): Promise<OrderPayment> {
-  validateOrderId(
-    orderId,
-  );
+  currencyCode = DEFAULT_CURRENCY_CODE,
+}: RegisterPaymentParams): Promise<OrderPaymentState> {
+  validateOrderId(orderId);
+  validateTotalAmount(totalAmount);
 
-  validateTotalAmount(
-    totalAmount,
-  );
-
-  const existingPayment =
-    await fetchOrderPaymentByOrderId(
-      orderId,
-    );
-
-  if (existingPayment) {
-    return existingPayment;
-  }
-
-  const paymentPayload =
-    buildPaymentPayload({
-      orderId,
-      paymentMethod,
+  if (paymentMethod === 'cash') {
+    validateCashPayment(
       totalAmount,
       amountReceived,
-      paymentReference,
-      paymentTiming,
       currencyCode,
-    });
-
-  try {
-    return await insertOrderPayment(
-      paymentPayload,
     );
-  } catch (error) {
-    /*
-     * 23505 = unique_violation.
-     *
-     * Otro request pudo registrar
-     * el pago entre nuestro SELECT
-     * y nuestro INSERT.
-     */
-    if (
-      error instanceof
-        PaymentRepositoryError &&
-      error.code ===
-        '23505'
-    ) {
-      const paymentAfterConflict =
-        await fetchOrderPaymentByOrderId(
-          orderId,
-        );
-
-      if (
-        paymentAfterConflict
-      ) {
-        return paymentAfterConflict;
-      }
-    }
-
-    throw error;
   }
-}
 
-function buildPaymentPayload({
-  orderId,
-  paymentMethod,
-  totalAmount,
-  amountReceived,
-  paymentReference,
-  paymentTiming = 'final',
-  currencyCode =
-    DEFAULT_CURRENCY_CODE,
-}: RegisterPaymentParams) {
   if (
-    paymentMethod ===
-    'card' ||
-    paymentMethod ===
-    'transfer'
+    paymentMethod === 'transfer' &&
+    (paymentReference?.trim().length ?? 0) < 3
   ) {
-    return {
-      orderId,
-      paymentMethod,
-      totalAmount,
-      amountReceived: null,
-      changeAmount: null,
-      paymentReference:
-        paymentMethod === 'transfer'
-          ? validateTransferReference(paymentReference)
-          : null,
-
-      paymentTiming,
-    };
-  }
-
-  validateCashPayment(
-    totalAmount,
-    amountReceived ??
-      null,
-    currencyCode,
-  );
-
-  const received =
-    amountReceived as number;
-
-  return {
-    orderId,
-    paymentMethod,
-    totalAmount,
-
-    amountReceived:
-      received,
-
-    changeAmount:
-      calculateChange(
-        totalAmount,
-        received,
-      ),
-    paymentReference: null,
-    paymentTiming,
-  };
-}
-
-
-function validateTransferReference(
-  value: string | null | undefined,
-): string {
-  const clean = value?.trim() ?? '';
-  if (clean.length < 3) {
     throw new Error(
       'Captura la referencia o folio de la transferencia.',
     );
   }
-  return clean.slice(0, 160);
+
+  return registerOrderPaymentMovement({
+    orderId,
+    paymentMethod,
+    amount: roundCurrency(totalAmount),
+    amountReceived:
+      paymentMethod === 'cash'
+        ? amountReceived
+        : null,
+    paymentReference:
+      paymentMethod === 'transfer'
+        ? paymentReference?.trim() ?? null
+        : null,
+    paymentTiming,
+  });
+}
+
+export async function refundOrderOverpayment(input: {
+  orderId: string;
+  paymentMethod: PaymentMethod;
+  amount: number;
+  paymentReference?: string | null;
+}): Promise<OrderPaymentState> {
+  validateOrderId(input.orderId);
+  validateTotalAmount(input.amount);
+
+  if (input.amount <= 0) {
+    throw new Error(
+      'El importe de devolución debe ser mayor a cero.',
+    );
+  }
+
+  return registerOrderOverpaymentRefund({
+    orderId: input.orderId,
+    paymentMethod: input.paymentMethod,
+    amount: roundCurrency(input.amount),
+    paymentReference: input.paymentReference ?? null,
+  });
 }
 
 export function calculateChange(
   totalAmount: number,
   amountReceived: number,
 ): number {
-  const change =
-    amountReceived -
-    totalAmount;
-
   return roundCurrency(
-    change,
+    amountReceived - totalAmount,
   );
 }
 
-function validateOrderId(
-  orderId: string,
-): void {
+function validateOrderId(orderId: string): void {
   if (!orderId?.trim()) {
     throw new Error(
       'El identificador de la orden es obligatorio.',
@@ -201,57 +135,41 @@ function validateOrderId(
   }
 }
 
-function validateTotalAmount(
-  totalAmount: number,
-): void {
+function validateTotalAmount(totalAmount: number): void {
   if (
-    !Number.isFinite(
-      totalAmount,
-    ) ||
+    !Number.isFinite(totalAmount) ||
     totalAmount < 0
   ) {
     throw new Error(
-      'El total de la orden no es válido.',
+      'El importe del pago no es válido.',
     );
   }
 }
 
 function validateCashPayment(
   totalAmount: number,
-  amountReceived:
-    number | null,
-  currencyCode:
-    string,
+  amountReceived: number | null,
+  currencyCode: string,
 ): void {
   if (
-    amountReceived ===
-      null ||
-    !Number.isFinite(
-      amountReceived,
-    )
+    amountReceived === null ||
+    !Number.isFinite(amountReceived)
   ) {
     throw new Error(
       'Ingresa la cantidad recibida.',
     );
   }
 
-  if (
-    amountReceived < 0
-  ) {
+  if (amountReceived < 0) {
     throw new Error(
       'La cantidad recibida no es válida.',
     );
   }
 
-  if (
-    amountReceived <
-    totalAmount
-  ) {
-    const missingAmount =
-      roundCurrency(
-        totalAmount -
-          amountReceived,
-      );
+  if (amountReceived < totalAmount) {
+    const missingAmount = roundCurrency(
+      totalAmount - amountReceived,
+    );
 
     throw new Error(
       `Faltan ${formatCurrency(
@@ -262,15 +180,10 @@ function validateCashPayment(
   }
 }
 
-function roundCurrency(
-  amount: number,
-): number {
+function roundCurrency(amount: number): number {
   return (
     Math.round(
-      (
-        amount +
-        Number.EPSILON
-      ) * 100,
+      (amount + Number.EPSILON) * 100,
     ) / 100
   );
 }

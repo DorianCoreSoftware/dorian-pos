@@ -169,6 +169,7 @@ export function AdminAttendance() {
   const [attendanceSettings, setAttendanceSettings] =
     useState<AttendanceSettings>({
       remindersEnabled: true,
+      shiftStartReminderMinutes: 10,
       earlyClockInMinutes: 60,
       reminderIntervalMinutes: 15,
       afterCloseGraceMinutes: 60,
@@ -204,6 +205,7 @@ export function AdminAttendance() {
 
   const updateNumericSetting = (
     key:
+      | 'shiftStartReminderMinutes'
       | 'earlyClockInMinutes'
       | 'reminderIntervalMinutes'
       | 'afterCloseGraceMinutes'
@@ -377,6 +379,21 @@ export function AdminAttendance() {
         </View>
 
         <View style={localStyles.settingsGrid}>
+          <View style={localStyles.settingField}>
+            <Text style={[localStyles.fieldLabel, { color: theme.textMuted }]}>
+              AVISO ANTES DEL TURNO · MIN
+            </Text>
+            <TextInput
+              keyboardType="number-pad"
+              value={String(attendanceSettings.shiftStartReminderMinutes)}
+              onChangeText={value => updateNumericSetting('shiftStartReminderMinutes', value)}
+              style={[localStyles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+            />
+            <Text style={[localStyles.settingHelp, { color: theme.textMuted }]}>
+              Push al celular antes del inicio del turno. Por defecto: 10 minutos.
+            </Text>
+          </View>
+
           <View style={localStyles.settingField}>
             <Text style={[localStyles.fieldLabel, { color: theme.textMuted }]}>
               ENTRADA ANTICIPADA · MIN
