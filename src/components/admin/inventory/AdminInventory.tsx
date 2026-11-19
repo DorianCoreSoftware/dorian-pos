@@ -21,6 +21,10 @@ import {
 import { useBusiness } from '../../../context/BusinessContext';
 
 import {
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+
+import {
   createInventoryItem,
   getInventoryItems,
   getInventoryMovements,
@@ -156,8 +160,13 @@ export function AdminInventory() {
 
   const {
     width,
+    height:
+      windowHeight,
   } =
     useWindowDimensions();
+
+  const insets =
+    useSafeAreaInsets();
 
   const isPhone =
     width < 700;
@@ -467,6 +476,34 @@ export function AdminInventory() {
       ...INITIAL_MOVEMENT_FORM,
     });
   }
+
+  const livePurchaseCost =
+    Number(
+      itemForm.purchaseCost,
+    );
+
+  const livePurchaseBaseQuantity =
+    Number(
+      itemForm.purchaseBaseQuantity,
+    );
+
+  const liveUnitCost =
+    Number.isFinite(
+      livePurchaseCost,
+    ) &&
+    livePurchaseCost >= 0 &&
+    Number.isFinite(
+      livePurchaseBaseQuantity,
+    ) &&
+    livePurchaseBaseQuantity > 0
+      ? livePurchaseCost /
+        livePurchaseBaseQuantity
+      : null;
+
+  const unitFormLabel =
+    UNIT_LABELS[
+      itemForm.baseUnit
+    ];
 
   async function handleSaveItem():
     Promise<void> {
@@ -1416,33 +1453,74 @@ export function AdminInventory() {
         }
       >
         <View
-          style={
-            styles.modalOverlay
-          }
+          style={[
+            styles.modalOverlay,
+            {
+              paddingTop:
+                Math.max(
+                  12,
+                  insets.top + 6,
+                ),
+              paddingBottom:
+                Math.max(
+                  12,
+                  insets.bottom + 8,
+                ),
+            },
+          ]}
         >
-          <ScrollView
-            style={
-              styles.modalCard
-            }
-            keyboardShouldPersistTaps="handled"
+          <View
+            style={[
+              styles.modalCard,
+              {
+                height:
+                  Math.max(
+                    360,
+                    windowHeight -
+                    Math.max(
+                      24,
+                      insets.top +
+                      insets.bottom +
+                      28,
+                    ),
+                  ),
+              },
+            ]}
           >
-            <Text
+            <View
               style={
-                styles.modalTitle
+                styles.modalHeader
               }
             >
-              {selectedItem
-                ? 'Editar insumo'
-                : 'Nuevo insumo'}
-            </Text>
+              <Text
+                style={
+                  styles.modalTitle
+                }
+              >
+                {selectedItem
+                  ? 'Editar insumo'
+                  : 'Nuevo insumo'}
+              </Text>
 
-            <Text
+              <Text
+                style={
+                  styles.modalSubtitle
+                }
+              >
+                Define cómo compras y controlas este insumo. El costo por {unitFormLabel} se calcula automáticamente.
+              </Text>
+            </View>
+
+            <ScrollView
               style={
-                styles.modalSubtitle
+                styles.modalBodyScroll
               }
+              contentContainerStyle={
+                styles.modalBodyContent
+              }
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator
             >
-              La unidad base no realiza conversiones todavía. Usa gramos, mililitros o piezas como unidad de control.
-            </Text>
 
             <Text
               style={
@@ -1720,6 +1798,49 @@ export function AdminInventory() {
               Ejemplos: 1 kg de carne = 1000 g; botella de 3.8 L = 3800 ml; paquete de 8 panes = 8 piezas.
             </Text>
 
+            <View
+              style={
+                styles.costPreviewCard
+              }
+            >
+              <Text
+                style={
+                  styles.costPreviewLabel
+                }
+              >
+                COSTO UNITARIO CALCULADO
+              </Text>
+
+              <Text
+                style={
+                  styles.costPreviewValue
+                }
+              >
+                {liveUnitCost === null
+                  ? '—'
+                  : liveUnitCost.toLocaleString(
+                      'es-MX',
+                      {
+                        style: 'currency',
+                        currency: 'MXN',
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 4,
+                      },
+                    )}
+                {liveUnitCost === null
+                  ? ''
+                  : ` / ${unitFormLabel}`}
+              </Text>
+
+              <Text
+                style={
+                  styles.costPreviewHelp
+                }
+              >
+                Ejemplo: si pagas $190 por una caja con 10 piezas, Dorian calcula $19 por pieza.
+              </Text>
+            </View>
+
             <Text
               style={
                 styles.label
@@ -1751,15 +1872,18 @@ export function AdminInventory() {
               }
             />
 
+            </ScrollView>
+
             <View
               style={
                 styles.modalActions
               }
             >
               <TouchableOpacity
-                style={
-                  styles.secondaryButton
-                }
+                style={[
+                  styles.secondaryButton,
+                  styles.modalActionButton,
+                ]}
                 disabled={
                   isProcessing
                 }
@@ -1779,6 +1903,7 @@ export function AdminInventory() {
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
+                  styles.modalActionButton,
                   isProcessing &&
                   styles.disabled,
                 ]}
@@ -1802,12 +1927,12 @@ export function AdminInventory() {
                       styles.primaryButtonText
                     }
                   >
-                    Guardar
+                    Guardar insumo
                   </Text>
                 )}
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
 
@@ -1822,36 +1947,80 @@ export function AdminInventory() {
         }
       >
         <View
-          style={
-            styles.modalOverlay
-          }
+          style={[
+            styles.modalOverlay,
+            {
+              paddingTop:
+                Math.max(
+                  12,
+                  insets.top + 6,
+                ),
+              paddingBottom:
+                Math.max(
+                  12,
+                  insets.bottom + 8,
+                ),
+            },
+          ]}
         >
-          <ScrollView
-            style={
-              styles.modalCard
-            }
-            keyboardShouldPersistTaps="handled"
+          <View
+            style={[
+              styles.modalCard,
+              {
+                height:
+                  Math.max(
+                    360,
+                    Math.min(
+                      640,
+                      windowHeight -
+                      Math.max(
+                        24,
+                        insets.top +
+                        insets.bottom +
+                        28,
+                      ),
+                    ),
+                  ),
+              },
+            ]}
           >
-            <Text
+            <View
               style={
-                styles.modalTitle
+                styles.modalHeader
               }
             >
-              Movimiento de inventario
-            </Text>
+              <Text
+                style={
+                  styles.modalTitle
+                }
+              >
+                Movimiento de inventario
+              </Text>
 
-            <Text
+              <Text
+                style={
+                  styles.modalSubtitle
+                }
+              >
+                {selectedItem
+                  ? `${selectedItem.name} · existencia actual ${formatQuantity(
+                      selectedItem.currentStock,
+                      selectedItem.baseUnit,
+                    )}`
+                  : ''}
+              </Text>
+            </View>
+
+            <ScrollView
               style={
-                styles.modalSubtitle
+                styles.modalBodyScroll
               }
+              contentContainerStyle={
+                styles.modalBodyContent
+              }
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator
             >
-              {selectedItem
-                ? `${selectedItem.name} · existencia actual ${formatQuantity(
-                    selectedItem.currentStock,
-                    selectedItem.baseUnit,
-                  )}`
-                : ''}
-            </Text>
 
             <Text
               style={
@@ -2008,15 +2177,18 @@ export function AdminInventory() {
               }
             />
 
+            </ScrollView>
+
             <View
               style={
                 styles.modalActions
               }
             >
               <TouchableOpacity
-                style={
-                  styles.secondaryButton
-                }
+                style={[
+                  styles.secondaryButton,
+                  styles.modalActionButton,
+                ]}
                 disabled={
                   isProcessing
                 }
@@ -2036,6 +2208,7 @@ export function AdminInventory() {
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
+                  styles.modalActionButton,
                   isProcessing &&
                   styles.disabled,
                 ]}
@@ -2064,7 +2237,7 @@ export function AdminInventory() {
                 )}
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
     </>

@@ -38,6 +38,8 @@ import {
   reorderWebBanners,
   updateWebBanner,
   WebBanner,
+  WebBannerAudience,
+  WebBannerPlacement,
 } from '../../../services/webBannerService';
 
 import {
@@ -60,6 +62,8 @@ interface BannerFormState {
   targetUrl: string;
   startsAt: string;
   endsAt: string;
+  placement: WebBannerPlacement;
+  audience: WebBannerAudience;
   isActive: boolean;
 }
 
@@ -75,6 +79,8 @@ const INITIAL_FORM:
   targetUrl: '',
   startsAt: '',
   endsAt: '',
+  placement: 'carousel',
+  audience: 'all',
   isActive: true,
 };
 
@@ -360,6 +366,18 @@ function SortableBannerCard({
               banner,
             )}
           </Text>
+
+          <Text
+            style={
+              styles.metaText
+            }
+          >
+            {getPlacementLabel(
+              banner.placement,
+            )} · {getAudienceLabel(
+              banner.audience,
+            )}
+          </Text>
         </View>
       </View>
 
@@ -605,6 +623,10 @@ export function AdminWebBanners() {
         formatDateInput(
           banner.endsAt,
         ),
+      placement:
+        banner.placement,
+      audience:
+        banner.audience,
       isActive:
         banner.isActive,
     });
@@ -888,6 +910,10 @@ export function AdminWebBanners() {
         imageUrl,
         imagePath,
         targetUrl,
+        placement:
+          form.placement,
+        audience:
+          form.audience,
         sortOrder:
           selectedBanner?.sortOrder ??
           (
@@ -1760,6 +1786,152 @@ export function AdminWebBanners() {
                   styles.inputLabel
                 }
               >
+                Dónde mostrar
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                {([
+                  ['carousel', 'Carrusel principal'],
+                  ['post_order', 'Después de pedido'],
+                  ['both', 'Ambos'],
+                ] as const).map(
+                  ([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      disabled={isProcessing}
+                      onPress={() =>
+                        setForm(current => ({
+                          ...current,
+                          placement: value,
+                        }))
+                      }
+                      style={{
+                        minHeight: 42,
+                        paddingHorizontal: 14,
+                        borderRadius: 9,
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderColor:
+                          form.placement === value
+                            ? theme.primary
+                            : '#444444',
+                        backgroundColor:
+                          form.placement === value
+                            ? `${theme.primary}22`
+                            : '#202020',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color:
+                            form.placement === value
+                              ? theme.primary
+                              : '#DDDDDD',
+                          fontWeight: '800',
+                          fontSize: 12,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ),
+                )}
+              </View>
+
+              <Text
+                style={
+                  styles.fieldHint
+                }
+              >
+                “Después de pedido” se mostrará como modal una vez creado el pedido.
+              </Text>
+
+              <Text
+                style={
+                  styles.inputLabel
+                }
+              >
+                Audiencia
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                {([
+                  ['all', 'Todos'],
+                  ['guest', 'Sólo invitados'],
+                  ['registered', 'Sólo registrados'],
+                ] as const).map(
+                  ([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      disabled={isProcessing}
+                      onPress={() =>
+                        setForm(current => ({
+                          ...current,
+                          audience: value,
+                        }))
+                      }
+                      style={{
+                        minHeight: 42,
+                        paddingHorizontal: 14,
+                        borderRadius: 9,
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderColor:
+                          form.audience === value
+                            ? theme.primary
+                            : '#444444',
+                        backgroundColor:
+                          form.audience === value
+                            ? `${theme.primary}22`
+                            : '#202020',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color:
+                            form.audience === value
+                              ? theme.primary
+                              : '#DDDDDD',
+                          fontWeight: '800',
+                          fontSize: 12,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ),
+                )}
+              </View>
+
+              <Text
+                style={
+                  styles.fieldHint
+                }
+              >
+                Puedes usar “Sólo invitados” para mensajes como “Regístrate para reclamar recompensas”.
+              </Text>
+
+              <Text
+                style={
+                  styles.inputLabel
+                }
+              >
                 Publicar desde
               </Text>
 
@@ -2222,6 +2394,33 @@ function isValidTargetUrl(
     );
   } catch {
     return false;
+  }
+}
+
+
+function getPlacementLabel(
+  placement: WebBannerPlacement,
+): string {
+  switch (placement) {
+    case 'post_order':
+      return 'Después de pedido';
+    case 'both':
+      return 'Carrusel + post-pedido';
+    default:
+      return 'Carrusel principal';
+  }
+}
+
+function getAudienceLabel(
+  audience: WebBannerAudience,
+): string {
+  switch (audience) {
+    case 'guest':
+      return 'Sólo invitados';
+    case 'registered':
+      return 'Sólo registrados';
+    default:
+      return 'Todos los clientes';
   }
 }
 

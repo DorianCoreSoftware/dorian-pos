@@ -8,7 +8,7 @@ export const styles =
       position:
         'absolute',
       right: 18,
-      bottom: 18,
+      bottom: 88,
       zIndex: 9999,
       alignItems:
         'flex-end',
@@ -20,7 +20,7 @@ export const styles =
         'calc(100vw - 28px)' as any,
       height: 520,
       maxHeight:
-        'calc(100vh - 100px)' as any,
+        'calc(100vh - 170px)' as any,
       borderWidth: 1,
       borderRadius: 18,
       overflow:

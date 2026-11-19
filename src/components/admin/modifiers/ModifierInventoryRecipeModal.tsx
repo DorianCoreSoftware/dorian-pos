@@ -576,7 +576,7 @@ export function ModifierInventoryRecipeModal({
                         styles.switchSubtitle
                       }
                     >
-                      Cuando este modificador sea elegido en una venta, se descontarán estos insumos.
+                      Agrega sólo los insumos que se consumen por elegir esta opción. No repitas aquí insumos que ya estén en la receta base del producto. Ejemplo: para “Fresa”, agrega únicamente el Boing Fresa que reemplaza la elección genérica.
                     </Text>
                   </View>
 

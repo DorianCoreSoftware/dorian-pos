@@ -362,12 +362,28 @@ const createStyles = (
     modalCard: {
       width: '100%',
       maxWidth: 600,
-      maxHeight: '92%',
-      padding: 20,
+      maxHeight: '100%',
       borderRadius: 15,
       borderWidth: 1,
       borderColor: '#3A3A3A',
       backgroundColor: '#1D1D1D',
+      overflow: 'hidden',
+    },
+    modalHeader: {
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#303030',
+    },
+    modalBodyScroll: {
+      flex: 1,
+      minHeight: 0,
+    },
+    modalBodyContent: {
+      paddingHorizontal: 20,
+      paddingTop: 4,
+      paddingBottom: 22,
     },
     modalTitle: {
       color: '#FFFFFF',
@@ -438,9 +454,42 @@ const createStyles = (
     modalActions: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      flexWrap: 'wrap',
       gap: 9,
-      marginTop: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderTopWidth: 1,
+      borderTopColor: '#303030',
+      backgroundColor: '#1D1D1D',
+    },
+    modalActionButton: {
+      flex: 1,
+      minWidth: 0,
+    },
+    costPreviewCard: {
+      marginTop: 12,
+      padding: 12,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: withAlpha(primaryColor, 0.45),
+      backgroundColor: withAlpha(primaryColor, 0.08),
+    },
+    costPreviewLabel: {
+      color: '#9C9C9C',
+      fontSize: 9,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    costPreviewValue: {
+      color: primaryColor,
+      fontSize: 20,
+      fontWeight: '900',
+      marginTop: 4,
+    },
+    costPreviewHelp: {
+      color: '#8B8B8B',
+      fontSize: 9,
+      lineHeight: 14,
+      marginTop: 4,
     },
   });
 
