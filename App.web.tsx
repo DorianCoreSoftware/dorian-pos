@@ -3,6 +3,10 @@ import WebApp from './src/web/WebApp';
 import WebAdminApp from './src/web/admin/WebAdminApp';
 
 import {
+  SafeAreaProvider,
+} from 'react-native-safe-area-context';
+
+import {
   AuthProvider,
 } from './src/context/AuthContext';
 
@@ -37,14 +41,16 @@ export default function AppWeb() {
     shouldUseAdminWeb();
 
   return (
-    <BusinessProvider>
-      {adminWeb ? (
-        <AuthProvider>
-          <WebAdminApp />
-        </AuthProvider>
-      ) : (
-        <WebApp />
-      )}
-    </BusinessProvider>
+    <SafeAreaProvider>
+      <BusinessProvider>
+        {adminWeb ? (
+          <AuthProvider>
+            <WebAdminApp />
+          </AuthProvider>
+        ) : (
+          <WebApp />
+        )}
+      </BusinessProvider>
+    </SafeAreaProvider>
   );
 }
