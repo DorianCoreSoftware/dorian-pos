@@ -302,6 +302,9 @@ function formatMoney(
   }
 }
 
+const MAX_ASSISTANT_AVATAR_BYTES =
+  10 * 1024 * 1024;
+
 export function AdminAiOrders() {
   const {
     width,
@@ -648,6 +651,16 @@ export function AdminAiOrders() {
               }
           ).file;
 
+        if (
+          webFile &&
+          webFile.size >
+            MAX_ASSISTANT_AVATAR_BYTES
+        ) {
+          throw new Error(
+            'La foto supera el límite de 10 MB. Elige una imagen más ligera.',
+          );
+        }
+
         let uploadBody:
           Blob | ArrayBuffer;
 
@@ -685,6 +698,16 @@ export function AdminAiOrders() {
             ) {
               throw new Error(
                 'La imagen seleccionada está vacía.',
+              );
+            }
+
+            if (
+              uploadBody
+                .byteLength >
+              MAX_ASSISTANT_AVATAR_BYTES
+            ) {
+              throw new Error(
+                'La foto supera el límite de 10 MB. Elige una imagen más ligera.',
               );
             }
           } catch (
