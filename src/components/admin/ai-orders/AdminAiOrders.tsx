@@ -20,6 +20,10 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 
 import {
+  File,
+} from 'expo-file-system';
+
+import {
   supabase,
 } from '../../../services/supabase';
 
@@ -645,34 +649,61 @@ export function AdminAiOrders() {
           ).file;
 
         let uploadBody:
-          Blob;
+          Blob | ArrayBuffer;
+
+        let detectedMimeType:
+          string | null =
+          null;
 
         if (
           webFile
         ) {
           uploadBody =
             webFile;
+
+          detectedMimeType =
+            webFile.type ||
+            null;
         } else {
-          const response =
-            await fetch(
-              asset.uri,
+          try {
+            const localFile =
+              new File(
+                asset.uri,
+              );
+
+            uploadBody =
+              await localFile
+                .arrayBuffer();
+
+            detectedMimeType =
+              localFile.type ||
+              null;
+
+            if (
+              uploadBody
+                .byteLength === 0
+            ) {
+              throw new Error(
+                'La imagen seleccionada está vacía.',
+              );
+            }
+          } catch (
+            fileError
+          ) {
+            console.error(
+              'Error leyendo imagen local de Dorian AI:',
+              fileError,
             );
 
-          if (
-            !response.ok
-          ) {
             throw new Error(
-              `No se pudo leer la imagen seleccionada (${response.status}).`,
+              'No se pudo leer la imagen seleccionada en este dispositivo. Intenta elegir otra foto.',
             );
           }
-
-          uploadBody =
-            await response.blob();
         }
 
         const mimeType =
           asset.mimeType ||
-          uploadBody.type ||
+          detectedMimeType ||
           'image/jpeg';
 
         const extension =
@@ -711,7 +742,14 @@ export function AdminAiOrders() {
             );
 
         if (uploadError) {
-          throw uploadError;
+          console.error(
+            'Supabase Storage rechazó el avatar de Dorian AI:',
+            uploadError,
+          );
+
+          throw new Error(
+            `No se pudo subir la foto a Storage: ${uploadError.message}`,
+          );
         }
 
         const {
