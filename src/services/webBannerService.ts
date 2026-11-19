@@ -2,6 +2,16 @@ import {
   supabase,
 } from './supabase';
 
+export type WebBannerPlacement =
+  | 'carousel'
+  | 'post_order'
+  | 'both';
+
+export type WebBannerAudience =
+  | 'all'
+  | 'guest'
+  | 'registered';
+
 export interface WebBanner {
   id: string;
   title: string | null;
@@ -9,6 +19,8 @@ export interface WebBanner {
   imageUrl: string;
   imagePath: string | null;
   targetUrl: string | null;
+  placement: WebBannerPlacement;
+  audience: WebBannerAudience;
   sortOrder: number;
   isActive: boolean;
   startsAt: string | null;
@@ -24,6 +36,8 @@ interface WebBannerRow {
   image_url: string;
   image_path?: string | null;
   target_url?: string | null;
+  placement?: WebBannerPlacement | null;
+  audience?: WebBannerAudience | null;
   sort_order: number;
   is_active?: boolean;
   starts_at?: string | null;
@@ -38,6 +52,8 @@ export interface SaveWebBannerInput {
   imageUrl: string;
   imagePath: string;
   targetUrl: string | null;
+  placement: WebBannerPlacement;
+  audience: WebBannerAudience;
   sortOrder: number;
   isActive: boolean;
   startsAt: string | null;
@@ -54,6 +70,8 @@ function mapBanner(
     imageUrl: row.image_url,
     imagePath: row.image_path ?? null,
     targetUrl: row.target_url ?? null,
+    placement: row.placement ?? 'carousel',
+    audience: row.audience ?? 'all',
     sortOrder: Number(row.sort_order ?? 0),
     isActive: row.is_active ?? true,
     startsAt: row.starts_at ?? null,
@@ -70,6 +88,8 @@ const ADMIN_SELECT = `
   image_url,
   image_path,
   target_url,
+  placement,
+  audience,
   sort_order,
   is_active,
   starts_at,
@@ -150,6 +170,8 @@ export async function createWebBanner(
       image_url: input.imageUrl,
       image_path: input.imagePath,
       target_url: input.targetUrl,
+      placement: input.placement,
+      audience: input.audience,
       sort_order: input.sortOrder,
       is_active: input.isActive,
       starts_at: input.startsAt,
@@ -185,6 +207,8 @@ export async function updateWebBanner(
       image_url: input.imageUrl,
       image_path: input.imagePath,
       target_url: input.targetUrl,
+      placement: input.placement,
+      audience: input.audience,
       sort_order: input.sortOrder,
       is_active: input.isActive,
       starts_at: input.startsAt,

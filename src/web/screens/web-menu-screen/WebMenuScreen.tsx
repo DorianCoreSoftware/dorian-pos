@@ -95,6 +95,7 @@ import { WebOrderTrackingModal } from '../../components/web-order-tracking-modal
 import WebProductCard from '../../components/web-product-card/WebProductCard';
 import WebOrderEntryChoiceModal from '../../components/web-order-entry-choice-modal/WebOrderEntryChoiceModal';
 import WebBannerCarousel from '../../components/web-banner-carousel/WebBannerCarousel';
+import WebPostOrderBannerModal from '../../components/web-post-order-banner-modal/WebPostOrderBannerModal';
 import {
   getSavedWebCart,
   getSavedWebOrderMode,
@@ -450,6 +451,14 @@ export default function WebMenuScreen({
     setWebBanners,
   ] = useState<WebBanner[]>([]);
   const [
+    isPostOrderBannerVisible,
+    setIsPostOrderBannerVisible,
+  ] = useState(false);
+  const [
+    postOrderBannerPending,
+    setPostOrderBannerPending,
+  ] = useState(false);
+  const [
     selectedCategoryId,
     setSelectedCategoryId,
   ] = useState<
@@ -505,6 +514,50 @@ export default function WebMenuScreen({
   ] = useState<WebCustomerProfile | null>(
     null,
   );
+
+  const carouselBanners =
+    useMemo(
+      () =>
+        webBanners.filter(
+          banner =>
+            banner.placement ===
+              'carousel' ||
+            banner.placement ===
+              'both',
+        ),
+      [webBanners],
+    );
+
+  const postOrderBanners =
+    useMemo(
+      () => {
+        const audience =
+          webCustomerProfile
+            ? 'registered'
+            : 'guest';
+
+        return webBanners.filter(
+          banner =>
+            (
+              banner.placement ===
+                'post_order' ||
+              banner.placement ===
+                'both'
+            ) &&
+            (
+              banner.audience ===
+                'all' ||
+              banner.audience ===
+                audience
+            ),
+        );
+      },
+      [
+        webBanners,
+        webCustomerProfile,
+      ],
+    );
+
 
   const [
     savedCustomerAddress,
@@ -1510,6 +1563,11 @@ export default function WebMenuScreen({
       );
       setSuccessfulPaymentMethod(data.paymentMethod);
 
+      setPostOrderBannerPending(
+        postOrderBanners.length >
+          0,
+      );
+
       if (
         marketingTrackingToken ||
         data.marketingCode
@@ -1601,6 +1659,24 @@ export default function WebMenuScreen({
       true,
     );
   }
+  function showPendingPostOrderBanner():
+    void {
+    if (
+      !postOrderBannerPending ||
+      postOrderBanners.length ===
+        0
+    ) {
+      return;
+    }
+
+    setPostOrderBannerPending(
+      false,
+    );
+    setIsPostOrderBannerVisible(
+      true,
+    );
+  }
+
   function handleCloseTracking() {
     updateTrackingPath(
       null,
@@ -1611,6 +1687,8 @@ export default function WebMenuScreen({
     setTrackingInitialCode(
       null,
     );
+
+    showPendingPostOrderBanner();
   }
   return (
     <View style={styles.screen}>
@@ -1838,7 +1916,7 @@ export default function WebMenuScreen({
         </View>
         <WebBannerCarousel
           banners={
-            webBanners
+            carouselBanners
           }
         />
         <View
@@ -2300,6 +2378,7 @@ export default function WebMenuScreen({
           {
             setSuccessfulOrderId(null);
             setSuccessfulPaymentMethod(null);
+            showPendingPostOrderBanner();
           }
         }
       />
@@ -2314,6 +2393,20 @@ export default function WebMenuScreen({
           handleCloseTracking
         }
       />
+      <WebPostOrderBannerModal
+        visible={
+          isPostOrderBannerVisible
+        }
+        banners={
+          postOrderBanners
+        }
+        onClose={() =>
+          setIsPostOrderBannerVisible(
+            false,
+          )
+        }
+      />
+
       <WebFeedbackModal
         visible={
           isFeedbackVisible

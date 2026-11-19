@@ -39,6 +39,29 @@ import {
 } from './ProductInventoryRecipeModal.styles';
 
 import {
+  getAllModifiers,
+  ModifierWithGroup,
+} from '../../../services/modifierService';
+
+import {
+  getProductModifierGroups,
+  ProductModifierGroup,
+} from '../../../services/productModifierGroupService';
+
+import {
+  getProductModifierOptions,
+} from '../../../services/productModifierOptionService';
+
+import {
+  getModifierInventoryRecipe,
+  ModifierInventoryRecipe,
+} from '../../../services/modifierInventoryRecipeService';
+
+import {
+  ModifierInventoryRecipeModal,
+} from '../modifiers/ModifierInventoryRecipeModal';
+
+import {
   useBusiness,
 } from '../../../context/BusinessContext';
 
@@ -55,6 +78,11 @@ interface ProductInventoryRecipeModalProps {
 interface RecipeLineForm {
   inventoryItemId: string;
   quantity: string;
+}
+
+interface ProductModifierConsumption {
+  modifier: ModifierWithGroup;
+  recipe: ModifierInventoryRecipe;
 }
 
 const UNIT_LABELS:
@@ -144,6 +172,37 @@ export function ProductInventoryRecipeModal({
       'manual',
     );
 
+
+  const [
+    modifierConsumption,
+    setModifierConsumption,
+  ] =
+    useState<ProductModifierConsumption[]>(
+      [],
+    );
+
+  const [
+    productModifierGroups,
+    setProductModifierGroups,
+  ] =
+    useState<ProductModifierGroup[]>(
+      [],
+    );
+
+  const [
+    modifierRecipeTarget,
+    setModifierRecipeTarget,
+  ] =
+    useState<ModifierWithGroup | null>(
+      null,
+    );
+
+  const [
+    consumptionRefreshKey,
+    setConsumptionRefreshKey,
+  ] =
+    useState(0);
+
   useEffect(
     () => {
       if (
@@ -166,6 +225,9 @@ export function ProductInventoryRecipeModal({
             loadedItems,
             recipe,
             loadedCosting,
+            productGroups,
+            productOptions,
+            allModifiers,
           ] =
             await Promise.all([
               getInventoryItems(),
@@ -175,11 +237,128 @@ export function ProductInventoryRecipeModal({
               getProductCosting(
                 productId,
               ),
+              getProductModifierGroups(
+                productId,
+              ),
+              getProductModifierOptions(
+                productId,
+              ),
+              getAllModifiers(),
             ]);
 
           if (cancelled) {
             return;
           }
+
+          setProductModifierGroups(
+            productGroups.filter(
+              group =>
+                group.isActive,
+            ),
+          );
+
+          const activeGroupIds =
+            new Set(
+              productGroups
+                .filter(
+                  group =>
+                    group.isActive,
+                )
+                .map(
+                  group =>
+                    group.modifierGroupId,
+                ),
+            );
+
+          const explicitOptionIds =
+            new Set(
+              productOptions
+                .filter(
+                  option =>
+                    option.isAvailable,
+                )
+                .map(
+                  option =>
+                    option.modifierId,
+                ),
+            );
+
+          const explicitGroupIds =
+            new Set(
+              allModifiers
+                .filter(
+                  modifier =>
+                    explicitOptionIds.has(
+                      modifier.id,
+                    ),
+                )
+                .map(
+                  modifier =>
+                    modifier.group_id,
+                ),
+            );
+
+          const productModifiers =
+            allModifiers
+              .filter(
+                modifier =>
+                  activeGroupIds.has(
+                    modifier.group_id,
+                  ) &&
+                  modifier.is_available &&
+                  (
+                    !explicitGroupIds.has(
+                      modifier.group_id,
+                    ) ||
+                    explicitOptionIds.has(
+                      modifier.id,
+                    )
+                  ),
+              )
+              .sort(
+                (left, right) => {
+                  const groupCompare =
+                    (
+                      left.group?.name ??
+                      ''
+                    ).localeCompare(
+                      right.group?.name ??
+                      '',
+                      'es-MX',
+                    );
+
+                  return groupCompare !== 0
+                    ? groupCompare
+                    : left.name.localeCompare(
+                        right.name,
+                        'es-MX',
+                      );
+                },
+              );
+
+          const modifierRecipes =
+            await Promise.all(
+              productModifiers.map(
+                modifier =>
+                  getModifierInventoryRecipe(
+                    modifier.id,
+                  ),
+              ),
+            );
+
+          if (cancelled) {
+            return;
+          }
+
+          setModifierConsumption(
+            productModifiers.map(
+              (modifier, index) => ({
+                modifier,
+                recipe:
+                  modifierRecipes[index],
+              }),
+            ),
+          );
 
           setInventoryItems(
             loadedItems,
@@ -240,6 +419,7 @@ export function ProductInventoryRecipeModal({
       visible,
       productId,
       onClose,
+      consumptionRefreshKey,
     ],
   );
 
@@ -462,6 +642,108 @@ export function ProductInventoryRecipeModal({
       [
         liveMaximumTotalCost,
         productPrice,
+      ],
+    );
+
+  const baseInventoryIds =
+    useMemo(
+      () =>
+        new Set(
+          lines.map(
+            line =>
+              line.inventoryItemId,
+          ),
+        ),
+      [lines],
+    );
+
+  const duplicateInventoryIds =
+    useMemo(
+      () => {
+        const duplicates =
+          new Set<string>();
+
+        modifierConsumption.forEach(
+          consumption => {
+            if (
+              !consumption.recipe.enabled
+            ) {
+              return;
+            }
+
+            consumption.recipe.items.forEach(
+              item => {
+                if (
+                  baseInventoryIds.has(
+                    item.inventoryItemId,
+                  )
+                ) {
+                  duplicates.add(
+                    item.inventoryItemId,
+                  );
+                }
+              },
+            );
+          },
+        );
+
+        return duplicates;
+      },
+      [
+        baseInventoryIds,
+        modifierConsumption,
+      ],
+    );
+
+  const groupCostSummary =
+    useMemo(
+      () =>
+        productModifierGroups.map(
+          group => {
+            const options =
+              modifierConsumption.filter(
+                consumption =>
+                  consumption.modifier.group_id ===
+                  group.modifierGroupId,
+              );
+
+            const optionCosts =
+              options
+                .filter(
+                  option =>
+                    option.recipe.enabled &&
+                    option.recipe.items.length > 0,
+                )
+                .map(
+                  option =>
+                    option.recipe.recipeCost,
+                );
+
+            const minOptionCost =
+              optionCosts.length > 0
+                ? Math.min(
+                    ...optionCosts,
+                  )
+                : 0;
+
+            const maxOptionCost =
+              optionCosts.length > 0
+                ? Math.max(
+                    ...optionCosts,
+                  )
+                : 0;
+
+            return {
+              group,
+              options,
+              minOptionCost,
+              maxOptionCost,
+            };
+          },
+        ),
+      [
+        modifierConsumption,
+        productModifierGroups,
       ],
     );
 
@@ -737,7 +1019,7 @@ export function ProductInventoryRecipeModal({
                         styles.enabledSubtitle
                       }
                     >
-                      La receta base se combina con variantes, modificadores y componentes de combo para calcular el costo total y el precio recomendado.
+                      Agrega aquí únicamente los insumos que SIEMPRE consume este producto. No agregues sabores, tamaños u opciones que cambian según un modificador: esos insumos deben configurarse en la receta del modificador. La receta base se suma a las opciones elegidas al vender.
                     </Text>
                   </View>
 
@@ -905,6 +1187,372 @@ export function ProductInventoryRecipeModal({
 
                 <View
                   style={
+                    styles.consumptionMap
+                  }
+                >
+                  <View
+                    style={
+                      styles.consumptionHeader
+                    }
+                  >
+                    <View
+                      style={{
+                        flex: 1,
+                      }}
+                    >
+                      <Text
+                        style={
+                          styles.costSummaryTitle
+                        }
+                      >
+                        Mapa de consumo
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.consumptionHelp
+                        }
+                      >
+                        Aquí ves en un solo lugar qué descuenta siempre el producto y qué cambia según cada opción.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={
+                      styles.mapSection
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.mapSectionLabel
+                      }
+                    >
+                      BASE · SIEMPRE SE CONSUME
+                    </Text>
+
+                    {lines.length === 0 ? (
+                      <Text
+                        style={
+                          styles.mapEmpty
+                        }
+                      >
+                        Sin consumo fijo. Esto es correcto para productos cuyo inventario depende totalmente de una opción, como sabores.
+                      </Text>
+                    ) : (
+                      lines.map(
+                        line => {
+                          const item =
+                            getItem(
+                              line.inventoryItemId,
+                            );
+
+                          if (!item) {
+                            return null;
+                          }
+
+                          const duplicated =
+                            duplicateInventoryIds.has(
+                              line.inventoryItemId,
+                            );
+
+                          return (
+                            <View
+                              key={`map-base-${line.inventoryItemId}`}
+                              style={[
+                                styles.mapRow,
+                                duplicated &&
+                                styles.mapRowWarning,
+                              ]}
+                            >
+                              <View
+                                style={{
+                                  flex: 1,
+                                }}
+                              >
+                                <Text
+                                  style={
+                                    styles.mapItemName
+                                  }
+                                >
+                                  {item.name}
+                                </Text>
+
+                                {duplicated ? (
+                                  <Text
+                                    style={
+                                      styles.mapWarningText
+                                    }
+                                  >
+                                    También aparece en una opción. Revisa posible doble descuento.
+                                  </Text>
+                                ) : null}
+                              </View>
+
+                              <Text
+                                style={
+                                  styles.mapQuantity
+                                }
+                              >
+                                {line.quantity || '0'} {UNIT_LABELS[item.baseUnit]}
+                              </Text>
+                            </View>
+                          );
+                        },
+                      )
+                    )}
+                  </View>
+
+                  <View
+                    style={
+                      styles.mapSection
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.mapSectionLabel
+                      }
+                    >
+                      SEGÚN OPCIÓN / MODIFICADOR
+                    </Text>
+
+                    {groupCostSummary.length === 0 ? (
+                      <Text
+                        style={
+                          styles.mapEmpty
+                        }
+                      >
+                        Este producto no tiene modificadores asociados.
+                      </Text>
+                    ) : (
+                      groupCostSummary.map(
+                        summary => {
+                          const {
+                            group,
+                            options,
+                            minOptionCost,
+                            maxOptionCost,
+                          } =
+                            summary;
+
+                          const groupLabel =
+                            group.group?.name ??
+                            'Grupo de opciones';
+
+                          const isExclusive =
+                            group.minSelections === 1 &&
+                            group.maxSelections === 1 &&
+                            !group.allowDuplicates;
+
+                          return (
+                            <View
+                              key={
+                                group.modifierGroupId
+                              }
+                              style={
+                                styles.optionConsumptionCard
+                              }
+                            >
+                              <View
+                                style={
+                                  styles.optionConsumptionTop
+                                }
+                              >
+                                <View
+                                  style={{
+                                    flex: 1,
+                                  }}
+                                >
+                                  <Text
+                                    style={
+                                      styles.optionGroupName
+                                    }
+                                  >
+                                    {groupLabel}
+                                  </Text>
+
+                                  <Text
+                                    style={
+                                      styles.optionName
+                                    }
+                                  >
+                                    {isExclusive
+                                      ? 'Selecciona 1 · costo de una sola variante'
+                                      : `Selecciona ${group.minSelections}–${group.maxSelections}`}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {isExclusive ? (
+                                <Text
+                                  style={
+                                    styles.costDetail
+                                  }
+                                >
+                                  Dorian NO suma todas las opciones. Para el costo mínimo toma la variante más barata (${minOptionCost.toFixed(2)}) y para el máximo la más cara (${maxOptionCost.toFixed(2)}).
+                                </Text>
+                              ) : (
+                                <Text
+                                  style={
+                                    styles.costDetail
+                                  }
+                                >
+                                  El costo considera la cantidad mínima y máxima de selecciones permitidas en este grupo.
+                                </Text>
+                              )}
+
+                              <View
+                                style={{
+                                  marginTop: 10,
+                                  gap: 8,
+                                }}
+                              >
+                                {options.map(
+                                  consumption => {
+                                    const {
+                                      modifier,
+                                      recipe,
+                                    } =
+                                      consumption;
+
+                                    const duplicatedItems =
+                                      recipe.items.filter(
+                                        item =>
+                                          baseInventoryIds.has(
+                                            item.inventoryItemId,
+                                          ),
+                                      );
+
+                                    return (
+                                      <View
+                                        key={
+                                          modifier.id
+                                        }
+                                        style={[
+                                          styles.optionConsumptionCard,
+                                          {
+                                            marginTop: 0,
+                                          },
+                                          duplicatedItems.length > 0 &&
+                                          styles.mapRowWarning,
+                                        ]}
+                                      >
+                                        <View
+                                          style={
+                                            styles.optionConsumptionTop
+                                          }
+                                        >
+                                          <View
+                                            style={{
+                                              flex: 1,
+                                            }}
+                                          >
+                                            <Text
+                                              style={
+                                                styles.optionName
+                                              }
+                                            >
+                                              {modifier.name}
+                                            </Text>
+                                          </View>
+
+                                          <TouchableOpacity
+                                            style={
+                                              styles.editConsumptionButton
+                                            }
+                                            onPress={() =>
+                                              setModifierRecipeTarget(
+                                                modifier,
+                                              )
+                                            }
+                                          >
+                                            <Text
+                                              style={
+                                                styles.editConsumptionText
+                                              }
+                                            >
+                                              Editar consumo
+                                            </Text>
+                                          </TouchableOpacity>
+                                        </View>
+
+                                        {!recipe.enabled ||
+                                        recipe.items.length === 0 ? (
+                                          <Text
+                                            style={
+                                              styles.mapEmpty
+                                            }
+                                          >
+                                            Sin consumo configurado.
+                                          </Text>
+                                        ) : (
+                                          <View
+                                            style={{
+                                              marginTop: 8,
+                                              gap: 5,
+                                            }}
+                                          >
+                                            {recipe.items.map(
+                                              item => (
+                                                <View
+                                                  key={`${modifier.id}-${item.inventoryItemId}`}
+                                                  style={
+                                                    styles.optionRecipeRow
+                                                  }
+                                                >
+                                                  <Text
+                                                    style={
+                                                      styles.optionRecipeItem
+                                                    }
+                                                  >
+                                                    {item.inventoryItemName}
+                                                  </Text>
+
+                                                  <Text
+                                                    style={
+                                                      styles.optionRecipeQty
+                                                    }
+                                                  >
+                                                    {item.quantity} {UNIT_LABELS[item.baseUnit]}
+                                                  </Text>
+                                                </View>
+                                              ),
+                                            )}
+
+                                            <Text
+                                              style={
+                                                styles.optionCost
+                                              }
+                                            >
+                                              Costo de esta variante: ${recipe.recipeCost.toFixed(2)}
+                                            </Text>
+                                          </View>
+                                        )}
+
+                                        {duplicatedItems.length > 0 ? (
+                                          <Text
+                                            style={
+                                              styles.mapWarningText
+                                            }
+                                          >
+                                            ⚠ {duplicatedItems.map(item => item.inventoryItemName).join(', ')} también está en la receta base.
+                                          </Text>
+                                        ) : null}
+                                      </View>
+                                    );
+                                  },
+                                )}
+                              </View>
+                            </View>
+                          );
+                        },
+                      )
+                    )}
+                  </View>
+                </View>
+
+                <View
+                  style={
                     styles.costSummary
                   }
                 >
@@ -914,6 +1562,14 @@ export function ProductInventoryRecipeModal({
                     }
                   >
                     Costeo y precio · vista previa
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.costDetail
+                    }
+                  >
+                    El costo máximo usa la combinación permitida más cara, no la suma de todas las variantes disponibles.
                   </Text>
 
                   <View
@@ -1210,6 +1866,39 @@ export function ProductInventoryRecipeModal({
           </View>
         </View>
       </Modal>
+
+      <ModifierInventoryRecipeModal
+        visible={
+          modifierRecipeTarget !==
+          null
+        }
+        modifierId={
+          modifierRecipeTarget
+            ?.id ??
+          null
+        }
+        modifierName={
+          modifierRecipeTarget
+            ?.name ??
+          ''
+        }
+        extraPrice={
+          Number(
+            modifierRecipeTarget
+              ?.extra_price ??
+            0,
+          )
+        }
+        onClose={() => {
+          setModifierRecipeTarget(
+            null,
+          );
+          setConsumptionRefreshKey(
+            current =>
+              current + 1,
+          );
+        }}
+      />
 
       <Modal
         transparent
