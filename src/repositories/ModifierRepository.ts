@@ -9,6 +9,7 @@ import {
 import {
 
   Modifier,
+  ModifierGroupKind,
 
 } from '../types';
 
@@ -21,6 +22,8 @@ export interface ModifierGroupEntity {
   code: string;
 
   name: string;
+
+  kind: ModifierGroupKind;
 
   is_active: boolean;
 
@@ -53,6 +56,8 @@ interface ModifierGroupDatabaseRecord {
   code: string;
 
   name: string;
+
+  kind: ModifierGroupKind;
 
   is_active: boolean;
 
@@ -150,6 +155,8 @@ export interface CreateModifierGroupData {
 
   position: number;
 
+  kind: ModifierGroupKind;
+
 }
 
 
@@ -161,6 +168,8 @@ export interface UpdateModifierGroupData {
   position: number;
 
   isActive: boolean;
+
+  kind: ModifierGroupKind;
 
 }
 
@@ -186,6 +195,8 @@ const MODIFIER_SELECT = `
 
     name,
 
+    kind,
+
     is_active,
 
     position,
@@ -207,6 +218,8 @@ const MODIFIER_GROUP_SELECT = `
   code,
 
   name,
+
+  kind,
 
   is_active,
 
@@ -245,6 +258,12 @@ function mapModifierGroup(
     name:
 
       group.name,
+
+
+
+    kind:
+
+      group.kind ?? 'option',
 
 
 
@@ -1108,6 +1127,12 @@ export async function insertModifierGroup(
 
 
 
+      kind:
+
+        input.kind,
+
+
+
       is_active:
 
         true,
@@ -1193,6 +1218,12 @@ export async function updateModifierGroupById(
       position:
 
         input.position,
+
+
+
+      kind:
+
+        input.kind,
 
 
 

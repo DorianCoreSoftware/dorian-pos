@@ -31,6 +31,7 @@ export function addConfiguredProductToCart(
 ): Cart {
   const {
     selectedModifiers = [],
+    selectedProductChecks = [],
     comboComponents = [],
     cookingMethod = null,
   } = configuration;
@@ -48,6 +49,8 @@ export function addConfiguredProductToCart(
       selectedModifiers,
     );
 
+  const checkIdentifier = selectedProductChecks.map(check => `${check.optionId}:${check.isSelected ? '1' : '0'}`).sort().join(',');
+
   const comboIdentifier =
     createComboIdentifier(
       normalizedComponents,
@@ -57,6 +60,7 @@ export function addConfiguredProductToCart(
     product.id,
     cleanNotes,
     modifierIdentifier,
+    checkIdentifier,
     comboIdentifier,
     cookingMethod ?? 'default',
   ].join('-');
@@ -81,6 +85,9 @@ export function addConfiguredProductToCart(
           ...modifier,
         }),
       ),
+
+    selectedProductChecks:
+      selectedProductChecks.map(check => ({ ...check })),
 
     cookingMethod,
 

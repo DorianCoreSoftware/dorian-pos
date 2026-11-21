@@ -698,6 +698,18 @@ export const Cart: React.FC<
                       </View>
                     ) : null}
 
+                    {(item.selectedProductChecks ?? []).length > 0 ? (
+                      <View style={styles.modifiersContainer}>
+                        {(item.selectedProductChecks ?? []).map(check => (
+                          <View key={`${item.id}-check-${check.optionId}`} style={styles.modifierBadge}>
+                            <Text style={styles.modifierText}>
+                              {check.isSelected ? '✓' : '✕'} {check.groupName}: {check.isSelected ? check.optionName : `Sin ${check.optionName}`}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+
                     {/* COMBO */}
                     {item
                       .comboComponents

@@ -231,6 +231,23 @@ const createStyles = (
       fontWeight: '800',
     },
 
+    personalizationButton: {
+      minHeight: 34,
+      paddingHorizontal: 10,
+      borderRadius: 7,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#35515B',
+      backgroundColor: '#142128',
+    },
+
+    personalizationButtonText: {
+      color: '#8FD6E8',
+      fontSize: 10,
+      fontWeight: '800',
+    },
+
     stateButton: {
       minHeight: 34,
       paddingHorizontal: 12,

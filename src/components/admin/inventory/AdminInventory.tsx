@@ -1306,8 +1306,9 @@ export function AdminInventory() {
                     <TouchableOpacity
                       style={[
                         styles.secondaryButton,
-                        item.isActive &&
-                        styles.dangerButton,
+                        item.isActive
+                          ? styles.dangerButton
+                          : styles.activateButton,
                       ]}
                       disabled={
                         isProcessing
@@ -1322,8 +1323,9 @@ export function AdminInventory() {
                       <Text
                         style={[
                           styles.secondaryButtonText,
-                          item.isActive &&
-                          styles.dangerButtonText,
+                          item.isActive
+                            ? styles.dangerButtonText
+                            : styles.activateButtonText,
                         ]}
                       >
                         {item.isActive

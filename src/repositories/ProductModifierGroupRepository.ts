@@ -6,6 +6,10 @@ import {
   ModifierGroupEntity,
 } from './ModifierRepository';
 
+import {
+  ModifierGroupKind,
+} from '../types';
+
 export interface ProductModifierGroup {
   id: string;
 
@@ -53,6 +57,7 @@ interface ProductModifierGroupDatabaseRecord {
         id: string;
         code: string;
         name: string;
+        kind: ModifierGroupKind;
         is_active: boolean;
         position: number;
         created_at?: string;
@@ -62,6 +67,7 @@ interface ProductModifierGroupDatabaseRecord {
         id: string;
         code: string;
         name: string;
+        kind: ModifierGroupKind;
         is_active: boolean;
         position: number;
         created_at?: string;
@@ -102,6 +108,7 @@ const PRODUCT_MODIFIER_GROUP_SELECT = `
     id,
     code,
     name,
+    kind,
     is_active,
     position,
     created_at,
@@ -160,6 +167,9 @@ function mapRecord(
 
             name:
               rawGroup.name,
+
+            kind:
+              rawGroup.kind ?? 'option',
 
             is_active:
               rawGroup.is_active,

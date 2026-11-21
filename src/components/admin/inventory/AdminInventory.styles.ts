@@ -148,7 +148,8 @@ const createStyles = (
       marginBottom: 10,
     },
     itemInactive: {
-      opacity: 0.55,
+      borderColor: '#4A4A4A',
+      backgroundColor: '#181818',
     },
     itemHeader: {
       flexDirection: 'row',
@@ -255,6 +256,14 @@ const createStyles = (
     },
     dangerButtonText: {
       color: '#FF9898',
+    },
+    activateButton: {
+      borderColor: '#66BB6A',
+      backgroundColor: '#2E7D32',
+    },
+    activateButtonText: {
+      color: '#FFFFFF',
+      fontWeight: '900',
     },
     emptyBox: {
       minHeight: 160,

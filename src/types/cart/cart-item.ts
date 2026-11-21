@@ -4,6 +4,7 @@ import {
   ComboComponentSelection,
 } from '../combo';
 import { DeliveryDetails } from '../delivery';
+import { SelectedProductCheck } from '../product-check';
 
 export interface CartItem {
   id: string;
@@ -12,6 +13,8 @@ export interface CartItem {
   notes: string;
 
   selectedModifiers: SelectedModifier[];
+
+  selectedProductChecks?: SelectedProductCheck[];
 
   cookingMethod?: ProductCookingMethod | null;
 

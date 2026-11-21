@@ -33,6 +33,7 @@ export interface AdminUpdateProductInput {
   allowsOilFryer: boolean;
   allowsAirFryer: boolean;
   airFryerExtraMinutes: number;
+  maxExtraItems: number;
   allowZeroPrice?: boolean;
 }
 
@@ -44,6 +45,7 @@ export interface CreateProductInput {
   allowsOilFryer: boolean;
   allowsAirFryer: boolean;
   airFryerExtraMinutes: number;
+  maxExtraItems: number;
   allowZeroPrice?: boolean;
 }
 
@@ -205,6 +207,9 @@ export async function createProduct(
 
         airFryerExtraMinutes:
           input.airFryerExtraMinutes,
+
+        maxExtraItems:
+          input.maxExtraItems,
       });
 
     return normalizeProduct(
@@ -324,6 +329,9 @@ export async function adminUpdateProduct(
 
           airFryerExtraMinutes:
             input.airFryerExtraMinutes,
+
+          maxExtraItems:
+            input.maxExtraItems,
         },
       );
 

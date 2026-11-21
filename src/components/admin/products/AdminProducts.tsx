@@ -20,6 +20,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from 'react-native';
 
@@ -47,6 +48,13 @@ import { uploadProductImage } from '../../../services/productImageService';
 import { useCurrency } from '../../../hooks/useCurrency';
 
 import { ProductInventoryRecipeModal } from '../inventory/ProductInventoryRecipeModal';
+
+import { ProductPersonalizationModal } from './ProductPersonalizationModal';
+
+import {
+    getProductPersonalizationEnabled,
+    setProductPersonalizationEnabled,
+} from '../../../services/productCheckService';
 
 import {
     getAllModifiers,
@@ -85,6 +93,7 @@ interface ProductFormState {
     allowsOilFryer: boolean;
     allowsAirFryer: boolean;
     airFryerExtraMinutes: string;
+    maxExtraItems: string;
 }
 
 interface ProductModifierGroupForm {
@@ -110,6 +119,7 @@ const INITIAL_FORM: ProductFormState = {
     allowsOilFryer: false,
     allowsAirFryer: false,
     airFryerExtraMinutes: '5',
+    maxExtraItems: '5',
 };
 
 export function AdminProducts({
@@ -123,6 +133,13 @@ export function AdminProducts({
     setBrandPrimaryColor(
         businessTheme.primary,
     );
+
+    const {
+        width,
+    } = useWindowDimensions();
+
+    const isPhone =
+        width < 700;
 
     const productImagePlaceholder =
         (
@@ -233,6 +250,16 @@ export function AdminProducts({
     const [
         isModalVisible,
         setIsModalVisible,
+    ] = useState(false);
+
+    const [
+        personalizationEnabled,
+        setPersonalizationEnabled,
+    ] = useState(false);
+
+    const [
+        isPersonalizationModalVisible,
+        setIsPersonalizationModalVisible,
     ] = useState(false);
 
     const [
@@ -390,6 +417,9 @@ export function AdminProducts({
 
     const openCreateModal =
         (): void => {
+            setPersonalizationEnabled(false);
+            setIsPersonalizationModalVisible(false);
+
             setSelectedProduct(null);
 
             setPendingImage(null);
@@ -428,6 +458,9 @@ export function AdminProducts({
                 product,
             );
 
+            setPersonalizationEnabled(false);
+            setIsPersonalizationModalVisible(false);
+
             setPendingImage(
                 null,
             );
@@ -465,6 +498,12 @@ export function AdminProducts({
                         product.air_fryer_extra_minutes ??
                         5,
                     ),
+
+                maxExtraItems:
+                    String(
+                        product.max_extra_items ??
+                        5,
+                    ),
             });
 
             setProductModifierGroups(
@@ -499,6 +538,7 @@ export function AdminProducts({
                     associations,
                     productOptions,
                     comboRecipe,
+                    productPersonalizationEnabled,
                 ] = await Promise.all([
                     getProductModifierGroups(
                         product.id,
@@ -509,7 +549,14 @@ export function AdminProducts({
                     getComboRecipeForAdmin(
                         product.id,
                     ),
+                    getProductPersonalizationEnabled(
+                        product.id,
+                    ),
                 ]);
+
+                setPersonalizationEnabled(
+                    productPersonalizationEnabled,
+                );
 
                 setProductModifierGroups(
                     associations.map(
@@ -820,10 +867,12 @@ export function AdminProducts({
                             '0',
 
                         maxSelections:
-                            '1',
+                            group.kind === 'extra'
+                                ? '10'
+                                : '1',
 
                         allowDuplicates:
-                            false,
+                            group.kind === 'extra',
 
                         position:
                             group.position,
@@ -980,6 +1029,15 @@ export function AdminProducts({
                         selectedIds === null ||
                         selectedIds === undefined
                     ) {
+                        ids.push(
+                            ...getModifiersForGroup(
+                                group.modifierGroupId,
+                            ).map(
+                                modifier =>
+                                    modifier.id,
+                            ),
+                        );
+
                         return;
                     }
 
@@ -1423,6 +1481,26 @@ export function AdminProducts({
                 return;
             }
 
+            const maxExtraItems =
+                Number(
+                    form.maxExtraItems,
+                );
+
+            if (
+                !Number.isInteger(
+                    maxExtraItems,
+                ) ||
+                maxExtraItems < 0 ||
+                maxExtraItems > 50
+            ) {
+                Alert.alert(
+                    'Límite de extras inválido',
+                    'El máximo total de extras debe ser un entero entre 0 y 50.',
+                );
+
+                return;
+            }
+
             const validatedGroups =
                 getValidatedModifierGroups();
 
@@ -1488,9 +1566,16 @@ export function AdminProducts({
                                     ? airFryerExtraMinutes
                                     : 0,
 
+                            maxExtraItems,
+
                             allowZeroPrice:
                                 isComboComplement,
                         },
+                    );
+
+                    await setProductPersonalizationEnabled(
+                        selectedProduct.id,
+                        personalizationEnabled,
                     );
 
                     await saveProductModifierGroups(
@@ -1555,9 +1640,16 @@ export function AdminProducts({
                                     ? airFryerExtraMinutes
                                     : 0,
 
+                            maxExtraItems,
+
                             allowZeroPrice:
                                 isComboComplement,
                         });
+
+                    await setProductPersonalizationEnabled(
+                        createdProduct.id,
+                        personalizationEnabled,
+                    );
 
                     if (pendingImage) {
                         const imageUrl =
@@ -1641,6 +1733,9 @@ export function AdminProducts({
                 setForm(
                     INITIAL_FORM,
                 );
+
+                setPersonalizationEnabled(false);
+                setIsPersonalizationModalVisible(false);
 
                 await Promise.all([
                     loadData(),
@@ -1770,9 +1865,7 @@ export function AdminProducts({
                 ]}
             >
                 <View
-                    style={
-                        styles.productThumbnailBox
-                    }
+                    style={[styles.productThumbnailBox, !isActive && styles.inactiveCardContent]}
                 >
                     {item.image_url ? (
                         <Image
@@ -1797,9 +1890,7 @@ export function AdminProducts({
                 </View>
 
                 <View
-                    style={
-                        styles.productInfo
-                    }
+                    style={[styles.productInfo, !isActive && styles.inactiveCardContent]}
                 >
                     <View
                         style={
@@ -1814,10 +1905,38 @@ export function AdminProducts({
                             {item.name}
                         </Text>
 
+                        {!isPhone ? (
+                            <View
+                                style={[
+                                    styles.statusBadge,
+
+                                    isActive
+                                        ? styles.statusBadgeActive
+                                        : styles.statusBadgeInactive,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.statusText,
+
+                                        isActive
+                                            ? styles.statusTextActive
+                                            : styles.statusTextInactive,
+                                    ]}
+                                >
+                                    {isActive
+                                        ? 'ACTIVO'
+                                        : 'INACTIVO'}
+                                </Text>
+                            </View>
+                        ) : null}
+                    </View>
+
+                    {isPhone ? (
                         <View
                             style={[
                                 styles.statusBadge,
-
+                                styles.statusBadgePhone,
                                 isActive
                                     ? styles.statusBadgeActive
                                     : styles.statusBadgeInactive,
@@ -1826,7 +1945,6 @@ export function AdminProducts({
                             <Text
                                 style={[
                                     styles.statusText,
-
                                     isActive
                                         ? styles.statusTextActive
                                         : styles.statusTextInactive,
@@ -1837,7 +1955,7 @@ export function AdminProducts({
                                     : 'INACTIVO'}
                             </Text>
                         </View>
-                    </View>
+                    ) : null}
 
                     <Text
                         style={
@@ -1899,9 +2017,7 @@ export function AdminProducts({
                     }
                 >
                     <TouchableOpacity
-                        style={
-                            styles.editButton
-                        }
+                        style={[styles.editButton, !isActive && styles.inactiveSecondaryAction]}
                         disabled={
                             isProcessing
                         }
@@ -1921,9 +2037,7 @@ export function AdminProducts({
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={
-                            styles.editButton
-                        }
+                        style={[styles.editButton, !isActive && styles.inactiveSecondaryAction]}
                         onPress={() => {
                             void openEditModal(
                                 item,
@@ -2072,6 +2186,14 @@ export function AdminProducts({
                         )
                 }
             />
+
+      <ProductPersonalizationModal
+        visible={isPersonalizationModalVisible}
+        product={selectedProduct}
+        onClose={() =>
+          setIsPersonalizationModalVisible(false)
+        }
+      />
 
             <Modal
                 visible={
@@ -3014,6 +3136,386 @@ export function AdminProducts({
 
                         <View
                             style={{
+                                marginTop: 16,
+                                padding: 12,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: personalizationEnabled
+                                    ? businessTheme.primary
+                                    : '#444444',
+                                backgroundColor: personalizationEnabled
+                                    ? withAlpha(
+                                        businessTheme.primary,
+                                        0.08,
+                                      )
+                                    : '#1B1B1B',
+                            }}
+                        >
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                }}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text
+                                        style={{
+                                            color: '#FFFFFF',
+                                            fontSize: 14,
+                                            fontWeight: '900',
+                                        }}
+                                    >
+                                        Personalización
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: '#9A9A9A',
+                                            fontSize: 10,
+                                            lineHeight: 15,
+                                            marginTop: 3,
+                                        }}
+                                    >
+                                        La categoría puede aportar una plantilla automática. Activa este switch sólo si quieres agregar personalización propia adicional a este producto.
+                                    </Text>
+                                </View>
+
+                                <Switch
+                                    value={personalizationEnabled}
+                                    disabled={isProcessing}
+                                    onValueChange={setPersonalizationEnabled}
+                                    trackColor={{
+                                        false: '#4A4A4A',
+                                        true: '#6FAFAD',
+                                    }}
+                                    thumbColor={
+                                        personalizationEnabled
+                                            ? '#8ED3D0'
+                                            : '#BDBDBD'
+                                    }
+                                />
+                            </View>
+
+                            {selectedProduct ? (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            setIsPersonalizationModalVisible(true)
+                                        }
+                                        disabled={isProcessing}
+                                        style={{
+                                            marginTop: 12,
+                                            minHeight: 44,
+                                            borderRadius: 9,
+                                            borderWidth: 1,
+                                            borderColor: businessTheme.primary,
+                                            backgroundColor: withAlpha(
+                                                businessTheme.primary,
+                                                0.12,
+                                            ),
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: businessTheme.primary,
+                                                fontSize: 11,
+                                                fontWeight: '900',
+                                            }}
+                                        >
+                                            Configurar personalización
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <Text
+                                        style={{
+                                            color: '#8F8F8F',
+                                            fontSize: 10,
+                                            lineHeight: 15,
+                                            marginTop: 10,
+                                        }}
+                                    >
+                                        Guarda primero el producto. Después podrás revisar la plantilla de categoría y agregar excepciones propias.
+                                    </Text>
+                                )}
+                        </View>
+
+                        {visibleModifierGroups.some(
+                            group =>
+                                group.kind ===
+                                'extra',
+                        ) ? (
+                            <View
+                                style={{
+                                    marginTop: 16,
+                                    padding: 12,
+                                    borderRadius: 10,
+                                    borderWidth: 1,
+                                    borderColor: '#6B5600',
+                                    backgroundColor: '#211C0E',
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: businessTheme.primary,
+                                        fontSize: 14,
+                                        fontWeight: '900',
+                                        marginBottom: 4,
+                                    }}
+                                >
+                                    + Extras cobrables
+                                </Text>
+
+                                <Text
+                                    style={{
+                                        color: '#B7B7B7',
+                                        fontSize: 10,
+                                        lineHeight: 15,
+                                        marginBottom: 10,
+                                    }}
+                                >
+                                    Activa aquí los ingredientes o adicionales que el cliente podrá agregar con costo extra.
+                                </Text>
+
+                                <View
+                                    style={{
+                                        marginBottom: 12,
+                                        padding: 10,
+                                        borderRadius: 8,
+                                        backgroundColor: '#171717',
+                                        borderWidth: 1,
+                                        borderColor: '#454545',
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: '#FFFFFF',
+                                            fontSize: 11,
+                                            fontWeight: '900',
+                                            marginBottom: 4,
+                                        }}
+                                    >
+                                        Máximo total de extras
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            color: '#8F8F8F',
+                                            fontSize: 9,
+                                            lineHeight: 13,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        Límite combinado entre todos los grupos Extra de este producto. Ejemplo: 2 carnes + 2 salsas + 1 nieve = 5 extras.
+                                    </Text>
+
+                                    <TextInput
+                                        value={form.maxExtraItems}
+                                        onChangeText={value =>
+                                            setForm(current => ({
+                                                ...current,
+                                                maxExtraItems: value.replace(/[^0-9]/g, ''),
+                                            }))
+                                        }
+                                        keyboardType="number-pad"
+                                        maxLength={2}
+                                        placeholder="5"
+                                        placeholderTextColor="#666666"
+                                        style={{
+                                            minHeight: 42,
+                                            paddingHorizontal: 12,
+                                            borderRadius: 8,
+                                            borderWidth: 1,
+                                            borderColor: '#555555',
+                                            backgroundColor: '#202020',
+                                            color: '#FFFFFF',
+                                            fontSize: 13,
+                                            fontWeight: '800',
+                                        }}
+                                    />
+                                </View>
+
+                                {visibleModifierGroups
+                                    .filter(
+                                        group =>
+                                            group.kind ===
+                                            'extra',
+                                    )
+                                    .map(
+                                        group => {
+                                            const config =
+                                                productModifierGroups.find(
+                                                    item =>
+                                                        item.modifierGroupId ===
+                                                        group.id,
+                                                );
+
+                                            const selected =
+                                                Boolean(config);
+
+                                            return (
+                                                <View
+                                                    key={group.id}
+                                                    style={{
+                                                        marginTop: 8,
+                                                        padding: 10,
+                                                        borderRadius: 8,
+                                                        borderWidth: 1,
+                                                        borderColor: selected
+                                                            ? businessTheme.primary
+                                                            : '#4B4430',
+                                                        backgroundColor: selected
+                                                            ? withAlpha(
+                                                                businessTheme.primary,
+                                                                0.12,
+                                                              )
+                                                            : '#1B1B1B',
+                                                    }}
+                                                >
+                                                    <View
+                                                        style={{
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            gap: 10,
+                                                        }}
+                                                    >
+                                                        <View style={{ flex: 1 }}>
+                                                            <Text
+                                                                style={{
+                                                                    color: selected
+                                                                        ? businessTheme.primary
+                                                                        : '#FFFFFF',
+                                                                    fontSize: 12,
+                                                                    fontWeight: '900',
+                                                                }}
+                                                            >
+                                                                {group.name}
+                                                            </Text>
+                                                            <Text
+                                                                style={{
+                                                                    color: '#8F8F8F',
+                                                                    fontSize: 9,
+                                                                    marginTop: 2,
+                                                                }}
+                                                            >
+                                                                {selected
+                                                                    ? `${getModifierOptionSummary(group.id)} · máximo ${config?.maxSelections ?? 10}`
+                                                                    : 'No disponible en este producto'}
+                                                            </Text>
+                                                        </View>
+
+                                                        <TouchableOpacity
+                                                            disabled={
+                                                                isProcessing ||
+                                                                !group.is_active
+                                                            }
+                                                            onPress={() =>
+                                                                toggleModifierGroup(
+                                                                    group,
+                                                                )
+                                                            }
+                                                            style={{
+                                                                minHeight: 38,
+                                                                paddingHorizontal: 12,
+                                                                borderRadius: 8,
+                                                                borderWidth: 1,
+                                                                borderColor: selected
+                                                                    ? '#8D3A3A'
+                                                                    : businessTheme.primary,
+                                                                backgroundColor: selected
+                                                                    ? '#381C1C'
+                                                                    : withAlpha(
+                                                                        businessTheme.primary,
+                                                                        0.16,
+                                                                      ),
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                            }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    color: selected
+                                                                        ? '#FF9B9B'
+                                                                        : businessTheme.primary,
+                                                                    fontSize: 10,
+                                                                    fontWeight: '900',
+                                                                }}
+                                                            >
+                                                                {selected
+                                                                    ? 'Quitar'
+                                                                    : 'Activar'}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+
+                                                    {config ? (
+                                                        <View
+                                                            style={{
+                                                                marginTop: 10,
+                                                                flexDirection: 'row',
+                                                                gap: 8,
+                                                            }}
+                                                        >
+                                                            <TouchableOpacity
+                                                                onPress={() =>
+                                                                    setOptionSelectorGroupId(
+                                                                        group.id,
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    flex: 1,
+                                                                    minHeight: 40,
+                                                                    borderRadius: 8,
+                                                                    borderWidth: 1,
+                                                                    borderColor: '#555555',
+                                                                    backgroundColor: '#191919',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: '#FFFFFF',
+                                                                        fontSize: 10,
+                                                                        fontWeight: '800',
+                                                                    }}
+                                                                >
+                                                                    Elegir extras
+                                                                </Text>
+                                                            </TouchableOpacity>
+
+                                                            <View
+                                                                style={{
+                                                                    minHeight: 40,
+                                                                    paddingHorizontal: 12,
+                                                                    borderRadius: 8,
+                                                                    backgroundColor: '#262626',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: '#BDBDBD',
+                                                                        fontSize: 9,
+                                                                        fontWeight: '700',
+                                                                    }}
+                                                                >
+                                                                    0–{config.maxSelections}
+                                                                </Text>
+                                                            </View>
+                                                        </View>
+                                                    ) : null}
+                                                </View>
+                                            );
+                                        },
+                                    )}
+                            </View>
+                        ) : null}
+
+                        <View
+                            style={{
                                 marginTop:
                                     16,
 
@@ -3048,7 +3550,7 @@ export function AdminProducts({
                                         4,
                                 }}
                             >
-                                Grupos de modificadores
+                                Opciones del producto
                             </Text>
 
                             <Text
@@ -3063,7 +3565,7 @@ export function AdminProducts({
                                         10,
                                 }}
                             >
-                                Selecciona los grupos que este producto utilizará y define sus límites.
+                                Configura aquí las opciones propias del producto: carne, sabor, tamaño, salsa incluida u otras elecciones.
                             </Text>
 
                             {isLoadingProductGroups ? (
@@ -3082,7 +3584,13 @@ export function AdminProducts({
                                     />
                                 </View>
                             ) : (
-                                visibleModifierGroups.map(
+                                visibleModifierGroups
+                                    .filter(
+                                        group =>
+                                            group.kind !==
+                                            'extra',
+                                    )
+                                    .map(
                                     group => {
                                         const config =
                                             productModifierGroups.find(
@@ -3175,6 +3683,7 @@ export function AdminProducts({
                                                                     ? '✓ '
                                                                     : ''}
                                                                 {group.name}
+                                                                
                                                             </Text>
 
                                                             {!group.is_active ? (
@@ -3418,7 +3927,7 @@ export function AdminProducts({
                                                                             '800',
                                                                     }}
                                                                 >
-                                                                    Permitir repetidos
+                                                                    {group.kind === 'extra' ? 'Permitir cantidad múltiple' : 'Permitir repetidos'}
                                                                 </Text>
 
                                                                 <Text
@@ -3433,7 +3942,7 @@ export function AdminProducts({
                                                                             2,
                                                                     }}
                                                                 >
-                                                                    Permite seleccionar varias veces la misma opción.
+                                                                    {group.kind === 'extra' ? 'Permite agregar 2x, 3x o más del mismo extra.' : 'Permite seleccionar varias veces la misma opción.'}
                                                                 </Text>
                                                             </View>
 

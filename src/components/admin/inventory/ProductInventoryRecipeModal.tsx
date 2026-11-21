@@ -665,7 +665,16 @@ export function ProductInventoryRecipeModal({
 
         modifierConsumption.forEach(
           consumption => {
+            const associatedGroup =
+              productModifierGroups.find(
+                group =>
+                  group.modifierGroupId ===
+                  consumption.modifier.group_id,
+              );
+
             if (
+              associatedGroup?.group?.kind ===
+                'extra' ||
               !consumption.recipe.enabled
             ) {
               return;
@@ -692,6 +701,7 @@ export function ProductInventoryRecipeModal({
       [
         baseInventoryIds,
         modifierConsumption,
+        productModifierGroups,
       ],
     );
 
@@ -1339,7 +1349,12 @@ export function ProductInventoryRecipeModal({
                             group.group?.name ??
                             'Grupo de opciones';
 
+                          const isExtraGroup =
+                            group.group?.kind ===
+                            'extra';
+
                           const isExclusive =
+                            !isExtraGroup &&
                             group.minSelections === 1 &&
                             group.maxSelections === 1 &&
                             !group.allowDuplicates;
@@ -1376,14 +1391,24 @@ export function ProductInventoryRecipeModal({
                                       styles.optionName
                                     }
                                   >
-                                    {isExclusive
-                                      ? 'Selecciona 1 · costo de una sola variante'
-                                      : `Selecciona ${group.minSelections}–${group.maxSelections}`}
+                                    {isExtraGroup
+                                      ? `EXTRAS COBRABLES · hasta ${group.maxSelections}`
+                                      : isExclusive
+                                        ? 'Selecciona 1 · costo de una sola variante'
+                                        : `Selecciona ${group.minSelections}–${group.maxSelections}`}
                                   </Text>
                                 </View>
                               </View>
 
-                              {isExclusive ? (
+                              {isExtraGroup ? (
+                                <Text
+                                  style={
+                                    styles.costDetail
+                                  }
+                                >
+                                  Estos insumos se consumen únicamente cuando el cliente agrega el extra. Pueden coincidir con la receta base: en ese caso representan una porción adicional y no un doble descuento accidental.
+                                </Text>
+                              ) : isExclusive ? (
                                 <Text
                                   style={
                                     styles.costDetail
@@ -1416,12 +1441,14 @@ export function ProductInventoryRecipeModal({
                                       consumption;
 
                                     const duplicatedItems =
-                                      recipe.items.filter(
-                                        item =>
-                                          baseInventoryIds.has(
-                                            item.inventoryItemId,
-                                          ),
-                                      );
+                                      isExtraGroup
+                                        ? []
+                                        : recipe.items.filter(
+                                            item =>
+                                              baseInventoryIds.has(
+                                                item.inventoryItemId,
+                                              ),
+                                          );
 
                                     return (
                                       <View
@@ -1524,7 +1551,9 @@ export function ProductInventoryRecipeModal({
                                                 styles.optionCost
                                               }
                                             >
-                                              Costo de esta variante: ${recipe.recipeCost.toFixed(2)}
+                                              {isExtraGroup
+                                                ? `Costo: $${recipe.recipeCost.toFixed(2)} · Precio extra: $${Number(modifier.extra_price ?? 0).toFixed(2)}`
+                                                : `Costo de esta variante: $${recipe.recipeCost.toFixed(2)}`}
                                             </Text>
                                           </View>
                                         )}

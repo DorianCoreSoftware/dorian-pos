@@ -1,0 +1,459 @@
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+
+import {
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+
+import {
+  Category,
+  ProductCheckAssignment,
+} from '../../../types';
+
+import {
+  createCategoryPersonalizationGroup,
+  createProductCheckOption,
+  deleteProductCheckOption,
+  deleteProductPersonalizationGroup,
+  getCategoryPersonalizationGroups,
+  setProductCheckOptionDefault,
+} from '../../../services/productCheckService';
+
+import {
+  useBusiness,
+} from '../../../context/BusinessContext';
+
+interface CategoryPersonalizationModalProps {
+  visible: boolean;
+  category: Category | null;
+  onClose: () => void;
+}
+
+export function CategoryPersonalizationModal({
+  visible,
+  category,
+  onClose,
+}: CategoryPersonalizationModalProps) {
+  const { theme } = useBusiness();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+
+  const [groups, setGroups] = useState<ProductCheckAssignment[]>([]);
+  const [groupName, setGroupName] = useState('');
+  const [optionDrafts, setOptionDrafts] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const load = useCallback(async (): Promise<void> => {
+    if (!category?.id) {
+      setGroups([]);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setGroups(
+        await getCategoryPersonalizationGroups(
+          category.id,
+        ),
+      );
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar la personalización de la categoría.',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [category?.id]);
+
+  useEffect(() => {
+    if (visible) {
+      setGroupName('');
+      setOptionDrafts({});
+      void load();
+    }
+  }, [visible, load]);
+
+  async function handleAddGroup(): Promise<void> {
+    if (!category?.id || isProcessing) return;
+    const clean = groupName.trim();
+    if (!clean) {
+      Alert.alert('Nombre requerido', 'Escribe un nombre como Verdura o Aderezos.');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      await createCategoryPersonalizationGroup(category.id, clean);
+      setGroupName('');
+      await load();
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo crear el grupo.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleAddOption(groupId: string): Promise<void> {
+    if (isProcessing) return;
+    const clean = (optionDrafts[groupId] ?? '').trim();
+    if (!clean) {
+      Alert.alert('Opción requerida', 'Escribe el nombre de la opción.');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      await createProductCheckOption(groupId, clean, true);
+      setOptionDrafts(current => ({ ...current, [groupId]: '' }));
+      await load();
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo crear la opción.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function confirmDeleteGroup(groupId: string, name: string): void {
+    Alert.alert(
+      'Eliminar plantilla',
+      `¿Eliminar “${name}” de la categoría? El cambio se reflejará en todos los productos que la hereden.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsProcessing(true);
+                await deleteProductPersonalizationGroup(groupId);
+                await load();
+              } catch (error) {
+                Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo eliminar el grupo.');
+              } finally {
+                setIsProcessing(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
+  function confirmDeleteOption(optionId: string, name: string): void {
+    Alert.alert(
+      'Eliminar opción',
+      `¿Eliminar “${name}”? Se quitará de todos los productos que hereden esta categoría.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsProcessing(true);
+                await deleteProductCheckOption(optionId);
+                await load();
+              } catch (error) {
+                Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo eliminar la opción.');
+              } finally {
+                setIsProcessing(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: 14,
+          paddingTop: Math.max(12, insets.top + 8),
+          paddingBottom: Math.max(14, insets.bottom + 10),
+          backgroundColor: 'rgba(0,0,0,0.78)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 620,
+            height: Math.min(height - Math.max(34, insets.top + insets.bottom + 28), 780),
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: theme.border,
+            backgroundColor: theme.surface,
+            overflow: 'hidden',
+          }}
+        >
+          <View
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>
+                Personalización de categoría
+              </Text>
+              <Text style={{ color: theme.textMuted, fontSize: 11, marginTop: 3 }}>
+                {category?.name ?? 'Categoría'} · Plantilla heredable
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={onClose}
+              disabled={isProcessing}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: theme.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: theme.text, fontSize: 22, fontWeight: '800' }}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View
+              style={{
+                padding: 12,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#35515B',
+                backgroundColor: '#142128',
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ color: '#8FD6E8', fontSize: 12, fontWeight: '900', marginBottom: 4 }}>
+                Plantilla automática
+              </Text>
+              <Text style={{ color: '#B7C6CB', fontSize: 11, lineHeight: 17 }}>
+                Todo producto de esta categoría hereda estos grupos automáticamente. No se copian producto por producto: cualquier cambio aquí se refleja de inmediato.
+              </Text>
+            </View>
+
+            <Text style={{ color: theme.text, fontSize: 13, fontWeight: '900', marginBottom: 8 }}>
+              Nuevo grupo
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+              <TextInput
+                value={groupName}
+                onChangeText={setGroupName}
+                placeholder="Ej. Verdura, Aderezos"
+                placeholderTextColor="#777777"
+                editable={!isProcessing}
+                maxLength={60}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  borderRadius: 9,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                  paddingHorizontal: 12,
+                  color: theme.text,
+                  backgroundColor: '#171717',
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => void handleAddGroup()}
+                disabled={isProcessing}
+                style={{
+                  minHeight: 44,
+                  paddingHorizontal: 14,
+                  borderRadius: 9,
+                  backgroundColor: theme.primary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: theme.onPrimary, fontSize: 11, fontWeight: '900' }}>+ Grupo</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isLoading ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : groups.length === 0 ? (
+              <View style={{ padding: 18, borderRadius: 12, borderWidth: 1, borderColor: theme.border, alignItems: 'center' }}>
+                <Text style={{ color: theme.textMuted, textAlign: 'center', fontSize: 12 }}>
+                  Esta categoría todavía no tiene una plantilla de personalización.
+                </Text>
+              </View>
+            ) : (
+              groups.map(group => (
+                <View
+                  key={group.groupId}
+                  style={{
+                    marginBottom: 14,
+                    padding: 12,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#444444',
+                    backgroundColor: '#1B1B1B',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>{group.group.name}</Text>
+                      <Text style={{ color: '#888888', fontSize: 10, marginTop: 2 }}>
+                        {group.options.length} opción{group.options.length === 1 ? '' : 'es'} · heredado por la categoría
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => confirmDeleteGroup(group.groupId, group.group.name)}
+                      disabled={isProcessing}
+                      style={{
+                        minHeight: 36,
+                        paddingHorizontal: 11,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#7D3A3A',
+                        backgroundColor: '#341C1C',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#FF9B9B', fontSize: 10, fontWeight: '900' }}>Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ marginTop: 12, gap: 8 }}>
+                    {group.options.map(option => (
+                      <View
+                        key={option.id}
+                        style={{
+                          minHeight: 48,
+                          paddingHorizontal: 10,
+                          paddingVertical: 8,
+                          borderRadius: 9,
+                          borderWidth: 1,
+                          borderColor: '#383838',
+                          backgroundColor: '#202020',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 10,
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>{option.name}</Text>
+                          <Text style={{ color: '#888888', fontSize: 9, marginTop: 2 }}>Incluido por defecto</Text>
+                        </View>
+                        <Switch
+                          value={option.defaultSelected}
+                          disabled={isProcessing}
+                          onValueChange={value => {
+                            void (async () => {
+                              try {
+                                setIsProcessing(true);
+                                await setProductCheckOptionDefault(option.id, value);
+                                await load();
+                              } catch (error) {
+                                Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo actualizar la opción.');
+                              } finally {
+                                setIsProcessing(false);
+                              }
+                            })();
+                          }}
+                          trackColor={{ false: '#494949', true: '#6FAFAD' }}
+                          thumbColor={option.defaultSelected ? '#8ED3D0' : '#BDBDBD'}
+                        />
+                        <TouchableOpacity
+                          onPress={() => confirmDeleteOption(option.id, option.name)}
+                          disabled={isProcessing}
+                          style={{ width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#6B3A3A', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Text style={{ color: '#FF8D8D', fontSize: 16, fontWeight: '900' }}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={{ marginTop: 10, flexDirection: 'row', gap: 8 }}>
+                    <TextInput
+                      value={optionDrafts[group.groupId] ?? ''}
+                      onChangeText={value => setOptionDrafts(current => ({ ...current, [group.groupId]: value }))}
+                      placeholder={`Agregar a ${group.group.name}`}
+                      placeholderTextColor="#777777"
+                      editable={!isProcessing}
+                      maxLength={60}
+                      style={{
+                        flex: 1,
+                        minHeight: 42,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#444444',
+                        backgroundColor: '#171717',
+                        paddingHorizontal: 10,
+                        color: '#FFFFFF',
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => void handleAddOption(group.groupId)}
+                      disabled={isProcessing}
+                      style={{ minHeight: 42, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: theme.primary, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '900' }}>+ Opción</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+          </ScrollView>
+
+          <View style={{ padding: 14, borderTopWidth: 1, borderTopColor: theme.border }}>
+            <TouchableOpacity
+              onPress={onClose}
+              disabled={isProcessing}
+              style={{ minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text style={{ color: theme.text, fontSize: 12, fontWeight: '900' }}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}

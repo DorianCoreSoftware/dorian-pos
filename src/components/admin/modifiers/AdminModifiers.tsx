@@ -45,8 +45,14 @@ import {
 } from '../../../hooks/useCurrency';
 
 import {
+    ModifierGroupKind,
+} from '../../../types';
+
+import {
     ModifierInventoryRecipeModal,
 } from './ModifierInventoryRecipeModal';
+
+const BILLABLE_EXTRAS_GROUP_CODE = 'billable_extras';
 
 type ModifierFilter =
     | 'all'
@@ -71,6 +77,7 @@ interface ModifierGroupFormState {
     name: string;
     code: string;
     position: string;
+    kind: ModifierGroupKind;
     isActive: boolean;
 }
 
@@ -79,6 +86,7 @@ const INITIAL_GROUP_FORM:
     name: '',
     code: '',
     position: '1',
+    kind: 'option',
     isActive: true,
 };
 
@@ -144,6 +152,11 @@ export function AdminModifiers({
         showUnavailable,
         setShowUnavailable,
     ] = useState(true);
+
+    const [
+        isExtrasMode,
+        setIsExtrasMode,
+    ] = useState(false);
 
     const [
         isModalVisible,
@@ -236,12 +249,25 @@ export function AdminModifiers({
         void loadData();
     }, [loadData]);
 
+    const extrasGroup =
+        useMemo(
+            () =>
+                groups.find(
+                    group =>
+                        group.code ===
+                        BILLABLE_EXTRAS_GROUP_CODE,
+                ) ?? null,
+            [groups],
+        );
+
     const activeGroups =
         useMemo(
             () =>
                 groups.filter(
                     group =>
-                        group.is_active,
+                        group.is_active &&
+                        group.code !==
+                            BILLABLE_EXTRAS_GROUP_CODE,
                 ),
             [groups],
         );
@@ -256,6 +282,17 @@ export function AdminModifiers({
             return modifiers
                 .filter(
                     (modifier) => {
+                        const isBillableExtra =
+                            modifier.group?.code ===
+                            BILLABLE_EXTRAS_GROUP_CODE;
+
+                        if (
+                            isExtrasMode !==
+                            isBillableExtra
+                        ) {
+                            return false;
+                        }
+
                         if (
                             !showUnavailable &&
                             modifier.is_available ===
@@ -265,6 +302,7 @@ export function AdminModifiers({
                         }
 
                         if (
+                            !isExtrasMode &&
                             activeFilter !==
                             'all' &&
                             modifier.group_id !==
@@ -324,6 +362,7 @@ export function AdminModifiers({
             activeFilter,
             searchText,
             showUnavailable,
+            isExtrasMode,
         ]);
 
     const openGroupsModal =
@@ -416,6 +455,9 @@ export function AdminModifiers({
                         group.position,
                     ),
 
+                kind:
+                    'option',
+
                 isActive:
                     group.is_active,
             });
@@ -498,6 +540,9 @@ export function AdminModifiers({
                             position:
                                 parsedPosition,
 
+                            kind:
+                                'option',
+
                             isActive:
                                 groupForm.isActive,
                         },
@@ -522,6 +567,9 @@ export function AdminModifiers({
 
                         position:
                             parsedPosition,
+
+                        kind:
+                            'option',
                     });
 
                     Alert.alert(
@@ -643,13 +691,19 @@ export function AdminModifiers({
             );
 
             const defaultGroup =
-                activeGroups[0] ??
-                null;
+                isExtrasMode
+                    ? extrasGroup
+                    : activeGroups[0] ??
+                      null;
 
             if (!defaultGroup) {
                 Alert.alert(
-                    'Sin grupos disponibles',
-                    'Activa o crea un grupo de modificadores antes de agregar un modificador.',
+                    isExtrasMode
+                        ? 'Extras no configurados'
+                        : 'Sin grupos disponibles',
+                    isExtrasMode
+                        ? 'No existe el catálogo técnico de extras. Aplica la migración de Extras cobrables.'
+                        : 'Activa o crea un grupo de modificadores antes de agregar un modificador.',
                 );
 
                 return;
@@ -952,8 +1006,11 @@ export function AdminModifiers({
                                     styles.groupBadgeText
                                 }
                             >
-                                {item.group?.name ??
-                                    'Sin grupo'}
+                                {item.group?.code ===
+                                BILLABLE_EXTRAS_GROUP_CODE
+                                    ? 'EXTRA COBRABLE'
+                                    : item.group?.name ??
+                                      'Sin grupo'}
                             </Text>
                         </View>
 
@@ -1199,6 +1256,61 @@ export function AdminModifiers({
                 ListHeaderComponent={
                     <>
                         <View
+                            style={{
+                                flexDirection: 'row',
+                                gap: 8,
+                                marginBottom: 14,
+                                flexWrap: 'wrap',
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setIsExtrasMode(false);
+                                    setActiveFilter('all');
+                                    setSearchText('');
+                                }}
+                                style={[
+                                    styles.filterButton,
+                                    !isExtrasMode &&
+                                    styles.filterButtonActive,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterButtonText,
+                                        !isExtrasMode &&
+                                        styles.filterButtonTextActive,
+                                    ]}
+                                >
+                                    Modificadores
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setIsExtrasMode(true);
+                                    setActiveFilter('all');
+                                    setSearchText('');
+                                }}
+                                style={[
+                                    styles.filterButton,
+                                    isExtrasMode &&
+                                    styles.filterButtonActive,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterButtonText,
+                                        isExtrasMode &&
+                                        styles.filterButtonTextActive,
+                                    ]}
+                                >
+                                    Extras cobrables
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View
                             style={
                                 styles.toolbar
                             }
@@ -1271,22 +1383,24 @@ export function AdminModifiers({
                                 />
                             </View>
 
-                            <TouchableOpacity
-                                style={
-                                    styles.manageGroupsButton
-                                }
-                                onPress={
-                                    openGroupsModal
-                                }
-                            >
-                                <Text
+                            {!isExtrasMode ? (
+                                <TouchableOpacity
                                     style={
-                                        styles.manageGroupsButtonText
+                                        styles.manageGroupsButton
+                                    }
+                                    onPress={
+                                        openGroupsModal
                                     }
                                 >
-                                    ⚙ Grupos
-                                </Text>
-                            </TouchableOpacity>
+                                    <Text
+                                        style={
+                                            styles.manageGroupsButtonText
+                                        }
+                                    >
+                                        ⚙ Grupos
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : null}
 
                             <TouchableOpacity
                                 style={
@@ -1301,11 +1415,14 @@ export function AdminModifiers({
                                         styles.createButtonText
                                     }
                                 >
-                                    + Nuevo modificador
+                                    {isExtrasMode
+                                        ? '+ Nuevo extra'
+                                        : '+ Nuevo modificador'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
 
+                        {!isExtrasMode ? (
                         <View
                             style={
                                 styles.filterTabs
@@ -1318,7 +1435,7 @@ export function AdminModifiers({
                                     name:
                                         'TODOS',
                                 },
-                                ...groups.map(
+                                ...activeGroups.map(
                                     group => ({
                                         id:
                                             group.id,
@@ -1364,6 +1481,7 @@ export function AdminModifiers({
                                 },
                             )}
                         </View>
+                        ) : null}
 
                         <View
                             style={
@@ -1375,7 +1493,9 @@ export function AdminModifiers({
                                     styles.listTitle
                                 }
                             >
-                                Modificadores
+                                {isExtrasMode
+                                    ? 'Extras cobrables'
+                                    : 'Modificadores'}
                             </Text>
 
                             <Text
@@ -1388,8 +1508,12 @@ export function AdminModifiers({
                                 }{' '}
                                 {visibleModifiers.length ===
                                     1
-                                    ? 'modificador'
-                                    : 'modificadores'}
+                                    ? isExtrasMode
+                                        ? 'extra'
+                                        : 'modificador'
+                                    : isExtrasMode
+                                        ? 'extras'
+                                        : 'modificadores'}
                             </Text>
                         </View>
                     </>
@@ -1578,6 +1702,8 @@ export function AdminModifiers({
                                         </Text>
                                     </>
                                 ) : null}
+
+                                
 
                                 <Text
                                     style={
@@ -1916,8 +2042,12 @@ export function AdminModifiers({
                             }
                         >
                             {selectedModifier
-                                ? 'Editar modificador'
-                                : 'Nuevo modificador'}
+                                ? isExtrasMode
+                                    ? 'Editar extra cobrable'
+                                    : 'Editar modificador'
+                                : isExtrasMode
+                                    ? 'Nuevo extra cobrable'
+                                    : 'Nuevo modificador'}
                         </Text>
 
                         <Text
@@ -1993,6 +2123,8 @@ export function AdminModifiers({
                             }
                         />
 
+                        {!isExtrasMode ? (
+                        <>
                         <Text
                             style={
                                 styles.inputLabel
@@ -2051,6 +2183,19 @@ export function AdminModifiers({
                                 },
                             )}
                         </View>
+                        </>
+                        ) : (
+                            <Text
+                                style={{
+                                    color: '#999999',
+                                    fontSize: 12,
+                                    marginTop: 8,
+                                    marginBottom: 8,
+                                }}
+                            >
+                                Los extras son globales. Después decides en cada producto cuáles acepta y cuántos puede agregar el cliente.
+                            </Text>
+                        )}
 
                         {selectedModifier ? (
                             <View

@@ -130,6 +130,15 @@ export interface PendingOrderModifierRelation {
   } | null;
 }
 
+export interface PendingOrderCheckSelectionRecord {
+  id: string;
+  group_id: string;
+  option_id: string;
+  group_name_applied: string;
+  option_name_applied: string;
+  is_selected: boolean;
+}
+
 export interface PendingOrderItemComponentRecord
   extends OrderItemComponentRecord {
   products: {
@@ -164,6 +173,9 @@ export interface PendingOrderItemRecord
 
   order_item_modifiers:
   PendingOrderModifierRelation[];
+
+  order_item_check_selections:
+  PendingOrderCheckSelectionRecord[];
 
   order_item_components:
   PendingOrderItemComponentRecord[];
@@ -341,6 +353,9 @@ export async function fetchPendingOrders(): Promise<
             )
           )
         ),
+        order_item_check_selections(
+          id, group_id, option_id, group_name_applied, option_name_applied, is_selected
+        ),
         order_item_components(
           *,
           products(*),
@@ -411,6 +426,9 @@ export async function fetchOrderById(
                 name
               )
             )
+          ),
+          order_item_check_selections(
+            id, group_id, option_id, group_name_applied, option_name_applied, is_selected
           ),
           order_item_components(
             *,

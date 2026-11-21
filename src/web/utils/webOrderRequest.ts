@@ -93,6 +93,8 @@ export function createWebOrderFingerprint(
             )
             .sort(),
 
+          checks: (item.selectedProductChecks ?? []).map(check => `${check.optionId}:${check.isSelected ? '1' : '0'}`).sort(),
+
           components: (
             item.comboComponents ??
             []

@@ -1181,7 +1181,7 @@ async function getProductDetails(productId: string) {
 
   const { data: groups, error: groupsError } = await admin
     .from('product_modifier_groups')
-    .select('modifier_group_id,is_required,min_selections,max_selections,position,modifier_groups(id,code,name,is_active)')
+    .select('modifier_group_id,is_required,min_selections,max_selections,allow_duplicates,position,modifier_groups(id,code,name,kind,is_active)')
     .eq('product_id', productId)
     .eq('is_active', true)
     .order('position');
@@ -3049,7 +3049,7 @@ async function getProductModifierConfiguration(
         max_selections,
         allow_duplicates,
         position,
-        modifier_groups(id,code,name,is_active)
+        modifier_groups(id,code,name,kind,is_active)
       `)
       .eq('product_id', productId)
       .eq('is_active', true)
@@ -3138,6 +3138,8 @@ async function getProductModifierConfiguration(
         relation?.code ?? null,
       name:
         relation?.name ?? 'Opciones',
+      kind:
+        relation?.kind ?? 'option',
       isRequired:
         Boolean(row.is_required),
       minSelections:
@@ -3773,14 +3775,16 @@ async function validateDraftItems(items: DraftItemInput[]) {
       comboProductIds.has(product.id);
 
     const quantity = Math.max(1, Math.min(50, Math.floor(Number(raw.quantity) || 1)));
-    const modifierIds = [...new Set(Array.isArray(raw.modifier_ids) ? raw.modifier_ids : [])];
+    const modifierIds = Array.isArray(raw.modifier_ids)
+      ? raw.modifier_ids.map(String)
+      : [];
     let modifierTotal = 0;
     let modifiers: any[] = [];
 
     if (modifierIds.length > 0) {
       const { data: groupLinks, error: groupLinksError } = await admin
         .from('product_modifier_groups')
-        .select('modifier_group_id')
+        .select('modifier_group_id,is_required,min_selections,max_selections,allow_duplicates,modifier_groups(id,name,kind)')
         .eq('product_id', product.id)
         .eq('is_active', true);
 
@@ -3806,7 +3810,7 @@ async function validateDraftItems(items: DraftItemInput[]) {
         admin
           .from('modifiers')
           .select('id,name,extra_price,is_available,group_id')
-          .in('id', modifierIds)
+          .in('id', [...new Set(modifierIds)])
           .eq('is_available', true),
       ]);
 
@@ -3863,6 +3867,56 @@ async function validateDraftItems(items: DraftItemInput[]) {
         throw new Error(`Uno o más modificadores no son válidos para ${product.name}.`);
       }
 
+      for (const groupLink of groupLinks ?? []) {
+        const groupId =
+          String((groupLink as any).modifier_group_id);
+
+        const relation =
+          Array.isArray((groupLink as any).modifier_groups)
+            ? (groupLink as any).modifier_groups[0]
+            : (groupLink as any).modifier_groups;
+
+        const selectedIds =
+          modifierIds.filter((modifierId) => {
+            const modifier: any =
+              requestedById.get(modifierId);
+
+            return String(modifier?.group_id ?? '') === groupId;
+          });
+
+        const minimum =
+          (groupLink as any).is_required
+            ? Math.max(
+                1,
+                Number((groupLink as any).min_selections ?? 0),
+              )
+            : Number((groupLink as any).min_selections ?? 0);
+
+        const maximum =
+          Math.max(
+            0,
+            Number((groupLink as any).max_selections ?? 1),
+          );
+
+        if (
+          !(groupLink as any).allow_duplicates &&
+          new Set(selectedIds).size !== selectedIds.length
+        ) {
+          throw new Error(
+            `El grupo "${relation?.name ?? 'Opciones'}" no permite repetir opciones.`,
+          );
+        }
+
+        if (
+          selectedIds.length < minimum ||
+          selectedIds.length > maximum
+        ) {
+          throw new Error(
+            `"${relation?.name ?? 'Opciones'}" en ${product.name} requiere entre ${minimum} y ${maximum} selecciones.`,
+          );
+        }
+      }
+
       modifiers = modifierIds
         .map((modifierId) => requestedById.get(modifierId))
         .filter(Boolean);
@@ -3884,9 +3938,24 @@ async function validateDraftItems(items: DraftItemInput[]) {
             components: [],
           };
 
+    const comboModifierTotal =
+      (comboValidation.components ?? []).reduce(
+        (componentTotal: number, component: any) =>
+          componentTotal +
+          Number(component.quantity ?? 1) *
+          (component.modifiers ?? []).reduce(
+            (modifierSum: number, modifier: any) =>
+              modifierSum +
+              Number(modifier.extraPrice ?? 0),
+            0,
+          ),
+        0,
+      );
+
     const unitPrice =
       Number(product.price) +
-      modifierTotal;
+      modifierTotal +
+      comboModifierTotal;
 
     const lineTotal =
       unitPrice * quantity;
@@ -9530,6 +9599,7 @@ REGLAS OBLIGATORIAS:
 - Si get_product_details indica combo.requiresConfiguration=true, usa get_combo_configuration. Debes completar exactamente cada componente del combo con una opción válida antes de update_draft.
 - Para combos, pregunta solo por la siguiente decisión faltante: opción del componente, modificadores obligatorios o método de cocción. No inventes componentes ni sustituciones.
 - Los sabores de bebida son modificadores normales. Si una opción tiene un modifierGroup con code='drink_flavor', trata ese grupo como la selección de sabor y envía el modifier.id elegido dentro de modifier_ids.
+- Los grupos con kind='extra' son adicionales cobrables. Si el cliente pide 2x/3x del mismo extra y el grupo permite duplicados, repite el mismo modifier.id esa cantidad de veces dentro de modifier_ids. No conviertas cantidades repetidas en notas. Respeta minSelections, maxSelections y allowDuplicates.
 - En update_draft envía combo_components estructurados con slot_id, product_id, modifier_ids, notes y cooking_method. Si el cliente cambia un componente, reconstruye el combo completo conservando los demás componentes confirmados.
 - Si el cliente pide domicilio, solicita una dirección suficientemente completa y usa quote_delivery antes de guardar el domicilio.
 - Nunca inventes coordenadas, cobertura ni costo de envío. Usa exactamente el resultado de quote_delivery.

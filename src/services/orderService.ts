@@ -21,6 +21,7 @@ import {
   OrderStatus,
 } from '../types';
 import { supabase } from './supabase';
+import { persistOrderProductChecks } from './productCheckService';
 
 /**
  * Resultado devuelto al crear una orden.
@@ -182,6 +183,14 @@ export async function createKitchenOrder(
       orderSource,
       resolvedFulfillmentType,
     );
+
+  await persistOrderProductChecks(
+    orderId,
+    cart.map(item => ({
+      productId: item.product.id,
+      checks: item.selectedProductChecks ?? [],
+    })),
+  );
 
   return {
     success: true,
@@ -431,6 +440,14 @@ function mapOrderToKitchenOrder(
               modifier !==
               null,
           ),
+
+        productChecks: (item.order_item_check_selections ?? []).map(check => ({
+          groupId: check.group_id,
+          groupName: check.group_name_applied,
+          optionId: check.option_id,
+          optionName: check.option_name_applied,
+          isSelected: check.is_selected !== false,
+        })),
 
         components: (
           item.order_item_components ??
@@ -946,6 +963,11 @@ export async function updateKitchenOrder(
     rpcItems,
     rpcDelivery,
     fulfillmentType,
+  );
+
+  await persistOrderProductChecks(
+    orderId,
+    cart.map(item => ({ productId: item.product.id, checks: item.selectedProductChecks ?? [] })),
   );
 }
 

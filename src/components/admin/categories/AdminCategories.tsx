@@ -35,6 +35,10 @@ import {
   setBrandPrimaryColor,
 } from './AdminCategories.styles';
 
+import {
+  CategoryPersonalizationModal,
+} from './CategoryPersonalizationModal';
+
 interface AdminCategoriesProps {
   onCategoriesChanged:
     () => Promise<void>;
@@ -68,6 +72,11 @@ export function AdminCategories({
   ] = useState<Category | null>(
     null,
   );
+
+  const [
+    personalizationCategory,
+    setPersonalizationCategory,
+  ] = useState<Category | null>(null);
 
   const [
     form,
@@ -484,6 +493,23 @@ export function AdminCategories({
         >
           <TouchableOpacity
             style={
+              styles.personalizationButton
+            }
+            onPress={() =>
+              setPersonalizationCategory(item)
+            }
+          >
+            <Text
+              style={
+                styles.personalizationButtonText
+              }
+            >
+              Personalización
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={
               styles.editButton
             }
             onPress={() =>
@@ -776,6 +802,12 @@ export function AdminCategories({
           }
         />
       )}
+
+      <CategoryPersonalizationModal
+        visible={personalizationCategory !== null}
+        category={personalizationCategory}
+        onClose={() => setPersonalizationCategory(null)}
+      />
 
       <Modal
         visible={

@@ -20,6 +20,10 @@ import {
 
 
 import {
+  fetchOrderPaymentByOrderId,
+} from '../../repositories/PaymentRepository';
+
+import {
   cancelOrder,
   deliverOrder,
   markOrderReady,
@@ -28,8 +32,6 @@ import {
 } from '../../services/orderService';
 
 import {
-  getOrderPaymentState,
-  refundOrderOverpayment,
   registerOrderPayment,
 } from '../../services/paymentService';
 
@@ -39,6 +41,7 @@ import {
 } from '../../services/promoService';
 
 import {
+  printDeliveryDispatchTicket,
   printOrderTicket,
 } from '../../services/printerService';
 
@@ -48,7 +51,6 @@ import {
   KitchenOrder,
   KitchenOrderItem,
   KitchenOrderItemComponent,
-  OrderPaymentState,
   PaymentMethod,
   Product,
 } from '../../types';
@@ -60,6 +62,10 @@ import {
 import {
   getOrderTrackingCode,
 } from '../../Utils/orderTracking';
+
+import {
+  groupModifiersForDisplay,
+} from '../../Utils/cartPricing';
 
 
 
@@ -153,59 +159,40 @@ export function KitchenScreen({
     useState(false);
 
   const [
-    financialByOrderId,
-    setFinancialByOrderId,
-  ] = useState<Record<string, OrderPaymentState>>({});
-
-  const [
-    verificationOrder,
-    setVerificationOrder,
-  ] = useState<KitchenOrder | null>(null);
-
-  const [
-    verificationAction,
-    setVerificationAction,
-  ] = useState<'finalize' | 'ready_for_delivery'>(
-    'finalize',
+    preparationItemIds,
+    setPreparationItemIds,
+  ] = useState<Set<string>>(
+    () => new Set(),
   );
 
   const [
-    verificationCheckedIds,
-    setVerificationCheckedIds,
-  ] = useState<Set<string>>(() => new Set());
-
-  const [
-    isSavingVerification,
-    setIsSavingVerification,
-  ] = useState(false);
-
-  const [
-    paymentAmountDue,
-    setPaymentAmountDue,
-  ] = useState(0);
+    paidOrderIds,
+    setPaidOrderIds,
+  ] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     let active = true;
 
-    const refreshFinancialStates =
+    const refreshPaidOrders =
       async (): Promise<void> => {
-        const entries =
+        const results =
           await Promise.all(
             pendingOrders.map(
               async order => {
                 try {
-                  const state =
-                    await getOrderPaymentState(
+                  const payment =
+                    await fetchOrderPaymentByOrderId(
                       order.id,
                     );
 
-                  return [
-                    order.id,
-                    state,
-                  ] as const;
+                  return payment
+                    ? order.id
+                    : null;
                 } catch (error) {
                   console.error(
-                    'No se pudo consultar el saldo de la orden:',
+                    'No se pudo consultar el pago de la orden:',
                     order.id,
                     error,
                   );
@@ -220,22 +207,116 @@ export function KitchenScreen({
           return;
         }
 
-        setFinancialByOrderId(
-          Object.fromEntries(
-            entries.filter(
-              (entry): entry is readonly [string, OrderPaymentState] =>
-                entry !== null,
+        setPaidOrderIds(
+          new Set(
+            results.filter(
+              (
+                orderId,
+              ): orderId is string =>
+                Boolean(orderId),
             ),
           ),
         );
       };
 
-    void refreshFinancialStates();
+    void refreshPaidOrders();
 
     return () => {
       active = false;
     };
   }, [pendingOrders]);
+
+  const isOrderFullyPrepared = (
+    order: KitchenOrder,
+  ): boolean =>
+    order.order_items.length > 0 &&
+    order.order_items.every(
+      line => line.is_prepared,
+    );
+
+  const handleToggleOrderItemPrepared =
+    async (
+      line: KitchenOrderItem,
+    ): Promise<void> => {
+      if (
+        preparationItemIds.has(
+          line.id,
+        )
+      ) {
+        return;
+      }
+
+      const nextPrepared =
+        !line.is_prepared;
+
+      setPreparationItemIds(
+        current => {
+          const next =
+            new Set(current);
+          next.add(line.id);
+          return next;
+        },
+      );
+
+      try {
+        await setOrderItemPrepared(
+          line.id,
+          nextPrepared,
+        );
+
+        setPendingOrders(
+          currentOrders =>
+            currentOrders.map(
+              order =>
+                order.id ===
+                line.order_id
+                  ? {
+                      ...order,
+                      order_items:
+                        order.order_items.map(
+                          item =>
+                            item.id ===
+                            line.id
+                              ? {
+                                  ...item,
+                                  is_prepared:
+                                    nextPrepared,
+                                  prepared_at:
+                                    nextPrepared
+                                      ? new Date().toISOString()
+                                      : null,
+                                  prepared_by:
+                                    null,
+                                }
+                              : item,
+                        ),
+                    }
+                  : order,
+            ),
+        );
+      } catch (error) {
+        console.error(
+          'Error al actualizar preparación:',
+          error,
+        );
+
+        Alert.alert(
+          'No se pudo actualizar',
+          error instanceof Error
+            ? error.message
+            : 'No se pudo actualizar la preparación del producto.',
+        );
+      } finally {
+        setPreparationItemIds(
+          current => {
+            const next =
+              new Set(current);
+            next.delete(line.id);
+            return next;
+          },
+        );
+      }
+    };
 
   const handleDeliverPaidOrder =
     async (
@@ -250,7 +331,18 @@ export function KitchenScreen({
           order.id,
         );
 
+        setPaidOrderIds(
+          current => {
+            const next =
+              new Set(current);
 
+            next.delete(
+              order.id,
+            );
+
+            return next;
+          },
+        );
 
         if (
           editingOrderId ===
@@ -273,65 +365,88 @@ export function KitchenScreen({
       }
     };
 
-  const updateFinancialState = (
-    state: OrderPaymentState,
-  ): void => {
-    setFinancialByOrderId(
-      current => ({
-        ...current,
-        [state.orderId]: state,
-      }),
-    );
-  };
-
   const handleOpenPayment =
     async (
       order: KitchenOrder,
       intent:
         'advance' | 'final',
     ): Promise<void> => {
+      const alreadyPaid =
+        paidOrderIds.has(
+          order.id,
+        );
+
+      if (alreadyPaid) {
+        if (
+          intent === 'final'
+        ) {
+          await handleDeliverPaidOrder(
+            order,
+          );
+        } else {
+          Alert.alert(
+            'Orden ya pagada',
+            'Esta orden ya tiene un pago registrado.',
+          );
+        }
+
+        return;
+      }
+
+      if (
+        intent === 'final' &&
+        !isOrderFullyPrepared(
+          order,
+        )
+      ) {
+        Alert.alert(
+          'Pedido incompleto',
+          'Marca todos los productos como preparados antes de cobrar y entregar la orden.',
+        );
+        return;
+      }
+
       try {
-        const state =
-          await getOrderPaymentState(
+        const existingPayment =
+          await fetchOrderPaymentByOrderId(
             order.id,
           );
 
-        updateFinancialState(
-          state,
-        );
-
-        if (state.creditDue > 0) {
-          Alert.alert(
-            'Saldo a favor del cliente',
-            `Hay ${formatCurrency(
-              state.creditDue,
-            )} por devolver antes de cerrar el pedido.`,
+        if (existingPayment) {
+          setPaidOrderIds(
+            current =>
+              new Set([
+                ...current,
+                order.id,
+              ]),
           );
-          return;
-        }
 
-        if (state.balanceDue <= 0) {
-          if (intent === 'final') {
+          if (
+            intent === 'final'
+          ) {
             await handleDeliverPaidOrder(
               order,
             );
           } else {
             Alert.alert(
-              'Pedido cubierto',
-              'El pedido no tiene saldo pendiente.',
+              'Orden ya pagada',
+              'Esta orden ya tiene un pago registrado.',
             );
           }
+
           return;
         }
 
-        setPaymentIntent(intent);
-        setPaymentAmountDue(
-          state.balanceDue,
+        setPaymentIntent(
+          intent,
         );
-        setPaymentOrder(order);
+
+        setPaymentOrder(
+          order,
+        );
       } catch (error) {
         console.error(
-          'Error al consultar el saldo:',
+          'Error al consultar el pago:',
           error,
         );
 
@@ -339,202 +454,10 @@ export function KitchenScreen({
           'Error',
           error instanceof Error
             ? error.message
-            : 'No se pudo consultar el estado financiero del pedido.',
+            : 'No se pudo consultar el estado del pago.',
         );
       }
     };
-
-  const handleRequestFinalization = (
-    order: KitchenOrder,
-  ): void => {
-    setVerificationAction('finalize');
-    setVerificationOrder(order);
-    setVerificationCheckedIds(
-      new Set(
-        order.order_items
-          .filter(line => line.is_prepared)
-          .map(line => line.id),
-      ),
-    );
-  };
-
-  const handleRequestReadyForDelivery = (
-    order: KitchenOrder,
-  ): void => {
-    setVerificationAction('ready_for_delivery');
-    setVerificationOrder(order);
-    setVerificationCheckedIds(
-      new Set(
-        order.order_items
-          .filter(line => line.is_prepared)
-          .map(line => line.id),
-      ),
-    );
-  };
-
-  const handleToggleVerificationItem = (
-    itemId: string,
-  ): void => {
-    setVerificationCheckedIds(
-      current => {
-        const next = new Set(current);
-        if (next.has(itemId)) {
-          next.delete(itemId);
-        } else {
-          next.add(itemId);
-        }
-        return next;
-      },
-    );
-  };
-
-  const handleConfirmVerification =
-    async (): Promise<void> => {
-      if (
-        !verificationOrder ||
-        isSavingVerification
-      ) {
-        return;
-      }
-
-      const allChecked =
-        verificationOrder.order_items.every(
-          line =>
-            verificationCheckedIds.has(
-              line.id,
-            ),
-        );
-
-      if (!allChecked) {
-        Alert.alert(
-          'Faltan productos',
-          'Asegúrate de que todos los productos estén listos antes de continuar.',
-        );
-        return;
-      }
-
-      try {
-        setIsSavingVerification(true);
-
-        const pendingLines =
-          verificationOrder.order_items.filter(
-            line => !line.is_prepared,
-          );
-
-        await Promise.all(
-          pendingLines.map(
-            line =>
-              setOrderItemPrepared(
-                line.id,
-                true,
-              ),
-          ),
-        );
-
-        const updatedOrder: KitchenOrder = {
-          ...verificationOrder,
-          order_items:
-            verificationOrder.order_items.map(
-              line => ({
-                ...line,
-                is_prepared: true,
-                prepared_at:
-                  line.prepared_at ??
-                  new Date().toISOString(),
-              }),
-            ),
-        };
-
-        setPendingOrders(
-          current =>
-            current.map(
-              order =>
-                order.id === updatedOrder.id
-                  ? updatedOrder
-                  : order,
-            ),
-        );
-
-        setVerificationOrder(null);
-        setVerificationCheckedIds(new Set());
-
-        if (
-          verificationAction ===
-          'ready_for_delivery'
-        ) {
-          await markOrderReady(
-            updatedOrder.id,
-          );
-
-          updateOrderInPendingList(
-            updatedOrder.id,
-            'ready',
-          );
-          return;
-        }
-
-        await handleOpenPayment(
-          updatedOrder,
-          'final',
-        );
-      } catch (error) {
-        Alert.alert(
-          'No se pudo verificar el pedido',
-          error instanceof Error
-            ? error.message
-            : 'No se pudo guardar la verificación de productos.',
-        );
-      } finally {
-        setIsSavingVerification(false);
-      }
-    };
-
-  const handleResolveCredit = (
-    order: KitchenOrder,
-    state: OrderPaymentState,
-  ): void => {
-    const execute = async (
-      method: PaymentMethod,
-    ): Promise<void> => {
-      try {
-        const next =
-          await refundOrderOverpayment({
-            orderId: order.id,
-            paymentMethod: method,
-            amount: state.creditDue,
-          });
-
-        updateFinancialState(next);
-
-        Alert.alert(
-          'Diferencia devuelta',
-          `Se registró una devolución de ${formatCurrency(
-            state.creditDue,
-          )}.`,
-        );
-      } catch (error) {
-        Alert.alert(
-          'No se pudo registrar',
-          error instanceof Error
-            ? error.message
-            : 'No se pudo registrar la devolución de diferencia.',
-        );
-      }
-    };
-
-    Alert.alert(
-      'Resolver saldo a favor',
-      `Devuelve ${formatCurrency(
-        state.creditDue,
-      )} al cliente y selecciona cómo salió el dinero.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Efectivo', onPress: () => void execute('cash') },
-        { text: 'Tarjeta', onPress: () => void execute('card') },
-        { text: 'Transferencia', onPress: () => void execute('transfer') },
-      ],
-    );
-  };
 
   const handleClosePayment =
     (): void => {
@@ -551,7 +474,6 @@ export function KitchenScreen({
       setPaymentIntent(
         'final',
       );
-      setPaymentAmountDue(0);
     };
 
   const handleConfirmPayment =
@@ -580,13 +502,8 @@ export function KitchenScreen({
           true,
         );
 
-        let nextFinancialState:
-          OrderPaymentState | null =
-          null;
-
         try {
-          nextFinancialState =
-            await registerOrderPayment(
+          await registerOrderPayment(
             {
               orderId:
                 orderToPay.id,
@@ -594,7 +511,9 @@ export function KitchenScreen({
               paymentMethod,
 
               totalAmount:
-                paymentAmountDue,
+                Number(
+                  orderToPay.total,
+                ),
 
               amountReceived,
 
@@ -608,10 +527,6 @@ export function KitchenScreen({
 
               currencyCode,
             },
-          );
-
-          updateFinancialState(
-            nextFinancialState,
           );
         } catch (error) {
           console.error(
@@ -664,9 +579,6 @@ export function KitchenScreen({
 
             amountReceived,
 
-            paymentAmount:
-              paymentAmountDue,
-
             promoCoupon,
 
             currencyCode,
@@ -685,6 +597,14 @@ export function KitchenScreen({
             'El cobro se guardó correctamente, pero no se pudo imprimir el ticket.\n\nPuedes continuar con la entrega.',
           );
         }
+
+        setPaidOrderIds(
+          current =>
+            new Set([
+              ...current,
+              orderToPay.id,
+            ]),
+        );
 
         setPaymentOrder(
           null,
@@ -712,8 +632,8 @@ export function KitchenScreen({
         Alert.alert(
           'Pago anticipado registrado',
           ticketPrinted
-            ? `El abono se guardó. Saldo pendiente: ${formatCurrency(nextFinancialState?.balanceDue ?? 0)}. La orden seguirá visible en cocina.`
-            : `El abono se guardó. Saldo pendiente: ${formatCurrency(nextFinancialState?.balanceDue ?? 0)}. La orden seguirá visible en cocina.`,
+            ? 'El cobro se guardó y el ticket fue generado. La orden conservará su estado actual y seguirá visible en cocina.'
+            : 'El cobro se guardó. La orden conservará su estado actual y seguirá visible en cocina.',
         );
       } finally {
         setIsProcessingPayment(
@@ -746,6 +666,49 @@ export function KitchenScreen({
       );
     };
 
+  const handlePrintDeliveryDispatchTicket =
+    async (
+      order: KitchenOrder,
+      showSuccess = false,
+    ): Promise<boolean> => {
+      if (
+        order.fulfillmentType !==
+          'delivery' ||
+        !order.deliveryDetails
+      ) {
+        return false;
+      }
+
+      try {
+        await printDeliveryDispatchTicket({
+          order,
+        });
+
+        if (showSuccess) {
+          Alert.alert(
+            'Ticket impreso',
+            'El identificador de reparto se imprimió correctamente.',
+          );
+        }
+
+        return true;
+      } catch (error) {
+        console.error(
+          'Error imprimiendo ticket de reparto:',
+          error,
+        );
+
+        Alert.alert(
+          'Pedido listo · impresión pendiente',
+          error instanceof Error
+            ? `El pedido quedó listo para reparto, pero no se pudo imprimir el identificador.\n\n${error.message}\n\nPuedes usar “Reimprimir reparto” desde esta orden.`
+            : 'El pedido quedó listo para reparto, pero no se pudo imprimir el identificador. Puedes reimprimirlo desde esta orden.',
+        );
+
+        return false;
+      }
+    };
+
   const handleAdvanceOrderStatus =
     async (
       order: KitchenOrder,
@@ -771,16 +734,6 @@ export function KitchenScreen({
           order.status ===
           'preparing'
         ) {
-          if (
-            order.fulfillmentType ===
-            'delivery'
-          ) {
-            handleRequestReadyForDelivery(
-              order,
-            );
-            return;
-          }
-
           await markOrderReady(
             order.id,
           );
@@ -789,6 +742,15 @@ export function KitchenScreen({
             order.id,
             'ready',
           );
+
+          if (
+            order.fulfillmentType ===
+            'delivery'
+          ) {
+            await handlePrintDeliveryDispatchTicket(
+              order,
+            );
+          }
 
           return;
         }
@@ -863,20 +825,11 @@ export function KitchenScreen({
           : 'Listo para recoger';
       }
 
-      const state =
-        financialByOrderId[
-          order.id
-        ];
-
-      if (state?.creditDue > 0) {
-        return 'Resolver saldo a favor';
-      }
-
-      if (state && state.balanceDue <= 0) {
-        return 'Verificar / Entregar';
-      }
-
-      return 'Verificar / Cobrar';
+      return paidOrderIds.has(
+        order.id,
+      )
+        ? 'Entregar'
+        : 'Cobrar / Entregar';
     };
 
   const handleCancelOrderPrompt =
@@ -991,6 +944,14 @@ export function KitchenScreen({
               ',',
             );
 
+        const personalizationIdentifier =
+          (line.productChecks ?? [])
+            .map(check =>
+              `${check.optionId}:${check.isSelected ? '1' : '0'}`,
+            )
+            .sort()
+            .join(',');
+
         const componentIdentifier =
           components
             .map(
@@ -1049,6 +1010,7 @@ export function KitchenScreen({
               line.product_id,
               cleanNotes,
               modifierIdentifier,
+              personalizationIdentifier,
               componentIdentifier,
             ].join(
               '-',
@@ -1091,6 +1053,13 @@ export function KitchenScreen({
                 modifier,
               ) => ({
                 ...modifier,
+              }),
+            ),
+
+          selectedProductChecks:
+            (line.productChecks ?? []).map(
+              check => ({
+                ...check,
               }),
             ),
 
@@ -1365,10 +1334,10 @@ export function KitchenScreen({
           </Text>
         ) : null}
 
-        {modifiers.map(
-          (
-            modifier,
-          ) => (
+        {groupModifiersForDisplay(
+          modifiers,
+        ).map(
+          ({ modifier, count }) => (
             <Text
               key={`${component.id}-${modifier.id}`}
               style={{
@@ -1389,7 +1358,7 @@ export function KitchenScreen({
               }}
             >
               •{' '}
-              {modifier.name}
+              {count > 1 ? `${count}x ` : ''}{modifier.name}
 
               {getModifierGroupLabel(
                 modifier,
@@ -1448,6 +1417,64 @@ export function KitchenScreen({
           }}
         >
           <TouchableOpacity
+            accessibilityRole="checkbox"
+            accessibilityState={{
+              checked:
+                line.is_prepared,
+              disabled:
+                preparationItemIds.has(
+                  line.id,
+                ),
+            }}
+            accessibilityLabel={`Marcar ${line.products?.name ?? 'producto'} como preparado`}
+            disabled={
+              preparationItemIds.has(
+                line.id,
+              )
+            }
+            onPress={() => {
+              void handleToggleOrderItemPrepared(
+                line,
+              );
+            }}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 7,
+              borderWidth: 2,
+              borderColor:
+                line.is_prepared
+                  ? businessTheme.primary
+                  : '#686868',
+              backgroundColor:
+                line.is_prepared
+                  ? businessTheme.primary
+                  : '#1C1C1C',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity:
+                preparationItemIds.has(
+                  line.id,
+                )
+                  ? 0.5
+                  : 1,
+            }}
+          >
+            {line.is_prepared ? (
+              <Text
+                style={{
+                  color:
+                    businessTheme.onPrimary,
+                  fontSize: 17,
+                  fontWeight: '900',
+                }}
+              >
+                ✓
+              </Text>
+            ) : null}
+          </TouchableOpacity>
+
+          <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel={`Ver descripción de ${
               line.products
@@ -1474,6 +1501,11 @@ export function KitchenScreen({
               style={[
                 styles.itemText,
                 {
+                  opacity:
+                    line.is_prepared
+                      ? 0.72
+                      : 1,
+
                   textDecorationLine:
                     'underline',
 
@@ -1524,10 +1556,10 @@ export function KitchenScreen({
                   4,
               }}
             >
-              {modifiers.map(
-                (
-                  modifier,
-                ) => (
+              {groupModifiersForDisplay(
+                modifiers,
+              ).map(
+                ({ modifier, count }) => (
                   <Text
                     key={
                       modifier.id
@@ -1544,7 +1576,7 @@ export function KitchenScreen({
                     }}
                   >
                     •{' '}
-                    {modifier.name}
+                    {count > 1 ? `${count}x ` : ''}{modifier.name}
 
                     {getModifierGroupLabel(
                       modifier,
@@ -1558,6 +1590,40 @@ export function KitchenScreen({
               )}
             </View>
           )}
+
+        {(line.productChecks ?? []).length > 0 ? (
+          <View
+            style={{
+              paddingLeft: 12,
+              marginVertical: 4,
+            }}
+          >
+            <Text
+              style={{
+                color: '#AFAFAF',
+                fontSize: 11,
+                fontWeight: '800',
+                marginBottom: 3,
+              }}
+            >
+              PERSONALIZACIÓN
+            </Text>
+
+            {(line.productChecks ?? []).map(check => (
+              <Text
+                key={`${line.id}-personalization-${check.optionId}`}
+                style={{
+                  color: check.isSelected
+                    ? '#FFFFFF'
+                    : '#FF9B9B',
+                  fontSize: 13,
+                }}
+              >
+                {check.isSelected ? '✓' : '✕'} {check.groupName}: {check.isSelected ? check.optionName : `SIN ${check.optionName}`}
+              </Text>
+            ))}
+          </View>
+        ) : null}
 
         {components.length >
           0 && (
@@ -1928,17 +1994,15 @@ export function KitchenScreen({
               item.total,
             ),
           )}
-          {financialByOrderId[item.id]?.status === 'paid' ? (
-            <Text style={styles.orderPaidText}>
+          {paidOrderIds.has(
+            item.id,
+          ) ? (
+            <Text
+              style={
+                styles.orderPaidText
+              }
+            >
               {' '}(Pagado)
-            </Text>
-          ) : financialByOrderId[item.id]?.status === 'partial' ? (
-            <Text style={{ color: '#FFB74D', fontSize: 12, fontWeight: '800' }}>
-              {' '}(Saldo {formatCurrency(financialByOrderId[item.id].balanceDue)})
-            </Text>
-          ) : financialByOrderId[item.id]?.status === 'credit' ? (
-            <Text style={{ color: '#EF9A9A', fontSize: 12, fontWeight: '800' }}>
-              {' '}(A favor {formatCurrency(financialByOrderId[item.id].creditDue)})
             </Text>
           ) : null}
         </Text>
@@ -2088,48 +2152,14 @@ export function KitchenScreen({
         </View>
       </ScrollView>
 
-      {financialByOrderId[item.id] ? (
-        <View
-          style={{
-            marginTop: 8,
-            padding: 10,
-            borderRadius: 9,
-            borderWidth: 1,
-            borderColor: '#454545',
-            backgroundColor: '#1E1E1E',
-          }}
-        >
-          <Text style={{ color: '#D0D0D0', fontSize: 12, fontWeight: '700' }}>
-            Total {formatCurrency(financialByOrderId[item.id].orderTotal)} · Pagado {formatCurrency(financialByOrderId[item.id].paidTotal)}
-          </Text>
-          {financialByOrderId[item.id].balanceDue > 0 ? (
-            <Text style={{ color: '#FFB74D', fontSize: 13, fontWeight: '900', marginTop: 3 }}>
-              Saldo pendiente {formatCurrency(financialByOrderId[item.id].balanceDue)}
-            </Text>
-          ) : null}
-          {financialByOrderId[item.id].creditDue > 0 ? (
-            <TouchableOpacity
-              onPress={() =>
-                handleResolveCredit(
-                  item,
-                  financialByOrderId[item.id],
-                )
-              }
-            >
-              <Text style={{ color: '#EF9A9A', fontSize: 13, fontWeight: '900', marginTop: 3, textDecorationLine: 'underline' }}>
-                Saldo a favor {formatCurrency(financialByOrderId[item.id].creditDue)} · Resolver
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      ) : null}
-
       <View
         style={
           styles.actionBlock
         }
       >
-        {(financialByOrderId[item.id]?.balanceDue ?? Number(item.total)) > 0 &&
+        {!paidOrderIds.has(
+          item.id,
+        ) &&
         item.status !== 'ready' &&
         item.status !== 'on_the_way' ? (
           <TouchableOpacity
@@ -2153,13 +2183,40 @@ export function KitchenScreen({
           </TouchableOpacity>
         ) : null}
 
+        {item.status !== 'pending' &&
+        !isOrderFullyPrepared(
+          item,
+        ) ? (
+          <Text
+            style={{
+              color: '#FFB74D',
+              fontSize: 12,
+              fontWeight: '700',
+              marginBottom: 9,
+              textAlign: 'center',
+            }}
+          >
+            ⏳ Marca todos los productos como preparados para continuar.
+          </Text>
+        ) : null}
+
         <TouchableOpacity
           style={[
             styles.deliverButton,
             styles.primaryStatusButton,
-
+            item.status !== 'pending' &&
+            !isOrderFullyPrepared(
+              item,
+            )
+              ? { opacity: 0.4 }
+              : null,
           ]}
-
+          disabled={
+            item.status !== 'pending' &&
+            !isOrderFullyPrepared(
+              item,
+            )
+          }
           onPress={() => {
             if (
               item.status ===
@@ -2167,8 +2224,9 @@ export function KitchenScreen({
               item.status ===
               'on_the_way'
             ) {
-              handleRequestFinalization(
+              void handleOpenPayment(
                 item,
+                'final',
               );
 
               return;
@@ -2213,6 +2271,35 @@ export function KitchenScreen({
               Editar
             </Text>
           </TouchableOpacity>
+
+          {item.fulfillmentType ===
+            'delivery' &&
+          (
+            item.status ===
+              'ready' ||
+            item.status ===
+              'on_the_way'
+          ) ? (
+            <TouchableOpacity
+              style={
+                styles.editOrderButton
+              }
+              onPress={() => {
+                void handlePrintDeliveryDispatchTicket(
+                  item,
+                  true,
+                );
+              }}
+            >
+              <Text
+                style={
+                  styles.editOrderButtonText
+                }
+              >
+                Reimprimir reparto
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             style={
@@ -2514,133 +2601,6 @@ export function KitchenScreen({
         </View>
       </Modal>
 
-      <Modal
-        visible={verificationOrder !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          if (!isSavingVerification) {
-            setVerificationOrder(null);
-          }
-        }}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.76)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-          }}
-        >
-          <View
-            style={{
-              width: '100%',
-              maxWidth: 560,
-              maxHeight: '82%',
-              borderRadius: 18,
-              backgroundColor: '#1E1E1E',
-              borderWidth: 1,
-              borderColor: '#484848',
-              overflow: 'hidden',
-            }}
-          >
-            <View style={{ padding: 18, borderBottomWidth: 1, borderBottomColor: '#353535' }}>
-              <Text style={{ color: '#FFF', fontSize: 21, fontWeight: '900' }}>
-                {verificationAction === 'ready_for_delivery'
-                  ? 'Verificar antes de enviar a reparto'
-                  : 'Verificar pedido'}
-              </Text>
-              <Text style={{ color: '#FFB74D', fontSize: 13, fontWeight: '700', marginTop: 6, lineHeight: 19 }}>
-                {verificationAction === 'ready_for_delivery'
-                  ? 'Asegúrate de que todos los productos estén listos antes de marcar el pedido listo para reparto.'
-                  : 'Asegúrate de que todos los productos estén listos antes de cobrar o entregar.'}
-              </Text>
-            </View>
-
-            <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-              {verificationOrder?.order_items.map(line => {
-                const checked = verificationCheckedIds.has(line.id);
-                return (
-                  <TouchableOpacity
-                    key={line.id}
-                    onPress={() => handleToggleVerificationItem(line.id)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: 12,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: checked ? businessTheme.primary : '#505050',
-                      backgroundColor: checked ? withAlpha(businessTheme.primary, 0.12) : '#242424',
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 7,
-                        borderWidth: 2,
-                        borderColor: checked ? businessTheme.primary : '#707070',
-                        backgroundColor: checked ? businessTheme.primary : '#1B1B1B',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {checked ? (
-                        <Text style={{ color: businessTheme.onPrimary, fontSize: 17, fontWeight: '900' }}>✓</Text>
-                      ) : null}
-                    </View>
-                    <Text style={{ flex: 1, color: '#FFF', fontSize: 15, fontWeight: '800' }}>
-                      {line.quantity}x {line.products?.name ?? 'Producto'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#353535', gap: 10 }}>
-              <TouchableOpacity
-                disabled={
-                  isSavingVerification ||
-                  !verificationOrder?.order_items.every(line =>
-                    verificationCheckedIds.has(line.id),
-                  )
-                }
-                onPress={() => void handleConfirmVerification()}
-                style={{
-                  minHeight: 50,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: businessTheme.primary,
-                  opacity:
-                    isSavingVerification ||
-                    !verificationOrder?.order_items.every(line =>
-                      verificationCheckedIds.has(line.id),
-                    )
-                      ? 0.4
-                      : 1,
-                }}
-              >
-                <Text style={{ color: businessTheme.onPrimary, fontSize: 15, fontWeight: '900' }}>
-                  {isSavingVerification ? 'Guardando…' : 'Todos listos · Continuar'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                disabled={isSavingVerification}
-                onPress={() => setVerificationOrder(null)}
-                style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Text style={{ color: '#BDBDBD', fontSize: 14, fontWeight: '800' }}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       <PaymentModal
         visible={
           paymentOrder !==
@@ -2653,7 +2613,9 @@ export function KitchenScreen({
         }
         totalAmount={
           paymentOrder
-            ? paymentAmountDue
+            ? Number(
+              paymentOrder.total,
+            )
             : 0
         }
         isProcessing={
