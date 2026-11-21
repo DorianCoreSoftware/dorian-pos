@@ -28,6 +28,7 @@ import {
 
 import {
   createProductCheckOption,
+  createCategoryPersonalizationGroup,
   createProductPersonalizationGroup,
   deleteProductCheckOption,
   deleteProductPersonalizationGroup,
@@ -70,9 +71,9 @@ export function ProductPersonalizationModal({
   ] = useState<ProductCheckAssignment[]>([]);
 
   const [
-    inheritedGroups,
-    setInheritedGroups,
-  ] = useState<ProductCheckAssignment[]>([]);
+    categoryId,
+    setCategoryId,
+  ] = useState<string | null>(null);
 
   const [
     categoryName,
@@ -131,8 +132,12 @@ export function ProductPersonalizationModal({
                 : Promise.resolve([]),
             ]);
 
-          setGroups(ownData);
-          setInheritedGroups(inheritedData);
+          setGroups(
+            context.inheritCategory && context.categoryId
+              ? inheritedData
+              : ownData,
+          );
+          setCategoryId(context.categoryId);
           setCategoryName(context.categoryName);
           setInheritCategory(context.inheritCategory);
         } catch (error) {
@@ -178,10 +183,17 @@ export function ProductPersonalizationModal({
 
     try {
       setIsProcessing(true);
-      await createProductPersonalizationGroup(
-        product.id,
-        clean,
-      );
+      if (inheritCategory && categoryId) {
+        await createCategoryPersonalizationGroup(
+          categoryId,
+          clean,
+        );
+      } else {
+        await createProductPersonalizationGroup(
+          product.id,
+          clean,
+        );
+      }
       setGroupName('');
       await load();
     } catch (error) {
@@ -479,6 +491,7 @@ export function ProductPersonalizationModal({
                           setIsProcessing(true);
                           await setProductCategoryPersonalizationInheritance(product.id, value);
                           setInheritCategory(value);
+                          await load();
                         } catch (error) {
                           Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo cambiar la herencia.');
                         } finally {
@@ -491,16 +504,6 @@ export function ProductPersonalizationModal({
                   />
                 </View>
 
-                {inheritCategory && inheritedGroups.length > 0 ? (
-                  <View style={{ marginTop: 10, gap: 7 }}>
-                    {inheritedGroups.map(group => (
-                      <View key={group.groupId} style={{ padding: 9, borderRadius: 8, backgroundColor: '#192D35', borderWidth: 1, borderColor: '#2D4A54' }}>
-                        <Text style={{ color: '#D8EEF4', fontSize: 11, fontWeight: '900' }}>{group.group.name}</Text>
-                        <Text style={{ color: '#91AAB1', fontSize: 9, marginTop: 2 }}>{group.options.map(option => option.name).join(' · ')}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
               </View>
             ) : null}
 
@@ -509,10 +512,25 @@ export function ProductPersonalizationModal({
                 color: theme.text,
                 fontSize: 13,
                 fontWeight: '900',
+                marginBottom: 4,
+              }}
+            >
+              {inheritCategory && categoryName
+                ? `Personalización de categoría · ${categoryName}`
+                : 'Personalización exclusiva de este producto'}
+            </Text>
+
+            <Text
+              style={{
+                color: theme.textMuted,
+                fontSize: 10,
+                lineHeight: 15,
                 marginBottom: 8,
               }}
             >
-              Personalización adicional de este producto
+              {inheritCategory && categoryName
+                ? `Los cambios se aplican automáticamente a todos los productos de ${categoryName} que tengan activa la herencia.`
+                : 'Los cambios de esta sección sólo afectan a este producto.'}
             </Text>
 
             <View
@@ -586,7 +604,9 @@ export function ProductPersonalizationModal({
                     fontSize: 12,
                   }}
                 >
-                  Todavía no hay personalización adicional propia de este producto.
+                  {inheritCategory && categoryName
+                    ? `Todavía no hay personalización configurada para la categoría ${categoryName}.`
+                    : 'Todavía no hay personalización exclusiva de este producto.'}
                 </Text>
               </View>
             ) : (
