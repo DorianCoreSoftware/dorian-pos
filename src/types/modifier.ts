@@ -1,7 +1,13 @@
+export type ModifierGroupKind =
+  | 'option'
+  | 'modifier'
+  | 'extra';
+
 export interface ModifierGroupReference {
   id: string;
   code: string;
   name: string;
+  kind?: ModifierGroupKind;
   is_active?: boolean;
   position?: number;
 }

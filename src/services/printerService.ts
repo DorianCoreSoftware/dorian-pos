@@ -16,6 +16,10 @@ import {
 } from './supabase';
 import { KitchenOrder, PaymentMethod } from '../types';
 
+import {
+  groupModifiersForDisplay,
+} from '../Utils/cartPricing';
+
 import { PromoCoupon } from './promoService';
 import { getPromotionPrograms } from './promotionService';
 import { getBusinessSettings } from './businessHoursService';
@@ -294,7 +298,6 @@ export async function printOrderTicket({
   order,
   paymentMethod,
   amountReceived,
-  paymentAmount,
   promoCoupon,
   ticketDate,
   isReprint = false,
@@ -343,22 +346,17 @@ export async function printOrderTicket({
       modifierPromotionDiscountTotal,
     );
 
-  const resolvedPaymentAmount =
-    Number(
-      paymentAmount ?? total,
-    );
-
   const received =
     paymentMethod === 'cash'
       ? Number(
-        amountReceived ?? resolvedPaymentAmount,
+        amountReceived ?? total,
       )
       : null;
 
   const change =
     received !== null
       ? roundCurrency(
-        received - resolvedPaymentAmount,
+        received - total,
       )
       : null;
 
@@ -503,12 +501,27 @@ export async function printOrderTicket({
       item.modifiers ?? [];
 
     for (
-      const modifier of
-      modifiers
+      const { modifier, count } of
+      groupModifiersForDisplay(
+        modifiers,
+      )
     ) {
       await printer.write(
-        `  + ${sanitizeTicketText(
+        `  + ${count > 1 ? `${count}x ` : ''}${sanitizeTicketText(
           modifier.name,
+        )}\n`,
+      );
+    }
+
+    const removedPersonalization =
+      (item.productChecks ?? []).filter(
+        check => !check.isSelected,
+      );
+
+    for (const check of removedPersonalization) {
+      await printer.write(
+        `  SIN ${sanitizeTicketText(
+          check.optionName,
         )}\n`,
       );
     }
@@ -542,12 +555,13 @@ export async function printOrderTicket({
       }
 
       for (
-        const modifier of
-        component.modifiers ??
-        []
+        const { modifier, count } of
+        groupModifiersForDisplay(
+          component.modifiers ?? [],
+        )
       ) {
         await printer.write(
-          `     + ${sanitizeTicketText(
+          `     + ${count > 1 ? `${count}x ` : ''}${sanitizeTicketText(
             modifier.name,
           )}\n`,
         );
@@ -826,30 +840,13 @@ export async function printOrderTicket({
     false,
   );
 
-  if (
-    Math.abs(
-      resolvedPaymentAmount -
-      total,
-    ) > 0.009
-  ) {
-    await printer.write(
-      createAmountRow(
-        'ABONO / AJUSTE',
-        resolvedPaymentAmount,
-        resolvedCurrencyCode,
-      ),
-    );
-  }
-
   await printer.write(
     createTextRow(
       'PAGO',
       paymentMethod ===
         'cash'
         ? 'EFECTIVO'
-        : paymentMethod === 'transfer'
-          ? 'TRANSFERENCIA'
-          : 'TARJETA',
+        : 'TARJETA',
     ),
   );
 
@@ -902,6 +899,420 @@ export async function printOrderTicket({
       promoCoupon,
     );
   }
+
+  await feedPaper(
+    printer,
+    2,
+  );
+
+  await cutPaper(
+    printer,
+  );
+}
+
+
+
+export interface PrintDeliveryDispatchTicketParams {
+  order:
+    KitchenOrder;
+}
+
+export async function printDeliveryDispatchTicket({
+  order,
+}: PrintDeliveryDispatchTicketParams): Promise<void> {
+  if (
+    order.fulfillmentType !==
+      'delivery' ||
+    !order.deliveryDetails
+  ) {
+    throw new Error(
+      'La orden no contiene datos de reparto.',
+    );
+  }
+
+  const printer =
+    await connectPrinter();
+
+  const business =
+    await getBusinessSettings();
+
+  const trackingCode =
+    getOrderTrackingCode(
+      order.id,
+    );
+
+  const delivery =
+    order.deliveryDetails;
+
+  await printer.write(
+    '\x1B\x40',
+  );
+
+  await printBusinessHeader(
+    printer,
+    business.identity.businessName,
+    business.identity.phone,
+    business.identity.address,
+    runtimeBranding.printer.ticketLogo,
+  );
+
+  await setAlignment(
+    printer,
+    'center',
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await setTextSize(
+    printer,
+    'double',
+  );
+
+  await printer.write(
+    'REPARTO\n',
+  );
+
+  await printer.write(
+    `#${trackingCode}\n`,
+  );
+
+  await setTextSize(
+    printer,
+    'normal',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  await printer.write(
+    'IDENTIFICADOR DE ENTREGA\n',
+  );
+
+  await printer.write(
+    'NO ES COMPROBANTE DE PAGO\n',
+  );
+
+  await setAlignment(
+    printer,
+    'left',
+  );
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    'CLIENTE\n',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  await printer.write(
+    `${sanitizeTicketText(
+      delivery.customerName,
+    )}\n`,
+  );
+
+  await printer.write(
+    `Tel: ${sanitizeTicketText(
+      delivery.phone,
+    )}\n`,
+  );
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    'DIRECCION\n',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  const address = [
+    delivery.street,
+    `#${delivery.exteriorNumber}`,
+    delivery.interiorNumber
+      ? `Int ${delivery.interiorNumber}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  for (
+    const line of
+    wrapTicketText(
+      sanitizeTicketText(
+        address,
+      ),
+      32,
+    )
+  ) {
+    await printer.write(
+      `${line}\n`,
+    );
+  }
+
+  const areaLine = [
+    delivery.neighborhood,
+    delivery.postalCode
+      ? `CP ${delivery.postalCode}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  if (areaLine) {
+    for (
+      const line of
+      wrapTicketText(
+        sanitizeTicketText(
+          areaLine,
+        ),
+        32,
+      )
+    ) {
+      await printer.write(
+        `${line}\n`,
+      );
+    }
+  }
+
+  if (
+    delivery
+      .deliveryReferences
+      ?.trim()
+  ) {
+    await printer.write(
+      '\n',
+    );
+
+    await setBold(
+      printer,
+      true,
+    );
+
+    await printer.write(
+      'REFERENCIAS\n',
+    );
+
+    await setBold(
+      printer,
+      false,
+    );
+
+    for (
+      const line of
+      wrapTicketText(
+        sanitizeTicketText(
+          delivery
+            .deliveryReferences
+            .trim(),
+        ),
+        32,
+      )
+    ) {
+      await printer.write(
+        `${line}\n`,
+      );
+    }
+  }
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    'CONTENIDO DEL PEDIDO\n',
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  for (
+    const item of
+    order.order_items
+  ) {
+    const productName =
+      item.products?.name ??
+      'Producto';
+
+    await setBold(
+      printer,
+      true,
+    );
+
+    await printer.write(
+      `${item.quantity}x ${sanitizeTicketText(
+        productName,
+      )}\n`,
+    );
+
+    await setBold(
+      printer,
+      false,
+    );
+
+    for (
+      const { modifier, count } of
+      groupModifiersForDisplay(
+        item.modifiers ?? [],
+      )
+    ) {
+      await printer.write(
+        `  + ${count > 1 ? `${count}x ` : ''}${sanitizeTicketText(
+          modifier.name,
+        )}\n`,
+      );
+    }
+
+    const removedPersonalization =
+      (item.productChecks ?? []).filter(
+        check => !check.isSelected,
+      );
+
+    for (const check of removedPersonalization) {
+      await printer.write(
+        `  SIN ${sanitizeTicketText(
+          check.optionName,
+        )}\n`,
+      );
+    }
+
+    for (
+      const component of
+      item.components ?? []
+    ) {
+      const componentName =
+        component.products
+          ?.name ??
+        component.label;
+
+      await printer.write(
+        `  > ${component.quantity}x ${sanitizeTicketText(
+          componentName,
+        )}\n`,
+      );
+
+      for (
+        const { modifier, count } of
+        groupModifiersForDisplay(
+          component.modifiers ?? [],
+        )
+      ) {
+        await printer.write(
+          `     + ${count > 1 ? `${count}x ` : ''}${sanitizeTicketText(
+            modifier.name,
+          )}\n`,
+        );
+      }
+
+      if (
+        component.notes
+          ?.trim()
+      ) {
+        for (
+          const line of
+          wrapTicketText(
+            `     Nota: ${sanitizeTicketText(
+              component.notes.trim(),
+            )}`,
+            32,
+          )
+        ) {
+          await printer.write(
+            `${line}\n`,
+          );
+        }
+      }
+    }
+
+    if (
+      item.notes
+        ?.trim()
+    ) {
+      for (
+        const line of
+        wrapTicketText(
+          `  Nota: ${sanitizeTicketText(
+            item.notes.trim(),
+          )}`,
+          32,
+        )
+      ) {
+        await printer.write(
+          `${line}\n`,
+        );
+      }
+    }
+  }
+
+  await printer.write(
+    separator(),
+  );
+
+  await setBold(
+    printer,
+    true,
+  );
+
+  await printer.write(
+    createAmountRow(
+      'TOTAL PEDIDO',
+      Number(
+        order.total,
+      ),
+      DEFAULT_CURRENCY_CODE,
+    ),
+  );
+
+  await setBold(
+    printer,
+    false,
+  );
+
+  await setAlignment(
+    printer,
+    'center',
+  );
+
+  await printer.write(
+    'PAGO / COBRO: CONSULTAR APP\n',
+  );
+
+  await printer.write(
+    `Listo: ${formatTicketDate(
+      new Date(),
+    )}\n`,
+  );
 
   await feedPaper(
     printer,
@@ -1502,9 +1913,6 @@ interface PrintOrderTicketParams {
 
   amountReceived:
   number | null;
-
-  paymentAmount?:
-  number;
 
   promoCoupon:
   PromoCoupon | null;

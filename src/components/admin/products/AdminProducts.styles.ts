@@ -153,11 +153,21 @@ const createStyles = (
     },
 
     productCardInactive: {
-      opacity: 0.55,
+      borderColor: '#4A4A4A',
+      backgroundColor: '#181818',
+    },
+
+    inactiveCardContent: {
+      opacity: 0.42,
+    },
+
+    inactiveSecondaryAction: {
+      opacity: 0.38,
     },
 
     productInfo: {
       flex: 1,
+      minWidth: 0,
       paddingRight: 14,
     },
 
@@ -165,12 +175,14 @@ const createStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      minWidth: 0,
     },
 
     productName: {
       color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '800',
+      flexShrink: 1,
     },
 
     statusBadge: {
@@ -188,6 +200,11 @@ const createStyles = (
     statusBadgeInactive: {
       borderColor: '#666666',
       backgroundColor: '#292929',
+    },
+
+    statusBadgePhone: {
+      alignSelf: 'flex-start',
+      marginTop: 6,
     },
 
     statusText: {
@@ -243,7 +260,9 @@ const createStyles = (
 
     productActions: {
       gap: 7,
+      width: 100,
       minWidth: 100,
+      flexShrink: 0,
     },
 
     editButton: {
@@ -278,8 +297,9 @@ const createStyles = (
     },
 
     activateButton: {
-      borderColor: '#315F35',
-      backgroundColor: '#17331A',
+      borderColor: '#43A047',
+      backgroundColor: '#2E7D32',
+      opacity: 1,
     },
 
     stateButtonText: {

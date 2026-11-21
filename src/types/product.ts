@@ -14,6 +14,7 @@ export interface Product {
   allows_oil_fryer?: boolean;
   allows_air_fryer?: boolean;
   air_fryer_extra_minutes?: number;
+  max_extra_items?: number;
   created_at: string;
   category?: Category;
 }

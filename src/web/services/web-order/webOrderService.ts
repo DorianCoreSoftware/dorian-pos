@@ -8,6 +8,7 @@ import {
 } from '../../../services/supabase';
 import { getDeliveryServiceStatus } from '../../../services/deliveryService';
 import { setWebOrderPaymentIntent } from '../../../services/paymentAccountService';
+import { persistOrderProductChecks } from '../../../services/productCheckService';
 
 export type WebFulfillmentType =
   | 'pickup'
@@ -293,6 +294,11 @@ export async function createWebOrder({
       'No se recibió el identificador del pedido.',
     );
   }
+
+  await persistOrderProductChecks(
+    data,
+    cart.map(item => ({ productId: item.product.id, checks: item.selectedProductChecks ?? [] })),
+  );
 
   await setWebOrderPaymentIntent({
     orderId: data,

@@ -161,7 +161,8 @@ const createStyles = (
     },
 
     bannerCardInactive: {
-      opacity: 0.58,
+      borderColor: '#4A4A4A',
+      backgroundColor: '#181818',
     },
 
     bannerCardDragging: {
@@ -336,8 +337,8 @@ const createStyles = (
     },
 
     activateButton: {
-      borderColor: '#315F35',
-      backgroundColor: '#17331A',
+      borderColor: '#66BB6A',
+      backgroundColor: '#2E7D32',
     },
 
     deleteButton: {

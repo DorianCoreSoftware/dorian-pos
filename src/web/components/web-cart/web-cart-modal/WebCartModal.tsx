@@ -257,6 +257,16 @@ export default function WebCartModal({
                     </Text>
                   )}
 
+                  {(item.selectedProductChecks ?? []).length > 0 && (
+                    <Text style={styles.detailText}>
+                      {(item.selectedProductChecks ?? []).map(check =>
+                        check.isSelected
+                          ? `✓ ${check.groupName}: ${check.optionName}`
+                          : `✕ ${check.groupName}: Sin ${check.optionName}`
+                      ).join(' · ')}
+                    </Text>
+                  )}
+
                   {(item.comboComponents ??
                     []).map(
                     (

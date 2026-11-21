@@ -33,6 +33,7 @@ import {
 import {
 
   Modifier,
+  ModifierGroupKind,
 
 } from '../types';
 
@@ -66,6 +67,8 @@ export interface CreateModifierGroupInput {
 
   position: number;
 
+  kind: ModifierGroupKind;
+
 }
 
 export interface UpdateModifierGroupInput {
@@ -75,6 +78,8 @@ export interface UpdateModifierGroupInput {
   position: number;
 
   isActive: boolean;
+
+  kind: ModifierGroupKind;
 
 }
 
@@ -550,6 +555,10 @@ export async function createModifierGroup(
 
         input.position,
 
+      kind:
+
+        input.kind,
+
     };
 
     return await insertModifierGroup(
@@ -661,6 +670,10 @@ export async function updateModifierGroup(
         isActive:
 
           input.isActive,
+
+        kind:
+
+          input.kind,
 
       },
 

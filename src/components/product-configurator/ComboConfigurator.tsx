@@ -803,6 +803,36 @@ export const ComboConfigurator: React.FC<
     );
   }
 
+  function decrementModifier(
+    componentId: string,
+    group: ProductModifierGroup,
+    modifierId: string,
+  ): void {
+    setSelectedModifierIdsByComponent(
+      current => {
+        const componentSelections = current[componentId] ?? {};
+        const currentSelections =
+          componentSelections[group.modifierGroupId] ?? [];
+        const index = currentSelections.lastIndexOf(modifierId);
+
+        if (index < 0) {
+          return current;
+        }
+
+        const nextSelections = [...currentSelections];
+        nextSelections.splice(index, 1);
+
+        return {
+          ...current,
+          [componentId]: {
+            ...componentSelections,
+            [group.modifierGroupId]: nextSelections,
+          },
+        };
+      },
+    );
+  }
+
   function updateComponentNotes(
     componentId: string,
     notes: string,
@@ -1277,6 +1307,8 @@ export const ComboConfigurator: React.FC<
             const groupName =
               group.group?.name ??
               'Opciones';
+            const isExtraGroup =
+              group.group?.kind === 'extra';
 
             return (
               <View
@@ -1308,12 +1340,13 @@ export const ComboConfigurator: React.FC<
                     marginBottom: 8,
                   }}
                 >
-                  {group.maxSelections ===
-                  1
-                    ? minimum > 0
-                      ? 'Selecciona una opción'
-                      : 'Selecciona hasta una opción'
-                    : `Selecciona de ${minimum} a ${group.maxSelections}`}
+                  {isExtraGroup
+                    ? `Agrega extras · hasta ${group.maxSelections}`
+                    : group.maxSelections === 1
+                      ? minimum > 0
+                        ? 'Selecciona una opción'
+                        : 'Selecciona hasta una opción'
+                      : `Selecciona de ${minimum} a ${group.maxSelections}`}
                 </Text>
 
                 {modifiers.length ===
@@ -1390,6 +1423,9 @@ export const ComboConfigurator: React.FC<
                               ? '🌶️ '
                               : ''}
                             {modifier.name}
+                            {isExtraGroup && Number(modifier.extra_price ?? 0) > 0
+                              ? ` (+${formatCurrency(Number(modifier.extra_price))})`
+                              : ''}
                             {selectedCountForModifier >
                               1
                               ? ` (x${selectedCountForModifier})`
@@ -1411,6 +1447,30 @@ export const ComboConfigurator: React.FC<
                                 )}
                               </Text>
                             )}
+
+                          {isExtraGroup && isSelected && (
+                            <TouchableOpacity
+                              onPress={() =>
+                                decrementModifier(
+                                  component.id,
+                                  group,
+                                  modifier.id,
+                                )
+                              }
+                              style={{
+                                marginTop: 6,
+                                paddingVertical: 5,
+                                paddingHorizontal: 8,
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: '#777777',
+                              }}
+                            >
+                              <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700', textAlign: 'center' }}>
+                                − Quitar uno
+                              </Text>
+                            </TouchableOpacity>
+                          )}
 
                           {group.allowDuplicates &&
                             isSelected &&

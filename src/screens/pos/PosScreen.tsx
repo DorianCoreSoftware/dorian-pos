@@ -500,6 +500,7 @@ export function POSScreen({
       }
       const {
         selectedModifiers = [],
+        selectedProductChecks = [],
         comboComponents = [],
         cookingMethod = null,
       } = configuration;
@@ -515,6 +516,7 @@ export function POSScreen({
         createModifierIdentifier(
           selectedModifiers,
         );
+      const checkIdentifier = selectedProductChecks.map(check => `${check.optionId}:${check.isSelected ? '1' : '0'}`).sort().join(',');
       const comboIdentifier =
         createComboIdentifier(
           normalizedComponents,
@@ -523,6 +525,7 @@ export function POSScreen({
         productToAdd.id,
         cleanNotes,
         modifierIdentifier,
+        checkIdentifier,
         comboIdentifier,
         cookingMethod ?? 'default',
       ].join('-');
@@ -541,6 +544,9 @@ export function POSScreen({
               ...modifier,
             }),
           ),
+
+        selectedProductChecks:
+          selectedProductChecks.map(check => ({ ...check })),
 
         cookingMethod,
 

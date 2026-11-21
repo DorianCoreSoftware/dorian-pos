@@ -631,8 +631,8 @@ const createStyles = (
     },
 
     zoneCardInactive: {
-      opacity:
-        0.55,
+      borderColor: '#4A4A4A',
+      backgroundColor: '#181818',
     },
 
     zoneInfo: {
@@ -835,10 +835,10 @@ const createStyles = (
 
     activateButton: {
       borderColor:
-        '#315F35',
+        '#66BB6A',
 
       backgroundColor:
-        '#17331A',
+        '#2E7D32',
     },
 
     deactivateButton: {
@@ -1317,8 +1317,8 @@ const createStyles = (
       padding: 12,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#315F35',
-      backgroundColor: '#17331A',
+      borderColor: '#66BB6A',
+      backgroundColor: '#2E7D32',
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: 10,

@@ -23,6 +23,8 @@ import {
   Product,
   ProductCookingMethod,
   SelectedModifier,
+  ProductCheckAssignment,
+  SelectedProductCheck,
 } from '../../types';
 import {
   getAvailableModifiersByGroupId,
@@ -50,8 +52,10 @@ import {
 } from './ComboConfigurator';
 import { getAvailableProductModifierOptions } from '../../services/productModifierOptionService';
 import { useCurrency } from '../../hooks/useCurrency';
+import { getEnabledProductPersonalizationGroups } from '../../services/productCheckService';
 export interface ProductConfigurationResult {
   selectedModifiers: SelectedModifier[];
+  selectedProductChecks: SelectedProductCheck[];
   comboComponents: ComboComponentSelection[];
   cookingMethod: ProductCookingMethod | null;
 }
@@ -113,6 +117,32 @@ export const ProductConfiguratorModal:
       Record<string, string[]>
     >({});
     const [
+      productCheckGroups,
+      setProductCheckGroups,
+    ] = useState<ProductCheckAssignment[]>([]);
+    const [
+      selectedProductCheckIdsByGroup,
+      setSelectedProductCheckIdsByGroup,
+    ] = useState<Record<string, string[]>>({});
+
+    const [
+      expandedPersonalizationGroupIds,
+      setExpandedPersonalizationGroupIds,
+    ] = useState<Record<string, boolean>>({});
+
+    const [
+      expandedExtraGroupIds,
+      setExpandedExtraGroupIds,
+    ] = useState<
+      Record<string, boolean>
+    >({});
+    const [
+      extraSearchByGroupId,
+      setExtraSearchByGroupId,
+    ] = useState<
+      Record<string, string>
+    >({});
+    const [
       areProductGroupsLoading,
       setAreProductGroupsLoading,
     ] = useState(false);
@@ -163,6 +193,40 @@ export const ProductConfiguratorModal:
       useMemo(
         () => productModifierGroups,
         [productModifierGroups],
+      );
+
+    const maxTotalExtras =
+      Math.max(
+        0,
+        Number(
+          product?.max_extra_items ??
+          5,
+        ),
+      );
+
+    const selectedExtraCount =
+      useMemo(
+        () =>
+          configurableProductModifierGroups
+            .filter(
+              association =>
+                association.group?.kind ===
+                'extra',
+            )
+            .reduce(
+              (total, association) =>
+                total +
+                (
+                  selectedModifierIdsByGroup[
+                    association.modifierGroupId
+                  ] ?? []
+                ).length,
+              0,
+            ),
+        [
+          configurableProductModifierGroups,
+          selectedModifierIdsByGroup,
+        ],
       );
 
     const selectedModifiers =
@@ -263,6 +327,13 @@ export const ProductConfiguratorModal:
           return false;
         }
 
+        if (
+          selectedExtraCount >
+          maxTotalExtras
+        ) {
+          return false;
+        }
+
         for (
           const association of
           configurableProductModifierGroups
@@ -309,6 +380,8 @@ export const ProductConfiguratorModal:
         configurableProductModifierGroups,
         selectedModifierIdsByGroup,
         selectedCookingMethod,
+        selectedExtraCount,
+        maxTotalExtras,
       ]);
 
     useEffect(() => {
@@ -449,6 +522,39 @@ export const ProductConfiguratorModal:
             }
           }
         };
+      const loadProductChecks =
+        async () => {
+          if (!product?.id || isCombo) {
+            setProductCheckGroups([]);
+            return;
+          }
+          try {
+            const groups = await getEnabledProductPersonalizationGroups(product.id);
+            if (!isMounted) return;
+            setProductCheckGroups(groups);
+            setSelectedProductCheckIdsByGroup(
+              Object.fromEntries(
+                groups.map(group => [
+                  group.groupId,
+                  group.options
+                    .filter(option => option.defaultSelected)
+                    .map(option => option.id),
+                ]),
+              ),
+            );
+            setExpandedPersonalizationGroupIds(
+              Object.fromEntries(
+                groups.map(group => [
+                  group.groupId,
+                  false,
+                ]),
+              ),
+            );
+          } catch (checkError) {
+            console.error('Error loading product checks:', checkError);
+            if (isMounted) setProductCheckGroups([]);
+          }
+        };
       const loadProductModifierGroups =
         async () => {
           if (
@@ -585,6 +691,7 @@ export const ProductConfiguratorModal:
           }
         };
       void loadModifierPromotion();
+      void loadProductChecks();
       void loadProductModifierGroups();
       return () => {
         isMounted =
@@ -596,6 +703,56 @@ export const ProductConfiguratorModal:
       comboCheckedProductId,
       isCombo,
     ]);
+    const selectedProductChecks =
+      useMemo<SelectedProductCheck[]>(() =>
+        productCheckGroups.flatMap(group => {
+          const selectedIds =
+            selectedProductCheckIdsByGroup[
+              group.groupId
+            ] ?? [];
+
+          return group.options.map(option => ({
+            groupId: group.groupId,
+            groupName: group.group.name,
+            optionId: option.id,
+            optionName: option.name,
+            isSelected: selectedIds.includes(option.id),
+          }));
+        }),
+      [productCheckGroups, selectedProductCheckIdsByGroup],
+    );
+
+    const areProductChecksValid = true;
+
+    const toggleProductCheck = (group: ProductCheckAssignment, optionId: string): void => {
+      setSelectedProductCheckIdsByGroup(current => {
+        const selected = current[group.groupId] ?? [];
+        if (selected.includes(optionId)) return { ...current, [group.groupId]: selected.filter(id => id !== optionId) };
+        if (selected.length >= group.maxSelections) return current;
+        return { ...current, [group.groupId]: [...selected, optionId] };
+      });
+    };
+
+    const togglePersonalizationGroup = (group: ProductCheckAssignment): void => {
+      setSelectedProductCheckIdsByGroup(current => {
+        const selected = current[group.groupId] ?? [];
+        const allIds = group.options.map(option => option.id);
+        const allSelected = allIds.length > 0 && allIds.every(id => selected.includes(id));
+
+        return {
+          ...current,
+          [group.groupId]: allSelected ? [] : allIds,
+        };
+      });
+    };
+
+    const togglePersonalizationExpanded = (groupId: string): void => {
+      setExpandedPersonalizationGroupIds(current => ({
+        ...current,
+        [groupId]: !current[groupId],
+      }));
+    };
+
     if (!product) {
       return null;
     }
@@ -691,10 +848,95 @@ export const ProductConfiguratorModal:
       );
     };
 
+    const handleIncrementExtra = (
+      association: ProductModifierGroup,
+      modifierId: string,
+    ): void => {
+      setSelectedModifierIdsByGroup(
+        current => {
+          const currentSelection =
+            current[association.modifierGroupId] ?? [];
+
+          const totalSelectedExtras =
+            configurableProductModifierGroups
+              .filter(
+                group =>
+                  group.group?.kind ===
+                  'extra',
+              )
+              .reduce(
+                (total, group) =>
+                  total +
+                  (
+                    current[
+                      group.modifierGroupId
+                    ] ?? []
+                  ).length,
+                0,
+              );
+
+          if (
+            currentSelection.length >= association.maxSelections ||
+            totalSelectedExtras >= maxTotalExtras ||
+            (!association.allowDuplicates &&
+              currentSelection.includes(modifierId))
+          ) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [association.modifierGroupId]: [
+              ...currentSelection,
+              modifierId,
+            ],
+          };
+        },
+      );
+    };
+
+    const handleDecrementExtra = (
+      association: ProductModifierGroup,
+      modifierId: string,
+    ): void => {
+      setSelectedModifierIdsByGroup(
+        current => {
+          const currentSelection =
+            current[association.modifierGroupId] ?? [];
+          const index =
+            currentSelection.lastIndexOf(modifierId);
+
+          if (index < 0) {
+            return current;
+          }
+
+          const next = [...currentSelection];
+          next.splice(index, 1);
+
+          return {
+            ...current,
+            [association.modifierGroupId]: next,
+          };
+        },
+      );
+    };
+
+    const toggleExtraGroup = (
+      groupId: string,
+    ): void => {
+      setExpandedExtraGroupIds(
+        current => ({
+          ...current,
+          [groupId]:
+            !current[groupId],
+        }),
+      );
+    };
+
     const handleConfirm =
       (): void => {
         if (
-          !isSelectionValid
+          (!isSelectionValid || !areProductChecksValid)
         ) {
           return;
         }
@@ -709,6 +951,7 @@ export const ProductConfiguratorModal:
           onConfirm({
             selectedModifiers:
               [],
+            selectedProductChecks: [],
             comboComponents: [
               ...comboSelection
                 .components,
@@ -720,6 +963,7 @@ export const ProductConfiguratorModal:
         }
         onConfirm({
           selectedModifiers,
+          selectedProductChecks,
           comboComponents:
             [],
           cookingMethod:
@@ -958,6 +1202,44 @@ export const ProductConfiguratorModal:
                     }
                   </Text>
                 )}
+              {comboCheckedProductId === product.id &&
+              !isCombo &&
+              configurableProductModifierGroups.some(
+                association =>
+                  association.group?.kind ===
+                  'extra',
+              ) ? (
+                <View
+                  style={{
+                    marginBottom: 10,
+                    padding: 10,
+                    borderRadius: 9,
+                    borderWidth: 1,
+                    borderColor: '#50471F',
+                    backgroundColor: '#1E1B10',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: businessTheme.primary,
+                      fontSize: 12,
+                      fontWeight: '900',
+                    }}
+                  >
+                    Extras seleccionados: {selectedExtraCount}/{maxTotalExtras}
+                  </Text>
+                  <Text
+                    style={{
+                      color: '#AAAAAA',
+                      fontSize: 10,
+                      marginTop: 3,
+                    }}
+                  >
+                    El límite es compartido entre todos los extras cobrables permitidos para este producto.
+                  </Text>
+                </View>
+              ) : null}
+
               {comboCheckedProductId === product.id && !isCombo &&
                 !areProductGroupsLoading &&
                 !productGroupsError &&
@@ -971,12 +1253,38 @@ export const ProductConfiguratorModal:
                       modifiersByGroup[
                       association.modifierGroupId
                       ] ?? [];
+                    const extraSearchText =
+                      extraSearchByGroupId[
+                        association.modifierGroupId
+                      ] ?? '';
+                    const normalizedExtraSearch =
+                      extraSearchText
+                        .trim()
+                        .toLocaleLowerCase('es');
+                    const visibleGroupModifiers =
+                      association.group?.kind === 'extra' &&
+                      normalizedExtraSearch
+                        ? groupModifiers.filter(
+                            modifier =>
+                              modifier.name
+                                .toLocaleLowerCase('es')
+                                .includes(normalizedExtraSearch),
+                          )
+                        : groupModifiers;
                     const selectedIds =
                       selectedModifierIdsByGroup[
                       association.modifierGroupId
                       ] ?? [];
                     const selectedCount =
                       selectedIds.length;
+                    const isExtraGroup =
+                      association.group?.kind ===
+                      'extra';
+                    const isExtraExpanded =
+                      !isExtraGroup ||
+                      expandedExtraGroupIds[
+                        association.modifierGroupId
+                      ] === true;
                     return (
                       <View
                         key={
@@ -987,24 +1295,59 @@ export const ProductConfiguratorModal:
                             .requiredSection
                         }
                       >
-                        <Text
-                          style={
-                            styles
-                              .sectionLabel
+                        <TouchableOpacity
+                          disabled={!isExtraGroup}
+                          onPress={() =>
+                            isExtraGroup &&
+                            toggleExtraGroup(
+                              association.modifierGroupId,
+                            )
                           }
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            marginBottom: 6,
+                          }}
                         >
-                          {groupName}
-                          {association.isRequired ||
-                            association.minSelections >
-                            0
-                            ? ' *'
-                            : ''}{' '}
-                          {association.minSelections ===
-                            association.maxSelections
-                            ? `(Selecciona ${association.maxSelections})`
-                            : `(Selecciona de ${association.minSelections} a ${association.maxSelections})`}
-                        </Text>
-                        {association.maxSelections >
+                          <Text
+                            style={[
+                              styles.sectionLabel,
+                              {
+                                flex: 1,
+                                marginBottom: 0,
+                              },
+                            ]}
+                          >
+                            {isExtraGroup
+                              ? 'Extras'
+                              : groupName}
+                            {association.isRequired ||
+                              association.minSelections > 0
+                              ? ' *'
+                              : ''}{' '}
+                            {isExtraGroup
+                              ? `(${selectedCount}/${association.maxSelections})`
+                              : association.minSelections === association.maxSelections
+                                  ? `(Selecciona ${association.maxSelections})`
+                                  : `(Selecciona de ${association.minSelections} a ${association.maxSelections})`}
+                          </Text>
+
+                          {isExtraGroup ? (
+                            <Text
+                              style={{
+                                color: businessTheme.primary,
+                                fontSize: 16,
+                                fontWeight: '900',
+                              }}
+                            >
+                              {isExtraExpanded ? '▲' : '▼'}
+                            </Text>
+                          ) : null}
+                        </TouchableOpacity>
+                        {isExtraExpanded &&
+                        association.maxSelections >
                           1 && (
                             <Text
                               style={{
@@ -1023,7 +1366,53 @@ export const ProductConfiguratorModal:
                               seleccionadas
                             </Text>
                           )}
-                        {groupModifiers.length ===
+                        {isExtraGroup && isExtraExpanded ? (
+                          <View
+                            style={{
+                              marginBottom: 10,
+                            }}
+                          >
+                            <TextInput
+                              value={extraSearchText}
+                              onChangeText={value =>
+                                setExtraSearchByGroupId(
+                                  current => ({
+                                    ...current,
+                                    [association.modifierGroupId]: value,
+                                  }),
+                                )
+                              }
+                              placeholder="Buscar extra..."
+                              placeholderTextColor="#777777"
+                              autoCapitalize="none"
+                              autoCorrect={false}
+                              style={{
+                                minHeight: 44,
+                                borderWidth: 1,
+                                borderColor: '#4B4B4B',
+                                borderRadius: 9,
+                                backgroundColor: '#171717',
+                                color: '#FFFFFF',
+                                paddingHorizontal: 12,
+                                fontSize: 13,
+                              }}
+                            />
+                            {normalizedExtraSearch &&
+                            visibleGroupModifiers.length === 0 ? (
+                              <Text
+                                style={{
+                                  color: '#888888',
+                                  fontSize: 11,
+                                  marginTop: 7,
+                                }}
+                              >
+                                No hay extras que coincidan con “{extraSearchText.trim()}”.
+                              </Text>
+                            ) : null}
+                          </View>
+                        ) : null}
+                        {!isExtraExpanded ? null :
+                        groupModifiers.length ===
                           0 ? (
                           <Text
                             style={{
@@ -1047,7 +1436,7 @@ export const ProductConfiguratorModal:
                                 .optionsContainerPhone,
                             ]}
                           >
-                            {groupModifiers.map(
+                            {visibleGroupModifiers.map(
                               modifier => {
                                 const selectedCountForModifier =
                                   selectedIds.filter(
@@ -1065,43 +1454,138 @@ export const ProductConfiguratorModal:
                                     ?.modifier_id ===
                                   modifier.id;
 
+                                if (isExtraGroup) {
+                                  const canAdd =
+                                    selectedIds.length <
+                                      association.maxSelections &&
+                                    selectedExtraCount <
+                                      maxTotalExtras &&
+                                    (association.allowDuplicates ||
+                                      !isSelected);
+
+                                  return (
+                                    <View
+                                      key={modifier.id}
+                                      style={{
+                                        width: '100%',
+                                        minHeight: 58,
+                                        borderRadius: 10,
+                                        borderWidth: 1,
+                                        borderColor: isSelected
+                                          ? businessTheme.primary
+                                          : '#555555',
+                                        backgroundColor: isSelected
+                                          ? withAlpha(businessTheme.primary, 0.12)
+                                          : '#202020',
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 9,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                      }}
+                                    >
+                                      <View style={{ flex: 1 }}>
+                                        <Text
+                                          style={{
+                                            color: '#FFFFFF',
+                                            fontSize: 13,
+                                            fontWeight: '800',
+                                          }}
+                                        >
+                                          {modifier.name}
+                                        </Text>
+                                        <Text
+                                          style={{
+                                            color: businessTheme.primary,
+                                            fontSize: 11,
+                                            fontWeight: '800',
+                                            marginTop: 3,
+                                          }}
+                                        >
+                                          +{formatCurrency(
+                                            Number(modifier.extra_price ?? 0),
+                                          )} c/u
+                                        </Text>
+                                      </View>
+
+                                      <TouchableOpacity
+                                        disabled={selectedCountForModifier === 0}
+                                        onPress={() =>
+                                          handleDecrementExtra(
+                                            association,
+                                            modifier.id,
+                                          )
+                                        }
+                                        style={{
+                                          width: 38,
+                                          height: 38,
+                                          borderRadius: 8,
+                                          borderWidth: 1,
+                                          borderColor: '#666666',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          opacity: selectedCountForModifier === 0 ? 0.35 : 1,
+                                        }}
+                                      >
+                                        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900' }}>−</Text>
+                                      </TouchableOpacity>
+
+                                      <Text
+                                        style={{
+                                          minWidth: 24,
+                                          color: '#FFFFFF',
+                                          fontSize: 16,
+                                          fontWeight: '900',
+                                          textAlign: 'center',
+                                        }}
+                                      >
+                                        {selectedCountForModifier}
+                                      </Text>
+
+                                      <TouchableOpacity
+                                        disabled={!canAdd}
+                                        onPress={() =>
+                                          handleIncrementExtra(
+                                            association,
+                                            modifier.id,
+                                          )
+                                        }
+                                        style={{
+                                          width: 38,
+                                          height: 38,
+                                          borderRadius: 8,
+                                          backgroundColor: businessTheme.primary,
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          opacity: canAdd ? 1 : 0.35,
+                                        }}
+                                      >
+                                        <Text style={{ color: '#111111', fontSize: 20, fontWeight: '900' }}>+</Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  );
+                                }
+
                                 return (
                                   <TouchableOpacity
-                                    key={
-                                      modifier.id
-                                    }
+                                    key={modifier.id}
                                     style={[
-                                      styles
-                                        .optionButtonChip,
+                                      styles.optionButtonChip,
                                       isPhone
-                                        ? styles
-                                          .optionButtonChipPhone
-                                        : styles
-                                          .optionButtonChipTablet,
+                                        ? styles.optionButtonChipPhone
+                                        : styles.optionButtonChipTablet,
                                       {
-                                        flexBasis:
-                                          isPhone
-                                            ? '100%'
-                                            : '48%',
-                                        flexGrow:
-                                          1,
-                                        flexShrink:
-                                          1,
-                                        minHeight:
-                                          46,
-                                        justifyContent:
-                                          'center',
-                                        alignItems:
-                                          'center',
+                                        flexBasis: isPhone ? '100%' : '48%',
+                                        flexGrow: 1,
+                                        flexShrink: 1,
+                                        minHeight: 46,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
                                       },
-                                      isSelected &&
-                                      styles
-                                        .optionButtonSelected,
+                                      isSelected && styles.optionButtonSelected,
                                       isModifierPromotion && {
-                                        borderColor:
-                                          businessTheme.primary,
-                                        borderWidth:
-                                          2,
+                                        borderColor: businessTheme.primary,
+                                        borderWidth: 2,
                                       },
                                     ]}
                                     onPress={() =>
@@ -1110,82 +1594,30 @@ export const ProductConfiguratorModal:
                                         modifier.id,
                                       )
                                     }
-                                    activeOpacity={
-                                      0.8
-                                    }
+                                    activeOpacity={0.8}
                                   >
                                     <Text
-                                      numberOfLines={
-                                        2
-                                      }
+                                      numberOfLines={2}
                                       style={[
-                                        styles
-                                          .optionText,
-                                        {
-                                          width:
-                                            '100%',
-                                          textAlign:
-                                            'center',
-                                        },
-                                        isPhone &&
-                                        styles
-                                          .optionTextPhone,
-                                        isSelected &&
-                                        styles
-                                          .optionTextSelected,
+                                        styles.optionText,
+                                        { width: '100%', textAlign: 'center' },
+                                        isPhone && styles.optionTextPhone,
+                                        isSelected && styles.optionTextSelected,
                                       ]}
                                     >
-                                      {isModifierPromotion
-                                        ? '🌶️ '
-                                        : ''}
-                                      {
-                                        modifier.name
-                                      }
-                                      {selectedCountForModifier >
-                                        1
+                                      {isModifierPromotion ? '🌶️ ' : ''}
+                                      {modifier.name}
+                                      {selectedCountForModifier > 1
                                         ? ` (x${selectedCountForModifier})`
                                         : ''}
-                                      {Number(
-                                        modifier.extra_price,
-                                      ) >
-                                        0
-                                        ? ` (+${formatCurrency(
-                                          Number(
-                                            modifier.extra_price,
-                                          ),
-                                        )})`
+                                      {Number(modifier.extra_price) > 0
+                                        ? ` (+${formatCurrency(Number(modifier.extra_price))})`
                                         : ''}
                                     </Text>
 
-                                    {isModifierPromotion &&
-                                      modifierPromotion && (
-                                        <Text
-                                          style={{
-                                            color:
-                                              '#D6C98A',
-                                            fontSize:
-                                              9,
-                                            fontWeight:
-                                              '800',
-                                            marginTop:
-                                              3,
-                                            textAlign:
-                                              'center',
-                                          }}
-                                        >
-                                          Ahorra $
-                                          {modifierPromotion
-                                            .discount_amount
-                                            .toFixed(
-                                              2,
-                                            )}
-                                        </Text>
-                                      )}
-
                                     {association.allowDuplicates &&
                                       isSelected &&
-                                      selectedIds.length <
-                                      association.maxSelections && (
+                                      selectedIds.length < association.maxSelections && (
                                         <TouchableOpacity
                                           onPress={() =>
                                             handleDuplicateModifier(
@@ -1194,32 +1626,15 @@ export const ProductConfiguratorModal:
                                             )
                                           }
                                           style={{
-                                            marginTop:
-                                              6,
-                                            paddingVertical:
-                                              5,
-                                            paddingHorizontal:
-                                              8,
-                                            borderRadius:
-                                              6,
-                                            borderWidth:
-                                              1,
-                                            borderColor:
-                                              '#777777',
+                                            marginTop: 6,
+                                            paddingVertical: 5,
+                                            paddingHorizontal: 8,
+                                            borderRadius: 6,
+                                            borderWidth: 1,
+                                            borderColor: '#777777',
                                           }}
                                         >
-                                          <Text
-                                            style={{
-                                              color:
-                                                '#FFFFFF',
-                                              fontSize:
-                                                10,
-                                              fontWeight:
-                                                '700',
-                                              textAlign:
-                                                'center',
-                                            }}
-                                          >
+                                          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700', textAlign: 'center' }}>
                                             + Agregar otra
                                           </Text>
                                         </TouchableOpacity>
@@ -1234,6 +1649,269 @@ export const ProductConfiguratorModal:
                     );
                   },
                 )}
+              {comboCheckedProductId === product.id &&
+              !isCombo &&
+              productCheckGroups.length > 0 ? (
+                <View style={styles.requiredSection}>
+                  <Text style={styles.sectionLabel}>
+                    Personaliza tu producto
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: '#AAAAAA',
+                      fontSize: 11,
+                      lineHeight: 16,
+                      marginBottom: 10,
+                    }}
+                  >
+                    Marca el grupo completo para incluir todo o despliega sus opciones para quitar/agregar elementos individuales.
+                  </Text>
+
+                  <View style={{ gap: 9 }}>
+                    {productCheckGroups.map(group => {
+                      const selected =
+                        selectedProductCheckIdsByGroup[
+                          group.groupId
+                        ] ?? [];
+
+                      const allIds =
+                        group.options.map(
+                          option => option.id,
+                        );
+
+                      const allSelected =
+                        allIds.length > 0 &&
+                        allIds.every(id =>
+                          selected.includes(id),
+                        );
+
+                      const someSelected =
+                        selected.length > 0 &&
+                        !allSelected;
+
+                      const expanded =
+                        expandedPersonalizationGroupIds[
+                          group.groupId
+                        ] === true;
+
+                      return (
+                        <View
+                          key={group.groupId}
+                          style={{
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: allSelected || someSelected
+                              ? businessTheme.primary
+                              : '#444444',
+                            backgroundColor: '#1D1D1D',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <View
+                            style={{
+                              minHeight: 54,
+                              paddingHorizontal: 11,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 10,
+                            }}
+                          >
+                            <TouchableOpacity
+                              onPress={() =>
+                                togglePersonalizationGroup(
+                                  group,
+                                )
+                              }
+                              activeOpacity={0.8}
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 6,
+                                borderWidth: 2,
+                                borderColor:
+                                  allSelected || someSelected
+                                    ? businessTheme.primary
+                                    : '#707070',
+                                backgroundColor: allSelected
+                                  ? businessTheme.primary
+                                  : 'transparent',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: allSelected
+                                    ? '#111111'
+                                    : businessTheme.primary,
+                                  fontSize: 15,
+                                  fontWeight: '900',
+                                }}
+                              >
+                                {allSelected
+                                  ? '✓'
+                                  : someSelected
+                                    ? '−'
+                                    : ''}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={() =>
+                                togglePersonalizationExpanded(
+                                  group.groupId,
+                                )
+                              }
+                              style={{
+                                flex: 1,
+                                minHeight: 54,
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: '#FFFFFF',
+                                  fontSize: 13,
+                                  fontWeight: '900',
+                                }}
+                              >
+                                {group.group.name}
+                              </Text>
+                              <Text
+                                style={{
+                                  color: '#8F8F8F',
+                                  fontSize: 10,
+                                  marginTop: 2,
+                                }}
+                              >
+                                {allSelected
+                                  ? 'Todo incluido'
+                                  : `${selected.length} de ${group.options.length} incluidos`}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={() =>
+                                togglePersonalizationExpanded(
+                                  group.groupId,
+                                )
+                              }
+                              style={{
+                                width: 38,
+                                height: 38,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: businessTheme.primary,
+                                  fontSize: 15,
+                                  fontWeight: '900',
+                                }}
+                              >
+                                {expanded ? '▲' : '▼'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+
+                          {expanded ? (
+                            <View
+                              style={{
+                                borderTopWidth: 1,
+                                borderTopColor: '#343434',
+                                padding: 9,
+                                gap: 7,
+                              }}
+                            >
+                              {group.options.map(option => {
+                                const isSelected =
+                                  selected.includes(
+                                    option.id,
+                                  );
+
+                                return (
+                                  <TouchableOpacity
+                                    key={option.id}
+                                    onPress={() =>
+                                      toggleProductCheck(
+                                        group,
+                                        option.id,
+                                      )
+                                    }
+                                    activeOpacity={0.8}
+                                    style={{
+                                      minHeight: 46,
+                                      borderRadius: 8,
+                                      borderWidth: 1,
+                                      borderColor: isSelected
+                                        ? businessTheme.primary
+                                        : '#424242',
+                                      backgroundColor: isSelected
+                                        ? withAlpha(
+                                            businessTheme.primary,
+                                            0.08,
+                                          )
+                                        : '#202020',
+                                      paddingHorizontal: 10,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 10,
+                                    }}
+                                  >
+                                    <View
+                                      style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 5,
+                                        borderWidth: 2,
+                                        borderColor: isSelected
+                                          ? businessTheme.primary
+                                          : '#707070',
+                                        backgroundColor: isSelected
+                                          ? businessTheme.primary
+                                          : 'transparent',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      {isSelected ? (
+                                        <Text
+                                          style={{
+                                            color: '#111111',
+                                            fontSize: 13,
+                                            fontWeight: '900',
+                                          }}
+                                        >
+                                          ✓
+                                        </Text>
+                                      ) : null}
+                                    </View>
+
+                                    <Text
+                                      style={{
+                                        flex: 1,
+                                        color: '#FFFFFF',
+                                        fontSize: 12,
+                                        fontWeight: '700',
+                                      }}
+                                    >
+                                      {option.name}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
+
+
               {comboCheckedProductId === product.id &&
               !isCombo &&
               (

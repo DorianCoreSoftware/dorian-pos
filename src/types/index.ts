@@ -8,3 +8,4 @@ export * from './combo';
 export * from './delivery';
 export * from './payment';
 export * from './cash-session';
+export * from './product-check';

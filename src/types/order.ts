@@ -2,6 +2,7 @@ import { ComboComponentType } from './combo';
 import { OrderDeliveryDetails } from './delivery';
 import { Modifier } from './modifier';
 import { Product, ProductCookingMethod } from './product';
+import { SelectedProductCheck } from './product-check';
 
 export type OrderStatus =
   | 'pending'
@@ -46,6 +47,7 @@ export interface KitchenOrderItem {
 
   products: Product | null;
   modifiers: Modifier[];
+  productChecks?: SelectedProductCheck[];
 
   components?: KitchenOrderItemComponent[];
 }
