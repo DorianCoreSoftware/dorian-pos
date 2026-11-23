@@ -98,6 +98,7 @@ import { AdminPayroll } from '../../components/admin/payroll/AdminPayroll';
 import { AdminPaymentSettings } from '../../components/admin/payment-settings/AdminPaymentSettings';
 import { AdminAiOrders } from '../../components/admin/ai-orders/AdminAiOrders';
 import { AdminAiHandoffInbox } from '../../components/admin/ai-handoff/AdminAiHandoffInbox';
+import { AdminMenuPdf } from '../../components/admin/menu-pdf/AdminMenuPdf';
 import {
   getAiHandoffPendingCount,
   subscribeAiHandoffRealtime,
@@ -123,6 +124,7 @@ type AdminSection =
   | 'reports'
   | 'expenses'
   | 'printer'
+  | 'menu-pdf'
   | 'promotions'
   | 'loyalty'
   | 'hours'
@@ -441,6 +443,14 @@ export function AdminScreen({
                 'IMPRESORA',
               icon:
                 '🖨️',
+            },
+            {
+              key:
+                'menu-pdf',
+              label:
+                'MENÚ PDF',
+              icon:
+                '📄',
             },
           ];
 
@@ -806,6 +816,14 @@ export function AdminScreen({
       ) {
         return (
           <AdminPrinter />
+        );
+      }
+      if (
+        activeSection ===
+        'menu-pdf'
+      ) {
+        return (
+          <AdminMenuPdf />
         );
       }
       if (

@@ -96,6 +96,7 @@ import WebProductCard from '../../components/web-product-card/WebProductCard';
 import WebOrderEntryChoiceModal from '../../components/web-order-entry-choice-modal/WebOrderEntryChoiceModal';
 import WebBannerCarousel from '../../components/web-banner-carousel/WebBannerCarousel';
 import WebPostOrderBannerModal from '../../components/web-post-order-banner-modal/WebPostOrderBannerModal';
+import { downloadMenuPdf } from '../../../services/menuPdfService';
 import {
   getSavedWebCart,
   getSavedWebOrderMode,
@@ -430,6 +431,11 @@ export default function WebMenuScreen({
     theme: businessTheme,
   } = useBusiness();
   setBrandPrimaryColor(businessTheme.primary);
+
+  const [
+    isMenuPdfDownloading,
+    setIsMenuPdfDownloading,
+  ] = useState(false);
 
   const [
     isFeedbackVisible,
@@ -1659,6 +1665,44 @@ export default function WebMenuScreen({
       true,
     );
   }
+  async function handleDownloadMenuPdf():
+    Promise<void> {
+    if (
+      !business ||
+      isMenuPdfDownloading
+    ) {
+      return;
+    }
+
+    try {
+      setIsMenuPdfDownloading(
+        true,
+      );
+
+      await downloadMenuPdf(
+        business,
+      );
+    } catch (
+    error
+    ) {
+      console.error(
+        'Error descargando menú PDF:',
+        error,
+      );
+
+      Alert.alert(
+        'No se pudo descargar el menú',
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al generar el PDF.',
+      );
+    } finally {
+      setIsMenuPdfDownloading(
+        false,
+      );
+    }
+  }
+
   function showPendingPostOrderBanner():
     void {
     if (
@@ -1831,6 +1875,34 @@ export default function WebMenuScreen({
                 }
               >
                 💬 Sugerencias
+              </Text>
+            </Pressable>
+            <Pressable
+              disabled={
+                isMenuPdfDownloading
+              }
+              onPress={() =>
+                void handleDownloadMenuPdf()
+              }
+              style={({
+                pressed,
+              }) => [
+                  styles.topActionSecondary,
+                  pressed &&
+                  styles.topActionPressed,
+                  isMenuPdfDownloading && {
+                    opacity: 0.6,
+                  },
+                ]}
+            >
+              <Text
+                style={
+                  styles.topActionSecondaryText
+                }
+              >
+                {isMenuPdfDownloading
+                  ? '⏳ Generando menú'
+                  : '📄 Descargar menú'}
               </Text>
             </Pressable>
           </View>
