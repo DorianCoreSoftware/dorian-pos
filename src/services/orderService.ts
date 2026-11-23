@@ -447,6 +447,8 @@ function mapOrderToKitchenOrder(
           optionId: check.option_id,
           optionName: check.option_name_applied,
           isSelected: check.is_selected !== false,
+          defaultSelected:
+            check.default_selected_applied !== false,
         })),
 
         components: (

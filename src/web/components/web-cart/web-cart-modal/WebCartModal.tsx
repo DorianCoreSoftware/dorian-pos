@@ -257,13 +257,24 @@ export default function WebCartModal({
                     </Text>
                   )}
 
-                  {(item.selectedProductChecks ?? []).length > 0 && (
+                  {(item.selectedProductChecks ?? []).some(
+                    check =>
+                      check.isSelected !==
+                      (check.defaultSelected ?? true),
+                  ) && (
                     <Text style={styles.detailText}>
-                      {(item.selectedProductChecks ?? []).map(check =>
-                        check.isSelected
-                          ? `✓ ${check.groupName}: ${check.optionName}`
-                          : `✕ ${check.groupName}: Sin ${check.optionName}`
-                      ).join(' · ')}
+                      {(item.selectedProductChecks ?? [])
+                        .filter(
+                          check =>
+                            check.isSelected !==
+                            (check.defaultSelected ?? true),
+                        )
+                        .map(check =>
+                          check.isSelected
+                            ? `AGREGAR ${check.optionName}`
+                            : `SIN ${check.optionName}`
+                        )
+                        .join(' · ')}
                     </Text>
                   )}
 

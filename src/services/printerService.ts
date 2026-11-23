@@ -298,6 +298,7 @@ export async function printOrderTicket({
   order,
   paymentMethod,
   amountReceived,
+  paymentAmount,
   promoCoupon,
   ticketDate,
   isReprint = false,
@@ -346,17 +347,24 @@ export async function printOrderTicket({
       modifierPromotionDiscountTotal,
     );
 
+  const resolvedPaymentAmount =
+    Number(
+      paymentAmount ?? total,
+    );
+
   const received =
     paymentMethod === 'cash'
       ? Number(
-        amountReceived ?? total,
+        amountReceived ??
+          resolvedPaymentAmount,
       )
       : null;
 
   const change =
     received !== null
       ? roundCurrency(
-        received - total,
+        received -
+          resolvedPaymentAmount,
       )
       : null;
 
@@ -513,14 +521,16 @@ export async function printOrderTicket({
       );
     }
 
-    const removedPersonalization =
+    const personalizationChanges =
       (item.productChecks ?? []).filter(
-        check => !check.isSelected,
+        check =>
+          check.isSelected !==
+          (check.defaultSelected ?? true),
       );
 
-    for (const check of removedPersonalization) {
+    for (const check of personalizationChanges) {
       await printer.write(
-        `  SIN ${sanitizeTicketText(
+        `  ${check.isSelected ? 'AGREGAR' : 'SIN'} ${sanitizeTicketText(
           check.optionName,
         )}\n`,
       );
@@ -839,6 +849,21 @@ export async function printOrderTicket({
     printer,
     false,
   );
+
+  if (
+    Math.abs(
+      resolvedPaymentAmount -
+      total,
+    ) > 0.009
+  ) {
+    await printer.write(
+      createAmountRow(
+        'ABONO / AJUSTE',
+        resolvedPaymentAmount,
+        resolvedCurrencyCode,
+      ),
+    );
+  }
 
   await printer.write(
     createTextRow(
@@ -1194,14 +1219,16 @@ export async function printDeliveryDispatchTicket({
       );
     }
 
-    const removedPersonalization =
+    const personalizationChanges =
       (item.productChecks ?? []).filter(
-        check => !check.isSelected,
+        check =>
+          check.isSelected !==
+          (check.defaultSelected ?? true),
       );
 
-    for (const check of removedPersonalization) {
+    for (const check of personalizationChanges) {
       await printer.write(
-        `  SIN ${sanitizeTicketText(
+        `  ${check.isSelected ? 'AGREGAR' : 'SIN'} ${sanitizeTicketText(
           check.optionName,
         )}\n`,
       );
@@ -1913,6 +1940,13 @@ interface PrintOrderTicketParams {
 
   amountReceived:
   number | null;
+
+  /**
+   * Importe realmente cobrado en este movimiento.
+   * Puede ser menor al total cuando se trata de un abono/ajuste.
+   */
+  paymentAmount?:
+  number;
 
   promoCoupon:
   PromoCoupon | null;

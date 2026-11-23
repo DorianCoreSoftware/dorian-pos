@@ -34,5 +34,20 @@ export interface SelectedProductCheck {
   groupName: string;
   optionId: string;
   optionName: string;
+
+  /**
+   * Estado elegido por el cliente.
+   */
   isSelected: boolean;
+
+  /**
+   * Snapshot del estado configurado al crear la orden.
+   *
+   * true  = normalmente viene incluido.
+   * false = normalmente NO viene incluido, pero el cliente puede agregarlo.
+   *
+   * Es opcional para mantener compatibilidad con órdenes/carritos creados
+   * antes de DorianCore 1.7.x. Si falta, se interpreta como true.
+   */
+  defaultSelected?: boolean;
 }
