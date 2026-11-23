@@ -133,6 +133,32 @@ export function CategoryPersonalizationModal({
     }
   }
 
+  async function handleSetGroupDefaults(
+    group: ProductCheckAssignment,
+    value: boolean,
+  ): Promise<void> {
+    if (isProcessing || group.options.length === 0) return;
+
+    try {
+      setIsProcessing(true);
+      await Promise.all(
+        group.options.map(option =>
+          setProductCheckOptionDefault(option.id, value),
+        ),
+      );
+      await load();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo actualizar el grupo.',
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   function confirmDeleteGroup(groupId: string, name: string): void {
     Alert.alert(
       'Eliminar plantilla',
@@ -359,6 +385,63 @@ export function CategoryPersonalizationModal({
                       <Text style={{ color: '#FF9B9B', fontSize: 10, fontWeight: '900' }}>Eliminar</Text>
                     </TouchableOpacity>
                   </View>
+
+                  {group.options.length > 0 ? (
+                    <View
+                      style={{
+                        marginTop: 10,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 7,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: '#9A9A9A',
+                          fontSize: 10,
+                          fontWeight: '700',
+                          marginRight: 2,
+                        }}
+                      >
+                        Por defecto: {group.options.filter(option => option.defaultSelected).length}/{group.options.length}
+                      </Text>
+                      <TouchableOpacity
+                        disabled={isProcessing}
+                        onPress={() => void handleSetGroupDefaults(group, true)}
+                        style={{
+                          minHeight: 32,
+                          paddingHorizontal: 10,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: theme.primary,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: theme.primary, fontSize: 9, fontWeight: '900' }}>
+                          Todos incluidos
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        disabled={isProcessing}
+                        onPress={() => void handleSetGroupDefaults(group, false)}
+                        style={{
+                          minHeight: 32,
+                          paddingHorizontal: 10,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: '#666666',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#BDBDBD', fontSize: 9, fontWeight: '900' }}>
+                          Ninguno incluido
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
 
                   <View style={{ marginTop: 12, gap: 8 }}>
                     {group.options.map(option => (

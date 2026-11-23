@@ -137,6 +137,7 @@ export interface PendingOrderCheckSelectionRecord {
   group_name_applied: string;
   option_name_applied: string;
   is_selected: boolean;
+  default_selected_applied: boolean;
 }
 
 export interface PendingOrderItemComponentRecord
@@ -354,7 +355,7 @@ export async function fetchPendingOrders(): Promise<
           )
         ),
         order_item_check_selections(
-          id, group_id, option_id, group_name_applied, option_name_applied, is_selected
+          id, group_id, option_id, group_name_applied, option_name_applied, is_selected, default_selected_applied
         ),
         order_item_components(
           *,
@@ -428,7 +429,7 @@ export async function fetchOrderById(
             )
           ),
           order_item_check_selections(
-            id, group_id, option_id, group_name_applied, option_name_applied, is_selected
+            id, group_id, option_id, group_name_applied, option_name_applied, is_selected, default_selected_applied
           ),
           order_item_components(
             *,

@@ -143,6 +143,14 @@ export const ProductConfiguratorModal:
       Record<string, string>
     >({});
     const [
+      expandedOptionGroupIds,
+      setExpandedOptionGroupIds,
+    ] = useState<Record<string, boolean>>({});
+    const [
+      optionSearchByGroupId,
+      setOptionSearchByGroupId,
+    ] = useState<Record<string, string>>({});
+    const [
       areProductGroupsLoading,
       setAreProductGroupsLoading,
     ] = useState(false);
@@ -717,6 +725,7 @@ export const ProductConfiguratorModal:
             optionId: option.id,
             optionName: option.name,
             isSelected: selectedIds.includes(option.id),
+            defaultSelected: option.defaultSelected,
           }));
         }),
       [productCheckGroups, selectedProductCheckIdsByGroup],
@@ -929,6 +938,17 @@ export const ProductConfiguratorModal:
           ...current,
           [groupId]:
             !current[groupId],
+        }),
+      );
+    };
+
+    const toggleOptionGroup = (
+      groupId: string,
+    ): void => {
+      setExpandedOptionGroupIds(
+        current => ({
+          ...current,
+          [groupId]: !current[groupId],
         }),
       );
     };
@@ -1202,45 +1222,7 @@ export const ProductConfiguratorModal:
                     }
                   </Text>
                 )}
-              {comboCheckedProductId === product.id &&
-              !isCombo &&
-              configurableProductModifierGroups.some(
-                association =>
-                  association.group?.kind ===
-                  'extra',
-              ) ? (
-                <View
-                  style={{
-                    marginBottom: 10,
-                    padding: 10,
-                    borderRadius: 9,
-                    borderWidth: 1,
-                    borderColor: '#50471F',
-                    backgroundColor: '#1E1B10',
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: businessTheme.primary,
-                      fontSize: 12,
-                      fontWeight: '900',
-                    }}
-                  >
-                    Extras seleccionados: {selectedExtraCount}/{maxTotalExtras}
-                  </Text>
-                  <Text
-                    style={{
-                      color: '#AAAAAA',
-                      fontSize: 10,
-                      marginTop: 3,
-                    }}
-                  >
-                    El límite es compartido entre todos los extras cobrables permitidos para este producto.
-                  </Text>
-                </View>
-              ) : null}
-
-              {comboCheckedProductId === product.id && !isCombo &&
+                            {comboCheckedProductId === product.id && !isCombo &&
                 !areProductGroupsLoading &&
                 !productGroupsError &&
                 configurableProductModifierGroups.map(
@@ -1253,22 +1235,33 @@ export const ProductConfiguratorModal:
                       modifiersByGroup[
                       association.modifierGroupId
                       ] ?? [];
-                    const extraSearchText =
-                      extraSearchByGroupId[
-                        association.modifierGroupId
-                      ] ?? '';
-                    const normalizedExtraSearch =
-                      extraSearchText
+                    const isExtraGroup =
+                      association.group?.kind === 'extra';
+                    const isLongOptionGroup =
+                      !isExtraGroup &&
+                      groupModifiers.length > 6;
+                    const groupSearchText =
+                      isExtraGroup
+                        ? (extraSearchByGroupId[
+                            association.modifierGroupId
+                          ] ?? '')
+                        : isLongOptionGroup
+                          ? (optionSearchByGroupId[
+                              association.modifierGroupId
+                            ] ?? '')
+                          : '';
+                    const normalizedGroupSearch =
+                      groupSearchText
                         .trim()
                         .toLocaleLowerCase('es');
                     const visibleGroupModifiers =
-                      association.group?.kind === 'extra' &&
-                      normalizedExtraSearch
+                      (isExtraGroup || isLongOptionGroup) &&
+                      normalizedGroupSearch
                         ? groupModifiers.filter(
                             modifier =>
                               modifier.name
                                 .toLocaleLowerCase('es')
-                                .includes(normalizedExtraSearch),
+                                .includes(normalizedGroupSearch),
                           )
                         : groupModifiers;
                     const selectedIds =
@@ -1277,32 +1270,55 @@ export const ProductConfiguratorModal:
                       ] ?? [];
                     const selectedCount =
                       selectedIds.length;
-                    const isExtraGroup =
-                      association.group?.kind ===
-                      'extra';
-                    const isExtraExpanded =
-                      !isExtraGroup ||
-                      expandedExtraGroupIds[
-                        association.modifierGroupId
-                      ] === true;
+                    const effectiveExtraLimit =
+                      isExtraGroup
+                        ? Math.min(
+                            association.maxSelections,
+                            maxTotalExtras,
+                          )
+                        : association.maxSelections;
+                    const isGroupCollapsible =
+                      isExtraGroup || isLongOptionGroup;
+                    const isGroupExpanded =
+                      isExtraGroup
+                        ? expandedExtraGroupIds[
+                            association.modifierGroupId
+                          ] === true
+                        : isLongOptionGroup
+                          ? expandedOptionGroupIds[
+                              association.modifierGroupId
+                            ] === true
+                          : true;
                     return (
                       <View
-                        key={
-                          association.id
-                        }
-                        style={
-                          styles
-                            .requiredSection
-                        }
+                        key={association.id}
+                        style={[
+                          styles.requiredSection,
+                          isGroupCollapsible
+                            ? {
+                                borderWidth: 1,
+                                borderColor: '#444444',
+                                borderRadius: 10,
+                                backgroundColor: '#1B1B1B',
+                                padding: 10,
+                                marginBottom: 10,
+                              }
+                            : null,
+                        ]}
                       >
                         <TouchableOpacity
-                          disabled={!isExtraGroup}
-                          onPress={() =>
-                            isExtraGroup &&
-                            toggleExtraGroup(
-                              association.modifierGroupId,
-                            )
-                          }
+                          disabled={!isGroupCollapsible}
+                          onPress={() => {
+                            if (isExtraGroup) {
+                              toggleExtraGroup(
+                                association.modifierGroupId,
+                              );
+                            } else if (isLongOptionGroup) {
+                              toggleOptionGroup(
+                                association.modifierGroupId,
+                              );
+                            }
+                          }}
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',
@@ -1328,13 +1344,13 @@ export const ProductConfiguratorModal:
                               ? ' *'
                               : ''}{' '}
                             {isExtraGroup
-                              ? `(${selectedCount}/${association.maxSelections})`
+                              ? `(${selectedCount}/${effectiveExtraLimit})`
                               : association.minSelections === association.maxSelections
                                   ? `(Selecciona ${association.maxSelections})`
                                   : `(Selecciona de ${association.minSelections} a ${association.maxSelections})`}
                           </Text>
 
-                          {isExtraGroup ? (
+                          {isGroupCollapsible ? (
                             <Text
                               style={{
                                 color: businessTheme.primary,
@@ -1342,11 +1358,30 @@ export const ProductConfiguratorModal:
                                 fontWeight: '900',
                               }}
                             >
-                              {isExtraExpanded ? '▲' : '▼'}
+                              {isGroupExpanded ? '▲' : '▼'}
                             </Text>
                           ) : null}
                         </TouchableOpacity>
-                        {isExtraExpanded &&
+
+                        {isLongOptionGroup && !isGroupExpanded ? (
+                          <Text
+                            style={{
+                              color: selectedCount > 0
+                                ? businessTheme.primary
+                                : '#8F8F8F',
+                              fontSize: 11,
+                              fontWeight: selectedCount > 0 ? '800' : '600',
+                              marginBottom: 2,
+                            }}
+                          >
+                            {selectedCount > 0
+                              ? `${selectedCount} seleccionada${selectedCount === 1 ? '' : 's'}`
+                              : 'Toca para ver opciones'}
+                          </Text>
+                        ) : null}
+
+                        {isGroupExpanded &&
+                        !isExtraGroup &&
                         association.maxSelections >
                           1 && (
                             <Text
@@ -1366,23 +1401,61 @@ export const ProductConfiguratorModal:
                               seleccionadas
                             </Text>
                           )}
-                        {isExtraGroup && isExtraExpanded ? (
+                        {isExtraGroup && isGroupExpanded ? (
                           <View
                             style={{
                               marginBottom: 10,
+                              padding: 9,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: '#50471F',
+                              backgroundColor: '#1E1B10',
                             }}
                           >
+                            <Text
+                              style={{
+                                color: businessTheme.primary,
+                                fontSize: 11,
+                                fontWeight: '900',
+                              }}
+                            >
+                              Límite: {effectiveExtraLimit} extras
+                            </Text>
+                            <Text
+                              style={{
+                                color: '#9A9A9A',
+                                fontSize: 9,
+                                marginTop: 2,
+                                lineHeight: 13,
+                              }}
+                            >
+                              Puedes agregar hasta {effectiveExtraLimit} extras en este producto.
+                            </Text>
+                          </View>
+                        ) : null}
+
+                        {isGroupCollapsible && isGroupExpanded ? (
+                          <View style={{ marginBottom: 10 }}>
                             <TextInput
-                              value={extraSearchText}
-                              onChangeText={value =>
-                                setExtraSearchByGroupId(
-                                  current => ({
+                              value={groupSearchText}
+                              onChangeText={value => {
+                                if (isExtraGroup) {
+                                  setExtraSearchByGroupId(current => ({
                                     ...current,
                                     [association.modifierGroupId]: value,
-                                  }),
-                                )
+                                  }));
+                                } else {
+                                  setOptionSearchByGroupId(current => ({
+                                    ...current,
+                                    [association.modifierGroupId]: value,
+                                  }));
+                                }
+                              }}
+                              placeholder={
+                                isExtraGroup
+                                  ? 'Buscar extra...'
+                                  : `Buscar en ${groupName}...`
                               }
-                              placeholder="Buscar extra..."
                               placeholderTextColor="#777777"
                               autoCapitalize="none"
                               autoCorrect={false}
@@ -1397,7 +1470,7 @@ export const ProductConfiguratorModal:
                                 fontSize: 13,
                               }}
                             />
-                            {normalizedExtraSearch &&
+                            {normalizedGroupSearch &&
                             visibleGroupModifiers.length === 0 ? (
                               <Text
                                 style={{
@@ -1406,12 +1479,12 @@ export const ProductConfiguratorModal:
                                   marginTop: 7,
                                 }}
                               >
-                                No hay extras que coincidan con “{extraSearchText.trim()}”.
+                                No hay opciones que coincidan con “{groupSearchText.trim()}”.
                               </Text>
                             ) : null}
                           </View>
                         ) : null}
-                        {!isExtraExpanded ? null :
+                        {!isGroupExpanded ? null :
                         groupModifiers.length ===
                           0 ? (
                           <Text
@@ -1787,7 +1860,9 @@ export const ProductConfiguratorModal:
                               >
                                 {allSelected
                                   ? 'Todo incluido'
-                                  : `${selected.length} de ${group.options.length} incluidos`}
+                                  : selected.length === 0
+                                    ? 'Nada incluido'
+                                    : `${selected.length} de ${group.options.length} incluidos`}
                               </Text>
                             </TouchableOpacity>
 
