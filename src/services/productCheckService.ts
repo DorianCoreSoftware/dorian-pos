@@ -266,6 +266,8 @@ export async function persistOrderProductChecks(
         groupId: c.groupId,
         optionId: c.optionId,
         isSelected: c.isSelected,
+        defaultSelected:
+          c.defaultSelected ?? true,
       })),
     })),
   });

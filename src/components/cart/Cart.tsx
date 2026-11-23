@@ -698,15 +698,25 @@ export const Cart: React.FC<
                       </View>
                     ) : null}
 
-                    {(item.selectedProductChecks ?? []).length > 0 ? (
+                    {(item.selectedProductChecks ?? []).some(
+                      check =>
+                        check.isSelected !==
+                        (check.defaultSelected ?? true),
+                    ) ? (
                       <View style={styles.modifiersContainer}>
-                        {(item.selectedProductChecks ?? []).map(check => (
-                          <View key={`${item.id}-check-${check.optionId}`} style={styles.modifierBadge}>
-                            <Text style={styles.modifierText}>
-                              {check.isSelected ? '✓' : '✕'} {check.groupName}: {check.isSelected ? check.optionName : `Sin ${check.optionName}`}
-                            </Text>
-                          </View>
-                        ))}
+                        {(item.selectedProductChecks ?? [])
+                          .filter(
+                            check =>
+                              check.isSelected !==
+                              (check.defaultSelected ?? true),
+                          )
+                          .map(check => (
+                            <View key={`${item.id}-check-${check.optionId}`} style={styles.modifierBadge}>
+                              <Text style={styles.modifierText}>
+                                {check.isSelected ? 'AGREGAR' : 'SIN'} {check.optionName}
+                              </Text>
+                            </View>
+                          ))}
                       </View>
                     ) : null}
 
