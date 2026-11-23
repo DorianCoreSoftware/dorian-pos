@@ -14,10 +14,6 @@ import {
 } from './businessHoursService';
 
 import {
-  getActiveCategories,
-} from './categoryService';
-
-import {
   getAllProducts,
 } from './products';
 
@@ -40,6 +36,14 @@ import {
 import {
   formatCompactCurrency,
 } from '../Utils/currency';
+
+import QRCode from 'qrcode';
+
+import {
+  getMenuPdfSettings,
+  getOrderedMenuPdfCategories,
+  MenuPdfSettings,
+} from './menuPdfSettingsService';
 
 interface MenuPdfOptionGroup {
   name: string;
@@ -72,6 +76,20 @@ interface PdfColor {
   r: number;
   g: number;
   b: number;
+}
+
+interface PdfJpegImage {
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+  colorSpace:
+    | 'DeviceGray'
+    | 'DeviceRGB'
+    | 'DeviceCMYK';
+}
+
+interface PdfBuildResources {
+  logo?: PdfJpegImage | null;
 }
 
 interface TextOptions {
@@ -540,6 +558,31 @@ class PdfPageCanvas {
     );
   }
 
+  image(
+    imageName:
+      string,
+    x:
+      number,
+    y:
+      number,
+    width:
+      number,
+    height:
+      number,
+  ): void {
+    this.commands.push(
+      `q ${width.toFixed(
+        2,
+      )} 0 0 ${height.toFixed(
+        2,
+      )} ${x.toFixed(
+        2,
+      )} ${y.toFixed(
+        2,
+      )} cm /${imageName} Do Q`,
+    );
+  }
+
   text(
     value:
       string,
@@ -588,12 +631,372 @@ class PdfPageCanvas {
   }
 }
 
+function parseJpegMetadata(
+  bytes:
+    Uint8Array,
+): Omit<
+  PdfJpegImage,
+  'bytes'
+> | null {
+  if (
+    bytes.length <
+      4 ||
+    bytes[0] !==
+      0xff ||
+    bytes[1] !==
+      0xd8
+  ) {
+    return null;
+  }
+
+  let offset =
+    2;
+
+  while (
+    offset + 9 <
+    bytes.length
+  ) {
+    if (
+      bytes[offset] !==
+      0xff
+    ) {
+      offset +=
+        1;
+
+      continue;
+    }
+
+    const marker =
+      bytes[
+        offset +
+        1
+      ];
+
+    offset +=
+      2;
+
+    if (
+      marker ===
+        0xd8 ||
+      marker ===
+        0xd9
+    ) {
+      continue;
+    }
+
+    if (
+      offset + 2 >
+      bytes.length
+    ) {
+      break;
+    }
+
+    const length =
+      (
+        bytes[offset] <<
+        8
+      ) +
+      bytes[
+        offset +
+        1
+      ];
+
+    const isSof =
+      (
+        marker >=
+          0xc0 &&
+        marker <=
+          0xc3
+      ) ||
+      (
+        marker >=
+          0xc5 &&
+        marker <=
+          0xc7
+      ) ||
+      (
+        marker >=
+          0xc9 &&
+        marker <=
+          0xcb
+      ) ||
+      (
+        marker >=
+          0xcd &&
+        marker <=
+          0xcf
+      );
+
+    if (
+      isSof &&
+      offset + 8 <
+      bytes.length
+    ) {
+      const height =
+        (
+          bytes[
+            offset +
+            3
+          ] <<
+          8
+        ) +
+        bytes[
+          offset +
+          4
+        ];
+
+      const width =
+        (
+          bytes[
+            offset +
+            5
+          ] <<
+          8
+        ) +
+        bytes[
+          offset +
+          6
+        ];
+
+      const components =
+        bytes[
+          offset +
+          7
+        ];
+
+      const colorSpace =
+        components ===
+          1
+          ? 'DeviceGray'
+          : components ===
+              4
+            ? 'DeviceCMYK'
+            : 'DeviceRGB';
+
+      return {
+        width,
+        height,
+        colorSpace,
+      };
+    }
+
+    if (
+      length <
+      2
+    ) {
+      break;
+    }
+
+    offset +=
+      length;
+  }
+
+  return null;
+}
+
+async function fetchJpegLogo(
+  url:
+    string,
+): Promise<
+  PdfJpegImage | null
+> {
+  const cleanUrl =
+    url.trim();
+
+  if (!cleanUrl) {
+    return null;
+  }
+
+  try {
+    const response =
+      await fetch(
+        cleanUrl,
+      );
+
+    if (
+      !response.ok
+    ) {
+      return null;
+    }
+
+    const bytes =
+      new Uint8Array(
+        await response.arrayBuffer(),
+      );
+
+    const metadata =
+      parseJpegMetadata(
+        bytes,
+      );
+
+    if (!metadata) {
+      return null;
+    }
+
+    return {
+      bytes,
+      ...metadata,
+    };
+  } catch (
+  error
+  ) {
+    console.warn(
+      'No se pudo cargar el logo para el menú PDF:',
+      error,
+    );
+
+    return null;
+  }
+}
+
+function drawQrCode(
+  canvas:
+    PdfPageCanvas,
+  value:
+    string,
+  x:
+    number,
+  y:
+    number,
+  size:
+    number,
+): void {
+  const qr =
+    QRCode.create(
+      value,
+      {
+        errorCorrectionLevel:
+          'M',
+      },
+    );
+
+  const moduleCount =
+    qr.modules.size;
+
+  const quietZone =
+    4;
+
+  const totalModules =
+    moduleCount +
+    quietZone *
+      2;
+
+  const moduleSize =
+    size /
+    totalModules;
+
+  canvas.fillRect(
+    x,
+    y,
+    size,
+    size,
+    WHITE,
+  );
+
+  for (
+    let row = 0;
+    row <
+    moduleCount;
+    row += 1
+  ) {
+    for (
+      let column = 0;
+      column <
+      moduleCount;
+      column += 1
+    ) {
+      const index =
+        row *
+          moduleCount +
+        column;
+
+      if (
+        !qr.modules.data[
+          index
+        ]
+      ) {
+        continue;
+      }
+
+      canvas.fillRect(
+        x +
+          (
+            column +
+            quietZone
+          ) *
+            moduleSize,
+        y +
+          (
+            totalModules -
+            quietZone -
+            row -
+            1
+          ) *
+            moduleSize,
+        moduleSize +
+          0.15,
+        moduleSize +
+          0.15,
+        {
+          r: 0,
+          g: 0,
+          b: 0,
+        },
+      );
+    }
+  }
+}
+
+function formatMenuUpdatedDate(
+  timezone:
+    string,
+): string {
+  return new Intl.DateTimeFormat(
+    'es-MX',
+    {
+      timeZone:
+        timezone ||
+        'America/Mexico_City',
+
+      day:
+        '2-digit',
+
+      month:
+        'long',
+
+      year:
+        'numeric',
+    },
+  ).format(
+    new Date(),
+  );
+}
+
 function buildPdfBytes(
   pageContents:
     string[],
+  resources:
+    PdfBuildResources = {},
 ): Uint8Array {
+  const hasLogo =
+    !!resources.logo;
+
+  const logoObjectId =
+    hasLogo
+      ? 5
+      : null;
+
+  const firstPageObjectId =
+    hasLogo
+      ? 6
+      : 5;
+
   const objectCount =
-    4 +
+    (
+      hasLogo
+        ? 5
+        : 4
+    ) +
     pageContents.length *
     2;
 
@@ -615,8 +1018,30 @@ function buildPdfBytes(
         _,
         index,
       ) =>
-        `${5 + index * 2} 0 R`,
+        `${firstPageObjectId + index * 2} 0 R`,
     );
+
+  if (
+    hasLogo &&
+    resources.logo &&
+    logoObjectId
+  ) {
+    const logo =
+      resources.logo;
+
+    objects[
+      logoObjectId
+    ] =
+      concatBytes([
+        encodeLatin1(
+          `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /${logo.colorSpace} /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.bytes.length} >>\nstream\n`,
+        ),
+        logo.bytes,
+        encodeLatin1(
+          '\nendstream',
+        ),
+      ]);
+  }
 
   objects[2] =
     encodeLatin1(
@@ -641,7 +1066,7 @@ function buildPdfBytes(
       index,
     ) => {
       const pageObjectId =
-        5 +
+        firstPageObjectId +
         index *
         2;
 
@@ -654,9 +1079,15 @@ function buildPdfBytes(
           content,
         );
 
+      const xObjectResources =
+        hasLogo &&
+        logoObjectId
+          ? ` /XObject << /Logo ${logoObjectId} 0 R >>`
+          : '';
+
       objects[pageObjectId] =
         encodeLatin1(
-          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectId} 0 R >>`,
+          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xObjectResources} >> /Contents ${contentObjectId} 0 R >>`,
         );
 
       objects[contentObjectId] =
@@ -1004,6 +1435,10 @@ function createCoverPage(
     PdfColor,
   background:
     PdfColor,
+  settings:
+    MenuPdfSettings,
+  logo:
+    PdfJpegImage | null,
 ): string {
   const canvas =
     new PdfPageCanvas(
@@ -1023,6 +1458,42 @@ function createCoverPage(
     },
   );
 
+  if (
+    settings.showLogo &&
+    logo
+  ) {
+    const maxWidth =
+      150;
+
+    const maxHeight =
+      110;
+
+    const scale =
+      Math.min(
+        maxWidth /
+          logo.width,
+        maxHeight /
+          logo.height,
+      );
+
+    const width =
+      logo.width *
+      scale;
+
+    const height =
+      logo.height *
+      scale;
+
+    canvas.image(
+      'Logo',
+      82,
+      628 -
+        height,
+      width,
+      height,
+    );
+  }
+
   const businessName =
     business.identity
       .businessName
@@ -1040,7 +1511,10 @@ function createCoverPage(
     );
 
   let y =
-    560;
+    settings.showLogo &&
+    logo
+      ? 492
+      : 560;
 
   nameLines.forEach(
     line => {
@@ -1138,6 +1612,71 @@ function createCoverPage(
 
         addressY -=
           12;
+      },
+    );
+  }
+
+  if (
+    settings.qrEnabled &&
+    settings.qrUrl.trim()
+  ) {
+    const qrSize =
+      104;
+
+    drawQrCode(
+      canvas,
+      settings.qrUrl.trim(),
+      416,
+      92,
+      qrSize,
+    );
+
+    const qrLabelLines =
+      wrapText(
+        settings.qrLabel,
+        120,
+        8.5,
+      ).slice(
+        0,
+        2,
+      );
+
+    let qrLabelY =
+      82;
+
+    qrLabelLines.forEach(
+      line => {
+        canvas.text(
+          line,
+          408,
+          qrLabelY,
+          {
+            size: 8.5,
+            bold: true,
+            color: primary,
+          },
+        );
+
+        qrLabelY -=
+          10;
+      },
+    );
+  }
+
+  if (
+    settings.showUpdatedDate
+  ) {
+    canvas.text(
+      `Actualizado: ${formatMenuUpdatedDate(
+        business.timezone,
+      )}`,
+      82,
+      88,
+      {
+        size:
+          8.5,
+        color:
+          MUTED,
       },
     );
   }
@@ -1722,19 +2261,21 @@ function optionSignature(
   )}`;
 }
 
-async function loadMenuPdfData():
-  Promise<MenuPdfData> {
+async function loadMenuPdfData(
+  settings:
+    MenuPdfSettings,
+): Promise<MenuPdfData> {
   const [
-    categories,
+    orderedCategories,
     allProducts,
   ] =
     await Promise.all([
-      getActiveCategories(),
+      getOrderedMenuPdfCategories(),
       getAllProducts(),
     ]);
 
   const activeCategories =
-    categories.filter(
+    orderedCategories.filter(
       category =>
         category.is_active ===
         true,
@@ -1753,6 +2294,11 @@ async function loadMenuPdfData():
       product =>
         product.is_active ===
           true &&
+        (
+          settings.showUnavailableProducts ||
+          product.is_available ===
+            true
+        ) &&
         activeCategoryIds.has(
           product.category_id,
         ),
@@ -1932,9 +2478,13 @@ async function loadMenuPdfData():
                   product.name,
 
                 description:
-                  product.description
-                    ?.trim() ??
-                  '',
+                  settings.showDescriptions
+                    ? (
+                      product.description
+                        ?.trim() ??
+                      ''
+                    )
+                    : '',
 
                 price:
                   Number(
@@ -2080,8 +2630,27 @@ export async function generateMenuPdfBytes(
 ): Promise<
   Uint8Array
 > {
-  const menu =
-    await loadMenuPdfData();
+  const settings =
+    await getMenuPdfSettings();
+
+  const [
+    menu,
+    logo,
+  ] =
+    await Promise.all([
+      loadMenuPdfData(
+        settings,
+      ),
+
+      settings.showLogo
+        ? fetchJpegLogo(
+            business.identity
+              .logoUrl,
+          )
+        : Promise.resolve(
+            null,
+          ),
+    ]);
 
   if (
     menu.categories.length ===
@@ -2112,6 +2681,8 @@ export async function generateMenuPdfBytes(
         business,
         primary,
         background,
+        settings,
+        logo,
       ),
     ];
 
@@ -2130,6 +2701,9 @@ export async function generateMenuPdfBytes(
 
   return buildPdfBytes(
     pages,
+    {
+      logo,
+    },
   );
 }
 
